@@ -1,0 +1,74 @@
+* Sequential programming framework for structured Grids
+
+** Primary constructs
+- grids
+  - multi-dimensional regular grids
+- domains
+  - multi-dimensional rectangular ranges
+  - used to specify index ranges
+- stencil function
+  - a function operated at each element of the given domain
+  - has index parameters for the particular element
+- grid_map(dimension, stencil funcion, other parameters)
+  - parameter dimension speifies a range where the stencil function is
+    operated
+- grid_map_nth
+  - a variation of grid_map that performs the same action as grid_map
+    n-times
+  - particularly efficient in distributed memory implementations
+- grid_get(g, i...)
+  - allowed in both driver and stencil functions
+  - parameter g
+    - grid to be accessed
+  - parameter i, j, etc
+    - the index in the given grid
+    - can be a linear function of the base index of a stencil function
+- grid_emit(g, v, [condition expression, boundary condition])
+  - Can only be used in a stencil function
+  - Specify the new value at the index of g, where index is the same
+    as the index of each execution of the stencil function
+  - The optional condition expression and boundary condition can be
+    used to speicify the boundary and how the boundary values are
+    determined for grid g. Available options  include DIRICHLET and
+    NEUMANN(i).
+    - DIRICHLET: the boundary values are constant
+    - NEUMANN(i): the boundary values are determined as the neighbor
+      value multiplied by i
+
+
+** Heterogeneous dimensionality
+A stencil function can have grids with different dimensionalities as
+the domain dimensionality. For example, 3-D execution of a stencil can
+have 1-D grids that are accessed only with one of the index sets (i,
+j, and k in this example). Implementation of this behavior can be
+difficult in distributed memory versions, since domain decompsition
+must be coordinated so that data exchanges should be minimized.
+
+** On-Demand Double Buffering
+Updating grid elements in parallel needs double buffering when the
+new values depend on the old values. The framework automatically
+detects such grids and allocates double buffers when needed.
+
+Update (04/16/2011)
+It's actually rather complex, and can be a source of performance
+inefficiency. It must do:
+- stencil access analysis. Just reading and writing the same point
+  does not require double buffering.
+- keeping non-accesed region consistent. how to do this efficiently is
+  not trivial. A simple method is to copy those points from one buffer
+  to another, but this may be a huge performance overhead, especially
+  if only a small portion of an entire grid is accessed. However, this
+  may be a good idea as a conservative backup. After all, it'd be ok
+  if we could not achieve optimal performance with automatic double
+  buffering.
+- Currently not supported.
+
+** Grid decomposition
+The framework automatially determines the optimal grid decomposition
+based on a global program analysis and inserts data exchanges as
+necessary. 
+
+** Grid-type global variables
+It is allowed to have global variables of type PSGrid, but we assume
+that the user code does not pass uninitialized grids to kernel
+functions. 
