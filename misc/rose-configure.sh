@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -u
+#set -u
 set -e
 
 if [ $# -gt 0 ]; then
@@ -33,7 +33,7 @@ if [ -z "$JAVA_HOME" ]; then
 	case $OSTYPE in
 		linux*)
 			LDFLAGS=""
-			for i in $(locate libjvm.so | grep -v gcj); do
+			for i in $(locate libjvm.so | grep sun); do
 				echo -n "Using $i? [Y/n] "
 				read yn
 				if [ "$yn" != "n" ]; then
@@ -41,19 +41,38 @@ if [ -z "$JAVA_HOME" ]; then
 					break
 				fi
 			done
-			if [ -z "$LDFLAGS" ]; then
+			if [ -z "$JAVA_HOME" ]; then
 				echo "Error: no Java found"
 				exit 1
 			fi
 			;;
+		darwin*)
+			JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK
+			;;
 	esac
 fi
 
-JVM_DIR=$(dirname $(find ${JAVA_HOME}/ -name libjvm.so | head -1))
-JAVA_LIBRARIES=${JAVA_HOME}/jre/lib:$JVM_DIR
+JVM_DIR=$(dirname $(find ${JAVA_HOME}/ -name "libjvm\.*" | head -1))
+case $OSTYPE in
+	linux*)
+		JAVA_LIBRARIES=${JAVA_HOME}/jre/lib:$JVM_DIR
+		;;
+	darwin*)
+		JAVA_LIBRARIES=$JVM_DIR
+		;;
+esac
 
-export LDFLAGS="-Wl,-rpath=${JAVA_LIBRARIES}:${BOOST}/lib"
-export LD_LIBRARY_PATH=${JAVA_LIBRARIES}:${BOOST}/lib:$LD_LIBRARY_PATH
+# Is this necessary?
+#export LDFLAGS="-Wl,-rpath=${JAVA_LIBRARIES}:${BOOST}/lib"
+case $OSTYPE in
+	linux*)
+		export LD_LIBRARY_PATH=${JAVA_LIBRARIES}:${BOOST}/lib:$LD_LIBRARY_PATH
+		;;
+	darwin*)
+		export DYLD_LIBRARY_PATH=${JAVA_LIBRARIES}:${BOOST}/lib:$DYLD_LIBRARY_PATH
+		;;
+esac
+
 echo LDFLAGS is set to $LDFLAGS
 echo LD_LIBRARY_PATH is set to $LD_LIBRARY_PATH
 echo JAVA_HOME is set to $JAVA_HOME
