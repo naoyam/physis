@@ -13,8 +13,8 @@
 
 ## Steps
 
-There are helper scipts at misc/rose-configure.sh and
-misc/rose-build.sh. Both of them automate the following steps. 
+There are helper scipts at misc/rose-build.sh, which mostly automates
+the following steps.
 
 1. (Git only) run build.sh
 2. Linux only
