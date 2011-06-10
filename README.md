@@ -54,7 +54,7 @@ required when using the respective platform:
 
 ### Building Physis
 
-To be written.
+See docs/build.md.
   
 ### Writing Physis Code
 
