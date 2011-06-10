@@ -21,7 +21,7 @@ devices and network connections.
 
 ## Features
 
-* C-based embedded DSL consisting declarative intrinsics
+* C-based embedded DSL consisting of declarative intrinsics
 * Platform portability
 * Virtual shared memory
 * No explicit parallel programming required
