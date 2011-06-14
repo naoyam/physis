@@ -49,13 +49,25 @@ target_link_libraries(physisc ${JAVA_JVM_LIBRARY})
 target_link_libraries(physisc ${Boost_LIBRARIES})
 target_link_libraries(physisc configuration)
 
+install(TARGETS physisc DESTINATION bin)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-ref.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref DESTINATION bin)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-cuda.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda DESTINATION bin)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi DESTINATION bin)
 
-install(TARGETS physisc DESTINATION bin)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-cuda.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda DESTINATION bin)
+
+
