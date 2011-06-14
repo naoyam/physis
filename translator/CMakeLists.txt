@@ -57,3 +57,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-cuda.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi)
+
+install(TARGETS physisc DESTINATION bin)

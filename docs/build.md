@@ -42,6 +42,7 @@
   install path can be left as is at this time.
 4. Run make. This should produce executable 'physis' under the build
    directory. 
+5. Run make install.
 
 ## Hints
 * Once cmake is run and build files are generated, the make command is the

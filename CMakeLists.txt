@@ -82,3 +82,5 @@ add_subdirectory(include/physis)
 add_subdirectory(util)
 add_subdirectory(translator)
 add_subdirectory(runtime)
+
+install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h")

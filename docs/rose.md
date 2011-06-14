@@ -1,4 +1,4 @@
-# Installation
+# ROSE Installation
 
 ## Prerequisites
 ### Ubuntu
