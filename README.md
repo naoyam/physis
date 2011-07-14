@@ -5,10 +5,11 @@
 Physis is a framework for stencil computations that is designed for a
 variety of parallel computing systems with a particular focus on
 programmable GPUs. The primary goals are high productivity and high
-performance. A small set of custom programming constructs, the Physis
-DSL, allows for very concise and portable implementations of common
-stencil computations. A single Physis program runs on x86 CPUs, NVIDIA
-GPUs, and even clusters of them with no platform-specific code.  
+performance. Physis DSL is a small set of custom programming
+constructs, and allows for very concise and portable implementations
+of common stencil computations. A single Physis program runs on x86
+CPUs, NVIDIA GPUs, and even clusters of them with no platform-specific
+code.   
 
 This software consists of a DSL translator and runtime layer for each
 supported platform. The translator automatically generates platform-specific
