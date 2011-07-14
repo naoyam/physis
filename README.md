@@ -1,22 +1,21 @@
-# A High-Level Domain-Specific Framework for Stencil Computations
+# Physis: A High-Level Domain-Specific Framework for Stencil Computations
 
 ## Overview
 
-Physis is a framework for stencil computations on modern heterogeneous
-parallel computing systems. The main goals are productivity and
-performance. The Physis DSL, which consists of a small set of custom
-programming constructs , allows very concise and portable implementations of
-stencil computations on a variety of high performance systems with a
-particular focus on modern programmable GPUs. A single Physis program
-runs on x86 CPUs, NVIDIA GPUs, and even clusters of them with no
-platform-specific code.  
+Physis is a framework for stencil computations that is designed for a
+variety of parallel computing systems with a particular focus on
+programmable GPUs. The primary goals are high productivity and high
+performance. A small set of custom programming constructs, the Physis
+DSL, allows for very concise and portable implementations of common
+stencil computations. A single Physis program runs on x86 CPUs, NVIDIA
+GPUs, and even clusters of them with no platform-specific code.  
 
-This software consists of a DSL translator and runtime for each target
-platform. The translator automatically generates platform-specific
-source code from a single Physis source, which is then compiled with a
+This software consists of a DSL translator and runtime layer for each
+supported platform. The translator automatically generates platform-specific
+source code from Physis code, which is then compiled by a
 platform-native compiler to generate final executable code. The
-runtime component is a thin software layer that manages
-application-independent tasks for each platform, such as managing GPU
+runtime component is a thin software layer that performs
+application-independent common tasks, such as management of GPU
 devices and network connections. 
 
 ## Features
