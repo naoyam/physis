@@ -15,31 +15,49 @@
 #set -u
 set -e
 
-if [ $# -gt 0 ]; then
-	ROSE_SRC=$1
-	shift
-else
+while getopts ":r:p:b:" opt; do
+	case $opt in
+		r)
+			ROSE_SRC=$OPTARG
+			;;
+		p)
+			INSTALL_PREFIX=$OPTARG
+			;;
+		b)
+			BOOST=$OPTARG
+			;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			;;
+	esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -z "$ROSE_SRC" ]; then
 	echo -n "ROSE source path: "
 	read ROSE_SRC
 fi
-if [ $# -gt 0 ]; then
-	INSTALL_PREFIX=$1
-	shift
-else
+if [ -z "$INSTALL_PREFIX" ]; then
 	echo -n "Install prefix path: "
 	read INSTALL_PREFIX
 fi
+
 echo Building ROSE at $ROSE_SRC and installing it to $INSTALL_PREFIX
 CONFIG_OPTIONS=$*
 
 BOOST_CANDIDATES=($HOME/homebrew /usr $HOME/tools/boost /work0/GSIC/apps/boost/1_45_0/gcc)
 
-for c in ${BOOST_CANDIDATES[*]}; do
-	if [ -d $c/include/boost ]; then
-		BOOST=$c
-		break
-	fi
-done
+if [ -z "$BOOST" ]; then
+	for c in ${BOOST_CANDIDATES[*]}; do
+		if [ -d $c/include/boost ]; then
+			BOOST=$c
+			break
+		fi
+	done
+fi
+
+echo Using Boost found at $BOOST
 
 if [ -z "$JAVA_HOME" ]; then
 	case $OSTYPE in
