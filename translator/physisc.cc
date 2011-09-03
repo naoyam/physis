@@ -205,6 +205,13 @@ int main(int argc, char *argv[]) {
   SgProject* proj = frontend(argvec);
   proj->skipfinalCompileStep(true);
 
+  LOG_INFO() << "AST generation done\n";
+
+  if (proj->numberOfFiles() == 0) {
+    LOG_INFO() << "No input source\n";
+    exit(0);
+  }
+  
   // Run internal consistency tests on AST
   // AstTests::runAllTests(proj);
 
