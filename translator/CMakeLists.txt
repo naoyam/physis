@@ -1,8 +1,13 @@
+
 link_directories(${PROJECT_BINARY_DIR}/common)
 link_directories(${PROJECT_BINARY_DIR}/util)
 
-# ROSE
+# ROSE is required. Skip if not found.
 find_package(ROSE)
+if (NOT ROSE_FOUND)
+  return()
+endif()
+
 include_directories(${ROSE_INCLUDE_DIR})
 
 # Boost
@@ -68,6 +73,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-ref.cmake
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref DESTINATION bin)
 
 
+install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 
 
