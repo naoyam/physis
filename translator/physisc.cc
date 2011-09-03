@@ -10,15 +10,15 @@
 
 #include "translator/config.h"
 #include "translator/reference_translator.h"
-#if defined(CUDA_ENABLED)
+//#if defined(CUDA_ENABLED)
 #include "translator/cuda_translator.h"
-#endif
-#if defined(MPI_ENABLED)
+//#endif
+//#if defined(MPI_ENABLED)
 #include "translator/mpi_translator.h"
-#endif
-#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
+//#endif
+//#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
 #include "translator/mpi_cuda_translator.h"
-#endif
+//#endif
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
@@ -53,15 +53,15 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   desc.add_options()("config", bpo::value<string>(),
                      "read configuration file");  
 
-#ifdef CUDA_ENABLED  
+  //#ifdef CUDA_ENABLED  
   desc.add_options()("cuda", "CUDA translation");
-#endif
-#ifdef MPI_ENABLED
+  //#endif
+  //#ifdef MPI_ENABLED
   desc.add_options()("mpi", "MPI translation");
-#endif
-#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
+  //#endif
+  //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
-#endif
+  //#endif
 
   bpo::variables_map vm;
   bpo::parsed_options parsed = bpo::command_line_parser(argc, argv).
@@ -91,28 +91,28 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     return;
   }
 
-#ifdef CUDA_ENABLED  
+  //#ifdef CUDA_ENABLED  
   if (vm.count("cuda")) {
     LOG_DEBUG() << "CUDA translation.\n";
     opts.cuda_trans = true;
     return;
   }
-#endif
-#ifdef MPI_ENABLED  
+  //#endif
+  //#ifdef MPI_ENABLED  
   if (vm.count("mpi")) {
     LOG_DEBUG() << "MPI translation.\n";
     opts.mpi_trans = true;
     return;
   }
-#endif
+  //#endif
 
-#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
+      //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
   if (vm.count("mpi-cuda")) {
     LOG_DEBUG() << "MPI-CUDA translation.\n";
     opts.mpi_cuda_trans = true;
     return;
   }
-#endif
+  //#endif
 
   LOG_INFO() << "No translation target given.\n";
   std::cout << desc << "\n";
@@ -158,35 +158,35 @@ int main(int argc, char *argv[]) {
     argvec.push_back("-DPHYSIS_REF");
   }
 
-#ifdef CUDA_ENABLED  
+  //#ifdef CUDA_ENABLED  
   if (opts.cuda_trans) {
     trans = new pt::CUDATranslator(config);
     filename_suffix = "cuda.cu";
     argvec.push_back("-DPHYSIS_CUDA");
-    argvec.push_back("-I" + string(CUDA_INCLUDE_DIR));
-    argvec.push_back("-I" + string(CUDA_CUT_INCLUDE_DIR));
+    //    argvec.push_back("-I" + string(CUDA_INCLUDE_DIR));
+    //    argvec.push_back("-I" + string(CUDA_CUT_INCLUDE_DIR));
   }
-#endif
+  //#endif
 
-#ifdef MPI_ENABLED  
+  //#ifdef MPI_ENABLED  
   if (opts.mpi_trans) {
     trans = new pt::MPITranslator(config);
     filename_suffix = "mpi.c";
     argvec.push_back("-DPHYSIS_MPI");
-    argvec.push_back("-I" + string(MPI_INCLUDE_DIR));    
+    //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));    
   }
-#endif
+  //#endif
 
-#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
+      //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
   if (opts.mpi_cuda_trans) {
     trans = new pt::MPICUDATranslator(config);
     filename_suffix = "mpi-cuda.cu";
     argvec.push_back("-DPHYSIS_MPI_CUDA");
-    argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
-    argvec.push_back("-I" + string(CUDA_INCLUDE_DIR));
-    argvec.push_back("-I" + string(CUDA_CUT_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(CUDA_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(CUDA_CUT_INCLUDE_DIR));
   }
-#endif
+  //#endif
 
   if (trans == NULL) {
     LOG_INFO() << "No translation done.\n";

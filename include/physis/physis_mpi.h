@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#if !defined(PHYSIS_USER)
 #include <mpi.h>
+#endif
 
 #include "physis/physis_common.h"
 

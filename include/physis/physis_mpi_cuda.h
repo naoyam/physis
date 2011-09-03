@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <mpi.h>
 #if !defined(PHYSIS_USER)
+#include <mpi.h>
 #include <cuda_runtime.h>
 #endif
 
