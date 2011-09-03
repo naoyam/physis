@@ -63,7 +63,7 @@ if [ -z "$JAVA_HOME" ]; then
 	case $OSTYPE in
 		linux*)
 			LDFLAGS=""
-			for i in $(locate libjvm.so | grep sun); do
+			for i in $(locate libjvm.so); do
 				echo -n "Using $i? [Y/n] "
 				read yn
 				if [ "$yn" != "n" ]; then
@@ -71,6 +71,7 @@ if [ -z "$JAVA_HOME" ]; then
 					break
 				fi
 			done
+			
 			if [ -z "$JAVA_HOME" ]; then
 				echo "Error: no Java found"
 				exit 1
