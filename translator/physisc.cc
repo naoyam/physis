@@ -62,6 +62,7 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
   //#endif
+  desc.add_options()("list-targets", "List available targets");
 
   bpo::variables_map vm;
   bpo::parsed_options parsed = bpo::command_line_parser(argc, argv).
@@ -113,6 +114,16 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     return;
   }
   //#endif
+
+  if (vm.count("list-targets")) {
+    StringJoin sj(" ");
+    sj << "ref";
+    sj << "mpi";
+    sj << "cuda";
+    sj << "mpi-cuda";
+    std::cout << sj << "\n";
+    exit(0);
+  }
 
   LOG_INFO() << "No translation target given.\n";
   std::cout << desc << "\n";
