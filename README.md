@@ -65,6 +65,10 @@ examples directory.
 
 To be written.
 
+## Publications
+
+* [Naoya Maruyama, Tatsuo Nomura, Kento Sato, and Satoshi Matsuoka, "Physis: An Implicitly Parallel Programming Model for Stencil Computations on Large-Scale GPU-Accelerated Supercomputers," Proceedings of the 2011 ACM/IEEE Conference on Supercomputing (SC'11), pp. 1--12, Seattle, WA, USA, Nov 2011.](http://matsu-www.is.titech.ac.jp/~naoya/index.html#sc11physis)
+
 ## License (BSD License)
 
 Copyright (c) 2011, Naoya Maruyama
