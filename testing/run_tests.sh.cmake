@@ -8,8 +8,9 @@
 # Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 # TODO:
-# - translation test
-# - execution test
+# - compilation
+# - linking
+# - execution
 
 ###############################################################
 WD=$PWD/test_output
@@ -57,25 +58,26 @@ function compile()
 	src=$1
 	target=$2
 	echo compilation of $src for $target
-	src_file=$(basename $src .c).$target
-	echo $src_file
+	src_file_base=$(basename $src .c).$target
 	if [ "${MPI_ENABLED}" = "TRUE" ]; then
 		MPI_C_FLAGS="-pthread"
 		for mpiinc in $(echo "${MPI_INCLUDE_PATH}" | sed 's/;/ /g'); do
 			MPI_C_FLAGS+=" -I$mpiinc"
 		done
 	fi
+	LDFLAGS=-L${CMAKE_BINARY_DIR}/runtime
 	case $target in
 		ref)
-			src_file+=".c"
-			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS
+			src_file="$src_file_base".c
+			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS &&
+			c++ "$src_file_base".o -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
 			;;
 		cuda)
 			if [ "${CUDA_ENABLED}" != "TRUE" ]; then
 				echo "[COMPILE] Skipping CUDA compilation (not supported)"
 				return 0
 			fi
-			src_file+=".cu"
+			src_file="$src_file_base".cu
 			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include -Xcompiler $CFLAGS
 			;;
 		mpi)
@@ -83,7 +85,7 @@ function compile()
 				echo "[COMPILE] Skipping MPI compilation (not supported)"
 				return 0
 			fi
-			src_file+=".c"
+			src_file="$src_file_base".c			
 			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_C_FLAGS $CFLAGS
 			;;
 		mpi-cuda)
@@ -91,7 +93,7 @@ function compile()
 				echo "[COMPILE] Skipping MPI-CUDA compilation (not supported)"
 				return 0
 			fi
-			src_file+=".cu"
+			src_file="$src_file_base".cu			
 			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include \
 				$MPI_C_FLAGS -Xcompiler $CFLAGS 
 			;;
