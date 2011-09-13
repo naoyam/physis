@@ -10,7 +10,7 @@ include_directories(${CMAKE_BINARY_DIR})
 
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-O2 -g -Wall -Wno-deprecated")
 #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-O0 -g -Wall -Wno-deprecated")
-#set(PS_DEBUG TRUE)
+set(PS_DEBUG TRUE)
 #set(PS_VERBOSE_DEBUG TRUE)
 #set(PS_VERBOSE TRUE)
 #set(PS_DEBUG TRUE)
