@@ -24,7 +24,6 @@ ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
 cd $WD
 
-
 NUM_SUCCESS=0
 NUM_FAIL=0
 
@@ -46,18 +45,19 @@ function finish()
 	# find tests
 	TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c')
 	NUM_TESTS=$(echo $TESTS | wc -w)
-	echo Running $NUM_TESTS tests
+	echo "Testing $NUM_TESTS test code(s)"
 	PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
 	TARGETS=$($PHYSISC --list-targets)
 	for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
-			echo Translating $TEST to $TARGET code
+			SHORTNAME=$(basename $TEST)
+			echo "[TRANSLATION] Processing $SHORTNAME for $TARGET target"
 			if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include $TEST \
-				> physisc.$TEST.$TARGET.log 2>&1; then
-				echo "\[TRANSLATION\] $TEST SUCCESS"
+				> $(basename $TEST).$TARGET.log 2>&1; then
+				echo "[TRANSLATION] SUCCESS"
 				NUM_SUCCESS=$(($NUM_SUCCESS + 1))
 			else
-				echo "\[TRANSLATION\] $TEST FAIL"
+				echo "[TRANSLATION] FAIL"
 				NUM_FAIL=$(($NUM_FAIL + 1))
 			# Terminates immediately when failed
 				finish
@@ -65,7 +65,7 @@ function finish()
 		done
 	done
 	finish
-} >> $LOGFILE 2>&1
+} 2>&1 | tee $LOGFILE
 
 # Local Variables:
 # mode: sh-mode
