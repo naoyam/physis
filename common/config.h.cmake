@@ -6,7 +6,6 @@
 #cmakedefine PS_DEBUG
 #cmakedefine PS_VERBOSE_DEBUG
 #cmakedefine PS_VERBOSE
-#cmakedefine PS_DEBUG
 
 
 #endif /* PHYSIS_COMMON_CONFIG_H_ */
