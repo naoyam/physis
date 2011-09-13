@@ -19,6 +19,8 @@
 #include <map>
 #include <string.h>
 
+#include "physis/config.h"
+
 #define __FUNC_ID__ __FUNCTION__
 
 //#define LOGGING_FILE_BASENAME(name)   (name)
@@ -26,7 +28,7 @@
   ((std::string(name).find_last_of('/') == std::string::npos) ?         \
    std::string(name) : std::string(name).substr(std::string(name).find_last_of('/')+1))
 
-#ifdef ENABLE_LOG_VERBOSE
+#if defined(PS_VERBOSE)
 #define LOG_VERBOSE()                             \
   (std::cerr << "[VERBOSE:" << __FUNC_ID__        \
    << "@" << LOGGING_FILE_BASENAME(__FILE__)    \
@@ -35,8 +37,7 @@
 #define LOG_VERBOSE()  if (0) std::cerr 
 #endif
 
-//#define ENABLE_LOG_DEBUG
-#ifdef ENABLE_LOG_DEBUG
+#if defined(PS_DEBUG)
 #define LOG_DEBUG()                             \
   (std::cerr << "[DEBUG:" << __FUNC_ID__        \
    << "@" << LOGGING_FILE_BASENAME(__FILE__)    \
