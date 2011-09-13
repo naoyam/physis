@@ -66,7 +66,9 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
 
   bpo::variables_map vm;
   bpo::parsed_options parsed = bpo::command_line_parser(argc, argv).
-      options(desc).allow_unregistered().run();
+      options(desc).allow_unregistered().
+      style(bpo::command_line_style::default_style &
+            ~bpo::command_line_style::allow_guessing).run();
   vector<string> unrec_opts = bpo::collect_unrecognized
       (parsed.options, bpo::include_positional);
   FOREACH (it, unrec_opts.begin(), unrec_opts.end()) {
