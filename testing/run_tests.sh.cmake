@@ -7,9 +7,11 @@
 #
 # Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
+#
+# For usage, see the help message by executing this script with option --help.
+#
+
 # TODO:
-# - compilation
-# - linking
 # - execution
 
 ###############################################################
@@ -32,21 +34,33 @@ NUM_SUCCESS_TRANS=0
 NUM_FAIL_TRANS=0
 NUM_SUCCESS_COMPILE=0
 NUM_FAIL_COMPILE=0
-NUM_SUCCESS_EXEC=0
-NUM_FAIL_EXEC=0
+NUM_SUCCESS_EXECUTE=0
+NUM_FAIL_EXECUTE=0
+FAILED_TESTS=""
+
+PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
+
+function fail()
+{
+	test=$1
+	trg=$2
+	stage=$3
+	FAILED_TESTS+="$test/$trg/$stage "
+}
 
 function finish()
 {
 	echo "All tests completed."
 	echo  "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
 	echo  "[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
-	echo  "[EXECUTE]   #SUCCESS: $NUM_SUCCESS_EXEC, #FAIL: $NUM_FAIL_EXEC."
+	echo  "[EXECUTE]   #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+	if [ "x" != "x$FAILED_TESTS" ]; then echo  "Failed tests: $FAILED_TESTS"; fi
 	cd $ORIGINAL_DIRECTORY
 	if [ $FLAG_KEEP_OUTPUT -eq 0 ]; then
 		rm -rf $WD
 	fi
 	if [ $NUM_FAIL_TRANS -eq 0 -a $NUM_FAIL_COMPILE -eq 0 -a \
-		$NUM_FAIL_EXEC -eq 0 ]; then
+		$NUM_FAIL_EXECUTE -eq 0 ]; then
 		exit 0
 	else
 		exit 1
@@ -57,15 +71,16 @@ function compile()
 {
 	src=$1
 	target=$2
-	echo compilation of $src for $target
 	src_file_base=$(basename $src .c).$target
 	if [ "${MPI_ENABLED}" = "TRUE" ]; then
-		MPI_C_FLAGS="-pthread"
+		MPI_CFLAGS="-pthread"
 		for mpiinc in $(echo "${MPI_INCLUDE_PATH}" | sed 's/;/ /g'); do
-			MPI_C_FLAGS+=" -I$mpiinc"
+			MPI_CFLAGS+=" -I$mpiinc"
 		done
 	fi
 	LDFLAGS=-L${CMAKE_BINARY_DIR}/runtime
+	NVCC_CFLAGS="-arch sm_20"
+	CUDA_LDFLAGS="-lcudart -L$(dirname ${CUDA_LIBRARIES})"
 	case $target in
 		ref)
 			src_file="$src_file_base".c
@@ -78,7 +93,8 @@ function compile()
 				return 0
 			fi
 			src_file="$src_file_base".cu
-			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include -Xcompiler $CFLAGS
+			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
+			nvcc "$src_file_base".o -lphysis_rt_cuda $LDFLAGS -o "$src_file_base".exe
 			;;
 		mpi)
 			if [ "${MPI_ENABLED}" != "TRUE" ]; then
@@ -86,31 +102,135 @@ function compile()
 				return 0
 			fi
 			src_file="$src_file_base".c			
-			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_C_FLAGS $CFLAGS
+			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_CFLAGS $CFLAGS &&
+			mpic++ "$src_file_base".o -lphysis_rt_mpi $LDFLAGS -o "$src_file_base".exe
 			;;
 		mpi-cuda)
 			if [ "${MPI_ENABLED}" != "TRUE" -o "${CUDA_ENABLED}" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI-CUDA compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".cu			
+			src_file="$src_file_base".cu
+			MPI_CUDA_CFLAGS=""
+			for f in $CFLAGS $MPI_CFLAGS; do
+				if echo $f | grep '^-I' > /dev/null; then
+					MPI_CUDA_CFLAGS+="$f "
+				else
+					MPI_CUDA_CFLAGS+="-Xcompiler $f "
+				fi
+			done
 			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include \
-				$MPI_C_FLAGS -Xcompiler $CFLAGS 
+				$NVCC_CFLAGS $MPI_CUDA_CFLAGS &&
+			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
+			-o "$src_file_base".exe
 			;;
 		*)
-			echo "Error: Unsupported target"
+			echo "ERROR! Unsupported target"
 			finish
 			;;
 	esac
 }
 
+# TODO
+function execute()
 {
+	src=$1
+	target=$2
+	src_file_base=$(basename $src .c).$target
+	echo "[EXECUTE] Processing $src/$target"
+	case $target in
+		ref)
+			exename=$src_file_base.ref.exe
+			;;
+		cuda)
+			exename=$src_file_base.cuda.exe			
+			;;
+		mpi)
+			exename=$src_file_base.mpi.exe			
+			;;
+		mpi-cuda)
+			exename=$src_file_base.mpi-cuda.exe
+			;;
+		*)
+			echo "ERROR! Unsupported target"
+			finish
+			;;
+	esac
+}
+
+function print_usage()
+{
+	echo "USAGE"
+	echo -e "\trun_tests.sh [options]"
+	echo ""
+	echo "OPTIONS"
+	echo -e "\t-t, --targets"
+	echo -e "\t\tSet the test targets. Supported targets: $($PHYSISC --list-targets)."
+	echo -e "\t--translate"
+	echo -e "\t\tTest only translation and its dependent tasks."
+	echo -e "\t--compile"
+	echo -e "\t\tTest only compilation and its dependent tasks."
+	echo -e "\t--execute"
+	echo -e "\t\tTest only execution and its dependent tasks."
+}
+
+{
+
+	TARGETS=""
+	STAGE="ALL"
+
+	TEMP=$(getopt -o ht:s: --long help,targets:,translate,compile,execute -- "$@")
+	if [ $? != 0 ]; then
+		echo "ERROR! Invalid options: $@";
+		print_usage
+		exit 1;
+	fi
+	
+	eval set -- "$TEMP"
+	while true; do
+		case "$1" in
+			-t|--targets)
+				TARGETS=$2
+				shift 2
+				;;
+			--translate)
+				STAGE="TRANSLATE"
+				shift
+				;;
+			--compile)
+				STAGE="COMPILE"
+				shift
+				;;
+			--execute)
+				STAGE="EXECUTE"
+				shift
+				;;
+			-h|--help)
+				print_usage
+				exit 0
+				shift
+				;;
+			--)
+				shift
+				break
+				;;
+			*) 
+				echo "ERROR! Invalid option: $1"
+				print_usage
+				exit 1
+				;;
+		esac
+	done
+	
+	# Test all targets by default
+	if [ "x$TARGETS" = "x" ]; then TARGETS=$($PHYSISC --list-targets); fi
+	
 	# find tests
-	TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c')
-	NUM_TESTS=$(echo $TESTS | wc -w)
-	echo "Testing $NUM_TESTS test code(s)"
-	PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
-	TARGETS=$($PHYSISC --list-targets)
+	TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c'|sort -n)
+	
+	echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
+	echo "Targets: $TARGETS"
+	
 	for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
 			SHORTNAME=$(basename $TEST)
@@ -122,9 +242,9 @@ function compile()
 			else
 				echo "[TRANSLATE] FAIL"
 				NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
-			    # Terminates immediately when failed
-				finish
+				fail $SHORTNAME $TARGET translate		
 			fi
+			if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
 			echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
 			if compile $SHORTNAME $TARGET; then
 				echo "[COMPILE] SUCCESS"
@@ -132,8 +252,16 @@ function compile()
 			else
 				echo "[COMPILE] FAIL"
 				NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
-				# Terminates immediately when failed
-				finish
+				fail $SHORTNAME $TARGET compile
+			fi
+			if [ "$STAGE" = "COMPILE" ]; then continue; fi
+			if execute $SHORTNAME $TARGET; then
+				echo "[EXECUTE] SUCCESS"
+				NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
+			else
+				echo "[EXECUTE] FAIL"
+				NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
+				fail $SHORTNAME $TARGET execute
 			fi
 		done
 	done
