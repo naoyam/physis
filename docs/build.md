@@ -16,7 +16,7 @@
         * apt-get install liblua5.1-dev
 * CUDA
     * Both toolkit and SDK (tested with 3.2)
-    * Specify the location of SDK by environment variable NVSDK_ROOT  
+    * Specify the location of SDK by environment variable NVSDKCUDA_ROOT  
     * MacOSX's SDK may not contain 64-bit version of cutil. It can be
       build by entering C/lib/common directory and type make x86_64=1
     
@@ -26,7 +26,7 @@
   directory rose under the unpacked source. Specifing locations of
   other dependencies may be needed.
     * Example on Ubuntu
-        * NVSDKCOMPUTE_ROOT=/home/naoya/projects/cuda/sdk3.2/C
+        * NVSDKCUDA_ROOT=/home/naoya/projects/cuda/sdk3.2/C
 	cmake -DCMAKE_INSTALL_PREFIX=$(pwd)/../install
         -DCMAKE_PREFIX_PATH=$HOME/projects/tools/rose/git ../src
     * On Tsubame
@@ -34,7 +34,7 @@
         * (CMake variable) JAVA_JVM_LIBRARY_DIRECTORIES=/usr/lib64/jvm/java/jre/bin/classic
         * (CMake variable) JAVA_INCLUDE_PATH2=/usr/lib64/jvm/java/include
         * (CMake variable) CMAKE_PREFIX_PATH=$HOME/projects/tools/rose/install
-        * (shell variable) NVSDKCOMPUTE_ROOT=/home/naoya/projects/cuda/sdk3.2
+	        * (shell variable) NVSDKCUDA_ROOT=/home/naoya/projects/cuda/sdk3.2/C
 3. Cmake then will search for the location of Boost, Java, and Rose. If
   Boost and JDK are already installed, they should be detected by
   Cmake. The path to a Rose installation must be supplied
