@@ -110,16 +110,17 @@ echo LD_LIBRARY_PATH is set to $LD_LIBRARY_PATH
 echo JAVA_HOME is set to $JAVA_HOME
 echo set LD_LIBRARY_PATH to $LD_LIBRARY_PATH
 
+echo "Detecting number of cores..."
 case $OSTYPE in
 	linux*)
 		NUM_PROCESSORS=$(grep processor /proc/cpuinfo|wc -l)
 		;;
 	darwin*)
-		NUM_PROCESSORS=$(system_profiler |grep 'Total Number of Cores')		
+		NUM_PROCESSORS=$(system_profiler |grep 'Total Number Of Cores' | awk '{print $5}')
 		;;
 esac
 
-echo $NUM_PROCESSORS cores detected
+echo "$NUM_PROCESSORS cores detected"
 
 function exec_configure()
 {
