@@ -19,6 +19,7 @@
     * Specify the location of SDK by environment variable NVSDKCUDA_ROOT  
     * MacOSX's SDK may not contain 64-bit version of cutil. It can be
       build by entering C/lib/common directory and type make x86_64=1
+* GNU getopt
     
 ## Steps
 1. Change directory to an empty build directory
