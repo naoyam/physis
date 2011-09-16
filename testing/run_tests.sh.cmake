@@ -11,9 +11,6 @@
 # For usage, see the help message by executing this script with option --help.
 #
 
-# TODO:
-# - execution
-
 ###############################################################
 WD=$PWD/test_output
 FLAG_KEEP_OUTPUT=1
@@ -39,6 +36,7 @@ NUM_FAIL_EXECUTE=0
 FAILED_TESTS=""
 
 PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
+MPIRUN="MPIRUN_UNSET"
 
 function fail()
 {
@@ -137,19 +135,20 @@ function execute()
 	src=$1
 	target=$2
 	src_file_base=$(basename $src .c).$target
-	echo "[EXECUTE] Processing $src/$target"
+	exename=$src_file_base.exe	
+	echo "[EXECUTE] Executing $exename"
 	case $target in
 		ref)
-			exename=$src_file_base.ref.exe
+			./$exename
 			;;
 		cuda)
-			exename=$src_file_base.cuda.exe			
+			./$exename
 			;;
 		mpi)
-			exename=$src_file_base.mpi.exe			
+			$MPIRUN ./$exename 
 			;;
 		mpi-cuda)
-			exename=$src_file_base.mpi-cuda.exe
+			$MPIRUN ./$exename 
 			;;
 		*)
 			echo "ERROR! Unsupported target"
@@ -179,7 +178,7 @@ function print_usage()
 	TARGETS=""
 	STAGE="ALL"
 
-	TEMP=$(getopt -o ht:s: --long help,targets:,translate,compile,execute -- "$@")
+	TEMP=$(getopt -o ht:s:m: --long help,targets:,translate,compile,execute,mpirun -- "$@")
 	if [ $? != 0 ]; then
 		echo "ERROR! Invalid options: $@";
 		print_usage
@@ -204,6 +203,10 @@ function print_usage()
 			--execute)
 				STAGE="EXECUTE"
 				shift
+				;;
+			-m|--mpi-run)
+				MPIRUN=$2
+				shift 2
 				;;
 			-h|--help)
 				print_usage
@@ -242,7 +245,8 @@ function print_usage()
 			else
 				echo "[TRANSLATE] FAIL"
 				NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
-				fail $SHORTNAME $TARGET translate		
+				fail $SHORTNAME $TARGET translate
+				continue
 			fi
 			if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
 			echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
@@ -253,6 +257,7 @@ function print_usage()
 				echo "[COMPILE] FAIL"
 				NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
 				fail $SHORTNAME $TARGET compile
+				continue				
 			fi
 			if [ "$STAGE" = "COMPILE" ]; then continue; fi
 			if execute $SHORTNAME $TARGET; then
@@ -262,6 +267,7 @@ function print_usage()
 				echo "[EXECUTE] FAIL"
 				NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
 				fail $SHORTNAME $TARGET execute
+				continue
 			fi
 		done
 	done
