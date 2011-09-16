@@ -2,24 +2,31 @@
 
 ## Prerequisites
 * Cmake
-* Rose
-    * Rose requires Boost, JDK, and several other packages. See docs/rose.md.
-* MPI
-    * OpenMPI
-        * --disable-visibility option needs to be passed to the configure script
-	* Or define OMPI_C_HAVE_VISIBILITY 0 before including mpi.h
-	* See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html  
 * Lua
     * MacOS
         * brew instal lua
     * Ubuntu
         * apt-get install liblua5.1-dev
-* CUDA
+* GNU getopt	
+* ROSE (Optional)
+    * Required when building the translator. Only the runtime will be
+      built if not found.
+    * Rose requires Boost, JDK, and several other packages. See docs/rose.md.
+* MPI (Optional)
+    * Required for MPI-based runtimes. If not found, no MPI-based
+      runtimes will be built.
+    * OpenMPI
+        * --disable-visibility option needs to be passed to the configure script
+	* Or define OMPI_C_HAVE_VISIBILITY 0 before including mpi.h
+	* See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html  
+* CUDA (Optional)
+    * Required for CUDA-based runtimes. If not found, no CUDA-based
+      runtimes will be built.
     * Both toolkit and SDK (tested with 3.2)
     * Specify the location of SDK by environment variable NVSDKCUDA_ROOT  
     * MacOSX's SDK may not contain 64-bit version of cutil. It can be
       build by entering C/lib/common directory and type make x86_64=1
-* GNU getopt
+
     
 ## Steps
 1. Change directory to an empty build directory
