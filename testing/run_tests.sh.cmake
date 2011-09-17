@@ -165,20 +165,27 @@ function print_usage()
 	echo "OPTIONS"
 	echo -e "\t-t, --targets"
 	echo -e "\t\tSet the test targets. Supported targets: $($PHYSISC --list-targets)."
+	echo -e "\t-s, --source"
+	echo -e "\t\tSet the test source files."
 	echo -e "\t--translate"
 	echo -e "\t\tTest only translation and its dependent tasks."
 	echo -e "\t--compile"
 	echo -e "\t\tTest only compilation and its dependent tasks."
 	echo -e "\t--execute"
 	echo -e "\t\tTest only execution and its dependent tasks."
+	echo -e "\t-m, --mpirun"
+	echo -e "\t\tThe mpirun command for testing MPI-based runs. Include necessary options like -np within a quoted string."
 }
 
 {
 
 	TARGETS=""
 	STAGE="ALL"
+	
+	# find tests
+	TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c'|sort -n)
 
-	TEMP=$(getopt -o ht:s:m: --long help,targets:,translate,compile,execute,mpirun -- "$@")
+	TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun -- "$@")
 	if [ $? != 0 ]; then
 		echo "ERROR! Invalid options: $@";
 		print_usage
@@ -190,6 +197,19 @@ function print_usage()
 		case "$1" in
 			-t|--targets)
 				TARGETS=$2
+				shift 2
+				;;
+			-s|--source)
+				SRC=$2
+				TMP=""
+				for i in $TESTS; do
+					for j in $SRC; do
+						if echo $i | grep --silent $j; then
+							TMP+="$i "
+						fi
+					done
+				done
+				TESTS=$TMP
 				shift 2
 				;;
 			--translate)
@@ -228,8 +248,6 @@ function print_usage()
 	# Test all targets by default
 	if [ "x$TARGETS" = "x" ]; then TARGETS=$($PHYSISC --list-targets); fi
 	
-	# find tests
-	TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c'|sort -n)
 	
 	echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
 	echo "Targets: $TARGETS"
