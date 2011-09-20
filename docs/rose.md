@@ -4,11 +4,14 @@
 ### Ubuntu
 * sun-java6 (JDK, not just JRE)
 * libboost-all-dev
+    * Only version 1.36 to 1.45 are supported.
 * doxygen (optional)
 
 ### Mac
 * Java developer package from http://connect.apple.com
-* Brew packages: boost, ghostscript
+* Boost
+    * Only version 1.36 to 1.45 are supported.
+* Ghostscript (optional)
 * GNU libtool
 
 ## Steps

@@ -2,6 +2,8 @@
 
 ## Prerequisites
 * Cmake
+* Boost
+    * Boost is also used in ROSE, which only supports Boost version 1.36 to 1.45.
 * Lua
     * MacOS
         * brew instal lua
