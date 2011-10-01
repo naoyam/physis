@@ -78,7 +78,7 @@ function compile()
 	fi
 	LDFLAGS=-L${CMAKE_BINARY_DIR}/runtime
 	NVCC_CFLAGS="-arch sm_20"
-	CUDA_LDFLAGS="-lcudart -L$(dirname ${CUDA_LIBRARIES})"
+	CUDA_LDFLAGS="-lcudart -L${CUDA_RT_DIR}"
 	case $target in
 		ref)
 			src_file="$src_file_base".c

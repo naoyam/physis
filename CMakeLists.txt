@@ -23,6 +23,14 @@ if (CUDA_FOUND)
   set(CUDA_ENABLED TRUE)
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
+  message(${CUDA_LIBRARIES})
+  foreach(i ${CUDA_LIBRARIES})
+    if (${i} MATCHES libcudart)
+      set(CUDA_LIBRT ${i})
+    endif()
+  endforeach()
+  message(STATUS "CUDART=${CUDA_LIBRT}")
+  get_filename_component(CUDA_RT_DIR ${CUDA_LIBRT} PATH)
   find_path (CUDA_CUT_INCLUDE_DIR cutil.h
     PATHS ${CUDA_SDK_SEARCH_PATH}
     PATH_SUFFIXES "common/inc"
