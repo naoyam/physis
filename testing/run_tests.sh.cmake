@@ -91,8 +91,9 @@ function compile()
 				return 0
 			fi
 			src_file="$src_file_base".cu
-			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
-			nvcc "$src_file_base".o -lphysis_rt_cuda $LDFLAGS -o "$src_file_base".exe
+			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
+			nvcc -m64 "$src_file_base".o -lphysis_rt_cuda $LDFLAGS \
+				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 			;;
 		mpi)
 			if [ "${MPI_ENABLED}" != "TRUE" ]; then
@@ -117,10 +118,10 @@ function compile()
 					MPI_CUDA_CFLAGS+="-Xcompiler $f "
 				fi
 			done
-			nvcc -c $src_file -I${CMAKE_SOURCE_DIR}/include \
+			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include \
 				$NVCC_CFLAGS $MPI_CUDA_CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
-			-o "$src_file_base".exe
+				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 			;;
 		*)
 			echo "ERROR! Unsupported target"
