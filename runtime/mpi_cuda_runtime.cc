@@ -12,6 +12,7 @@
 
 #include <cuda_runtime.h>
 #include <cutil.h>
+#include <cutil_inline_runtime.h>
 
 using std::vector;
 using std::map;
@@ -58,6 +59,9 @@ void InitCUDA(int my_rank, int num_local_processes) {
   CUDA_SAFE_CALL(cudaSetDeviceFlags(cudaDeviceMapHost));
   CUDA_SAFE_CALL(cudaSetDevice(dev_id));
   CUT_CHECK_ERROR("CUDA initialization");
+  if (!cutilCudaCapabilities(2, 0, 0, NULL)) {
+    PSAbort(1);
+  }
   CUDA_SAFE_CALL(cudaStreamCreate(&stream_inner));
   CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_copy));
   for (int i = 0; i < num_stream_boundary_kernel; ++i) {

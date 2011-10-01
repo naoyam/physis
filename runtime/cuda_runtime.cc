@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <cuda_runtime.h>
 #include <cutil.h>
+#include <cutil_inline_runtime.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,9 @@ extern "C" {
     physis::runtime::PSInitCommon(argc, argv);
     CUT_DEVICE_INIT(*argc, *argv);
     CUT_CHECK_ERROR("CUDA initialization");
+    if (!cutilCudaCapabilities(2, 0, *argc, *argv)) {
+      PSAbort(1);
+    }
   }
   void PSFinalize() {
     CUDA_SAFE_CALL(cudaThreadExit());
