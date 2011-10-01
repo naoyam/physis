@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
     if (indata[i] * 2 != outdata[i]) {
       fprintf(stderr, "Error: mismatch at %d, in: %f, out: %f\n",
               i, indata[i]*2, outdata[i]);
+      exit(1);
     }
   }
 
