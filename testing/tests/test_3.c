@@ -34,6 +34,7 @@ int main(int argc, char *argv[]) {
     if (indata[i] != outdata[i]) {
       fprintf(stderr, "Error: mismatch at %d, in: %f, out: %f\n",
               i, indata[i], outdata[i]);
+      exit(1);
     }
   }
 

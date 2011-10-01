@@ -27,6 +27,7 @@ void check(float *input, float *output, int halo_width) {
         if (v != GET(output, i, j, k)) {
           printf("ERROR at (%d, %d, %d): %f != %f\n",
                  i, j, k, v, GET(output, i, j, k));
+          exit(1);
         }
       }
     }
@@ -41,7 +42,8 @@ int main(int argc, char *argv[]) {
 
   PSDomain3D d = PSDomain3DNew(0+halo_width, N-halo_width,
                                0+halo_width, N-halo_width,
-                               0+halo_width, N-halo_width);                          size_t nelms = N*N*N;
+                               0+halo_width, N-halo_width);
+  size_t nelms = N*N*N;
   
   float *indata = (float *)malloc(sizeof(float) * nelms);
   int i;
