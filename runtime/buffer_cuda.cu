@@ -331,7 +331,8 @@ void BufferCUDADev3D::DeleteChunk(void *ptr) {
   }
 }
 
-void BufferCUDADev3D::Allocate(int num_dims, size_t elm_size, const IntArray &size) {
+void BufferCUDADev3D::Allocate(int num_dims, size_t elm_size,
+                               const IntArray &size) {
   Delete();
   if (size.accumulate(num_dims)) {
     num_dims_ = num_dims;
@@ -343,9 +344,9 @@ void BufferCUDADev3D::Allocate(int num_dims, size_t elm_size, const IntArray &si
   size_ = size;
 }
 
-void BufferCUDADev3D::Allocate(const IntArray &size) {
+/*void BufferCUDADev3D::Allocate(const IntArray &size) {
   Allocate(num_dims_, elm_size_, size);
-}
+  }*/
 
 void BufferCUDADev3D::Copyin(const void *buf, const IntArray &offset,
                              const IntArray &size) {

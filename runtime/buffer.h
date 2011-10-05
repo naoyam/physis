@@ -22,8 +22,9 @@ class Buffer {
  public:
   Buffer(int num_dims, size_t elm_size);  
   virtual ~Buffer();
-  virtual void Allocate(int num_dims, size_t elm_size, const IntArray &size);
-  virtual void Allocate(const IntArray &size);  
+  virtual void Allocate(int num_dims, size_t elm_size,
+                        const IntArray &size);
+  void Allocate(const IntArray &size);  
   void *&Get() { return buf_; }
   const void *Get() const { return buf_; }
   virtual const IntArray &size() const { return size_; }
@@ -32,15 +33,15 @@ class Buffer {
   void Copyin(const void *buf, size_t size);
   virtual void Copyout(void *buf, const IntArray &offset,
                        const IntArray &size) = 0;
-  virtual void *Copyout();
+  void *Copyout();
   virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size) = 0;
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &size) {
+  void MPIRecv(int src, MPI_Comm comm, const IntArray &size) {
     MPIRecv(src, comm, IntArray((index_t)0), size);
   }
   virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size) = 0;
-  virtual void MPISend(int dst, MPI_Comm comm, const IntArray &size) {
+  void MPISend(int dst, MPI_Comm comm, const IntArray &size) {
     MPISend(dst, comm, IntArray((index_t)0), size);
   }
   virtual void Delete();

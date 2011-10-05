@@ -46,10 +46,7 @@ class BufferCUDAHost: public Buffer {
   
   virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size);
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &size) {
-    MPIRecv(src, comm, IntArray((index_t)0), size);
-  }
-  
+
   virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size);
 
@@ -106,13 +103,11 @@ class BufferCUDAHostMapped: public Buffer {
   
   virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size);
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &size) {
-    MPIRecv(src, comm, IntArray((index_t)0), size);
-  }
   
   virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size);
-  virtual void Allocate(int num_dims, size_t elm_size, const IntArray &size);
+  virtual void Allocate(int num_dims, size_t elm_size,
+                        const IntArray &size);
  protected:
   virtual void *GetChunk(const IntArray &size);
 
@@ -193,7 +188,7 @@ class BufferCUDADev3D: public Buffer {
   cudaStream_t &strm() { return strm_; }
  protected:
   virtual cudaPitchedPtr GetChunk3D(const IntArray &size);
-  virtual void Allocate(const IntArray &size);
+  //virtual void Allocate(const IntArray &size);
   virtual void Allocate(int num_dims, size_t elm_size, const IntArray &size);  
   BufferCUDAHost *pinned_buf_;
   BufferCUDAHostMapped *mapped_buf_;

@@ -476,7 +476,7 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
                                                      IntArray(),
                                                      IntArray(fw_size));
 #else
-    grid->halo_peer_cuda_[dim][1]->MPIRecv(fw_peer, comm_, IntArray(fw_size));
+    grid->halo_peer_cuda_[dim][1]->Buffer::MPIRecv(fw_peer, comm_, IntArray(fw_size));
 #endif
     prof_upw.cpu_in += st.Stop();
     st.Start(); 
@@ -506,7 +506,7 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
                                                      IntArray(),
                                                      IntArray(bw_size));
 #else
-    grid->halo_peer_cuda_[dim][0]->MPIRecv(bw_peer, comm_,IntArray(bw_size));
+    grid->halo_peer_cuda_[dim][0]->Buffer::MPIRecv(bw_peer, comm_,IntArray(bw_size));
 #endif
     //prof_dwn.cpu_in += st.Stop();
     double t = st.Stop();
@@ -618,7 +618,7 @@ void GridSpaceMPICUDA::ExchangeBoundaries(
                                                      IntArray(),
                                                      IntArray(fw_size));
 #else
-    grid->halo_peer_cuda_[dim][1]->MPIRecv(fw_peer, comm_, IntArray(fw_size));
+    grid->halo_peer_cuda_[dim][1]->Buffer::MPIRecv(fw_peer, comm_, IntArray(fw_size));
 #endif
     prof_upw.cpu_in += st.Stop();
     st.Start(); 
@@ -648,7 +648,7 @@ void GridSpaceMPICUDA::ExchangeBoundaries(
                                                      IntArray(),
                                                      IntArray(bw_size));
 #else
-    grid->halo_peer_cuda_[dim][0]->MPIRecv(bw_peer, comm_,IntArray(bw_size));
+    grid->halo_peer_cuda_[dim][0]->Buffer::MPIRecv(bw_peer, comm_,IntArray(bw_size));
 #endif
     //prof_dwn.cpu_in += st.Stop();
     double t = st.Stop();
