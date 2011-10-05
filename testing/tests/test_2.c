@@ -1,3 +1,7 @@
+/*
+ * TEST: Identity kernel
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 

@@ -1,3 +1,7 @@
+/*
+ * TEST: 7-point stencil
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 

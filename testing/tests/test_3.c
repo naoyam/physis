@@ -1,3 +1,7 @@
+/*
+ * TEST: Identity kernel using source and destination grids
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 

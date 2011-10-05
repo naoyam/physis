@@ -1,5 +1,5 @@
 /*
- * Test: Using two kernels 
+ * TEST: Combining two kernels 
  */ 
 
 #include <stdio.h>

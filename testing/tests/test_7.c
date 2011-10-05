@@ -1,5 +1,5 @@
 /*
- * Test: different grid dimension
+ * TEST: Mixing different grid dimensions
  */
 
 #include <stdio.h>

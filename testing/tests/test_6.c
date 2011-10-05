@@ -1,3 +1,7 @@
+/*
+ * TEST: Run multiple iterations of 7-point stencil 
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 
@@ -64,7 +68,7 @@ int main(int argc, char *argv[]) {
     
   PSGridCopyin(g1, indata);
   
-  int iter = 1 * 2;
+  int iter = 10;
   
   PSStencilRun(PSStencilMap(kernel1, d, g1, g2),
                PSStencilMap(kernel1, d, g2, g1),

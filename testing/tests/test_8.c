@@ -1,5 +1,5 @@
 /*
- * Test: accessing a 2D plane in a 3D grid
+ * TEST: Accessing a 2D plane in a 3D grid
  */
 
 #include <stdio.h>

@@ -1,3 +1,7 @@
+/*
+ * TEST: copyin and copyout
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 
