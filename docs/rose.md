@@ -8,16 +8,23 @@
 * doxygen (optional)
 
 ### Mac
+* Mac OSX 10.6 (10.7 not supported)
 * Java developer package from http://connect.apple.com
 * Boost
     * Only version 1.36 to 1.45 are supported.
 * Ghostscript (optional)
 * GNU libtool
 
-## Steps
+## Automated way
 
-There are helper scipts at misc/rose-build.sh, which mostly automates
-the following steps.
+The helper script located at misc/rose-build.sh can be used to
+download, configure, and compile the ROSE source as suitable for
+Physis. Just run the script, and the ROSE library will be build under
+a directory at the current working directory. 
+
+## Manual way
+
+Clone the Git repository or download a tar package from the ROSE website.
 
 1. (Git only) run build.sh
 2. Linux only
