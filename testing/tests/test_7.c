@@ -1,3 +1,7 @@
+/*
+ * Test: different grid dimension
+ */
+
 #include <stdio.h>
 #include "physis/physis.h"
 
@@ -47,6 +51,7 @@ int main(int argc, char *argv[]) {
         if (indata[IDX3(i, j, k)] != outdata[IDX2(j, k)]) {
           printf("Error: mismatch at %d,%d,%d, in: %f, out: %f\n",
                  i, j, k, indata[IDX3(i, j, k)], outdata[IDX2(j, k)]);
+          exit(1);
         }
       }
     }
@@ -56,7 +61,7 @@ int main(int argc, char *argv[]) {
   PSGridFree(g2);  
   PSFinalize();
 
-  dump(outdata, N*N, stdout);
+  //dump(outdata, N*N, stdout);
   free(indata);
   free(outdata);
   return 0;
