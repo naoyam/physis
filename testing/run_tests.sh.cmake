@@ -256,6 +256,8 @@ function print_usage()
 	for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
 			SHORTNAME=$(basename $TEST)
+			DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
+			echo "Testing with $SHORTNAME ($DESC)"
 			echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
 			if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include $TEST \
 				> $(basename $TEST).$TARGET.log 2>&1; then
