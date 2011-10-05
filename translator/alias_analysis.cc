@@ -89,7 +89,7 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
   }
 
   // node is assumed to be of type SgAssignInitializer
-  SgExpression *rhs;
+  SgExpression *rhs = NULL;
   if (isSgAssignInitializer(initializer)) {
     rhs = isSgAssignInitializer(initializer)->get_operand();
   } else {

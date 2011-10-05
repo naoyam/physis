@@ -215,7 +215,8 @@ SgExpression *buildStencilDimVarExp(StencilMap *stencil,
 }
 
 SgExpression *buildCudaIdxExp(const CudaDimentionIdx idx) {
-  SgVarRefExp *var, *xyz;
+  SgVarRefExp *var = NULL;
+  SgVarRefExp *xyz = NULL;
   switch (idx) {
     case kBlockDimX:
     case kBlockDimY:
