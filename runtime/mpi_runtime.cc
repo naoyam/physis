@@ -15,6 +15,7 @@
 #include "mpi.h"
 
 #include "physis/physis_mpi.h"
+#include "physis/physis_util.h"
 #include "runtime/grid_mpi_debug_util.h"
 #include "runtime/mpi_util.h"
 
@@ -465,7 +466,8 @@ extern "C" {
   void __PSLoadNeighbor(__PSGridMPI *g,
                         const PSVectorInt halo_fw_width,
                         const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse) {
+                        int diagonal, int reuse, int overlap) {
+    if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
     GridMPI *gm = (GridMPI*)g;
     gs->LoadNeighbor(gm, IntArray(halo_fw_width), IntArray(halo_bw_width),
                      (bool)diagonal, reuse);

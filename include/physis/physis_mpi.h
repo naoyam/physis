@@ -88,7 +88,8 @@ extern "C" {
   extern void __PSLoadNeighbor(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
-                               int diagonal, int reuse);
+                               int diagonal, int reuse,
+                               int overlap);
   extern void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
                               int reuse);
   extern void __PSLoadSubgrid2D(__PSGridMPI *g, 
