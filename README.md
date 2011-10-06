@@ -52,18 +52,18 @@ required when using the respective platform:
 * MPI for multi-node parallel execution
   ([OpenMPI v1.4.2](http://www.open-mpi.org/) tested)
 
-### Building Physis
+### Installing Physis
 
-See docs/build.md.
+See docs/install.md.
   
 ### Writing Physis Code
 
-See docs/programming_physis.md. Some example code is available at the
+See docs/programming.md. Some example code is available at the
 examples directory.  
 
 ### Compiling Physis Programs
 
-See docs/compiling_physis.md.
+See docs/compilation.md.
 
 ## FAQ
 
