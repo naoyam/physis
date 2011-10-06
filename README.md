@@ -63,7 +63,11 @@ examples directory.
 
 ### Compiling Physis Programs
 
-To be written.
+See docs/compiling_physis.md.
+
+## FAQ
+
+See docs/faq.md.
 
 ## Publications
 
