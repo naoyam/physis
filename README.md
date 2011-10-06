@@ -54,20 +54,19 @@ required when using the respective platform:
 
 ### Building Physis
 
-See docs/build.md.
+See [Building Physis](docs/build.md).
   
 ### Writing Physis Code
 
-See docs/programming_physis.md. Some example code is available at the
-examples directory.  
+See [Programming Physis](docs/programming_physis.md). Some example code is available at the examples directory.  
 
 ### Compiling Physis Programs
 
-See docs/compiling_physis.md.
+See [Compiling Physis](docs/compiling_physis.md).
 
 ## FAQ
 
-See docs/faq.md.
+See [Physis FAQ](docs/faq.md).
 
 ## Publications
 
