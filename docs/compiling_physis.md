@@ -16,10 +16,10 @@ targets:
 To compile Physis code, use `physisc` command, which is located at
 the <install-prefix>/bin directory, as follows:
 
-    $ physisc --target test.c -I<install-prefix>/include
+    $ physisc --<target> test.c -I<install-prefix>/include
     
 where `target` can be one of the supported platforms. More simply,
-a utility shell scripts are provided for each platform, such as
+a utility shell script is provided for each platform, such as
 `physisc-cuda`. So, the following translates test.c to cuda code:
 
      $ physisc-cuda test.c
