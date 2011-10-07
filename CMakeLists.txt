@@ -87,6 +87,22 @@ IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+# Doxygen documentation
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  add_custom_target(doxygen ${DOXYGEN_EXECUTABLE}
+    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+  # make clean will wipe the doxygen output directory
+  set_property(DIRECTORY APPEND PROPERTY
+    ADDITIONAL_MAKE_CLEAN_FILES doxygen)
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
+    DESTINATION docs/doxygen)
+else ()
+  message(STATUS "Doxygen not found. Some documentation is not generated.")
+endif()
 
 add_subdirectory(common)
 add_subdirectory(include/physis)
