@@ -98,8 +98,8 @@ if (DOXYGEN_FOUND)
   # make clean will wipe the doxygen output directory
   set_property(DIRECTORY APPEND PROPERTY
     ADDITIONAL_MAKE_CLEAN_FILES doxygen)
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
-    DESTINATION docs/doxygen)
+  #install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
+  #DESTINATION docs/doxygen)
 else ()
   message(STATUS "Doxygen not found. Some documentation is not generated.")
 endif()
