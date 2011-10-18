@@ -1,14 +1,11 @@
 # Building Physis
 
 ## Prerequisites
-* Cmake
+* Cmake 
+    * version 2.8 or newer
 * Boost
-    * Boost is also used in ROSE, which only supports Boost version 1.36 to 1.45.
+    * Boost is also used in ROSE, which only supports version 1.36 to 1.45.
 * Lua
-    * MacOS
-        * brew instal lua
-    * Ubuntu
-        * apt-get install liblua5.1-dev
 * GNU getopt	
 * ROSE (Optional)
     * Required when building the translator. Only the runtime will be
