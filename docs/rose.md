@@ -1,23 +1,23 @@
 # ROSE Installation
 
 ## Prerequisites
-### Ubuntu
-* sun-java6 (JDK, not just JRE)
-* libboost-all-dev
-    * Only version 1.36 to 1.45 are supported.
-* doxygen (optional)
-
-### Mac
-* Mac OSX 10.6 (10.7 not supported)
-* Java developer package from http://connect.apple.com
-* Boost
-    * Only version 1.36 to 1.45 are supported.
-* Ghostscript (optional)
+* Java JDK (not just JRE)
+* Boost C++ library
+    * Versions from 1.36 to 1.45
 * GNU libtool
+* Ghostscript (optional)
+* Doxygen (optional)
+
+### Platform specific notes
+* Ubuntu/Debian packages
+    * sun-java6, libboost-all-dev
+* Mac
+    * Only OSX 10.6 is suppoted (10.7 not supported)
+    * Get Java from the Java developer package from http://connect.apple.com
 
 ## Automated way
 
-1. Set the JAVA_HOME environment variable. It should be like /usr/lib/jvm/java (RHEL6/CentOS6/SL6), /usr/lib/jvm/java-6-sun, and /usr/lib/jvm/java-6-sun.
+1. Set the JAVA_HOME environment variable. It should be like /usr/lib/jvm/java (RHEL6/CentOS6/SL6), /usr/lib/jvm/java-6-sun, or /usr/lib/jvm/java-6-sun.
 2. Run misc/rose-build.sh. It will automatically download, configure, and compile the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named rose-VERSION/build and installed to rose-VERSION/install. 
 
 ## Manual way
