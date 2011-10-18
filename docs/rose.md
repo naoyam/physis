@@ -17,10 +17,8 @@
 
 ## Automated way
 
-The helper script located at misc/rose-build.sh can be used to
-download, configure, and compile the ROSE source as suitable for
-Physis. Just run the script, and the ROSE library will be build under
-a directory at the current working directory. 
+1. Set the JAVA_HOME environment variable. It should be like /usr/lib/jvm/java (RHEL6/CentOS6/SL6), /usr/lib/jvm/java-6-sun, and /usr/lib/jvm/java-6-sun.
+2. Run misc/rose-build.sh. It will automatically download, configure, and compile the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named rose-VERSION/build and installed to rose-VERSION/install. 
 
 ## Manual way
 

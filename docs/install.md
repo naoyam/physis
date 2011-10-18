@@ -25,34 +25,25 @@
     * Required for CUDA-based runtimes. If not found, no CUDA-based
       runtimes will be built.
     * Both toolkit and SDK (tested with 3.2)
-    * Specify the location of SDK by environment variable NVSDKCUDA_ROOT  
+    * Specify the location of SDK by environment variable NVSDKCOMPUTE_ROOT  
     * MacOSX's SDK may not contain 64-bit version of cutil. It can be
       build by entering C/lib/common directory and type make x86_64=1
-
     
 ## Steps
 1. Change directory to an empty build directory
-2. Run 'cmake -i <path-to-src>', where <path-to-src> is the path to
-  directory rose under the unpacked source. Specifing locations of
-  other dependencies may be needed.
-    * Example on Ubuntu
-        * NVSDKCUDA_ROOT=/home/naoya/projects/cuda/sdk3.2/C
-	cmake -DCMAKE_INSTALL_PREFIX=$(pwd)/../install
-        -DCMAKE_PREFIX_PATH=$HOME/projects/tools/rose/git ../src
-    * On Tsubame
-        * (CMake variable) CMAKE_PREFIX_PATH=/work0/GSIC/apps/boost/1_45_0/gcc
-        * (CMake variable) JAVA_JVM_LIBRARY_DIRECTORIES=/usr/lib64/jvm/java/jre/bin/classic
-        * (CMake variable) JAVA_INCLUDE_PATH2=/usr/lib64/jvm/java/include
-        * (CMake variable) CMAKE_PREFIX_PATH=$HOME/projects/tools/rose/install
-	        * (shell variable) NVSDKCUDA_ROOT=/home/naoya/projects/cuda/sdk3.2/C
-3. Cmake then will search for the location of Boost, Java, and Rose. If
+2. Set shell environment variable NVSDKCOMPUTE_ROOT as the path to the root SDK directory path.
+3. Run cmkake as follows:
+  'cmake -i PHYSIS_SOURCE_PATH -DCMAKE_INSTALL_PREFIX=PHYSIS_INSTALL_PATH -DCMAKE_PREFIX_PATH=ROSE_INSTALL_PATH'
+  where PHYSIS_SOURCE_PATH is the path to the Physis root directory, PHYSIS_INSTALL_PATH is the path where Physis should be installed, ROSE_INSTALL_PATH is the path where ROSE is installed. 
+ On Tsubame, the following CMake variable might need to be defined.
+    * JAVA_JVM_LIBRARY_DIRECTORIES=/usr/lib64/jvm/java/jre/bin/classic
+    * JAVA_INCLUDE_PATH2=/usr/lib64/jvm/java/include
+4. Cmake then will search for the location of Boost, Java, and Rose. If
   Boost and JDK are already installed, they should be detected by
-  Cmake. The path to a Rose installation must be supplied
-  manually into a prompt issued by Cmake. Other path options such as
-  install path can be left as is at this time.
-4. Run make. This should produce executable 'physis' under the build
+  Cmake.
+5. Run make. This should produce executable 'physis' under the build
    directory. 
-5. Run make install.
+6. Run make install.
 
 ## Hints
 * Once cmake is run and build files are generated, the make command is the
