@@ -24,7 +24,7 @@ function download_latest_tarball()
 	echo "Trying to detect the latest ROSE source package..." 
 	local path=$(wget --quiet -O- "$site/frs/?group_id=24" | egrep -o -m1 '/frs/download.php/[0-9]+/rose-0.9.5a-without-EDG-[0-9]+\.tar\.gz')
 	echo "Downloading $site$path..."
-	wget $site$path
+	#wget $site$path
 	echo "Download finished."
 	tar zxf $(basename $path)
 	local dname=$(basename $path .tar.gz| sed 's/-without-EDG//')
@@ -50,6 +50,14 @@ function detect_boost()
 		done
 	fi
 	echo Using Boost found at $BOOST
+    if [ -e "$BOOST/lib64/libboost_program_options.so" ]; then
+        BOOSTLIB=$BOOST/lib64
+    elif [ -e "$BOOST/lib/libboost_program_options.so" ]; then
+        BOOSTLIB=$BOOST/lib
+    else
+        echo "ERROR! Boost library not found."
+        exit 1
+    fi  
 }
 
 function set_java_home()
@@ -98,10 +106,10 @@ function exec_configure()
 	if [ -z "$ROSE_SRC" ]; then echo "ERROR! ROSE src path not set"; exit 1; fi
 	if [ -z "$INSTALL_PREFIX" ]; then echo "ERROR! install prefix not set"; exit 1; fi	
 	echo Building ROSE at $ROSE_SRC and installing it to $INSTALL_PREFIX
-	echo $ROSE_SRC/configure --prefix=$INSTALL_PREFIX --with-CXX_DEBUG=-g --with-CXX_WARNINGS="-Wall -Wno-deprecated" --with-boost=$BOOST --enable-languages=c,c++,fortran,cuda,opencl --disable-binary-analysis-tests -with-haskell=no 
+	echo $ROSE_SRC/configure --prefix=$INSTALL_PREFIX --with-CXX_DEBUG=-g --with-CXX_WARNINGS="-Wall -Wno-deprecated" --with-boost=$BOOST --with-boost-libdir=$BOOSTLIB --enable-languages=c,c++,fortran,cuda,opencl --disable-binary-analysis-tests -with-haskell=no 
 	echo -n "Type Enter to proceed: "
 	read x
-	$ROSE_SRC/configure --prefix=$INSTALL_PREFIX --with-CXX_DEBUG=-g --with-CXX_WARNINGS="-Wall -Wno-deprecated" --with-boost=$BOOST --enable-languages=c,c++,fortran,cuda,opencl --enable-binary-analysis-tests=no --disable-projects-directory --disable-tutorial-directory -with-haskell=no 
+	$ROSE_SRC/configure --prefix=$INSTALL_PREFIX --with-CXX_DEBUG=-g --with-CXX_WARNINGS="-Wall -Wno-deprecated" --with-boost=$BOOST --with-boost-libdir=$BOOSTLIB --enable-languages=c,c++,fortran,cuda,opencl --enable-binary-analysis-tests=no --disable-projects-directory --disable-tutorial-directory -with-haskell=no 
 	if [ $? == 0 ]; then
 		echo "Rerun again and select make for building ROSE"
 	fi
