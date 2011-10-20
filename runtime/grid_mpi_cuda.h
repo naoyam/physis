@@ -84,6 +84,10 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                               ssize_t halo_size,
                               performance::DataCopyProfile &prof,
                               MPI_Request &req) const;
+  virtual bool RecvBoundaries(GridMPICUDA3D *grid, int dim, unsigned width,
+                              bool forward, bool diagonal,
+                              ssize_t halo_size,
+                              performance::DataCopyProfile &prof) const;
   
   virtual void ExchangeBoundaries(GridMPI *grid,
                                   int dim,
