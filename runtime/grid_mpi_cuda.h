@@ -79,6 +79,12 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                     bool double_buffering,
                                     const IntArray &global_offset,
                                     int attr);
+  virtual bool SendBoundaries(GridMPICUDA3D *grid, int dim, unsigned width,
+                              bool forward, bool diagonal,
+                              ssize_t halo_size,
+                              performance::DataCopyProfile &prof,
+                              MPI_Request &req) const;
+  
   virtual void ExchangeBoundaries(GridMPI *grid,
                                   int dim,
                                   unsigned halo_fw_width,
