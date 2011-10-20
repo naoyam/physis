@@ -136,6 +136,7 @@ void GridMPI::EnsureRemoteGrid(const IntArray &local_offset,
 }
 
 
+// Copy out halo with diagonal points
 // PRECONDITION: halo for the first dim is already exchanged
 void GridMPI::CopyoutHalo2D0(unsigned width, bool fw, char *buf) {
   LOG_DEBUG() << "2d copyout halo\n";
