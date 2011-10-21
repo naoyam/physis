@@ -24,7 +24,7 @@ function download_latest_tarball()
 	echo "Trying to detect the latest ROSE source package..." 
 	local path=$(wget --quiet -O- "$site/frs/?group_id=24" | egrep -o -m1 '/frs/download.php/[0-9]+/rose-0.9.5a-without-EDG-[0-9]+\.tar\.gz')
 	echo "Downloading $site$path..."
-	#wget $site$path
+	wget $site$path
 	echo "Download finished."
 	tar zxf $(basename $path)
 	local dname=$(basename $path .tar.gz| sed 's/-without-EDG//')
