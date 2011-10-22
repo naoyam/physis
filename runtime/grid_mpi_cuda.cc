@@ -444,26 +444,30 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
   DataCopyProfile &prof_upw = profs[dim*2];
   DataCopyProfile &prof_dwn = profs[dim*2+1];  
   Stopwatch st;
-  // Sends out the halo for backward access
 
+  bool req_bw_active = false;
+  bool req_fw_active = false;
+  MPI_Request req_bw;
+  MPI_Request req_fw;
+  
   if (halo_bw_width > 0 &&
       (is_periodic ||
        grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
-    MPI_Request req;
     st.Start();
-    grid->halo_self_mpi_[dim][0]->MPIIsend(fw_peer, comm_, &req,
+    grid->halo_self_mpi_[dim][0]->MPIIsend(fw_peer, comm_, &req_bw,
                                            IntArray(), IntArray(bw_size));
     prof_upw.cpu_out += st.Stop();
+    req_bw_active = true;
   }
   
   // Sends out the halo for forward access
   if (halo_fw_width > 0 &&
       (is_periodic || grid->local_offset_[dim] > 0)) {
-    MPI_Request req;
     st.Start();        
-    grid->halo_self_mpi_[dim][1]->MPIIsend(bw_peer, comm_, &req,
+    grid->halo_self_mpi_[dim][1]->MPIIsend(bw_peer, comm_, &req_fw,
                                            IntArray(), IntArray(fw_size));
     prof_dwn.cpu_out += st.Stop();
+    req_fw_active = true;
   }
 
   // Receiving halo for backward access
@@ -473,6 +477,11 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
   // Receiving halo for forward access
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
                  fw_size, prof_upw);
+
+  // Ensure the exchanges are done. Otherwise, the send buffers can be
+  // overwritten by the next iteration.
+  if (req_fw_active) CHECK_MPI(MPI_Wait(&req_fw, MPI_STATUS_IGNORE));
+  if (req_bw_active) CHECK_MPI(MPI_Wait(&req_bw, MPI_STATUS_IGNORE));
 
   grid->FixupBufferPointers();
   return;
@@ -613,9 +622,10 @@ void GridSpaceMPICUDA::ExchangeBoundaries(
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
                  fw_size, prof_upw);
 
-  // Ensure the exchanges are done
-  if (req_fw_active) MPI_Wait(&req_fw, MPI_STATUS_IGNORE);
-  if (req_bw_active) MPI_Wait(&req_bw, MPI_STATUS_IGNORE);  
+  // Ensure the exchanges are done. Otherwise, the send buffers can be
+  // overwritten by the next iteration.
+  if (req_fw_active) CHECK_MPI(MPI_Wait(&req_fw, MPI_STATUS_IGNORE));
+  if (req_bw_active) CHECK_MPI(MPI_Wait(&req_bw, MPI_STATUS_IGNORE));
 
   grid->FixupBufferPointers();
   return;
