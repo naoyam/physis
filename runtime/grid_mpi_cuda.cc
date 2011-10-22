@@ -199,18 +199,19 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, int fw) {
   IntArray sg_size(local_size_[0], width, halo_bw_width_[2]);
   IntArray halo_size(local_size_[0], local_size_[1],
                      halo_bw_width_[2]);
+  // different  
   CopyoutSubgrid(elm_size_, num_dims_, halo_peer_cuda_[2][0]->Get(),
                  halo_size, buf, sg_offset, sg_size);
-  buf += sg_size.accumulate(3) * elm_size_;
+  buf += sg_size.accumulate(nd) * elm_size_;
 
   // copy halo
   sg_size[2] = local_size_[2];
+  // different
   halo_self_cuda_[1][fw]->Copyout(buf, sg_size.accumulate(nd));
   buf += sg_size.accumulate(nd) * elm_size_;
   
   // copy diag
   sg_size[2] = halo_fw_width_[2];
-  halo_size = local_size_;
   halo_size[2] = halo_fw_width_[2];
   CopyoutSubgrid(elm_size_, num_dims_, halo_peer_cuda_[2][1]->Get(),
                  halo_size, buf, sg_offset, sg_size);

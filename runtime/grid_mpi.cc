@@ -217,27 +217,29 @@ void GridMPI::CopyoutHalo3D0(unsigned width, bool fw, char *buf) {
 }
 
 void GridMPI::CopyoutHalo3D1(unsigned width, bool fw, char *buf) {
+  int nd = 3;
   // copy diag
   IntArray sg_offset;
   if (!fw) sg_offset[1] = local_size_[1] - width;
   IntArray sg_size(local_size_[0], width, halo_bw_width_[2]);
-  IntArray halo_bw_2_size(local_size_[0], local_size_[1],
-                          halo_bw_width_[2]);
+  IntArray halo_size(local_size_[0], local_size_[1],
+                     halo_bw_width_[2]);
+  // different
   CopyoutSubgrid(elm_size_, num_dims_, halo_peer_bw_[2],
-                 halo_bw_2_size, buf, sg_offset, sg_size);
-  buf += sg_size.accumulate(3) * elm_size_;
+                 halo_size, buf, sg_offset, sg_size);
+  buf += sg_size.accumulate(nd) * elm_size_;
 
   // copy halo
   sg_size[2] = local_size_[2];
   CopyoutSubgrid(elm_size_, num_dims_, data_[0], local_size_,
                  buf, sg_offset, sg_size);
-  buf += sg_size.accumulate(3) * elm_size_;
+  buf += sg_size.accumulate(nd) * elm_size_;
 
   // copy diag
   sg_size[2] = halo_fw_width_[2];
-  halo_bw_2_size[2] = halo_fw_width_[2];
+  halo_size[2] = halo_fw_width_[2];
   CopyoutSubgrid(elm_size_, num_dims_, halo_peer_fw_[2],
-                 halo_bw_2_size, buf, sg_offset, sg_size);
+                 halo_size, buf, sg_offset, sg_size);
   return;
 }
 
