@@ -466,71 +466,13 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
     prof_dwn.cpu_out += st.Stop();
   }
 
-  if (halo_fw_width > 0 &&
-      (is_periodic ||
-       grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
-    if (!is_periodic) {
-      PSAssert(grid->local_offset_[dim] +
-               grid->local_size_[dim] + halo_fw_width
-               <= grid->size_[dim]);
-    }
-#if defined(PS_VERBOSE)    
-    LOG_VERBOSE() << "Receiving halo of " << fw_size
-		  << " bytes for fw access from " << fw_peer << "\n";
-#endif
-    grid->halo_peer_cuda_[dim][1]->EnsureCapacity(fw_size);
-    grid->halo_fw_width_[dim] = halo_fw_width;
-    grid->SetHaloSize(dim, true, halo_fw_width, diagonal);
-    st.Start();
-#if 0
-    grid->halo_peer_cuda_[dim][1]->mpi_buf_->MPIRecv(fw_peer, comm_,
-                                                     IntArray(),
-                                                     IntArray(fw_size));
-#else
-    grid->halo_peer_cuda_[dim][1]->Buffer::MPIRecv(fw_peer, comm_, IntArray(fw_size));
-#endif
-    prof_upw.cpu_in += st.Stop();
-    st.Start(); 
-    grid->halo_peer_dev_[dim][1]->Copyin(*grid->halo_peer_cuda_[dim][1],
-                                         IntArray(), IntArray(fw_size));
-    prof_upw.cpu_to_gpu += st.Stop();    
-  } else {
-    grid->halo_fw_width_[dim] = 0;
-    grid->halo_fw_size_[dim].assign(0);
-  }
+  // Receiving halo for backward access
+  RecvBoundaries(grid, dim, halo_fw_width, false, diagonal,
+                 fw_size, prof_dwn);
   
-  if (halo_bw_width > 0 &&
-      (is_periodic || grid->local_offset_[dim] > 0)) {
-    if (!is_periodic) PSAssert(grid->local_offset_[dim] >= halo_bw_width);
-#if defined(PS_VERBOSE)        
-    LOG_DEBUG() << "Receiving halo of " << bw_size
-                << " bytes for bw access from " << bw_peer << "\n";
-#endif    
-    grid->halo_peer_cuda_[dim][0]->EnsureCapacity(bw_size);
-    grid->halo_bw_width_[dim] = halo_bw_width;
-    grid->SetHaloSize(dim, false, halo_bw_width, diagonal);
-    // First, receive the halo data to CUDA pinned memory on host
-    st.Start();
-#if 0    
-    grid->halo_peer_cuda_[dim][0]->mpi_buf_->MPIRecv(bw_peer,
-                                                     comm_,
-                                                     IntArray(),
-                                                     IntArray(bw_size));
-#else
-    grid->halo_peer_cuda_[dim][0]->Buffer::MPIRecv(bw_peer, comm_,IntArray(bw_size));
-#endif
-    //prof_dwn.cpu_in += st.Stop();
-    double t = st.Stop();
-    prof_dwn.cpu_in += t;
-    // Then, transfer the data into CUDA device memory
-    st.Start();    
-    grid->halo_peer_dev_[dim][0]->Copyin(*grid->halo_peer_cuda_[dim][0],
-                                         IntArray(), IntArray(bw_size));
-    prof_dwn.cpu_to_gpu += st.Stop();
-  } else {
-    grid->halo_bw_width_[dim] = 0;
-    grid->halo_bw_size_[dim].assign(0);
-  }
+  // Receiving halo for forward access
+  RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
+                 fw_size, prof_upw);
 
   grid->FixupBufferPointers();
   return;
