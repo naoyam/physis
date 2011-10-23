@@ -17,11 +17,11 @@ namespace translator {
 
 class MPICUDAOptimizer {
  public:
-  MPICUDAOptimizer(MPICUDATranslator &trans);
+  MPICUDAOptimizer(const MPICUDATranslator &trans);
   virtual ~MPICUDAOptimizer() {}
   virtual void GridPreCalcAddr(SgFunctionDeclaration *func);
  protected:
-  MPICUDATranslator &trans_;
+  const MPICUDATranslator &trans_;
 };
 
 } // namespace translator

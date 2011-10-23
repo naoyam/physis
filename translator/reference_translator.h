@@ -56,25 +56,32 @@ class ReferenceTranslator : public Translator {
                                     int numDim,
                                     SgExpressionPtrList &args);
   virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
-  virtual SgFunctionDeclaration *generateMap(StencilMap *s);
-  virtual SgFunctionDeclaration *generateRunKernel(StencilMap *s);
-  virtual SgFunctionDeclaration *generateRunInnerKernel(StencilMap *s) {
+  virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
+  virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
+  virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s) {
     return NULL;
   }
-  virtual std::vector<SgFunctionDeclaration*> generateRunBoundaryKernel(StencilMap *s) {
+  virtual SgFunctionDeclarationPtrVector BuildRunBoundaryKernel(
+      StencilMap *s) {
     std::vector<SgFunctionDeclaration*> v;
     return v;
   }
-  virtual SgBasicBlock *generateRunKernelBody(
+  //! A helper function for BuildRunKernel.
+  /*!
+    \param s The stencil map object.
+    \param stencil_param 
+    \return The body of the run function.
+   */
+  virtual SgBasicBlock *BuildRunKernelBody(
       StencilMap *s, SgInitializedName *stencil_param);
   virtual void appendGridSwap(StencilMap *mc, SgExpression *stencil,
                               SgScopeStatement *scope);
-  virtual SgFunctionCallExp* generateKernelCall(
+  virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *s, SgExpressionPtrList &indexArgs,
       SgScopeStatement *containingScope);
   virtual void defineMapSpecificTypesAndFunctions();
-  virtual SgBasicBlock *generateRunBody(Run *run);
-  virtual SgFunctionDeclaration *generateRun(Run *run);
+  virtual SgBasicBlock *BuildRunBody(Run *run);
+  virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual void translateRun(SgFunctionCallExp *node, Run *run);
 
   virtual void optimizeConstantSizedGrids();
@@ -92,8 +99,11 @@ class ReferenceTranslator : public Translator {
   virtual SgExpression *BuildStencilDomMinRef(SgExpression *stencil) const;
   virtual SgExpression *BuildStencilDomMinRef(SgExpression *stencil,
                                               int dim) const;
+  /*
   virtual SgVarRefExp *BuildDomainMinRef(SgClassDeclaration* dom_decl) const;
-  virtual SgVarRefExp *BuildDomainMaxRef(SgClassDeclaration* dom_decl) const;
+  virtual SgVarRefExp *BuildDomainMaxRef(SgClassDeclaration* dom_decl)
+  const;
+  */
   virtual SgExpression *BuildStencilFieldRef(SgExpression *stencil_ref,
                                              std::string name) const;
   virtual SgExpression *BuildStencilFieldRef(SgExpression *stencil_ref,

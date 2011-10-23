@@ -33,6 +33,7 @@ typedef std::list<int> IntList;
 typedef std::vector<int> IntVec;
 typedef Rose_STL_Container<SgFunctionCallExp*> SgFunctionCallExpPtrList;
 typedef std::set<SgInitializedName*> SgInitializedNamePtrSet;
+typedef std::vector<SgFunctionDeclaration*> SgFunctionDeclarationPtrVector;
 
 using physis::util::IntArray;
 using physis::util::IntVector;

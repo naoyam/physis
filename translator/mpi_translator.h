@@ -28,8 +28,8 @@ class MPITranslator: public ReferenceTranslator {
   virtual void translateInit(SgFunctionCallExp *node);
   virtual void translateRun(SgFunctionCallExp *node,
                             Run *run);
-  virtual SgBasicBlock *generateRunBody(Run *run);
-  virtual SgFunctionDeclaration *generateRun(Run *run);
+  virtual SgBasicBlock *BuildRunBody(Run *run);
+  virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
   virtual bool translateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv);

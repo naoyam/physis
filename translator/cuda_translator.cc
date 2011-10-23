@@ -35,7 +35,6 @@ CUDATranslator::CUDATranslator(const Configuration &config):
     block_dim_y_(BLOCK_DIM_Y_DEFAULT),
     block_dim_z_(BLOCK_DIM_Z_DEFAULT) {
   target_specific_macro_ = "PHYSIS_CUDA";  
-  flag_using_dimy_as_dimz_ = false;
   flag_pre_calc_grid_address_ = false;
   const pu::LuaValue *lv
       = config.Lookup(Configuration::CUDA_PRE_CALC_GRID_ADDRESS);
@@ -148,67 +147,31 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
   si::replaceExpression(func_call_exp, grid_get_exp);
 }
 
-SgVariableDeclaration *CUDATranslator::generateGridDimDeclaration2D(
+SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
     const SgName &name,
-    SgExpression *stencil_var,
+    SgExpression *dom_dim_x,
+    SgExpression *dom_dim_y,    
     SgExpression *block_dim_x,
     SgExpression *block_dim_y,
-    SgScopeStatement *scope) {
-  // Note: BuildBlockDimX/Y/Z are not used because double values are
-  // used here. Casting to double would be ok, but immediate values as
-  // double would look nicer.
+    SgScopeStatement *scope) const {
   SgExpression *dim_x =
-      sb::buildCastExp(BuildFunctionCall(
-          "ceil",
-          sb::buildDivideOp(BuildStencilDomMaxRef(stencil_var, 0),
-                            sb::buildDoubleVal(block_dim_x_))),
-                       sb::buildIntType());
+      sb::buildDivideOp(dom_dim_x,
+                        sb::buildCastExp(block_dim_x,
+                                         sb::buildDoubleType()));
+  dim_x = BuildFunctionCall("ceil", dim_x);
+  dim_x = sb::buildCastExp(dim_x, sb::buildIntType());
   SgExpression *dim_y =
-      sb::buildCastExp(BuildFunctionCall(
-          "ceil",
-          sb::buildDivideOp(BuildStencilDomMaxRef(stencil_var, 1),
-                            sb::buildDoubleVal(block_dim_y_))),
-                       sb::buildIntType());
+      sb::buildDivideOp(dom_dim_y,
+                        sb::buildCastExp(block_dim_y,
+                                         sb::buildDoubleType()));
+  dim_y = BuildFunctionCall("ceil", dim_y);
+  dim_y = sb::buildCastExp(dim_y, sb::buildIntType());
   SgExpression *dim_z = sb::buildIntVal(1);
-  SgVariableDeclaration *block_dim =
+  SgVariableDeclaration *grid_dim =
       sbx::buildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
-  return block_dim;
+  return grid_dim;
 }
 
-// NOTE: non-refactorable size is not handled correctly.
-SgVariableDeclaration *CUDATranslator::generateGridDimDeclaration3D(
-    const SgName &name,
-    SgExpression *stencil_var,
-    SgExpression *block_dim_x,
-    SgExpression *block_dim_y,
-    SgScopeStatement *scope) {
-  SgExpression *dim_x, *dim_y, *dim_z;
-#if NOMURA_ORIGINAL  
-  dim_x =
-      sb::buildDivideOp(
-          sb::buildMultiplyOp(
-              sbx::buildStencilDimVarExp(stencil, stencil_var, 0),
-              sbx::buildStencilDimVarExp(stencil, stencil_var, 1)),
-          sb::buildMultiplyOp(block_dim_x, block_dim_y));
-  dim_y = sb::buildDivideOp(sbx::buildStencilDimVarExp(stencil,
-                                                       stencil_var, 2),
-                            BuildBlockDimZ());
-  dim_z = sb::buildIntVal(1);
-#else
-  dim_x =
-      sb::buildDivideOp(
-          sb::buildMultiplyOp(
-              BuildStencilDomMaxRef(stencil_var, 0),
-              BuildStencilDomMaxRef(stencil_var, 1)),
-          sb::buildMultiplyOp(block_dim_x, block_dim_y));
-  dim_y = sb::buildDivideOp(BuildStencilDomMaxRef(stencil_var, 2),
-                            BuildBlockDimZ());
-  dim_z = sb::buildIntVal(1);
-#endif  
-  SgVariableDeclaration *block_dim =
-      sbx::buildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
-  return block_dim;
-}
 
 SgExpression *CUDATranslator::BuildBlockDimX() {
   return sb::buildIntVal(block_dim_x_);
@@ -222,7 +185,7 @@ SgExpression *CUDATranslator::BuildBlockDimZ() {
   return sb::buildIntVal(block_dim_z_);
 }
 
-SgBasicBlock *CUDATranslator::generateRunBody(Run *run) {
+SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
   SgBasicBlock *block = sb::buildBasicBlock();
   // int i;
   SgVariableDeclaration *loop_index =
@@ -241,7 +204,7 @@ SgBasicBlock *CUDATranslator::generateRunBody(Run *run) {
   SgExpression *loop_incr =
       sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
   // Generate loop body
-  SgBasicBlock *loop_body = GenerateRunLoopBody(run, block);
+  SgBasicBlock *loop_body = BuildRunLoopBody(run, block);
   SgForStatement *loop =
       sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
 
@@ -254,7 +217,38 @@ SgBasicBlock *CUDATranslator::generateRunBody(Run *run) {
   return block;
 }
 
-SgBasicBlock *CUDATranslator::GenerateRunLoopBody(
+SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(int stencil_idx,
+                                                      StencilMap *sm,
+                                                      SgVarRefExp *sv) const {
+  // Build an argument list by expanding members of the parameter struct
+  // e.g., struct {a, b, c}; -> (s.a, s.b, s.c)
+  SgExprListExp *args = sb::buildExprListExp();
+  SgClassDefinition *stencil_def = sm->GetStencilTypeDefinition();
+  PSAssert(stencil_def);
+
+  // Enumerate members of parameter struct
+  const SgDeclarationStatementPtrList &members = stencil_def->get_members();
+  FOREACH(member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
+    SgExpression *arg =
+        sb::buildDotExp(sv, sb::buildVarRefExp(member_decl));
+    const SgInitializedNamePtrList &vars = member_decl->get_variables();
+    // If the type of the member is grid, pass the device pointer.
+    GridType *gt = tx_->findGridType(vars[0]->get_type());
+    if (gt) {
+      arg = sb::buildPointerDerefExp(
+          sb::buildCastExp(
+              sb::buildArrowExp(arg, sb::buildVarRefExp("dev")),
+              sb::buildPointerType(BuildOnDeviceGridType(gt))));
+      // skip the grid index
+      ++member;
+    }
+    args->append_expression(arg);
+  }
+  return args;
+}
+
+SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     Run *run, SgScopeStatement *outer_block) {
   SgVariableDeclaration *block_dim =
       sbx::buildDim3Declaration("block_dim", BuildBlockDimX(),
@@ -263,83 +257,50 @@ SgBasicBlock *CUDATranslator::GenerateRunLoopBody(
   outer_block->append_statement(block_dim);
   
   SgBasicBlock *loop_body = sb::buildBasicBlock();
+
+  // Generates a call to each of the stencil function specified in the
+  // PSStencilRun.
   ENUMERATE(stencil_idx, it, run->stencils().begin(), run->stencils().end()) {
     StencilMap *sm = it->second;    
 
     // Generate cache config code for each kernel
-    SgFunctionSymbol *func_sym =
-        rose_util::getFunctionSymbol(sm->run());
+    SgFunctionSymbol *func_sym = rose_util::getFunctionSymbol(sm->run());
     PSAssert(func_sym);
-#if 1
+    // Set the SM on-chip memory to prefer the L1 cache
     SgFunctionCallExp *cache_config =
         sbx::buildCudaCallFuncSetCacheConfig(func_sym,
                                              sbx::cudaFuncCachePreferL1);
     // Append invocation statement ahead of the loop
     outer_block->append_statement(sb::buildExprStatement(cache_config));
-#endif    
 
-    // Build an argument list by expanding members of the parameter struct
-    // i.e. struct {a, b, c}; -> (s.a, s.b, s.c)
-    SgExprListExp *args = sb::buildExprListExp();
     string stencil_name = "s" + toString(stencil_idx);
-    SgVarRefExp *stencil_var = sb::buildVarRefExp(stencil_name);
-    SgClassDefinition *stencil_def = sm->GetStencilTypeDefinition();
-    PSAssert(stencil_def);
+    SgVarRefExp *sv = sb::buildVarRefExp(stencil_name);
+    SgExprListExp *args = BuildCUDAKernelArgList(stencil_idx, sm, sv);    
 
-    SgVariableDeclaration *grid_dim;
-    if (flag_using_dimy_as_dimz_) {
-      grid_dim =
-          generateGridDimDeclaration3D(stencil_name + "_grid_dim",
-                                       stencil_var,
-                                       BuildBlockDimX(),
-                                       BuildBlockDimY(),
-                                       outer_block);
-    } else {
-      grid_dim =
-          generateGridDimDeclaration2D(stencil_name + "_grid_dim",
-                                       stencil_var,
-                                       BuildBlockDimX(),
-                                       BuildBlockDimY(),
-                                       outer_block);
-    }
+    SgVariableDeclaration *grid_dim =
+        BuildGridDimDeclaration(stencil_name + "_grid_dim",
+                                BuildStencilDomMaxRef(sv, 0),
+                                BuildStencilDomMaxRef(sv, 1),
+                                BuildBlockDimX(),
+                                BuildBlockDimY(),
+                                outer_block);
     outer_block->append_statement(grid_dim);
-
-    // Enumerate members of parameter struct
-    const SgDeclarationStatementPtrList &members = stencil_def->get_members();
-    FOREACH(member, members.begin(), members.end()) {
-      SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
-      SgExpression *arg =
-          sb::buildDotExp(stencil_var, sb::buildVarRefExp(member_decl));
-      const SgInitializedNamePtrList &vars = member_decl->get_variables();
-      GridType *gt = tx_->findGridType(vars[0]->get_type());
-      if (gt) {
-        arg = sb::buildPointerDerefExp(
-            sb::buildCastExp(
-                sb::buildArrowExp(arg, sb::buildVarRefExp("dev")),
-                sb::buildPointerType(BuildOnDeviceGridType(gt))));
-        // skip the grid index
-        ++member;
-      }
-      args->append_expression(arg);
-    }
 
     // Generate Kernel invocation code
     SgCudaKernelExecConfig *cuda_config =
         sbx::buildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
                                        sb::buildVarRefExp(block_dim),
                                        NULL, NULL);
-
     SgCudaKernelCallExp *cuda_call =
         sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(func_sym),
                                     args, cuda_config);
-
     loop_body->append_statement(sb::buildExprStatement(cuda_call));
-    appendGridSwap(sm, stencil_var, loop_body);
+    appendGridSwap(sm, sv, loop_body);
   }
   return loop_body;
 }
 
-SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) {
+SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
   PSAssert(gt);
   string gt_name;
   int nd = gt->getNumDim();
@@ -356,14 +317,13 @@ SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) {
   return t;
 }
 
-SgFunctionDeclaration *CUDATranslator::generateRunKernel(StencilMap *stencil) {
+SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   SgFunctionParameterList *params = sb::buildFunctionParameterList();
   SgClassDefinition *param_struct_def = stencil->GetStencilTypeDefinition();
   PSAssert(param_struct_def);
 
-  SgInitializedName *grid_arg = NULL;
   SgInitializedName *dom_arg = NULL;
-
+  // Build the parameter list for the function
   const SgDeclarationStatementPtrList &members =
       param_struct_def->get_members();
   FOREACH(member, members.begin(), members.end()) {
@@ -373,21 +333,15 @@ SgFunctionDeclaration *CUDATranslator::generateRunKernel(StencilMap *stencil) {
     SgType *type = arg->get_type();
     LOG_DEBUG() << "type: " << type->unparseToString() << "\n";
     if (Domain::isDomainType(type)) {
-      if (!dom_arg) {
-        dom_arg = arg;
-      }
+      if (!dom_arg) { dom_arg = arg; }
     } else if (GridType::isGridType(type)) {
       SgType *gt = BuildOnDeviceGridType(tx_->findGridType(type));
       arg->set_type(gt);
-      if (!grid_arg) {
-        grid_arg = arg;
-      }
       // skip the grid index
       ++member;
     }
     params->append_arg(arg);
   }
-  PSAssert(grid_arg);
   PSAssert(dom_arg);
 
   LOG_INFO() << "Declaring and defining function named "
@@ -398,25 +352,27 @@ SgFunctionDeclaration *CUDATranslator::generateRunKernel(StencilMap *stencil) {
                                            params, global_scope_);
   
   si::attachComment(run_func, "Generated by " + string(__FUNCTION__));
+  // Make this function a CUDA global function
   SgFunctionModifier &modifier = run_func->get_functionModifier();
   modifier.setCudaKernel();
-  SgBasicBlock *func_body = generateRunKernelBody(stencil, grid_arg, dom_arg);
+  // Build and set the function body
+  SgBasicBlock *func_body = BuildRunKernelBody(stencil, dom_arg);
   run_func->get_definition()->set_body(func_body);
 
   return run_func;
 }
 
-SgFunctionCallExp *CUDATranslator::generateKernelCall(
+SgExprListExp *CUDATranslator::BuildKernelCallArgList(
     StencilMap *stencil,
-    SgExpressionPtrList &index_args,
-    SgScopeStatement *scope) {
+    SgExpressionPtrList &index_args) {
   SgClassDefinition *stencil_def = stencil->GetStencilTypeDefinition();
 
-  // append the fields of the stencil type to the argument list
   SgExprListExp *args = sb::buildExprListExp();
   FOREACH(it, index_args.begin(), index_args.end()) {
     args->append_expression(*it);
   }
+  
+  // append the fields of the stencil type to the argument list  
   SgDeclarationStatementPtrList &members = stencil_def->get_members();
   FOREACH(it, ++(members.begin()), members.end()) {
     SgVariableDeclaration *var_decl = isSgVariableDeclaration(*it);
@@ -433,17 +389,23 @@ SgFunctionCallExp *CUDATranslator::generateKernelCall(
     args->append_expression(exp);
   }
 
+  return args;
+}
+
+SgFunctionCallExp *CUDATranslator::BuildKernelCall(
+    StencilMap *stencil,
+    SgExpressionPtrList &index_args) {
+  SgExprListExp *args  = BuildKernelCallArgList(stencil, index_args);
   SgFunctionCallExp *func_call =
       sb::buildFunctionCallExp(
           rose_util::getFunctionSymbol(stencil->getKernel()), args);
   return func_call;
 }
 
-SgBasicBlock* CUDATranslator::generateRunKernelBody(
+SgBasicBlock* CUDATranslator::BuildRunKernelBody(
     StencilMap *stencil,
-    SgInitializedName *grid_arg,
     SgInitializedName *dom_arg) {
-  LOG_DEBUG() << "Generating run kernel body\n";
+  LOG_DEBUG() << __FUNCTION__;
   SgBasicBlock *block = sb::buildBasicBlock();
   si::attachComment(block, "Generated by " + string(__FUNCTION__));
   
@@ -457,118 +419,55 @@ SgBasicBlock* CUDATranslator::generateRunKernelBody(
   if (dim < 3) {
     LOG_ERROR() << "not supported yet.\n";
   } else if (dim == 3) {
-    // Generate a z-loop
-    SgVariableDeclaration *loop_index;
-    SgStatement *loop_init, *loop_test;
-    SgExpression *loop_incr;
-    SgBasicBlock *loop_body;
-    SgVariableDeclaration *x_index, *y_index, *z_index;
-    x_index = sb::buildVariableDeclaration("x", sb::buildIntType(),
-                                           NULL, block);
-    y_index = sb::buildVariableDeclaration("y", sb::buildIntType(),
-                                           NULL, block);
-    z_index = sb::buildVariableDeclaration("z", sb::buildIntType(),
-                                           NULL, block);
+    SgVariableDeclaration *x_index = sb::buildVariableDeclaration
+        ("x", sb::buildIntType(), NULL, block);
+    SgVariableDeclaration *y_index = sb::buildVariableDeclaration
+        ("y", sb::buildIntType(), NULL, block);
+    SgVariableDeclaration *z_index = sb::buildVariableDeclaration
+        ("z", sb::buildIntType(), NULL, block);
     block->append_statement(y_index);
-    // NOTE: z_index is going to be appended again if
-    //flag_using_dimy_as_dimz_ is false, so this is commented out, but
-    // not sure this is acutally correct.
-    //block->append_statement(z_index);
     block->append_statement(x_index);
     index_args.push_back(sb::buildVarRefExp(x_index));
     index_args.push_back(sb::buildVarRefExp(y_index));
 
-    if (flag_using_dimy_as_dimz_) {
-      // blockIdx_y = blockIdx.x / (nx/dim_x);
-      // blockIdx_x = blockIdx.x - blockIdx_y*(nx/dim_x);
-      // x = dim_x * blockIdx_x + threadIdx.x;
-      // y = dim_y * blockIdx_y + threadIdx.y;
-      // z = dim_z * blockIdx.y;
-      SgExpression *nx_div_dim_x =
-          sb::buildDivideOp(
-              sbx::buildGridDimVarExp(sb::buildVarRefExp(grid_arg), 0),
-              BuildBlockDimX());
-      SgExpression *block_idx_y =
-          sb::buildDivideOp(sbx::buildCudaIdxExp(sbx::kBlockIdxX), nx_div_dim_x);
-      SgExpression *block_idx_x =
-          sb::buildSubtractOp(
-              sbx::buildCudaIdxExp(sbx::kBlockIdxX),
-              sb::buildMultiplyOp(block_idx_y, nx_div_dim_x));
-      x_index->reset_initializer(
-          sb::buildAssignInitializer(
-              sb::buildAddOp(sb::buildMultiplyOp(BuildBlockDimX(), block_idx_x),
-                  sbx::buildCudaIdxExp(sbx::kThreadIdxX))));
-      y_index->reset_initializer(
-          sb::buildAssignInitializer(
-              sb::buildAddOp(
-                  sb::buildMultiplyOp(BuildBlockDimY(), block_idx_y),
-                  sbx::buildCudaIdxExp(sbx::kThreadIdxY))));
-      z_index->reset_initializer(
-          sb::buildAssignInitializer(
-              sb::buildMultiplyOp(BuildBlockDimZ(),
-                  sbx::buildCudaIdxExp(sbx::kBlockIdxY))));
-      loop_index = sb::buildVariableDeclaration("_k",
-                                                sb::buildIntType(),
-                                                NULL, block);
-      loop_init = sb::buildAssignStatement(
-          sb::buildVarRefExp(loop_index), sb::buildIntVal(0));
+    // x = blockIdx.x * blockDim.x + threadIdx.x;
+    x_index->reset_initializer(
+        sb::buildAssignInitializer(
+            sb::buildAddOp(sb::buildMultiplyOp(
+                sbx::buildCudaIdxExp(sbx::kBlockIdxX),
+                sbx::buildCudaIdxExp(sbx::kBlockDimX)),
+                           sbx::buildCudaIdxExp(sbx::kThreadIdxX))));
+    // y = blockIdx.y * blockDim.y + threadIdx.y;
+    y_index->reset_initializer(
+        sb::buildAssignInitializer(
+            sb::buildAddOp(sb::buildMultiplyOp(
+                sbx::buildCudaIdxExp(sbx::kBlockIdxY),
+                sbx::buildCudaIdxExp(sbx::kBlockDimY)),
+                           sbx::buildCudaIdxExp(sbx::kThreadIdxY))));
+    SgVariableDeclaration *loop_index = z_index;
+    SgStatement *loop_init = sb::buildAssignStatement(
+        sb::buildVarRefExp(loop_index),
+        sb::buildPntrArrRefExp(min_field, sb::buildIntVal(2)));
+    SgStatement *loop_test = sb::buildExprStatement(
+        sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
+                            sb::buildPntrArrRefExp(max_field,
+                                                   sb::buildIntVal(2))));
+    index_args.push_back(sb::buildVarRefExp(loop_index));
 
-      loop_test = sb::buildExprStatement(
-          sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
-                              BuildBlockDimZ()));
-      index_args.push_back(sb::buildAddOp(sb::buildVarRefExp(z_index),
-                                          sb::buildVarRefExp(loop_index)));
-    } else {
-      // x = blockIdx.x * blockDim.x + threadIdx.x;
-      SgExpression *dom_min_z = sb::buildPntrArrRefExp(min_field,
-                                                       sb::buildIntVal(2));
-      SgExpression *dom_max_z = sb::buildPntrArrRefExp(max_field,
-                                                       sb::buildIntVal(2));
-      x_index->reset_initializer(
-          sb::buildAssignInitializer(
-              sb::buildAddOp(sb::buildMultiplyOp(
-                  sbx::buildCudaIdxExp(sbx::kBlockIdxX),
-                  sbx::buildCudaIdxExp(sbx::kBlockDimX)),
-                             sbx::buildCudaIdxExp(sbx::kThreadIdxX))));
-
-      // y = blockIdx.y * blockDim.y + threadIdx.y;
-      y_index->reset_initializer(
-          sb::buildAssignInitializer(
-              sb::buildAddOp(sb::buildMultiplyOp(
-                  sbx::buildCudaIdxExp(sbx::kBlockIdxY),
-                  sbx::buildCudaIdxExp(sbx::kBlockDimY)),
-                             sbx::buildCudaIdxExp(sbx::kThreadIdxY))));
-      loop_index = z_index;
-      loop_init = sb::buildAssignStatement(
-          sb::buildVarRefExp(loop_index), dom_min_z);
-      loop_test = sb::buildExprStatement(
-          sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
-                              dom_max_z));
-      index_args.push_back(sb::buildVarRefExp(loop_index));
-    }
     SgVariableDeclaration* t[] = {x_index, y_index};
     vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
-    
     block->append_statement(
         BuildDomainInclusionCheck(range_checking_idx, domain));
     
     block->append_statement(loop_index);
 
-    loop_incr =
+    SgExpression *loop_incr =
         sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
-
-    loop_body = sb::buildBasicBlock();
-    SgFunctionCallExp *kernel_call
-        = generateKernelCall(stencil, index_args, loop_body);
-    loop_body->append_statement(sb::buildExprStatement(kernel_call));
-
+    SgFunctionCallExp *kernel_call = BuildKernelCall(stencil, index_args);
+    SgBasicBlock *loop_body =
+        sb::buildBasicBlock(sb::buildExprStatement(kernel_call));
     SgStatement *loop
         = sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
-    if (flag_using_dimy_as_dimz_) {
-      SgPragmaDeclaration *pragma_unroll =
-          sb::buildPragmaDeclaration("unroll", block);
-      block->append_statement(pragma_unroll);
-    }
     block->append_statement(loop);
   }
 

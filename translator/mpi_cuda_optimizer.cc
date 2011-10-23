@@ -18,7 +18,7 @@ namespace si = SageInterface;
 namespace physis {
 namespace translator {
 
-MPICUDAOptimizer::MPICUDAOptimizer(MPICUDATranslator &trans)
+MPICUDAOptimizer::MPICUDAOptimizer(const MPICUDATranslator &trans)
     : trans_(trans) {}
 
 
