@@ -182,10 +182,10 @@ function execute_reference()
     local ref_out=$ref_exe.out    
     # Do nothing if no reference implementation is found.
     if [ ! -x $ref_exe ]; then
-	echo "[EXECUTE] No reference implementation found for $target" >&2
+	echo "[EXECUTE] No reference implementation found." >&2
 	# Check if other implementation variants exist. If true,
 	# warn about the lack of an implementation for this target
-	if ! ls {CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.ref.*.exe > \
+	if ls ${CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.manual.*.exe > \
 	    /dev/null 2>&1 ; then
 	    warn "Missing reference implementation for $target?"
 	fi
@@ -194,7 +194,7 @@ function execute_reference()
     if [ $ref_exe -ot $ref_out ]; then
 	echo "[EXECUTE] Previous output found." >&2
     else 
-	echo "[EXECUTE] Executing reference implementation ($ref_exe)" >&2
+	echo "[EXECUTE] Executing reference implementation ($ref_exe)." >&2
 	$ref_exe > $ref_out
     fi
     return 0
