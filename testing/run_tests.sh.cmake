@@ -170,7 +170,7 @@ function get_reference_exe_name()
 	    target=cuda
 	    ;;
     esac
-    local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.ref.$target.exe
+    local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.manual.$target.exe
     echo $ref_exe
 }
 
@@ -194,8 +194,8 @@ function execute_reference()
     if [ $ref_exe -ot $ref_out ]; then
 	echo "[EXECUTE] Previous output found." >&2
     else 
-	echo "[EXECUTE] Executing reference implementation ($exename)" >&2
-	$exename > $exename.out
+	echo "[EXECUTE] Executing reference implementation ($ref_exe)" >&2
+	$ref_exe > $ref_out
     fi
     return 0
 }
@@ -225,10 +225,12 @@ function execute()
     execute_reference $1 $2
     local ref_output=$(get_reference_exe_name $1 $2).out
     if [ -f "$ref_output" ]; then
-	echo "[EXECUTE] Reference output found. Checking equivalence..."
+	echo "[EXECUTE] Reference output found. Validating output..."
 	if ! diff $ref_output $exename.out > $exename.out.diff ; then
-	    print_error "Result differs from the reference. Diff saved at: $(pwd)/$exename.out.diff"
+	    print_error "Invalid output. Diff saved at: $(pwd)/$exename.out.diff"
 	    return 1
+	else
+	    echo "[EXECUTE] Successfully validated."
 	fi
     fi
 }
@@ -258,9 +260,11 @@ function print_usage()
     TARGETS=""
     STAGE="ALL"
     
-	# find tests
+    # find tests
     TESTS=$(find ${CMAKE_SOURCE_DIR}/testing/tests -name 'test_*.c'|sort -n)
-
+    set +e
+    TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
+    set -e
     TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
@@ -323,7 +327,6 @@ function print_usage()
     
 	# Test all targets by default
     if [ "x$TARGETS" = "x" ]; then TARGETS=$($PHYSISC --list-targets); fi
-    
     
     echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
     echo "Targets: $TARGETS"
