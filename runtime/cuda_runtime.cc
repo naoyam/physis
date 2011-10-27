@@ -8,6 +8,7 @@
 
 
 #include "runtime/runtime_common.h"
+#include "runtime/runtime_common_cuda.h"
 #include "physis/physis_cuda.h"
 
 #include <stdarg.h>
@@ -23,7 +24,7 @@ extern "C" {
     physis::runtime::PSInitCommon(argc, argv);
     CUT_DEVICE_INIT(*argc, *argv);
     CUT_CHECK_ERROR("CUDA initialization");
-    if (!cutilCudaCapabilities(2, 0, *argc, *argv)) {
+    if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
       PSAbort(1);
     }
   }

@@ -8,6 +8,7 @@
 
 #include "runtime/mpi_cuda_runtime.h"
 #include "runtime/runtime_common.h"
+#include "runtime/runtime_common_cuda.h"
 #include "physis/physis_mpi_cuda.h"
 
 #include <cuda_runtime.h>
@@ -59,7 +60,7 @@ void InitCUDA(int my_rank, int num_local_processes) {
   CUDA_SAFE_CALL(cudaSetDeviceFlags(cudaDeviceMapHost));
   CUDA_SAFE_CALL(cudaSetDevice(dev_id));
   CUT_CHECK_ERROR("CUDA initialization");
-  if (!cutilCudaCapabilities(2, 0, 0, NULL)) {
+  if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
     PSAbort(1);
   }
   CUDA_SAFE_CALL(cudaStreamCreate(&stream_inner));
