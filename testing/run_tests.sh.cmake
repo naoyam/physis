@@ -19,7 +19,7 @@ if [ "x$CFLAGS" = "x" ]; then
 fi
 ###############################################################
 set -u
-set -e
+#set -e
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
 LOGFILE=$PWD/run_tests.log.$TIMESTAMP
 WD=$WD/$TIMESTAMP
@@ -164,7 +164,7 @@ function get_reference_exe_name()
     local target=$2
     case $target in
 	mpi)
-	    target==ref
+	    target=ref
 	    ;;
 	mpi-cuda)
 	    target=cuda
@@ -222,6 +222,9 @@ function execute()
 	    exit_error "Unsupported target: $2"
 	    ;;
     esac
+    if [ $? -ne 0 ]; then
+	return 1
+    fi
     execute_reference $1 $2
     local ref_output=$(get_reference_exe_name $1 $2).out
     if [ -f "$ref_output" ]; then
