@@ -1,11 +1,12 @@
 /*
- * TEST: Run multiple iterations of 7-point stencil 
+ * TEST: Run multiple iterations of 7-point stencil
  */
 
 #include <stdio.h>
 #include "physis/physis.h"
 
 #define N 8
+#define ITER 5
 
 void kernel1(const int x, const int y, const int z,
              PSGrid3DFloat g1, PSGrid3DFloat g2) {
@@ -48,6 +49,13 @@ void check(float *input, float *output) {
 
 #define halo_width (1)
 
+void dump(float *input) {
+  int i;
+  for (i = 0; i < N*N*N; ++i) {
+    printf("%f\n", input[i]);
+  }
+}
+
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 3, N, N, N);
   PSGrid3DFloat g1 = PSGrid3DFloatNew(N, N, N);
@@ -67,21 +75,18 @@ int main(int argc, char *argv[]) {
   float *outdata = (float *)malloc(sizeof(float) * nelms);  
     
   PSGridCopyin(g1, indata);
-  
-  int iter = 10;
-  
+  PSGridCopyin(g2, indata);
+
+
   PSStencilRun(PSStencilMap(kernel1, d, g1, g2),
                PSStencilMap(kernel1, d, g2, g1),
-               iter);
+               ITER);
 
-  for (i = 0 ; i < iter; ++i) {
-    kernel_ref(indata, outdata, halo_width);
-    kernel_ref(outdata, indata, halo_width);
-  }
+  //PSStencilRun(PSStencilMap(kernel1, d, g1, g2));  
     
   PSGridCopyout(g1, outdata_ps);
 
-  check(indata, outdata_ps);
+  dump(outdata_ps);
 
   PSGridFree(g1);
   PSGridFree(g2);  
