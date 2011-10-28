@@ -17,6 +17,7 @@ FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
+DIE_IMMEDIATELY=0
 ###############################################################
 set -u
 #set -e
@@ -59,6 +60,9 @@ function fail()
     stage=$3
     config=$4
     FAILED_TESTS+="$test/$trg/$stage/$config "
+    if [ $DIE_IMMEDIATELY -eq 1 ]; then
+	exit_error
+    fi
 }
 
 function finish()
@@ -397,7 +401,7 @@ function print_usage()
     set +e
     TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
     set -e
-    TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -448,6 +452,10 @@ function print_usage()
 		MPI_MACHINEFILE=$2
 		echo $MPI_MACHINEFILE
 		shift 2
+		;;
+	    -q|--quit)
+		DIE_IMMEDIATELY=1
+		shift
 		;;
 	    -h|--help)
 		print_usage
