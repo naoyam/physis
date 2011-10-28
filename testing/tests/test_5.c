@@ -1,5 +1,5 @@
 /*
- * TEST: Combining two kernels 
+ * TEST: Combining two kernels
  * DIM: 3
  */ 
 
