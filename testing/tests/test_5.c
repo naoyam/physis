@@ -1,5 +1,6 @@
 /*
  * TEST: Combining two kernels 
+ * DIM: 3
  */ 
 
 #include <stdio.h>

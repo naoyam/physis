@@ -1,5 +1,6 @@
 /*
  * TEST: Mixing different grid dimensions
+ * DIM: 3
  */
 
 #include <stdio.h>

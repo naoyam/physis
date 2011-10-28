@@ -1,5 +1,6 @@
 /*
  * TEST: Run multiple iterations of 7-point stencil
+ * DIM: 3
  */
 
 #include <stdio.h>

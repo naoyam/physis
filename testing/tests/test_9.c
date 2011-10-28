@@ -1,5 +1,6 @@
 /*
  * TEST: Reflecting access
+ * DIM: 3
  */
 
 #include <stdio.h>

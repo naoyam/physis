@@ -38,7 +38,7 @@ FAILED_TESTS=""
 
 PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
 MPIRUN=mpirun
-MPI_NP="1" # use only 1 process by default; can be controlled by the -np option
+MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
 
 function print_error()
@@ -308,7 +308,9 @@ function execute_reference()
 
 function do_mpirun()
 {
-    local np=$1
+    local proc_dim_list=$1
+    shift
+    local dim=$1
     shift
     local mfile=$1
     shift
@@ -316,8 +318,10 @@ function do_mpirun()
     if [ "x$mfile" = "x" ]; then
 	mfile_option=""
     fi
-    echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $*\"" >&2
-    $MPIRUN -np $np $mfile_option $*
+    local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
+    local np=$(($(echo $proc_dim | sed 's/x/*/g')))
+    echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim\"" >&2
+    $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim
 }
 
 function execute()
@@ -333,10 +337,10 @@ function execute()
 	    ./$exename > $exename.out
 	    ;;
 	mpi)
-	    do_mpirun $3 "$MPI_MACHINEFILE" ./$exename > $exename.out
+	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
 	    ;;
 	mpi-cuda)
-	    do_mpirun $3 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
+	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
@@ -353,6 +357,7 @@ function execute()
 	    print_error "Invalid output. Diff saved at: $(pwd)/$exename.out.diff"
 	    return 1
 	else
+	    rm $exename.out.diff
 	    echo "[EXECUTE] Successfully validated."
 	fi
     fi
@@ -376,8 +381,8 @@ function print_usage()
     echo -e "\t\tTest only execution and its dependent tasks."
     echo -e "\t-m, --mpirun"
     echo -e "\t\tThe mpirun command for testing MPI-based runs."
-    echo -e "\t--np <num-pe>"
-    echo -e "\t\tThe number of MPI processes. Multiple values can be passed with quotations."
+    echo -e "\t--proc-dim <proc-dim-list>"
+    echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
     echo -e "\t--machinefile <file-path>"
     echo -e "\t\tThe MPI machinefile."
 }
@@ -392,7 +397,7 @@ function print_usage()
     set +e
     TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
     set -e
-    TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,np: -- "$@")
+    TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim: -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -435,8 +440,8 @@ function print_usage()
 		MPIRUN=$2
 		shift 2
 		;;
-	    --np)
-		MPI_NP=$2
+	    --proc-dim)
+		MPI_PROC_DIM=$2
 		shift 2
 		;;
 	    --machinefile)
@@ -471,9 +476,11 @@ function print_usage()
 	for TEST in $TESTS; do
 	    SHORTNAME=$(basename $TEST)
 	    DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
+	    DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
 	    for CONFIG in $(generate_translation_configurations $TARGET); do
 		echo "Testing with $SHORTNAME ($DESC)"
 		echo "Configuration ($CONFIG):"
+		echo "Dimension: $DIM"
 		cat $CONFIG
 		echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
 		if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include --config $CONFIG \
@@ -500,10 +507,10 @@ function print_usage()
 		if [ "$STAGE" = "COMPILE" ]; then continue; fi
 		np_target=1
 		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
-		    np_target=$MPI_NP
+		    np_target=$MPI_PROC_DIM
 		fi
 		for np in $np_target; do
-		    if execute $SHORTNAME $TARGET $np; then
+		    if execute $SHORTNAME $TARGET $np $DIM; then
 			echo "[EXECUTE] SUCCESS"
 			NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
 		    else

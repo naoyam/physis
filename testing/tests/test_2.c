@@ -1,5 +1,6 @@
 /*
  * TEST: Identity kernel
+ * DIM: 3
  */
 
 #include <stdio.h>

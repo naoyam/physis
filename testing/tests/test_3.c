@@ -1,5 +1,6 @@
 /*
  * TEST: Identity kernel using source and destination grids
+ * DIM: 3
  */
 
 #include <stdio.h>

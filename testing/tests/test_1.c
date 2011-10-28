@@ -1,5 +1,6 @@
 /*
  * TEST: copyin and copyout
+ * DIM: 3
  */
 
 #include <stdio.h>

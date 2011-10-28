@@ -1,5 +1,6 @@
 /*
  * TEST: Accessing a 2D plane in a 3D grid
+ * DIM: 3
  */
 
 #include <stdio.h>
