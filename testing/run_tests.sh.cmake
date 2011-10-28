@@ -37,7 +37,9 @@ NUM_WARNING=0
 FAILED_TESTS=""
 
 PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
-MPIRUN="MPIRUN_UNSET"
+MPIRUN=mpirun
+MPI_NP="1" # use only 1 process by default; can be controlled by the -np option
+MPI_MACHINEFILE=""
 
 function print_error()
 {
@@ -304,11 +306,25 @@ function execute_reference()
     return 0
 }
 
+function do_mpirun()
+{
+    local np=$1
+    shift
+    local mfile=$1
+    shift
+    local mfile_option="-machinefile $mfile"
+    if [ "x$mfile" = "x" ]; then
+	mfile_option=""
+    fi
+    echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $*\"" >&2
+    $MPIRUN -np $np $mfile_option $*
+}
+
 function execute()
 {
     local target=$2
     local exename=$(basename $1 .c).$target.exe
-    echo "[EXECUTE] Executing $exename"
+    echo  "[EXECUTE] Executing $exename"
     case $target in
 	ref)
 	    ./$exename > $exename.out
@@ -317,10 +333,10 @@ function execute()
 	    ./$exename > $exename.out
 	    ;;
 	mpi)
-	    $MPIRUN ./$exename > $exename.out
+	    do_mpirun $3 "$MPI_MACHINEFILE" ./$exename > $exename.out
 	    ;;
 	mpi-cuda)
-	    $MPIRUN ./$exename > $exename.out
+	    do_mpirun $3 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
@@ -359,7 +375,11 @@ function print_usage()
     echo -e "\t--execute"
     echo -e "\t\tTest only execution and its dependent tasks."
     echo -e "\t-m, --mpirun"
-    echo -e "\t\tThe mpirun command for testing MPI-based runs. Include necessary options like -np within a quoted string."
+    echo -e "\t\tThe mpirun command for testing MPI-based runs."
+    echo -e "\t--np"
+    echo -e "\t\tThe number of MPI processes."
+    echo -e "\t--machinefile"
+    echo -e "\t\tThe MPI machinefile."
 }
 
 {
@@ -372,7 +392,7 @@ function print_usage()
     set +e
     TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
     set -e
-    TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun -- "$@")
+    TEMP=$(getopt -o ht:s:m: --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,np: -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -413,6 +433,15 @@ function print_usage()
 		;;
 	    -m|--mpi-run)
 		MPIRUN=$2
+		shift 2
+		;;
+	    --np)
+		MPI_NP=$2
+		shift 2
+		;;
+	    --machinefile)
+		MPI_MACHINEFILE=$2
+		echo $MPI_MACHINEFILE
 		shift 2
 		;;
 	    -h|--help)
@@ -469,15 +498,21 @@ function print_usage()
 		    continue				
 		fi
 		if [ "$STAGE" = "COMPILE" ]; then continue; fi
-		if execute $SHORTNAME $TARGET; then
-		    echo "[EXECUTE] SUCCESS"
-		    NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
-		else
-		    echo "[EXECUTE] FAIL"
-		    NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
-		    fail $SHORTNAME $TARGET execute $CONFIG
-		    continue
+		np_target=1
+		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
+		    np_target=$MPI_NP
 		fi
+		for np in $np_target; do
+		    if execute $SHORTNAME $TARGET $np; then
+			echo "[EXECUTE] SUCCESS"
+			NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
+		    else
+			echo "[EXECUTE] FAIL"
+			NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
+			fail $SHORTNAME $TARGET execute $CONFIG
+			continue
+		    fi
+		done
 	    done
 	done
     done
