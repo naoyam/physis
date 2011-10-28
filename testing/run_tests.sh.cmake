@@ -55,7 +55,8 @@ function fail()
     test=$1
     trg=$2
     stage=$3
-    FAILED_TESTS+="$test/$trg/$stage "
+    config=$4
+    FAILED_TESTS+="$test/$trg/$stage/$config "
 }
 
 function finish()
@@ -92,6 +93,109 @@ function exit_error()
     fi
     echo "Testing stopped (some tests are not done)."
     finish
+}
+
+function generate_empty_translation_configuration()
+{
+    echo -n "" > config.empty
+    echo config.empty
+}
+
+function generate_translation_configurations_ref()
+{
+    if [ $# -gt 0 ]; then
+	echo $1
+    else
+	generate_empty_translation_configuration
+    fi
+}
+
+function generate_translation_configurations_cuda()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+	configs=$*
+    else
+	configs=config.empty
+	echo -n "" > config.empty
+    fi
+    local pre_calc='true false'
+    local bsize="64,4,1 32,8,1"
+    local new_configs=""
+    local idx=0
+    for i in $pre_calc; do
+	for j in $bsize; do
+	    for k in $configs; do
+		local c=config.cuda.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
+		echo "CUDA_BLOCK_SIZE = {$j}" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    done
+    echo $new_configs
+}
+
+function generate_translation_configurations_mpi()
+{
+    if [ $# -gt 0 ]; then
+	echo $1
+    else
+	generate_empty_translation_configuration
+    fi
+}
+
+function generate_translation_configurations_mpi_cuda()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+	configs=$*
+    else
+	configs=config.empty
+	echo -n "" > config.empty
+    fi
+    configs=$(generate_translation_configurations_cuda "$configs")
+    local overlap='true false'
+    local multistream='true fale'
+    local new_configs=""
+    local idx=0
+    for i in $overlap; do
+	for j in $multistream; do
+	    for k in $configs; do
+		local c=config.mpi-cuda.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "MPI_OVERLAP = $i" >> $c
+		echo "MULTISTREAM_BOUNDARY = $j" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    done
+    echo $new_configs
+}
+
+function generate_translation_configurations()
+{
+    target=$1
+    case $target in
+	ref)
+	    generate_translation_configurations_ref
+	    ;;
+	cuda)
+	    generate_translation_configurations_cuda
+	    ;;
+	mpi)
+	    generate_translation_configurations_mpi
+	    ;;
+	mpi-cuda)
+	    generate_translation_configurations_mpi_cuda
+	    ;;
+	*)
+	    generate_empty_compile_configuration
+	    ;;
+    esac
 }
 
 function compile()
@@ -338,39 +442,43 @@ function print_usage()
 	for TEST in $TESTS; do
 	    SHORTNAME=$(basename $TEST)
 	    DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
-	    echo "Testing with $SHORTNAME ($DESC)"
-	    echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
-	    if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include $TEST \
-		> $(basename $TEST).$TARGET.log 2>&1; then
-		echo "[TRANSLATE] SUCCESS"
-		NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
-	    else
-		echo "[TRANSLATE] FAIL"
-		NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
-		fail $SHORTNAME $TARGET translate
-		continue
-	    fi
-	    if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
-	    echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
-	    if compile $SHORTNAME $TARGET; then
-		echo "[COMPILE] SUCCESS"
-		NUM_SUCCESS_COMPILE=$(($NUM_SUCCESS_COMPILE + 1))
-	    else
-		echo "[COMPILE] FAIL"
-		NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
-		fail $SHORTNAME $TARGET compile
-		continue				
-	    fi
-	    if [ "$STAGE" = "COMPILE" ]; then continue; fi
-	    if execute $SHORTNAME $TARGET; then
-		echo "[EXECUTE] SUCCESS"
-		NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
-	    else
-		echo "[EXECUTE] FAIL"
-		NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
-		fail $SHORTNAME $TARGET execute
-		continue
-	    fi
+	    for CONFIG in $(generate_translation_configurations $TARGET); do
+		echo "Testing with $SHORTNAME ($DESC)"
+		echo "Configuration ($CONFIG):"
+		cat $CONFIG
+		echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
+		if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include --config $CONFIG \
+		    $TEST > $(basename $TEST).$TARGET.log 2>&1; then
+		    echo "[TRANSLATE] SUCCESS"
+		    NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
+		else
+		    echo "[TRANSLATE] FAIL"
+		    NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
+		    fail $SHORTNAME $TARGET translate $CONFIG
+		    continue
+		fi
+		if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
+		echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
+		if compile $SHORTNAME $TARGET; then
+		    echo "[COMPILE] SUCCESS"
+		    NUM_SUCCESS_COMPILE=$(($NUM_SUCCESS_COMPILE + 1))
+		else
+		    echo "[COMPILE] FAIL"
+		    NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
+		    fail $SHORTNAME $TARGET compile $CONFIG
+		    continue				
+		fi
+		if [ "$STAGE" = "COMPILE" ]; then continue; fi
+		if execute $SHORTNAME $TARGET; then
+		    echo "[EXECUTE] SUCCESS"
+		    NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
+		else
+		    echo "[EXECUTE] FAIL"
+		    NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
+		    fail $SHORTNAME $TARGET execute $CONFIG
+		    continue
+		fi
+	    done
 	done
     done
     finish
