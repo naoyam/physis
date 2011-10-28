@@ -542,9 +542,9 @@ bool GridSpaceMPICUDA::RecvBoundaries(GridMPICUDA3D *grid, int dim,
   bool is_last_process =
       grid->local_offset_[dim] + grid->local_size_[dim]
       == grid->size_[dim];
-  bool is_first_process = grid->local_size_[dim] == 0;
+  bool is_first_process = grid->local_offset_[dim] == 0;
   Stopwatch st;
-  
+
   if (width == 0 ||
       (!is_periodic && ((forward && is_last_process) ||
                         (!forward && is_first_process)))) {
