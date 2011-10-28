@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 8
+#define N 32
 
 void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
             PSGrid3DFloat g2) {

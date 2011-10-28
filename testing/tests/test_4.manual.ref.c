@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 8
+#define N 32
 #define REAL float
 
 #define OFFSET(x, y, z) ((x) + (y) * N + (z) * N * N)
