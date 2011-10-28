@@ -81,8 +81,6 @@ int main(int argc, char *argv[]) {
   PSStencilRun(PSStencilMap(kernel1, d, g1, g2),
                PSStencilMap(kernel1, d, g2, g1),
                ITER);
-
-  //PSStencilRun(PSStencilMap(kernel1, d, g1, g2));  
     
   PSGridCopyout(g1, outdata_ps);
 
