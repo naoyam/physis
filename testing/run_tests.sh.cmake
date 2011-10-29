@@ -535,6 +535,7 @@ function print_usage()
 		np_target=1
 		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
 		    np_target=$MPI_PROC_DIM
+		    echo "[EXECUTE] Trying with process configurations: $np_target"
 		fi
 		for np in $np_target; do
 		    if execute $SHORTNAME $TARGET $np $DIM; then
