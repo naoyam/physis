@@ -26,6 +26,7 @@ LOGFILE=$PWD/run_tests.log.$TIMESTAMP
 WD=$WD/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
+ORIGINAL_WD=$(pwd)
 cd $WD
 
 NUM_SUCCESS_TRANS=0
@@ -101,6 +102,16 @@ function exit_error()
     finish
 }
 
+function abs_path()
+{
+    local path=$1
+    if [ $(expr substr $path 1 1) = '/' ]; then
+	echo $path
+    else
+	echo $ORIGINAL_WD/$path
+    fi
+}
+
 function generate_empty_translation_configuration()
 {
     echo -n "" > config.empty
@@ -163,13 +174,18 @@ function generate_translation_configurations_mpi_cuda()
 	echo -n "" > config.empty
     fi
     configs=$(generate_translation_configurations_cuda "$configs")
-    local overlap='true false'
-    local multistream='true fale'
+    local overlap='false true'
+    local multistream='fale true'
     local new_configs=""
     local idx=0
     for i in $overlap; do
 	for j in $multistream; do
 	    for k in $configs; do
+		# skip configurations with not all options enabled
+		if [ \( $i = 'true' -a $j = 'false' \)  \
+			-o \( $i = 'false' -a $j = 'false' \) ]; then
+		    continue;
+		fi
 		local c=config.mpi-cuda.$idx
 		idx=$(($idx + 1))
 		cat $k > $c
@@ -266,6 +282,8 @@ function compile()
 	    exit_error "Unsupported target"
 	    ;;
     esac
+
+    sync
 }
 
 function get_reference_exe_name()
@@ -325,6 +343,8 @@ function do_mpirun()
     local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
     echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim\"" >&2
+    # make sure compiled binaries are synched to other nodes
+    sleep 30
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim
 }
 
@@ -449,8 +469,7 @@ function print_usage()
 		shift 2
 		;;
 	    --machinefile)
-		MPI_MACHINEFILE=$2
-		echo $MPI_MACHINEFILE
+		MPI_MACHINEFILE=$(abs_path $2)
 		shift 2
 		;;
 	    -q|--quit)
@@ -479,7 +498,7 @@ function print_usage()
     
     echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
     echo "Targets: $TARGETS"
-    
+
     for TARGET in $TARGETS; do
 	for TEST in $TESTS; do
 	    SHORTNAME=$(basename $TEST)
