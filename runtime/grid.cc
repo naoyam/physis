@@ -32,6 +32,7 @@ Grid::~Grid() {
 
 
 void Grid::InitBuffer() {
+  LOG_DEBUG() << "Initializing grid buffer\n";
   data_buffer_[0] = new BufferHost(num_dims_, num_elms_);
   data_buffer_[0]->Allocate(size_);
   if (double_buffering_) {

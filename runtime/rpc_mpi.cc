@@ -308,7 +308,7 @@ void Master::StencilRun(int id, int iter, int num_stencils,
   for (int i = 0; i < num_stencils; ++i) {
     PS_MPI_Bcast(stencils[i], stencil_sizes[i], MPI_BYTE, 0, comm_);
   }
-
+  LOG_DEBUG() << "Calling the stencil function\n";
   // call the stencil obj
   __PS_stencils[id](iter, stencils);
   return;
@@ -331,6 +331,7 @@ void Client::StencilRun(int id) {
     PS_MPI_Bcast(sbuf, stencil_sizes[i], MPI_BYTE, 0, comm_);
     stencils[i] = sbuf;
   }
+  LOG_DEBUG() << "Calling the stencil function\n";
   __PS_stencils[id](iter, stencils);
   delete[] stencil_sizes;
   delete[] stencils;
