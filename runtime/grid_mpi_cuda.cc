@@ -30,6 +30,8 @@ GridMPICUDA3D::GridMPICUDA3D(
     int attr):
     GridMPI(elm_size, num_dims, size, double_buffering, global_offset,
             local_offset, local_size, attr) {
+  
+  if (empty_) return;
 
   // These pointers are replaced with buffer substrate in this class
   delete[]  halo_self_fw_;
@@ -75,6 +77,7 @@ GridMPICUDA3D *GridMPICUDA3D::Create(
 
 
 GridMPICUDA3D::~GridMPICUDA3D() {
+  if (empty_) return;
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
       delete halo_self_cuda_[i][j];
@@ -92,6 +95,8 @@ GridMPICUDA3D::~GridMPICUDA3D() {
 }
 
 void GridMPICUDA3D::InitBuffer() {
+  LOG_DEBUG() << "Initializing grid buffer\n";
+  if (empty_) return;
   data_buffer_[0] = new BufferCUDADev3D(num_dims(), elm_size());
   data_buffer_[0]->Allocate(local_size());
   if (double_buffering_) {
@@ -373,6 +378,7 @@ GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
                                            local_size, attr);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
+  LOG_DEBUG() << "grid registered\n";  
   DataCopyProfile *profs = new DataCopyProfile[num_dims*2];
   load_neighbor_prof_.insert(make_pair(g->id(), profs));
   return g;
