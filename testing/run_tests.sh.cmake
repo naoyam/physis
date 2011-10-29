@@ -183,7 +183,7 @@ function generate_translation_configurations_mpi_cuda()
 	    for k in $configs; do
 		# skip configurations with not all options enabled
 		if [ \( $i = 'true' -a $j = 'false' \)  \
-			-o \( $i = 'false' -a $j = 'false' \) ]; then
+			-o \( $i = 'false' -a $j = 'true' \) ]; then
 		    continue;
 		fi
 		local c=config.mpi-cuda.$idx
