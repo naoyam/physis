@@ -501,22 +501,22 @@ bool GridSpaceMPICUDA::SendBoundaries(GridMPICUDA3D *grid, int dim,
   // Do nothing if this process is on the end of the dimension and
   // periodic boundary is not set.
   if (!grid->AttributeSet(PS_GRID_PERIODIC)) {
-    if ((forward &&
+    if ((!forward &&
          grid->local_offset_[dim] + grid->local_size_[dim] == grid->size_[dim]) ||
-        (!forward && grid->local_offset_[dim] == 0)) {
+        (forward && grid->local_offset_[dim] == 0)) {
       return false;
     }
   }
   
   int dir_idx = forward ? 1 : 0;
-  int peer = forward ? fw_neighbors_[dim] : bw_neighbors_[dim];  
-  LOG_VERBOSE() << "Sending halo of " << halo_size << " elements"
-                << " for access to " << peer << "\n";
+  int peer = forward ? bw_neighbors_[dim] : fw_neighbors_[dim];  
+  LOG_DEBUG() << "Sending halo of " << halo_size << " elements"
+              << " for access to " << peer << "\n";
   Stopwatch st;  
   st.Start();
   grid->CopyoutHalo(dim, width, forward, diagonal);
   prof.gpu_to_cpu += st.Stop();
-#if defined(PS_VERBOSE)    
+#if defined(PS_VERBOSE)
   LOG_VERBOSE() << "cuda ->";
   grid->halo_self_cuda_[dim][dir_idx]->print<float>(std::cerr);
   LOG_VERBOSE() << "host ->";
@@ -558,13 +558,29 @@ bool GridSpaceMPICUDA::RecvBoundaries(GridMPICUDA3D *grid, int dim,
     return false;
   }
 
+#if defined(PS_DEBUG)
   if (!is_periodic) {
-    PSAssert(grid->local_offset_[dim] +
-             grid->local_size_[dim] + width
-             <= grid->size_[dim]);
+    if( (forward && grid->local_offset_[dim] +
+        grid->local_size_[dim] + width
+         > grid->size_[dim]) ||
+        (!forward && grid->local_offset_[dim] - width < 0)
+        ) {
+      LOG_ERROR() << "Off limit accesses: "
+                  << "local_offset: " << grid->local_offset_[dim]
+                  << ", local_size: " << grid->local_size_[dim]
+                  << ", width: " << width
+                  << ", grid size: " << grid->size_[dim]
+                  << "\n";
+      LOG_ERROR() << "is_first: " << is_first_process
+                  << ", is_last: " << is_last_process
+                  << ", forward: " << forward
+                  << "\n";
+      PSAbort(1);
+    }
   }
-  LOG_VERBOSE() << "Receiving halo of " << halo_size
-                << " bytes from " << peer << "\n";
+#endif  
+  LOG_DEBUG() << "Receiving halo of " << halo_size
+              << " bytes from " << peer << "\n";
   
   grid->halo_peer_cuda_[dim][dir_idx]->EnsureCapacity(halo_size);
   if (forward) {
