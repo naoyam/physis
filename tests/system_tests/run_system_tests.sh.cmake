@@ -22,7 +22,7 @@ DIE_IMMEDIATELY=0
 set -u
 #set -e
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
-LOGFILE=$PWD/run_tests.log.$TIMESTAMP
+LOGFILE=$PWD/$(basename $0 .sh).log.$TIMESTAMP
 WD=$WD/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
@@ -175,7 +175,7 @@ function generate_translation_configurations_mpi_cuda()
     fi
     configs=$(generate_translation_configurations_cuda "$configs")
     local overlap='false true'
-    local multistream='fale true'
+    local multistream='false true'
     local new_configs=""
     local idx=0
     for i in $overlap; do
@@ -343,8 +343,6 @@ function do_mpirun()
     local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
     echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim\"" >&2
-    # make sure compiled binaries are synched to other nodes
-    sleep 30
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim
 }
 
@@ -536,6 +534,9 @@ function print_usage()
 		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
 		    np_target=$MPI_PROC_DIM
 		    echo "[EXECUTE] Trying with process configurations: $np_target"
+                    # Make sure compiled binaries are synched to other nodes
+		    # This is a temporary workaround for the Raccoon cluster.
+		    sleep 30
 		fi
 		for np in $np_target; do
 		    if execute $SHORTNAME $TARGET $np $DIM; then
