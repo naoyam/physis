@@ -2,7 +2,7 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 
-#define N 8
+#define N 32
 #define ITER 5
 #define REAL float
 

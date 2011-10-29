@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 8
+#define N 32
 #define ITER 5
 
 void kernel1(const int x, const int y, const int z,
