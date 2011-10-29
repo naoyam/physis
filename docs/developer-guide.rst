@@ -15,19 +15,19 @@ Testing
 The testing/tests directory contains several Physis programs that
 are written to verify certain parts of the framework. To run the
 tests, use the test driver at
-<BUILD_DIRECTORY>/testing/run_tests.sh. For example, to run all tests
+<BUILD_DIRECTORY>/run_system_tests.sh. For example, to run all tests
 for all targets, use the driver as::
 
-  ./testing/run_tests
+  ./run_system_tests
 
 To run just a specific test::
 
-  ./testing/run_tests -s <test-name>
+  ./run_system_tests -s <test-name>
 
 where <test-name> is the base name of the test file name (e.g.,
 test_1). To run all tests only against some specific target::
 
-  ./testing/run_tests -t <target>
+  ./run_system_tests -t <target>
 
 The driver also allows for command-line configurations of MPI process
 number and domain decomposition of each test program. For
@@ -35,18 +35,18 @@ example, to use 16 processes with the decomposion of 16, 4x4, 4x2x2,
 for 1-D, 2-D, and 3-D problems, respectively, use the proc-dim option
 like::
 
-  ./testing/run_tests --proc-dim 16,4x4,4x2x2
+  ./run_system_tests --proc-dim 16,4x4,4x2x2
 
 Multiple values are allowed for many options of the test driver. For
 example, these are all valid options::
 
-  ./testing/run_tests --proc-dim '16,4x4,4x2x2 2,1x2,2x1x1'
-  ./testing/run_tests -t 'cuda mpi'
-  ./testing/run_tests -s 'test_1 test_2' -t 'ref mpi'
+  ./run_system_tests --proc-dim '16,4x4,4x2x2 2,1x2,2x1x1'
+  ./run_system_tests -t 'cuda mpi'
+  ./run_system_tests -s 'test_1 test_2' -t 'ref mpi'
 
 For more information on the usage of the driver, see help by::
 
-  ./testing/run_tests -h
+  ./run_system_tests -h
 
 Each combination of the specified cases is translated, compiled, and
 executed by the test driver. This process may be done multiple times
