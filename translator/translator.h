@@ -24,8 +24,7 @@ class Grid;
 
 class Translator: public RoseASTTraversal {
  public:
-  Translator(const Configuration &config):
-      config_(config), grid_type_name_("__PSGrid") {}
+  Translator(const Configuration &config);
   virtual ~Translator() {}
   // This is the public interface to run the the
   // translator. Method run with no parameters is the actual

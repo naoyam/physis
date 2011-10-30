@@ -18,6 +18,23 @@ namespace sb = SageBuilder;
 namespace physis {
 namespace translator {
 
+Translator::Translator(const Configuration &config):
+    config_(config),
+    project_(NULL),
+    src_(NULL),
+    global_scope_(NULL),
+    tx_(NULL),
+    ivec_type_(NULL),
+    grid_decl_(NULL),
+    grid_type_(NULL),
+    grid_ptr_type_(NULL),
+    dom_type_(NULL),
+    dom_ptr_type_(NULL),
+    grid_swap_(NULL),
+    grid_dim_get_func_(NULL),
+    grid_type_name_("__PSGrid") {
+}
+
 void Translator::run(SgProject *project, TranslationContext *context) {
   LOG_DEBUG() << "Translation started\n";
   assert(project);
