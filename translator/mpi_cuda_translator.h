@@ -34,7 +34,9 @@ class MPICUDATranslator: public MPITranslator {
  public:
   MPICUDATranslator(const Configuration &config);
   virtual ~MPICUDATranslator();
-  friend class MPICUDAOptimizer;  
+  friend class MPICUDAOptimizer;
+  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void Finish();
   //! Generates an IF block to exclude indices outside an inner domain.
   /*!
     \param indices the indices to check.

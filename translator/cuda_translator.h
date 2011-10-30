@@ -18,7 +18,6 @@ class CUDATranslator : public ReferenceTranslator {
  public:
   CUDATranslator(const Configuration &config);
   virtual ~CUDATranslator() {}
-  virtual void run();
   
  protected:  
   int block_dim_x_;

@@ -38,7 +38,6 @@ std::string MPICUDATranslator::GetBoundarySuffix() {
   return boundary_suffix_;
 }
 
-
 MPICUDATranslator::MPICUDATranslator(const Configuration &config)
     : MPITranslator(config),
       cuda_trans_(new CUDATranslator(config)),
@@ -68,6 +67,19 @@ MPICUDATranslator::MPICUDATranslator(const Configuration &config)
 
 MPICUDATranslator::~MPICUDATranslator() {
   delete cuda_trans_;
+}
+
+void MPICUDATranslator::SetUp(SgProject *project,
+                              TranslationContext *context) {
+  MPITranslator::SetUp(project, context);
+  LOG_DEBUG() << "Parent setup done\n";
+  cuda_trans_->SetUp(project, context);
+  LOG_DEBUG() << "cuda_trans_ setup done\n";
+}
+
+void MPICUDATranslator::Finish() {
+  cuda_trans_->Finish();
+  MPITranslator::Finish();
 }
 
 // This is the same as CUDATranslator::BuildRunKernelBody, except for

@@ -35,8 +35,7 @@ Translator::Translator(const Configuration &config):
     grid_type_name_("__PSGrid") {
 }
 
-void Translator::run(SgProject *project, TranslationContext *context) {
-  LOG_DEBUG() << "Translation started\n";
+void Translator::SetUp(SgProject *project, TranslationContext *context) {
   assert(project);
   project_ = project;
   src_ = isSgSourceFile((*project_)[0]);
@@ -44,7 +43,7 @@ void Translator::run(SgProject *project, TranslationContext *context) {
   tx_ = context;
 
   global_scope_ = src_->get_globalScope();
-  ROSE_ASSERT(global_scope_ != NULL);
+  PSAssert(global_scope_);
   sb::pushScopeStack(global_scope_);
 
   ivec_type_ = sb::buildArrayType(sb::buildIntType(),
@@ -53,26 +52,33 @@ void Translator::run(SgProject *project, TranslationContext *context) {
 
   dom_type_ = isSgTypedefType(
       si::lookupNamedTypeInParentScopes(PSDOMAIN_TYPE_NAME, global_scope_));
-  assert(dom_type_);
+  PSAssert(dom_type_);
   LOG_DEBUG() << "dom base type: "
               << dom_type_->get_base_type()->class_name()
               << "\n";
   dom_ptr_type_ = sb::buildPointerType(dom_type_);
   
-  assert(grid_swap_ = 
+  PSAssert(grid_swap_ = 
          si::lookupFunctionSymbolInParentScopes("__PSGridSwap",
                                                 global_scope_));
-  assert(grid_dim_get_func_ =
-         si::lookupFunctionSymbolInParentScopes("PSGridDim",
+  PSAssert(grid_dim_get_func_ =
+           si::lookupFunctionSymbolInParentScopes("PSGridDim",
                                                 global_scope_));
+}
 
-  run();
-  
-  // TODO: optimization is disabled
-  //optimize();
-  
-  finish();
-  LOG_DEBUG() << "AST Translation finished\n";
+void Translator::Finish() {
+  project_ = NULL;
+  src_ = NULL;
+  tx_ = NULL;
+  global_scope_ = NULL;
+  ivec_type_ = NULL;
+  grid_decl_ = NULL;
+  grid_type_ = NULL;
+  grid_ptr_type_ = NULL;
+  dom_type_ = NULL;
+  dom_ptr_type_ = NULL;
+  grid_swap_ = NULL;
+  grid_dim_get_func_ = NULL;
 }
 
 void Translator::defineMacro(const string &name,
@@ -94,7 +100,11 @@ void Translator::buildGridDecl() {
   LOG_DEBUG() << "grid type name: " << grid_type_name_ << "\n";
   grid_type_ = isSgTypedefType(
       si::lookupNamedTypeInParentScopes(grid_type_name_, global_scope_));
-  assert(grid_type_);
+  // Grid type is NULL when the translator is used as a helper class
+  // for other translators.
+  if (!grid_type_) {
+    return;
+  }
   LOG_DEBUG() << "grid type found\n";  
   grid_ptr_type_ = sb::buildPointerType(grid_type_);
   SgClassType *anont = isSgClassType(grid_type_->get_base_type());

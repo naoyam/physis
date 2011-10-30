@@ -31,6 +31,8 @@ class ReferenceTranslator : public Translator {
   virtual ~ReferenceTranslator();
   virtual void run();
   virtual void optimize();
+  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void Finish();  
 
   bool flag_constant_grid_size_optimization() const {
     return flag_constant_grid_size_optimization_;

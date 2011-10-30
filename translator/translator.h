@@ -29,7 +29,12 @@ class Translator: public RoseASTTraversal {
   // This is the public interface to run the the
   // translator. Method run with no parameters is the actual
   // implementation.
-  void run(SgProject *project, TranslationContext *context);
+  //void run(SgProject *project, TranslationContext *context);
+  // Concrete classes implement this method
+  virtual void run() = 0;
+  virtual void optimize() {}  
+  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void Finish();
  protected:
   const Configuration &config_;
   SgProject *project_;
@@ -53,10 +58,7 @@ class Translator: public RoseASTTraversal {
 
   virtual void buildGridDecl();
 
-  // Concrete classes implement this method
-  virtual void run() = 0;
-  virtual void optimize() {}
-  virtual void finish() {}
+
   virtual void visit(SgClassDeclaration *node) {}
   virtual void visit(SgFunctionCallExp *node);
   virtual void visit(SgFunctionDeclaration *node);

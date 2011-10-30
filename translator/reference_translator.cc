@@ -33,10 +33,6 @@ ReferenceTranslator::~ReferenceTranslator() {
 void ReferenceTranslator::run() {
   defineMacro(target_specific_macro_);
   
-  SgFunctionParameterTypeList *new_params
-      = sb::buildFunctionParameterTypeList();
-  new_params->append_argument(sb::buildUnsignedIntType());
-
   FOREACH(it, tx_->gridTypeBegin(),
           tx_->gridTypeEnd()) {
 #if 0    
@@ -66,15 +62,23 @@ void ReferenceTranslator::run() {
 #endif    
   }
 
-  ref_rt_builder_ = new ReferenceRuntimeBuilder(global_scope_);
-
   defineMapSpecificTypesAndFunctions();
   
   traverseBottomUp(project_);
+}
 
+void ReferenceTranslator::SetUp(SgProject *project,
+                                TranslationContext *context) {
+  Translator::SetUp(project, context);
+  ref_rt_builder_ = new ReferenceRuntimeBuilder(global_scope_);  
+}
+
+void ReferenceTranslator::Finish() {
   delete ref_rt_builder_;
   ref_rt_builder_ = NULL;
+  Translator::Finish();
 }
+
 
 void ReferenceTranslator::optimize() {
   if (flag_constant_grid_size_optimization_) {

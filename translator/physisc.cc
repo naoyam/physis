@@ -230,8 +230,14 @@ int main(int argc, char *argv[]) {
 
   pt::TranslationContext tx(proj);
 
-  trans->run(proj, &tx);
-
+  trans->SetUp(proj, &tx);
+  LOG_DEBUG() << "Translating the AST\n";  
+  trans->run();
+  // TODO: optimization is disabled
+  //trans->optimize();
+  LOG_DEBUG() << "Translation done\n";
+  trans->Finish();
+  
   pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
 
   int b = backend(proj);
