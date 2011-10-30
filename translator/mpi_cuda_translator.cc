@@ -46,17 +46,9 @@ MPICUDATranslator::MPICUDATranslator(const Configuration &config)
       boundary_suffix_("_boundary") {  
   grid_create_name_ = "__PSGridNewMPI";
   target_specific_macro_ = "PHYSIS_MPI_CUDA";
-  flag_pre_calc_grid_address_ = false;
   flag_multistream_boundary_ = false;
-  const pu::LuaValue *lv
-      = config.Lookup(Configuration::CUDA_PRE_CALC_GRID_ADDRESS);
-  if (lv) {
-    PSAssert(lv->get(flag_pre_calc_grid_address_));
-  }
-  if (flag_pre_calc_grid_address_) {
-    LOG_INFO() << "Optimization of address calculation enabled.\n";
-  }
-  lv = config.Lookup(Configuration::MULTISTREAM_BOUNDARY);
+  const pu::LuaValue *lv =
+      config.Lookup(Configuration::MULTISTREAM_BOUNDARY);
   if (lv) {
     PSAssert(lv->get(flag_multistream_boundary_));
   }
@@ -673,7 +665,7 @@ MPICUDATranslator::BuildInteriorKernel(SgFunctionDeclaration *original)
       continue;
     }
   }
-  if (flag_pre_calc_grid_address_) {
+  if (cuda_trans_->flag_pre_calc_grid_address()) {
     MPICUDAOptimizer opt(*this);
     opt.GridPreCalcAddr(inner_version);
   }

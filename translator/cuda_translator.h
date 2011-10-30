@@ -166,6 +166,9 @@ class CUDATranslator : public ReferenceTranslator {
     \return A type object corresponding to the given grid type.
    */
   virtual SgType *BuildOnDeviceGridType(GridType *gt) const;
+  bool flag_pre_calc_grid_address() const {
+    return flag_pre_calc_grid_address_;
+  }
 };
 
 } // namespace translator

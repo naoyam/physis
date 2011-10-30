@@ -23,8 +23,6 @@ class MPICUDATranslator: public MPITranslator {
  protected:
   //! Used to generate CUDA-related code.
   CUDATranslator *cuda_trans_;
-  //! Same as CUDATranslator
-  bool flag_pre_calc_grid_address_;
   //! Optimization flag to enable the multi-stream boundary processing.
   bool flag_multistream_boundary_;
   string boundary_kernel_width_name_;
