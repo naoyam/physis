@@ -56,11 +56,13 @@ function warn()
 
 function fail()
 {
-    test=$1
-    trg=$2
-    stage=$3
-    config=$4
-    FAILED_TESTS+="$test/$trg/$stage/$config "
+    local msg=$1
+    shift
+    while [ $# -gt 0 ]; do
+	msg+="/$1"
+	shift
+    done
+    FAILED_TESTS+="$msg "
     if [ $DIE_IMMEDIATELY -eq 1 ]; then
 	exit_error
     fi
@@ -409,13 +411,27 @@ function print_usage()
     echo -e "\t\tThe MPI machinefile."
 }
 
+function get_test_cases()
 {
+    local test_names=""
+    if [ $# -eq 0 ]; then
+	test_names="test_1 test_2 test_3 test_4 test_5 test_6 test_7"
+    else
+	test_names="$*"
+    fi
+    local tests2=""
+    for t in $test_names; do
+	tests2+="${CMAKE_CURRENT_SOURCE_DIR}/test_cases/$t.c "
+    done
+    echo $tests2
+}
 
+{
     TARGETS=""
     STAGE="ALL"
+
+    TESTS=$(get_test_cases)
     
-    # find tests
-    TESTS=$(find ${CMAKE_CURRENT_SOURCE_DIR}/test_cases -name 'test_*.c'|sort -n)
     set +e
     TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
     set -e
@@ -434,16 +450,7 @@ function print_usage()
 		shift 2
 		;;
 	    -s|--source)
-		SRC=$2
-		TMP=""
-		for i in $TESTS; do
-		    for j in $SRC; do
-			if echo $i | grep --silent $j; then
-			    TMP+="$i "
-			fi
-		    done
-		done
-		TESTS=$TMP
+		TESTS=$(get_test_cases $2)
 		shift 2
 		;;
 	    --translate)
@@ -545,7 +552,7 @@ function print_usage()
 		    else
 			echo "[EXECUTE] FAIL"
 			NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
-			fail $SHORTNAME $TARGET execute $CONFIG
+			fail $SHORTNAME $TARGET execute $CONFIG $np
 			continue
 		    fi
 		done
