@@ -29,8 +29,8 @@ class ReferenceTranslator : public Translator {
  public:
   ReferenceTranslator(const Configuration &config);
   virtual ~ReferenceTranslator();
-  virtual void run();
-  virtual void optimize();
+  virtual void Translate();
+  virtual void Optimize();
   virtual void SetUp(SgProject *project, TranslationContext *context);
   virtual void Finish();  
 

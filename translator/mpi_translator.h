@@ -21,7 +21,7 @@ class MPITranslator: public ReferenceTranslator {
  public:
   MPITranslator(const Configuration &config);
   virtual ~MPITranslator() {}
-  virtual void run();
+  virtual void Translate();
  protected:
   MPIRuntimeBuilder *mpi_rt_builder_;
   bool flag_mpi_overlap_;

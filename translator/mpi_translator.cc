@@ -95,8 +95,8 @@ void MPITranslator::CheckSizes() {
   //LOG_DEBUG() << "Global size: " << global_size_ << "\n";
 }
 
-void MPITranslator::run() {
-  LOG_DEBUG() << "MPI run\n";
+void MPITranslator::Translate() {
+  LOG_DEBUG() << "Translating to MPI\n";
 
   assert(stencil_run_func_ =
          si::lookupFunctionSymbolInParentScopes("__PSStencilRun",
@@ -123,7 +123,7 @@ void MPITranslator::run() {
         prototype);
   }
   
-  ReferenceTranslator::run();
+  ReferenceTranslator::Translate();
   delete mpi_rt_builder_;
   mpi_rt_builder_ = NULL;
 }

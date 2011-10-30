@@ -30,7 +30,7 @@ ReferenceTranslator::ReferenceTranslator(const Configuration &config):
 ReferenceTranslator::~ReferenceTranslator() {
 }
 
-void ReferenceTranslator::run() {
+void ReferenceTranslator::Translate() {
   defineMacro(target_specific_macro_);
   
   FOREACH(it, tx_->gridTypeBegin(),
@@ -79,8 +79,7 @@ void ReferenceTranslator::Finish() {
   Translator::Finish();
 }
 
-
-void ReferenceTranslator::optimize() {
+void ReferenceTranslator::Optimize() {
   if (flag_constant_grid_size_optimization_) {
     optimizeConstantSizedGrids();
   }

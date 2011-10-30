@@ -232,9 +232,9 @@ int main(int argc, char *argv[]) {
 
   trans->SetUp(proj, &tx);
   LOG_DEBUG() << "Translating the AST\n";  
-  trans->run();
+  trans->Translate();
   // TODO: optimization is disabled
-  //trans->optimize();
+  //trans->Optimize();
   LOG_DEBUG() << "Translation done\n";
   trans->Finish();
   

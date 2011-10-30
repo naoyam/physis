@@ -26,15 +26,20 @@ class Translator: public RoseASTTraversal {
  public:
   Translator(const Configuration &config);
   virtual ~Translator() {}
-  // This is the public interface to run the the
-  // translator. Method run with no parameters is the actual
-  // implementation.
-  //void run(SgProject *project, TranslationContext *context);
-  // Concrete classes implement this method
-  virtual void run() = 0;
-  virtual void optimize() {}  
-  virtual void SetUp(SgProject *project, TranslationContext *context);
-  virtual void Finish();
+  virtual void SetUp(SgProject *project, TranslationContext *context);  
+  //! Translate the AST given by the SetUp function.
+  /*!
+    Call SetUp before calling this. Translator instances can be reused
+    by calling Finish and SetUp.
+   */
+  virtual void Translate() = 0;
+  //! Clear fields set for the AST set by SetUp.
+  /*!
+    Call this before translating different ASTs.
+   */
+  virtual void Finish();  
+  virtual void Optimize() {}  
+
  protected:
   const Configuration &config_;
   SgProject *project_;
@@ -57,7 +62,6 @@ class Translator: public RoseASTTraversal {
   string target_specific_macro_;
 
   virtual void buildGridDecl();
-
 
   virtual void visit(SgClassDeclaration *node) {}
   virtual void visit(SgFunctionCallExp *node);

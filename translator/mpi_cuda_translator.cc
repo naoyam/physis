@@ -612,7 +612,6 @@ SgBasicBlock *MPICUDATranslator::BuildRunBody(Run *run) {
   block->insert_statement(
       loop, sb::buildExprStatement(BuildCudaThreadSynchronize()), false);
   
-
   return block;
 }
 
