@@ -830,7 +830,8 @@ SgFunctionDeclaration *MPICUDATranslator::BuildRunKernel(
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgInitializedName *arg = new SgInitializedName(*vars[0]);
+    SgInitializedName *arg = sb::buildInitializedName(
+        vars[0]->get_name(), vars[0]->get_type());
     SgType *type = arg->get_type();
     LOG_DEBUG() << "type: " << type->unparseToString() << "\n";
     if (Domain::isDomainType(type)) {
@@ -882,7 +883,8 @@ SgFunctionDeclaration *MPICUDATranslator::BuildRunInteriorKernel(
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgInitializedName *arg = new SgInitializedName(*vars[0]);
+    SgInitializedName *arg = sb::buildInitializedName(
+        vars[0]->get_name(), vars[0]->get_type());
     SgType *type = arg->get_type();
     LOG_DEBUG() << "type: " << type->unparseToString() << "\n";
     if (Domain::isDomainType(type)) {
@@ -927,7 +929,8 @@ void MPICUDATranslator::BuildFunctionParamList(
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgInitializedName *arg = new SgInitializedName(*vars[0]);
+    SgInitializedName *arg = sb::buildInitializedName(
+        vars[0]->get_name(), vars[0]->get_type());
     SgType *type = arg->get_type();
     if (Domain::isDomainType(type)) {
       if (!dom_arg) {
@@ -1014,7 +1017,8 @@ MPICUDATranslator::BuildRunBoundaryKernel(StencilMap *stencil) {
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgInitializedName *arg = new SgInitializedName(*vars[0]);
+    SgInitializedName *arg = sb::buildInitializedName(
+        vars[0]->get_name(), vars[0]->get_type());
     SgType *type = arg->get_type();
     LOG_DEBUG() << "type: " << type->unparseToString() << "\n";
     if (Domain::isDomainType(type)) {
