@@ -43,6 +43,8 @@ MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
 
+EXECUTE_WITH_VALGRIND=0
+
 function print_error()
 {
     echo "ERROR!: $1" >&2
@@ -387,10 +389,25 @@ function execute()
     fi
 }
 
+function use_valgrind()
+{
+    case $1 in
+	translate)
+	    PHYSISC="valgrind --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/misc/valgrind-suppressions.supp $PHYSISC"
+	    ;;
+	execute)
+	    EXECUTE_WITH_VALGRIND=1
+	    ;;
+	*)
+	    exit_error "Unknown step $1"
+	    ;;
+    esac
+}
+
 function print_usage()
 {
     echo "USAGE"
-    echo -e "\trun_tests.sh [options]"
+    echo -e "\trun_system_tests.sh [options]"
     echo ""
     echo "OPTIONS"
     echo -e "\t-t, --targets <targets>"
@@ -409,6 +426,8 @@ function print_usage()
     echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
     echo -e "\t--machinefile <file-path>"
     echo -e "\t\tThe MPI machinefile."
+    echo -e "\t--with-valgrind <translate|execute>"
+    echo -e "\t\tExecute the given step with Valgrind. Excution with Valgrind\n\t\tis not yet supported."
 }
 
 function get_test_cases()
@@ -435,7 +454,7 @@ function get_test_cases()
     set +e
     TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
     set -e
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit,with-valgrind: -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -481,6 +500,10 @@ function get_test_cases()
 		DIE_IMMEDIATELY=1
 		shift
 		;;
+	    --with-valgrind)
+		use_valgrind $2
+		shift 2
+		;;
 	    -h|--help)
 		print_usage
 		exit 0
@@ -515,8 +538,11 @@ function get_test_cases()
 		echo "Dimension: $DIM"
 		cat $CONFIG
 		echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
-		if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include --config $CONFIG \
-		    $TEST > $(basename $TEST).$TARGET.log 2>&1; then
+		echo $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include \
+		    --config $CONFIG $TEST
+		if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include \
+		    --config $CONFIG $TEST > $(basename $TEST).$TARGET.log \
+		    2>&1; then
 		    echo "[TRANSLATE] SUCCESS"
 		    NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
 		else

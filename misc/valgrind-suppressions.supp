@@ -1,0 +1,10 @@
+{
+   <lua_is_number_addr8>
+   Memcheck:Addr8
+   ...
+   fun:lua_isnumber
+   ...
+   fun:_ZN6physis4util13Configuration8LoadFileERKSs
+   fun:main
+}   
+
