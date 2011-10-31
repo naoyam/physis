@@ -8,3 +8,19 @@
    fun:main
 }   
 
+{
+   <lua_free>
+   Memcheck:Free
+   ...
+   fun:_ZN6physis4util13Configuration8LoadFileERKSs
+   fun:main
+}   
+
+{
+   <exit_free>
+   Memcheck:Free
+   ...
+   fun:exit
+   ...
+}   
+
