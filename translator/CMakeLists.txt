@@ -11,8 +11,8 @@ endif()
 include_directories(${ROSE_INCLUDE_DIR})
 
 # Boost
-set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.40 REQUIRED program_options)
+#set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost REQUIRED program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 

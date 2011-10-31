@@ -1,6 +1,6 @@
 # Boost
 #set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.40 REQUIRED program_options)
+find_package(Boost REQUIRED program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(RUNTIME_COMMON_SRC runtime_common.cc buffer.cc timing.cc)
