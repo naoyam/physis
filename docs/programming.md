@@ -274,3 +274,42 @@ to study such optimizations as fusing and reordering of stencil
 functions. Explicit grouping of stencil functions would allow for
 such aggressive optimizations at translation time. 
 
+Reduction
+---------
+
+** THE FOLLOWING IS NOT YET IMPLEMENTED.** It describes the current plan
+for data reductions in Physis.	   
+
+Physis provides two methods for reductions. First, grid data can be
+reduced to a scalar value with intrinsic `PSReduce`: 
+
+     T PSReduce(PSGrid g, PSReduceOp op)
+
+Parameter `op` defines a binary associative operation. The predefined 
+operations are:
+
+* PS_MAX
+* PS_MIN
+* PS_SUM
+* PS_PROD
+
+The naming and semantics are adopted from the MPI reduction
+operations. The type of the return value is the same as the element
+type of the grid parameter. 
+
+The `PSReduce` intrinsic also allows for more flexible, in-place data
+reduction with a user-defined stencil-like function:
+
+     T PSReduce(PSReduceOp op, PSReduceKernel func, PSDomain dom, ...)
+
+The `PSReduceOp` parameter defines a reduction operation, which must
+be one of the predefined ones. The rest of parameters define mapping
+of function `func` over the `dom` domain with optional parameters
+following the domain parameter. The function parameter must be a
+function name unambiguously referencing a *reduction kernel*, which is
+a standard C function with the similar restrictions as the stencil
+kernel. As the stencil kernel, it is executed over the given domain
+with the optional parameters, but, unlike the stencil kernel, it must
+return a scalar value of type `T`, which is then reduced by the given
+reduction operation `op`. The return type of this form of `PSReduce`
+is then defined by the return type of the reduction kernel. 
