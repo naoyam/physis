@@ -81,11 +81,12 @@ extern "C" {
   //#define grid_map2(k,...) _grid_map((void*)k,__VA_ARGS__)
   //#define grid_copyin(g, v) g.copyin(v)
 
-  //#define grid_reduce(d, g, k) g->reduce(&d, k)
   extern index_t PSGridDim(void *g, int d);
   typedef int PSStencil;
   extern PSStencil PSStencilMap(void *, ...);
   extern void PSStencilRun(PSStencil, ...);
+
+  extern void PSReduce(void *v, ...);
 
 #ifdef __cplusplus
 }

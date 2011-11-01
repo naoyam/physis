@@ -19,6 +19,7 @@
 #include "translator/domain.h"
 #include "translator/map.h"
 #include "translator/run.h"
+#include "translator/reduce.h"
 // Why this is included? 
 //#include "translator/CallGraph.h"
 #include "translator/kernel.h"
@@ -96,6 +97,9 @@ class TranslationContext {
   void analyzeRun(DefUseAnalysis &dua);
   // Depends on analyzeGridVars, analyzeKernelFunctions
   void markReadWriteGrids();
+
+  //! Find and collect information on reductions
+  void AnalyzeReduce();
 
  public:
 
@@ -195,6 +199,15 @@ class TranslationContext {
 
   bool isNewCall(SgFunctionCallExp *ce);
   bool isNewFunc(const string &funcName);
+
+
+  //! Returns a Reduce attribute object for a reduce call.
+  /*!
+    \param call A function call.
+    \return The Reduce object for the call when it is a call to Reduce
+    intrinsic. NULL otherwise.
+   */
+  Reduce *GetReduce(SgFunctionCallExp *call) const;
 
   // ool isGridTypeSpecificCall(SgFunctionCallExp *ce);
   // gInitializedName* getGridVarUsedInFuncCall(SgFunctionCallExp *call);

@@ -194,6 +194,16 @@ void Translator::visit(SgFunctionCallExp *node) {
     return;
   }
 
+  Reduce *rd = tx_->GetReduce(node);
+  if (rd) {
+    LOG_DEBUG() << "Translating Reduce\n";
+    LOG_DEBUG() << node->unparseToString() << "\n";
+    if (rd->IsGrid()) TranslateReduceGrid(rd);
+    else TranslateReduceKernel(rd);
+    setSkipChildren();
+    return;
+  }
+
   // This is not related to physis grids; leave it as is
   return;
 }

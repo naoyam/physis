@@ -9,6 +9,7 @@
 
 #include "physis/config.h"
 #include "physis/stopwatch.h"
+#include "physis/reduce.h"
 // runtime.h functions are not used in the original user code, but it
 // is included to make code generation easier
 #include "physis/runtime.h"

@@ -228,9 +228,10 @@ static bool propagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
   // No grid argument passed
   if (!grid_is_used) return false;
 
-  // this is taken care by another propagation function
-  if (StencilMap::isMap(c)) return false;
-
+  // These are not taken care here.
+  if (StencilMap::isMap(c) ||
+      Reduce::IsReduce(c)) return false;
+  
   LOG_DEBUG() << "Grid var propagation: " <<
       c->get_function()->unparseToString() << "\n";  
   
@@ -292,6 +293,10 @@ void TranslationContext::analyzeGridVars(DefUseAnalysis &dua) {
       StencilMap *m = it->second;
       changed |= propagateGridVarMapAcrossStencilCall(c, m, *this);
     }
+    
+    // Note: grids are read-only in reduction kernels, so no need to
+    // analyze them
+    
     // Handle normal function call
     FOREACH (it, calls.begin(), calls.end()) {
       SgFunctionCallExp *c = isSgFunctionCallExp(*it);
@@ -399,7 +404,7 @@ void TranslationContext::build() {
   analyzeGridTypes();
   analyzeDomainExpr(*dua);
   analyzeMap();
-
+  AnalyzeReduce();
 
   analyzeGridVars(*dua);
   LOG_DEBUG() << "grid variable analysis done\n";
@@ -415,6 +420,8 @@ void TranslationContext::build() {
   FOREACH (it, stencil_map_.begin(), stencil_map_.end()) {
     AnalyzeStencilRange(*(it->second), *this);
   }
+
+
 
   LOG_INFO() << "Translation context built\n";
   print(std::cout);
@@ -790,6 +797,27 @@ const StencilIndexList* TranslationContext::findStencilIndex(
   } else {
     return &(it->second);
   }
+}
+
+void TranslationContext::AnalyzeReduce() {
+  LOG_INFO() << "Analyzing reductions\n";
+  Rose_STL_Container<SgNode*> calls =
+      NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
+  FOREACH(it, calls.begin(), calls.end()) {
+    SgFunctionCallExp *call = isSgFunctionCallExp(*it);
+    assert(call);
+    if (!Reduce::IsReduce(call)) continue;
+    LOG_DEBUG() << "Call to reduce found: "
+                << call->unparseToString() << "\n";
+    Reduce *rd = new Reduce(call);
+    call->addNewAttribute(Reduce::name, rd);
+  }
+  LOG_INFO() << "Reduction analysis done.\n";  
+}
+
+Reduce *TranslationContext::GetReduce(SgFunctionCallExp *call) const {
+  Reduce *rd = static_cast<Reduce*>(call->getAttribute(Reduce::name));
+  return rd;
 }
 
 

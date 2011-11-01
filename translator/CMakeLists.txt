@@ -26,7 +26,7 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   reference_translator.cc kernel.cc alias_analysis.cc SageBuilderEx.cc
   stencil_analysis.cc stencil_range.cc translation_util.cc
   reference_runtime_builder.cc runtime_builder.cc
-  rose_ast_attribute.cc)
+  rose_ast_attribute.cc reduce.cc)
 
 #if (MPI_ENABLED)
 #  set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})

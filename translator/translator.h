@@ -12,6 +12,7 @@
 #include "translator/translator_common.h"
 #include "translator/rose_traversal.h"
 #include "translator/configuration.h"
+#include "translator/reduce.h"
 
 namespace physis {
 namespace translator {
@@ -95,6 +96,17 @@ class Translator: public RoseASTTraversal {
                             StencilMap *s) {}
   virtual void translateRun(SgFunctionCallExp *node,
                             Run *run) {}
+  //! Handler for a call to reduce grids.
+  /*!
+    \param rd A Reduce object.
+   */
+  virtual void TranslateReduceGrid(Reduce *rd) {}
+  //! Handler for a call to kernel reductions.
+  /*!
+    \param rd A Reduce object.
+   */
+  virtual void TranslateReduceKernel(Reduce *rd) {}
+  
   void defineMacro(const string &name, const string &val="");
 
   SgClassDeclaration *getDomainDeclaration() {
