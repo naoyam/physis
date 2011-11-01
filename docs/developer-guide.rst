@@ -59,3 +59,12 @@ modified.
 When the driver is executed, all intermediate files are generated
 under a directory named "test_output/TIMESTAMP". A log file is also
 created at the current working directory.
+
+Coding Style
+------------
+
+For C/C++ code in Physis, we adopt the Google C++ Style Guide
+(http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml). We
+initially didn't have any specific coding rules, and so part of the
+code still don't follow the the guide. We will gradually clean up
+non-conforming code.
