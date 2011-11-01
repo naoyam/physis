@@ -68,3 +68,18 @@ For C/C++ code in Physis, we adopt the Google C++ Style Guide
 initially didn't have any specific coding rules, and so part of the
 code still don't follow the the guide. We will gradually clean up
 non-conforming code.
+
+Git Repository and Branching Model
+----------------------------------
+
+The repository is hosted at http://github.com/naoyam/physis. You can
+browse the code and its repository history there.
+
+For the development of Physis, we adopt the Git branching model by
+Vincent Driessen. The main development work is on the `develop`
+branch, and when each new feature is added, a new branch named
+"feature/feature-name" is created. The development of the feature is
+done on the feature branch, which is then merged back to the `develop`
+branch when finished. See
+http://nvie.com/posts/a-successful-git-branching-model/ for more
+information.
