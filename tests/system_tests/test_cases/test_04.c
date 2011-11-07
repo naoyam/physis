@@ -1,6 +1,7 @@
 /*
  * TEST: 7-point stencil
  * DIM: 3
+ * PRIORITY: 1 
  */
 
 #include <stdio.h>

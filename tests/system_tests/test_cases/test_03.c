@@ -1,6 +1,7 @@
 /*
- * TEST: Identity kernel
+ * TEST: Identity kernel using source and destination grids
  * DIM: 3
+ * PRIORITY: 1 
  */
 
 #include <stdio.h>
@@ -8,15 +9,17 @@
 
 #define N 8
 
-void kernel(const int x, const int y, const int z, PSGrid3DFloat g) {
-  float v = PSGridGet(g, x, y, z) * 2;
-  PSGridEmit(g, v);
+void kernel1(const int x, const int y, const int z, PSGrid3DFloat g,
+             PSGrid3DFloat g2) {
+  float v = PSGridGet(g, x, y, z);
+  PSGridEmit(g2, v);
   return;
 }
 
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 3, N, N, N);
   PSGrid3DFloat g = PSGrid3DFloatNew(N, N, N);
+  PSGrid3DFloat g2 = PSGrid3DFloatNew(N, N, N);  
   PSDomain3D d = PSDomain3DNew(0, N, 0, N, 0, N);
   size_t nelms = N*N*N;
   
@@ -29,19 +32,20 @@ int main(int argc, char *argv[]) {
     
   PSGridCopyin(g, indata);
 
-  PSStencilRun(PSStencilMap(kernel, d, g));
+  PSStencilRun(PSStencilMap(kernel1, d, g, g2));
     
-  PSGridCopyout(g, outdata);
+  PSGridCopyout(g2, outdata);
     
   for (i = 0; i < nelms; i++) {
-    if (indata[i] * 2 != outdata[i]) {
+    if (indata[i] != outdata[i]) {
       fprintf(stderr, "Error: mismatch at %d, in: %f, out: %f\n",
-              i, indata[i]*2, outdata[i]);
+              i, indata[i], outdata[i]);
       exit(1);
     }
   }
 
   PSGridFree(g);
+  PSGridFree(g2);
   PSFinalize();
   free(indata);
   free(outdata);

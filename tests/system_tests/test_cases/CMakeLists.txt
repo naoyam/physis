@@ -1,8 +1,8 @@
 
-add_executable(test_4.manual.ref.exe test_4.manual.ref.c)
-add_executable(test_6.manual.ref.exe test_6.manual.ref.c)
+add_executable(test_04.manual.ref.exe test_04.manual.ref.c)
+add_executable(test_06.manual.ref.exe test_06.manual.ref.c)
 
 if (CUDA_ENABLED)
-  cuda_add_executable(test_4.manual.cuda.exe test_4.manual.cuda.cu)  
-  cuda_add_executable(test_6.manual.cuda.exe test_6.manual.cuda.cu)
+  cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
+  cuda_add_executable(test_06.manual.cuda.exe test_06.manual.cuda.cu)
 endif ()

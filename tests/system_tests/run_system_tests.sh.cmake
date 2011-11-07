@@ -45,6 +45,8 @@ MPI_MACHINEFILE=""
 
 EXECUTE_WITH_VALGRIND=0
 
+PRIORITY=1
+
 function print_error()
 {
     echo "ERROR!: $1" >&2
@@ -428,21 +430,40 @@ function print_usage()
     echo -e "\t\tThe MPI machinefile."
     echo -e "\t--with-valgrind <translate|execute>"
     echo -e "\t\tExecute the given step with Valgrind. Excution with Valgrind\n\t\tis not yet supported."
+    echo -e "\t--priority <level>"
+    echo -e "\t\tExecute the test cases with priority higher than or equal\n\t\tto the given level.\n"
+}
+
+function filter_test_case_by_priority()
+{
+	local priority=$1
+	shift
+	local tests=$*
+	local tests_out=""
+	for test in $tests; do
+		local test_priority=$(grep PRIORITY $test | awk '{print $3}')
+		if [ "x$test_priority" = "x" ]; then continue; fi
+		if [ $test_priority -le $priority ]; then
+			tests_out+="$test "
+		fi
+	done
+	echo $tests_out
 }
 
 function get_test_cases()
 {
-    local test_names=""
+	local tests=""
     if [ $# -eq 0 ]; then
-	test_names="test_1 test_2 test_3 test_4 test_5 test_6 test_7"
+		tests=$(find ${CMAKE_CURRENT_SOURCE_DIR}/test_cases -name "test_*.c"|sort -n)
     else
-	test_names="$*"
-    fi
-    local tests2=""
-    for t in $test_names; do
-	tests2+="${CMAKE_CURRENT_SOURCE_DIR}/test_cases/$t.c "
-    done
-    echo $tests2
+		for t in "$*"; do
+			tests+="${CMAKE_CURRENT_SOURCE_DIR}/test_cases/$t.c "
+		done
+	fi
+    set +e	
+    tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.manual\.'; done)
+    set -e
+	echo $tests
 }
 
 {
@@ -450,11 +471,8 @@ function get_test_cases()
     STAGE="ALL"
 
     TESTS=$(get_test_cases)
-    
-    set +e
-    TESTS=$(for t in $TESTS; do echo $t | grep -v 'test_.*\.manual\.'; done)
-    set -e
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit,with-valgrind: -- "$@")
+	
+    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit,with-valgrind:,priority: -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -504,6 +522,10 @@ function get_test_cases()
 		use_valgrind $2
 		shift 2
 		;;
+		--priority)
+			PRIORITY=$2
+			shift 2
+			;;
 	    -h|--help)
 		print_usage
 		exit 0
@@ -520,6 +542,9 @@ function get_test_cases()
 		;;
 	esac
     done
+
+	echo priority: $PRIORITY
+	TESTS=$(filter_test_case_by_priority $PRIORITY $TESTS)
     
 	# Test all targets by default
     if [ "x$TARGETS" = "x" ]; then TARGETS=$($PHYSISC --list-targets); fi

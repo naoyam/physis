@@ -1,6 +1,7 @@
 /*
  * TEST: Grid reduction OP=PS_SUM
  * DIM: 3
+ * PRIORITY: 1
  */
 
 #include <stdio.h>
