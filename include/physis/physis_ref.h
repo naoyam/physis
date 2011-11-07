@@ -45,6 +45,20 @@ extern "C" {
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   extern void __PSGridGet(__PSGrid *g, void *buf, ...);
+
+  typedef void (*ReducerFunc)();
+  
+  //extern void __PSReduceGrid(void *buf, __PSGrid *g, ReducerFunc f);
+  //! Reduces a grid with an operator.
+  /*!
+    \param buf A pointer to the output buffer.
+    \param op A binary operator to reduce elements.
+    \param g A grid.
+   */
+  extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                                  __PSGrid *g);
+  extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                                  __PSGrid *g);
   
 #ifdef __cplusplus
 }

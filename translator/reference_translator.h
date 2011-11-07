@@ -86,6 +86,15 @@ class ReferenceTranslator : public Translator {
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual void translateRun(SgFunctionCallExp *node, Run *run);
 
+  virtual void TranslateReduceGrid(Reduce *rd);
+  virtual void TranslateReduceKernel(Reduce *rd);
+  //! Build a real function for reducing a grid.
+  /*!
+    \param rd A reduction of grid.
+    \return A function declaration for reducing the grid.
+   */
+  virtual SgFunctionDeclaration *BuildReduceGrid(Reduce *rd);
+
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
   ReferenceRuntimeBuilder *ref_rt_builder_;

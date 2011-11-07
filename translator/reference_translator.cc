@@ -830,6 +830,47 @@ void ReferenceTranslator::translateSet(SgFunctionCallExp *node,
   si::replaceStatement(parent_stmt, set_exp);
 }
 
+void ReferenceTranslator::TranslateReduceGrid(Reduce *rd) {
+  // If the element type is a primitive type, use its corresponding
+  // reduce function in the reference runtime. Otherwise, create a
+  // type-specific reducer function, and then call __PSReduceGrid RT
+  // function with the reducer function.
+  SgVarRefExp *gv = rd->GetGrid();
+  PSAssert(gv);
+  //SgInitializedName *gin = gv->get_symbol()->get_declaration();
+  GridType *gt = tx_->findGridType(gv);
+  SgType *elm_type = gt->getElmType();
+  
+  SgFunctionSymbol *reduce_grid_func;
+
+  if (isSgTypeFloat(elm_type)) {
+    PSAssert(reduce_grid_func = 
+             si::lookupFunctionSymbolInParentScopes(
+                 "__PSReduceGridFloat",
+                 global_scope_));
+  } else if (isSgTypeDouble(elm_type)) {
+    PSAssert(reduce_grid_func = 
+             si::lookupFunctionSymbolInParentScopes(
+                 "__PSReduceGridDouble",
+                 global_scope_));
+  } else {
+    LOG_ERROR() << "Unsupported element type.";
+    PSAbort(1);
+  }
+
+  SgFunctionCallExp *rdcall = rd->reduce_call();
+  rdcall->set_function(sb::buildFunctionRefExp(reduce_grid_func));
+  return;
+}
+
+SgFunctionDeclaration *ReferenceTranslator::BuildReduceGrid(Reduce *rd) {
+  return NULL;
+}
+
+void ReferenceTranslator::TranslateReduceKernel(Reduce *rd) {
+  LOG_ERROR() << "Not implemented yet.";
+  PSAbort(1);
+}
 
 } // namespace translator
 } // namespace physis

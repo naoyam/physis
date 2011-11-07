@@ -283,7 +283,7 @@ for data reductions in Physis.
 Physis provides two methods for reductions. First, grid data can be
 reduced to a scalar value with intrinsic `PSReduce`: 
 
-     void PSReduce(T *v, PSGrid g, PSReduceOp op)
+     void PSReduce(T *v, PSReduceOp op, PSGrid g)
 
 Parameter `op` defines a binary associative operation. The predefined 
 operations are:

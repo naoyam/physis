@@ -63,6 +63,13 @@ bool Reduce::IsReduce(SgFunctionCallExp *call) {
   return name == REDUCE_NAME;
 }
 
+SgVarRefExp *Reduce::GetGrid() const {
+  if (IsKernel()) return NULL;
+  SgExprListExp *args = reduce_call()->get_args();
+  SgExpression *ge = *(args->get_expressions().begin() + 2);
+  return isSgVarRefExp(ge);
+}
+
 } // namespace translator
 } // namespace physis
 

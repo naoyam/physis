@@ -119,6 +119,13 @@ class TranslationContext {
       return it->second;
     }
   }
+  GridType *findGridType(SgInitializedName *in) {
+    return findGridType(in->get_type());
+  }
+  GridType *findGridType(SgVarRefExp *gv) {
+    SgInitializedName *gin = gv->get_symbol()->get_declaration();
+    return findGridType(gin);
+  }
 
   GridTypeMap::iterator gridTypeBegin() {
     return grid_type_map_.begin();

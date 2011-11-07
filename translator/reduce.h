@@ -1,3 +1,4 @@
+
 // Copyright 2011, Tokyo Institute of Technology.
 // All rights reserved.
 //
@@ -25,9 +26,11 @@ class Reduce: public AstAttribute {
   virtual ~Reduce();
   static const std::string name;
   AstAttribute *copy();
-  SgFunctionCallExp *reduce_call() { return reduce_call_; };
+  SgFunctionCallExp *reduce_call() const { return reduce_call_; };
   bool IsGrid() const;
   bool IsKernel() const;
+  //! Returns the variable referencing the grid to be reduced.
+  SgVarRefExp *GetGrid() const;
   //! Returns true if a call is to the reduce intrinsic.
   /*!
     \param call A function call.
