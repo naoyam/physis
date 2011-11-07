@@ -110,6 +110,17 @@ extern "C" {
                                      int active);
   extern int __PSIsRoot();
 
+  //! Reduces a grid with an operator.
+  /*!
+    \param buf A pointer to the output buffer.
+    \param op A binary operator to reduce elements.
+    \param g A grid.
+   */
+  extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                                  __PSGridMPI *g);
+  extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                                  __PSGridMPI *g);
+
 #ifdef __cplusplus
 }
 #endif
