@@ -67,7 +67,7 @@ void test2() {
   GridSpaceMPICUDA *gs = new GridSpaceMPICUDA(NDIM, global_size,
                                               NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   print_grid<float>(g, my_rank, cerr);
@@ -84,7 +84,7 @@ void test3() {
                                               NDIM, proc_size, my_rank);
   
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
@@ -103,7 +103,7 @@ void test4() {
                                               NDIM, proc_size, my_rank);
   
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
@@ -121,7 +121,7 @@ void test5() {
   GridSpaceMPICUDA *gs = new GridSpaceMPICUDA(NDIM, global_size, NDIM,
                                               proc_size, my_rank);
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   
@@ -142,7 +142,7 @@ void test6() {
   GridSpaceMPICUDA *gs = new GridSpaceMPICUDA(NDIM, global_size,
                                               NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   
@@ -167,7 +167,7 @@ void test7() {
   GridSpaceMPICUDA *gs = new GridSpaceMPICUDA(NDIM, global_size, NDIM,
                                               proc_size, my_rank);
   IntArray global_offset;
-  GridMPICUDA3D *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPICUDA3D *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                                     false, global_offset, 0);
   init_grid(g);
   IntArray goffset;

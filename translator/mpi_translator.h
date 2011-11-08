@@ -30,6 +30,8 @@ class MPITranslator: public ReferenceTranslator {
                             Run *run);
   virtual SgBasicBlock *BuildRunBody(Run *run);
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
+  virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
+                                        SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
   virtual bool translateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv);
@@ -50,6 +52,7 @@ class MPITranslator: public ReferenceTranslator {
   virtual void DeactivateRemoteGrids(
       StencilMap *smap,
       SgExpression *stencil_ref,
+      
       SgScopeStatement *scope,
       const SgInitializedNamePtrList &remote_grids);
   virtual void FixGridAddresses(StencilMap *smap,

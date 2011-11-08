@@ -6,24 +6,24 @@
 //
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
-#ifndef PHYSIS_REDUCTION_H_
-#define PHYSIS_REDUCTION_H_
+#ifndef PHYSIS_TYPES_H_
+#define PHYSIS_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  enum PSReduceOp {
-    PS_MAX,
-    PS_MIN,
-    PS_SUM,
-    PS_PROD
+  typedef int PSType;
+  enum PSPrimitiveType {
+    PS_INT = 0,
+    PS_LONG = 1,
+    PS_FLOAT = 2,
+    PS_DOUBLE = 3
   };
-
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif /* PHYSIS_RUNTIME_H_ */
+#endif /* PHYSIS_TYPES_H_ */

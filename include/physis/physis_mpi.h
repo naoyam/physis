@@ -43,7 +43,8 @@ extern "C" {
 #endif
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
-  extern __PSGridMPI* __PSGridNewMPI(int elm_size, int dim,
+  extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size,
+                                     int dim,
                                      const PSVectorInt size,
                                      int double_buffering,
                                      const PSVectorInt global_offset,

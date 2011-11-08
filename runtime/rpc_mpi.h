@@ -21,7 +21,8 @@ enum RT_FUNC_KIND {
   FUNC_INVALID, FUNC_NEW, FUNC_DELETE,
   FUNC_COPYIN, FUNC_COPYOUT,
   FUNC_GET, FUNC_SET,
-  FUNC_RUN, FUNC_FINALIZE, FUNC_BARRIER
+  FUNC_RUN, FUNC_FINALIZE, FUNC_BARRIER,
+  FUNC_GRID_REDUCE
 };
 
 class ProcInfo {
@@ -53,6 +54,7 @@ class Client {
   virtual void GridSet(int id);
   virtual void GridGet(int id);  
   virtual void StencilRun(int id);
+  virtual void GridReduce(int id);
 };
 
 class Master {
@@ -67,7 +69,8 @@ class Master {
   virtual ~Master() {}
   virtual void Finalize();
   virtual void Barrier();
-  virtual GridMPI *GridNew(int elm_size, int num_dims,
+  virtual GridMPI *GridNew(PSType type, int elm_size,
+                           int num_dims,
                            const IntArray &size,
                            bool double_buffering,
                            const IntArray &global_offset,
@@ -81,7 +84,7 @@ class Master {
   virtual void GridGet(GridMPI *g, void *buf, const IntArray &index);  
   virtual void StencilRun(int id, int iter, int num_stencils,
                   void **stencils, int *stencil_sizes);
-  
+  virtual void GridReduce(void *buf, PSReduceOp op, GridMPI *g);
 };
 
 } // namespace runtime

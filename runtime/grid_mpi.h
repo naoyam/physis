@@ -13,6 +13,7 @@
 
 #include "runtime/runtime_common.h"
 #include "runtime/grid.h"
+#include "runtime/mpi_util.h"
 
 namespace physis {
 namespace runtime {
@@ -24,12 +25,14 @@ class GridSpaceMPI;
 class GridMPI: public Grid {
   friend class GridSpaceMPI;
  protected:
-  GridMPI(int elm_size, int num_dims, const IntArray &size,
+  GridMPI(PSType type, int elm_size, int num_dims,
+          const IntArray &size,
           bool double_buffering, const IntArray &global_offset,
           const IntArray &local_offset, const IntArray &local_size,
           int attr);
  public:
-  static GridMPI *Create(int elm_size, int num_dims, const IntArray &size,
+  static GridMPI *Create(PSType type, int elm_size,
+                         int num_dims, const IntArray &size,
                          bool double_buffering,
                          const IntArray &global_offset,
                          const IntArray &local_offset,
@@ -82,6 +85,9 @@ class GridMPI: public Grid {
 
   virtual void Resize(const IntArray &local_offset,
                       const IntArray &local_size);
+  
+  int Reduce(PSReduceOp op, void *out);
+
  protected:
   bool empty_;
   IntArray global_offset_;
@@ -147,8 +153,8 @@ class GridSpaceMPI: public GridSpace {
                              const IntArray &global_offset,
                              IntArray &local_offset, IntArray &local_size);
   
-  virtual GridMPI *CreateGrid(int elm_size, int num_dims, const IntArray &size,
-                              bool double_buffering,
+  virtual GridMPI *CreateGrid(PSType type, int elm_size, int num_dims,
+                              const IntArray &size, bool double_buffering,
                               const IntArray &global_offset,
                               int attr);
 
@@ -209,6 +215,15 @@ class GridSpaceMPI: public GridSpace {
   const std::vector<IntArray> &proc_indices() const { return proc_indices_; }
   MPI_Comm comm() const { return comm_; };
   int GetProcessRank(const IntArray &proc_index) const;
+  //! Reduce a grid with binary operator op.
+  /*
+   * \param g The grid to reduce.
+   * \param op The binary operator to apply.
+   * \param out The destination scalar buffer.
+   * \return The number of reduced elements.
+   */
+  int ReduceGrid(void *out, PSReduceOp op, GridMPI *g);
+
  protected:
   int num_dims_;
   IntArray global_size_;

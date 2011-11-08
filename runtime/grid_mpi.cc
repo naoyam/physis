@@ -55,11 +55,12 @@ void GridMPI::SetHaloSize(int dim, bool fw, size_t width, bool diagonal) {
   return;
 }
 
-GridMPI::GridMPI(int elm_size, int num_dims, const IntArray &size,
+GridMPI::GridMPI(PSType type, int elm_size, int num_dims,
+                 const IntArray &size,
                  bool double_buffering, const IntArray &global_offset,
                  const IntArray &local_offset,                 
                  const IntArray &local_size, int attr):
-    Grid(elm_size, num_dims, size, double_buffering, attr),
+    Grid(type, elm_size, num_dims, size, double_buffering, attr),
     global_offset_(global_offset),  
     local_offset_(local_offset), local_size_(local_size),
     halo_has_diagonal_(false),
@@ -81,13 +82,14 @@ GridMPI::GridMPI(int elm_size, int num_dims, const IntArray &size,
   }
 }
 // This is the only interface to create a GridMPI grid
-GridMPI *GridMPI::Create(int elm_size, int num_dims, const IntArray &size,
+GridMPI *GridMPI::Create(PSType type, int elm_size,
+                         int num_dims, const IntArray &size,
                          bool double_buffering,
                          const IntArray &global_offset,
                          const IntArray &local_offset,
                          const IntArray &local_size,
                          int attr) {
-  GridMPI *gm = new GridMPI(elm_size, num_dims, size,
+  GridMPI *gm = new GridMPI(type, elm_size, num_dims, size,
                             double_buffering, global_offset,
                             local_offset, local_size, attr);
   gm->InitBuffer();
@@ -127,7 +129,7 @@ GridMPI::~GridMPI() {
 void GridMPI::EnsureRemoteGrid(const IntArray &local_offset,
                                const IntArray &local_size) {
   if (remote_grid_ == NULL) {
-    remote_grid_ = GridMPI::Create(elm_size_, num_dims_,
+    remote_grid_ = GridMPI::Create(type_, elm_size_, num_dims_,
                                    size_, false, global_offset_,
                                    local_offset, local_size, 0);
   } else {
@@ -343,6 +345,36 @@ std::ostream &GridMPI::Print(std::ostream &os) const {
   return os;
 }
 
+template <class T>
+int ReduceGrid(GridMPI *g, PSReduceOp op, T *out) {
+  size_t nelms = g->local_size().accumulate(g->num_dims());
+  if (nelms == 0) return 0;
+  boost::function<T (T, T)> func = GetReducer<T>(op);
+  T *d = (T *)g->_data();
+  T v = d[0];
+  for (size_t i = 1; i < nelms; ++i) {
+    v = func(v, d[i]);
+  }
+  *out = v;
+  return nelms;
+}
+
+int GridMPI::Reduce(PSReduceOp op, void *out) {
+  int rv = 0;
+  switch (type_) {
+    case PS_FLOAT:
+      rv = ReduceGrid<float>(this, op, (float*)out);
+      break;
+    case PS_DOUBLE:
+      rv = ReduceGrid<double>(this, op, (double*)out);
+      break;
+    default:
+      PSAbort(1);
+  }
+  return rv;
+}
+
+
 
 std::ostream &GridSpaceMPI::Print(std::ostream &os) const {
   os << "GridSpaceMPI {"
@@ -452,8 +484,10 @@ void GridSpaceMPI::PartitionGrid(int num_dims, const IntArray &size,
   return;
 }
 
-GridMPI *GridSpaceMPI::CreateGrid(int elm_size, int num_dims,
-                                  const IntArray &size, bool double_buffering,
+GridMPI *GridSpaceMPI::CreateGrid(PSType type, int elm_size,
+                                  int num_dims,
+                                  const IntArray &size,
+                                  bool double_buffering,
                                   const IntArray &global_offset,
                                   int attr) {
   IntArray grid_size = size;
@@ -477,7 +511,7 @@ GridMPI *GridSpaceMPI::CreateGrid(int elm_size, int num_dims,
                 local_offset, local_size);
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
-  GridMPI *g = GridMPI::Create(elm_size, num_dims, grid_size,
+  GridMPI *g = GridMPI::Create(type, elm_size, num_dims, grid_size,
                                double_buffering,
                                grid_global_offset, local_offset,
                                local_size, attr);
@@ -1009,6 +1043,35 @@ void LoadSubgrid(GridMPI *gm, GridSpaceMPI *gs,
     
   gs->LoadSubgrid(gm, offset, right - offset, reuse);
   return;
+}
+
+template <class T>
+void ReduceGridTemplate(void *out, PSReduceOp op,
+                        GridMPI *g, MPI_Comm comm) {
+  T v;
+  if (g->Reduce(op, &v) == 0) {
+    v = GetReductionDefaultValue<T>(op);
+  }
+  MPI_Datatype type = GetMPIDataType(g->type());
+  MPI_Op mpi_op = GetMPIOp(op);
+  //LOG_DEBUG() << "Local reduction: " << v << "\n";
+  PS_MPI_Reduce(&v, out, 1, type, mpi_op, 0, comm);
+  return;
+}
+
+int GridSpaceMPI::ReduceGrid(void *out, PSReduceOp op,
+                             GridMPI *g) {
+  switch (g->type()) {
+    case PS_FLOAT:
+      ReduceGridTemplate<float>(out, op, g, comm());
+      break;
+    case PS_DOUBLE:
+      ReduceGridTemplate<double>(out, op, g, comm());
+      break;
+    default:
+      PSAbort(1);
+  }
+  return g->num_elms();
 }
 
 } // namespace runtime

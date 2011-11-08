@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   float v_ref = reduce(indata);
   fprintf(stderr, "Reduction result: %f, reference: %f\n", v, v_ref);
   if (v != v_ref) {
-    fprintf(stderr, "Error: No matching result\n");
+    fprintf(stderr, "Error: Non matching result\n");
     exit(1);
   }
   PSGridFree(g1);

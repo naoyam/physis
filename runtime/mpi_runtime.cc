@@ -284,7 +284,7 @@ extern "C" {
     fprintf(out, "%s", ss.str().c_str());
   }
 
-  __PSGridMPI* __PSGridNewMPI(int elm_size, int dim,
+  __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
                               const PSVectorInt global_offset,
@@ -300,7 +300,7 @@ extern "C" {
                   << gs->global_size() << "\n";
       return NULL;
     }
-    return master->GridNew(elm_size, dim, gsize,
+    return master->GridNew(type, elm_size, dim, gsize,
                            double_buffering, IntArray(), attr);
   }
 
@@ -521,6 +521,17 @@ extern "C" {
   int __PSIsRoot() {
     return pinfo->IsRoot();
   }
+
+  void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                           __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);
+  }
+  
+  void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                            __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);    
+  }
+  
 
 #ifdef __cplusplus
 }

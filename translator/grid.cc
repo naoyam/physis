@@ -179,6 +179,18 @@ string GridType::getRealFuncName(const string &funcName,
   return ss.str();
 }
 
+SgExpression *GridType::BuildElementTypeExpr() {
+  SgExpression *e = NULL;
+  if (isSgTypeFloat(elm_type_)) {
+    e = sb::buildIntVal(PS_FLOAT);
+  } else if (isSgTypeDouble(elm_type_)) {
+    e = sb::buildIntVal(PS_DOUBLE);
+  } else {
+    PSAbort(1);
+  }
+  return e;
+}
+
 string Grid::toString() const {
   ostringstream ss;
   ss << "Grid object: " << gt->toString()

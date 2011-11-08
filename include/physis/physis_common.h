@@ -9,10 +9,16 @@
 
 #include "physis/config.h"
 #include "physis/stopwatch.h"
+#include "physis/types.h"
 #include "physis/reduce.h"
 // runtime.h functions are not used in the original user code, but it
 // is included to make code generation easier
 #include "physis/runtime.h"
+
+/*
+ * Declarations that are common both in user input code and generated
+ * code. 
+ */
 
 
 // TODO: Most of the code below is not necessary for the

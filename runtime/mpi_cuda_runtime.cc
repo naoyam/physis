@@ -244,7 +244,7 @@ extern "C" {
   }
   
 
-  __PSGridMPI* __PSGridNewMPI(int elm_size, int dim,
+  __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
                               const PSVectorInt global_offset,
@@ -261,7 +261,7 @@ extern "C" {
       return NULL;
     }
     
-    return master->GridNew(elm_size, dim, gsize,
+    return master->GridNew(type, elm_size, dim, gsize,
                            double_buffering, IntArray(), attr);
   }
 

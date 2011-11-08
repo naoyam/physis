@@ -49,6 +49,14 @@ int PS_MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root,
 }
 
 
+int PS_MPI_Reduce(void *sendbuf, void *recvbuf, int count,
+                  MPI_Datatype datatype, MPI_Op op,
+                  int root, MPI_Comm comm) {
+  CHECK_MPI(MPI_Reduce(sendbuf, recvbuf, count, datatype,
+                       op, root, comm));
+  return MPI_SUCCESS;
+}
+
 } // namespace runtime
 } // namespace physis
 

@@ -15,6 +15,16 @@
 namespace physis {
 namespace runtime {
 
+//! Copy a multi-dimensional sub grid into a continuous buffer.
+/*
+  \param elm_size The size of each element.
+  \param num_dims The number of dimensions of the grid.
+  \param grid The source grid.
+  \param grid_size The size of each dimension of the grid.
+  \param subgrid The destination buffer.
+  \param subgrid_offset The offset of the sub grid to copy.
+  \param subgrid_size The offset of the sub grid to copy.
+ */
 void CopyoutSubgrid(size_t elm_size, int num_dims,
                     const void *grid,
                     const physis::util::IntArray  &grid_size,
@@ -22,6 +32,16 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
                     const physis::util::IntArray &subgrid_offset,
                     const physis::util::IntArray &subgrid_size);
 
+//! Copy a continuous buffer into a multi-dimensional sub grid.
+/*
+  \param elm_size The size of each element.
+  \param num_dims The number of dimensions of the grid.
+  \param grid The destination grid.
+  \param grid_size The size of each dimension of the grid.
+  \param subgrid The source buffer.
+  \param subgrid_offset The offset of the sub grid to copy.
+  \param subgrid_size The offset of the sub grid to copy.
+ */
 void CopyinSubgrid(size_t elm_size, int num_dims,
                    void *grid, const physis::util::IntArray &grid_size,
                    const void *subgrid,

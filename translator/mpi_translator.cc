@@ -448,6 +448,14 @@ SgFunctionDeclaration *MPITranslator::GenerateRun(Run *run) {
   return runFunc;
 }
 
+SgExprListExp *MPITranslator::generateNewArg(
+    GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
+  // Prepend the type specifier.
+  SgExprListExp *new_args = ReferenceTranslator::generateNewArg(gt, g, dim_decl);
+  new_args->prepend_expression(gt->BuildElementTypeExpr());
+  return new_args;
+}
+
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g) {
   args->append_expression(rose_util::buildNULL());
@@ -494,6 +502,7 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
   LOG_DEBUG() << "Stencil index: " << *sil;
   if (StencilIndexSelf(*sil, nd)) {
     get_address = sb::buildFunctionRefExp(get_address_no_halo_name,
+
                                           global_scope_);
   } else {
     get_address = sb::buildFunctionRefExp(get_address_name,

@@ -14,14 +14,6 @@
 namespace physis {
 namespace runtime {
 
-Grid* Grid::Create(int elm_size, int num_dims, const IntArray &size,
-                   bool double_buffering, int attr) {
-  Grid *g = new Grid(elm_size, num_dims, size,
-                     double_buffering, attr);
-  g->InitBuffer();
-  return g;
-}
-
 Grid::~Grid() {
   delete data_buffer_[0];
   if (double_buffering_) delete data_buffer_[1];
@@ -85,6 +77,36 @@ std::ostream &Grid::Print(std::ostream &os) const {
   return os;
 }
 
+template <class T>
+int ReduceGrid(Grid *g, PSReduceOp op, T *out) {
+  if (g->num_elms() == 0) return 0;
+  //LOG_DEBUG() << "Op: " << op << "\n";
+  boost::function<T (T, T)> func = GetReducer<T>(op);
+  T *d = (T *)g->_data();
+  T v = d[0];
+  for (size_t i = 1; i < g->num_elms(); ++i) {
+    v = func(v, d[i]);
+  }
+  //LOG_DEBUG() << "Reduce grid: " << v << "\n";
+  *out = v;
+  return g->num_elms();
+}
+
+int Grid::Reduce(PSReduceOp op, void *out) {
+  int rv = 0;
+  switch (type_) {
+    case PS_FLOAT:
+      rv = ReduceGrid<float>(this, op, (float*)out);
+      break;
+    case PS_DOUBLE:
+      rv = ReduceGrid<double>(this, op, (double*)out);
+      break;
+    default:
+      PSAbort(1);
+  }
+  return rv;
+}
+
 bool GridSpace::RegisterGrid(Grid *g) {
   g->id() = grid_counter_.next();
   grids_.insert(std::make_pair(g->id(), g));
@@ -99,7 +121,8 @@ bool GridSpace::DeregisterGrid(Grid *g) {
 
 Grid *GridSpace::FindGrid(int id) const {
   //assert(id >= 0 && (unsigned)id < grids_.size());
-  Grid *g = physis::find<int, Grid*>(grids_, id, NULL);
+  Grid *g =
+      physis::find<int, Grid*>(grids_, id, NULL);
   assert(g);
   return g;
 }

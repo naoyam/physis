@@ -32,7 +32,7 @@ void test2() {
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size, false,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size, false,
                               global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;
@@ -59,7 +59,7 @@ void test3() {
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;
@@ -88,7 +88,7 @@ void test4() {
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;
@@ -122,7 +122,7 @@ void test5() {
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;
@@ -153,7 +153,7 @@ void test6() {
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;
@@ -188,7 +188,7 @@ void test7() {
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
   float v = N * N * my_rank;

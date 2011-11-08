@@ -34,6 +34,11 @@ extern int PS_MPI_Irecv( void *buf, int count, MPI_Datatype datatype,
 extern int PS_MPI_Bcast(void *buffer, int count, MPI_Datatype datatype,
                         int root, MPI_Comm comm);
 
+extern int PS_MPI_Reduce(void *sendbuf, void *recvbuf, int count,
+                         MPI_Datatype datatype, MPI_Op op,
+                         int root, MPI_Comm comm);
+                         
+
 } // namespace runtime
 } // namespace physis
 

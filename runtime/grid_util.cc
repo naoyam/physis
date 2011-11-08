@@ -26,7 +26,6 @@ static size_t get1DOffset(const IntArray &md_offset,
 namespace physis {
 namespace runtime {
 
-// Copy a continuous region out of a multi-dimensional array
 void CopyoutSubgrid(size_t elm_size, int num_dims,
                     const void *grid, const IntArray &grid_size,
                     void *subgrid,
@@ -40,7 +39,8 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
               << "subgrid offset: " << subgrid_offset
               << "subgrid size: " << subgrid_size
               << "\n";
-    
+
+  // Collect 1-D continuous regions
   offsets->push_back(subgrid_offset);
   for (int i = num_dims - 1; i >= 1; --i) {
     FOREACH (oit, offsets->begin(), offsets->end()) {
@@ -55,6 +55,7 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
     offsets_new->clear();
   }
 
+  // Copy the collected 1-D continuous regions
   size_t line_size = subgrid_size[0] * elm_size;
   FOREACH (oit, offsets->begin(), offsets->end()) {
     const IntArray &offset = *oit;
@@ -75,7 +76,6 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
   return;
 }
 
-// Copy a continuous buffer into a multi-dimensional array
 void CopyinSubgrid(size_t elm_size, int num_dims,
                    void *grid, const IntArray &grid_size,
                    const void *subgrid,

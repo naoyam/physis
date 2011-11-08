@@ -23,6 +23,7 @@ struct Request {
 };
 
 struct RequestNEW {
+  PSType type;
   int elm_size;
   int num_dims;
   IntArray size;
@@ -93,6 +94,12 @@ void Client::Listen() {
         StencilRun(req.opt);
         LOG_DEBUG() << "Client: run done\n";
         break;
+      case FUNC_GRID_REDUCE:
+        LOG_DEBUG() << "Client: grid reduce requested ("
+                    << req.opt << ")\n";
+        GridReduce(req.opt);
+        LOG_DEBUG() << "Client: grid reduce done\n";
+        break;
       case FUNC_INVALID:
         LOG_INFO() << "Client: invaid request\n";
         PSAbort(1);
@@ -145,17 +152,19 @@ void Client::Barrier() {
 }
 
 // Create
-GridMPI *Master::GridNew(int elm_size, int num_dims, const IntArray &size,
+GridMPI *Master::GridNew(PSType type, int elm_size,
+                         int num_dims, const IntArray &size,
                          bool double_buffering,
                          const IntArray &global_offset,
                          int attr) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
   NotifyCall(FUNC_NEW);
-  RequestNEW req = {elm_size, num_dims, size, double_buffering,
-                    global_offset, attr};
+  RequestNEW req = {type, elm_size, num_dims, size,
+                    double_buffering, global_offset, attr};
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
-  GridMPI *g = gs_->CreateGrid(elm_size, num_dims, size,
-                               double_buffering, global_offset, attr);
+  GridMPI *g = gs_->CreateGrid(type, elm_size, num_dims, size,
+                               double_buffering, global_offset,
+                               attr);
   return g;
 }
 
@@ -163,7 +172,7 @@ void Client::GridNew() {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Create\n";
   RequestNEW req;
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
-  gs_->CreateGrid(req.elm_size, req.num_dims, req.size,
+  gs_->CreateGrid(req.type, req.elm_size, req.num_dims, req.size,
                   req.double_buffering, req.global_offset, req.attr);
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Create done\n";
   return;
@@ -409,6 +418,24 @@ void Master::GridSet(GridMPI *g, const void *buf, const IntArray &index) {
   }
 }
 
+void Client::GridReduce(int id) {
+  LOG_DEBUG() << "Client GridReduce(" << id << ")\n";
+  GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(id));
+  PSReduceOp op;
+  PS_MPI_Bcast(&op, sizeof(PSReduceOp) / sizeof(int),
+               MPI_INT, 0, comm_);
+  gs->ReduceGrid(NULL, op, g);
+  return;
+}
+
+void Master::GridReduce(void *buf, PSReduceOp op, GridMPI *g) {
+  LOG_DEBUG() << "Master GridReduce\n";
+  NotifyCall(FUNC_GRID_REDUCE, g->id());
+  PS_MPI_Bcast(&op, sizeof(PSReduceOp) / sizeof(int),
+               MPI_INT, 0, comm_);
+  gs->ReduceGrid(buf, op, g);
+  LOG_DEBUG() << "Master GridReduce done\n";  
+}
 
 } // namespace runtime
 } // namespace physis

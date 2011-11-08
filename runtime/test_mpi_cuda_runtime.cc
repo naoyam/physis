@@ -91,7 +91,7 @@ void test2(int *argc, char ***argv) {
   LOG_DEBUG() << "Test 2:  Grid creation and deletion\n";
   PSVectorInt global_size = {N, N, N};
   PSInit(argc, argv, NDIM, N, N, N, 0);
-  __PSGridNewMPI(sizeof(float), NDIM, global_size, false, NULL, 0);
+  __PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, global_size, false, NULL, 0);
   PSFinalize();
   LOG_DEBUG() << "Test 1: Finished\n";
 }
@@ -101,7 +101,7 @@ void test3(int *argc, char ***argv) {
   PSVectorInt global_size = {N, N, N};
   PSInit(argc, argv, NDIM, N, N, N, 0);
   __PSGridMPI * g =
-      __PSGridNewMPI(sizeof(float), NDIM, global_size, false, NULL, 0);
+      __PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, global_size, false, NULL, 0);
   float *indata = make_grid(N, N, N);
   float *outdata = make_grid(N, N, N);
   set_grid(outdata, N, N, N, 0.0);
@@ -128,7 +128,7 @@ void test4(int *argc, char ***argv) {
   PSVectorInt global_size = {N, N, N};
   PSInit(argc, argv, NDIM, N, N, N, 0);
   __PSGridMPI * g =
-      __PSGridNewMPI(sizeof(float), NDIM, global_size, false, NULL, 0);
+      __PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, global_size, false, NULL, 0);
   float *indata = make_grid(N, N, N);
   float *outdata = make_grid(N, N, N);
   set_grid(outdata, N, N, N, 0.0);

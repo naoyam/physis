@@ -63,7 +63,7 @@ void test2() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   print_grid<float>(g, my_rank, cerr);
@@ -78,7 +78,7 @@ void test3() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
@@ -95,7 +95,7 @@ void test4() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   
@@ -115,7 +115,7 @@ void test5() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   
@@ -138,7 +138,7 @@ void test6() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
 
@@ -160,7 +160,7 @@ void test7() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
 
@@ -182,7 +182,7 @@ void test8() {
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   IntArray global_offset;
-  GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size,
+  GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   IntArray goffset;

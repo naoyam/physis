@@ -8,48 +8,19 @@
 
 #include "runtime/runtime_common.h"
 #include "physis/physis_ref.h"
+#include "runtime/reduce.h"
 
 #include <stdarg.h>
 #include <functional>
 #include <boost/function.hpp>
 
-namespace {
-template <class T>
-struct MaxOp: public std::binary_function<T, T, T> {
-  T operator()(T x, T y) {
-    return (x > y) ? x : y;
-  }
-};
+namespace physis {
+namespace runtime {
   
 template <class T>
-struct MinOp: public std::binary_function<T, T, T> {
-  T operator()(T x, T y) {
-    return (x < y) ? x : y;
-  }
-};
-  
-template <class T>
-void __PSReduceGridTemplate(void *buf, PSReduceOp op,
-                            __PSGrid *g) {
-  boost::function<T (T, T)> func;
-  //std::binary_function<T, T, T> *func = NULL;
-  switch (op) {
-    case PS_MAX:
-      func = MaxOp<T>();
-      break;
-    case PS_MIN:
-      func = MinOp<T>();
-      break;
-    case PS_SUM:
-      func = std::plus<T>();
-      break;
-    case PS_PROD:
-      func = std::multiplies<T>();
-      break;
-    default:
-      PSAbort(1);
-      break;
-  }
+void PSReduceGridTemplate(void *buf, PSReduceOp op,
+                          __PSGrid *g) {
+  boost::function<T (T, T)> func = GetReducer<T>(op);
   T *d = (T *)g->p0;
   T v = d[0];
   for (int64_t i = 1; i < g->num_elms; ++i) {
@@ -58,7 +29,7 @@ void __PSReduceGridTemplate(void *buf, PSReduceOp op,
   *((T*)buf) = v;
   return;
 }
-
+}
 }
 
 #ifdef __cplusplus
@@ -180,12 +151,12 @@ extern "C" {
   
   void __PSReduceGridFloat(void *buf, PSReduceOp op,
                            __PSGrid *g) {
-    __PSReduceGridTemplate<float>(buf, op, g);
+    physis::runtime::PSReduceGridTemplate<float>(buf, op, g);
   }
 
   void __PSReduceGridDouble(void *buf, PSReduceOp op,
                             __PSGrid *g) {
-    __PSReduceGridTemplate<double>(buf, op, g);
+    physis::runtime::PSReduceGridTemplate<double>(buf, op, g);
   }
   
   

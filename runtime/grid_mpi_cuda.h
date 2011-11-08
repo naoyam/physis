@@ -25,7 +25,7 @@ class GridSpaceMPICUDA;
 class GridMPICUDA3D: public GridMPI {
   friend class GridSpaceMPICUDA;
  protected:  
-  GridMPICUDA3D(int elm_size, int num_dims, const IntArray &size,
+  GridMPICUDA3D(PSType type, int elm_size, int num_dims, const IntArray &size,
                 bool double_buffering, const IntArray &global_offset,
                 const IntArray &local_offset, const IntArray &local_size,
                 int attr);
@@ -36,7 +36,7 @@ class GridMPICUDA3D: public GridMPI {
   virtual void Copyout(void *dst, const void *src, size_t size); 
  public:
   static GridMPICUDA3D *Create(
-      int elm_size, int num_dims,  const IntArray &size,
+      PSType type, int elm_size, int num_dims,  const IntArray &size,
       bool double_buffering, const IntArray &global_offset,
       const IntArray &local_offset, const IntArray &local_size,
       int attr);
@@ -74,7 +74,7 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                    int my_rank);
   virtual ~GridSpaceMPICUDA();
 
-  virtual GridMPICUDA3D *CreateGrid(int elm_size, int num_dims,
+  virtual GridMPICUDA3D *CreateGrid(PSType type, int elm_size, int num_dims,
                                     const IntArray &size,
                                     bool double_buffering,
                                     const IntArray &global_offset,

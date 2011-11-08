@@ -237,7 +237,7 @@ function compile()
 	    MPI_CFLAGS+=" -I$mpiinc"
 	done
     fi
-    LDFLAGS=-L${CMAKE_BINARY_DIR}/runtime
+    LDFLAGS="-L${CMAKE_BINARY_DIR}/runtime -lm"
     NVCC_CFLAGS="-arch sm_20"
     CUDA_LDFLAGS="-lcudart -L${CUDA_RT_DIR}"
     case $target in
@@ -253,7 +253,7 @@ function compile()
 	    fi
 	    src_file="$src_file_base".cu
 	    nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
-	    nvcc -m64 "$src_file_base".o -lphysis_rt_cuda $LDFLAGS \
+	    nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
 		'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 	    ;;
 	mpi)
@@ -456,7 +456,7 @@ function get_test_cases()
     if [ $# -eq 0 ]; then
 		tests=$(find ${CMAKE_CURRENT_SOURCE_DIR}/test_cases -name "test_*.c"|sort -n)
     else
-		for t in "$*"; do
+		for t in $*; do
 			tests+="${CMAKE_CURRENT_SOURCE_DIR}/test_cases/$t.c "
 		done
 	fi
@@ -488,6 +488,7 @@ function get_test_cases()
 		;;
 	    -s|--source)
 		TESTS=$(get_test_cases $2)
+		echo $TESTS
 		shift 2
 		;;
 	    --translate)

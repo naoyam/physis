@@ -24,11 +24,11 @@ namespace runtime {
 // Grid
 //
 GridMPICUDA3D::GridMPICUDA3D(
-    int elm_size, int num_dims, const IntArray &size,
+    PSType type, int elm_size, int num_dims, const IntArray &size,
     bool double_buffering, const IntArray &global_offset,
     const IntArray &local_offset, const IntArray &local_size,
     int attr):
-    GridMPI(elm_size, num_dims, size, double_buffering, global_offset,
+    GridMPI(type, elm_size, num_dims, size, double_buffering, global_offset,
             local_offset, local_size, attr) {
   
   if (empty_) return;
@@ -63,11 +63,11 @@ GridMPICUDA3D::GridMPICUDA3D(
 }
 
 GridMPICUDA3D *GridMPICUDA3D::Create(
-    int elm_size, int num_dims, const IntArray &size,
+    PSType type, int elm_size, int num_dims, const IntArray &size,
     bool double_buffering, const IntArray &global_offset,
     const IntArray &local_offset, const IntArray &local_size,
     int attr) {
-  GridMPICUDA3D *gmc = new GridMPICUDA3D(elm_size, num_dims, size,
+  GridMPICUDA3D *gmc = new GridMPICUDA3D(type, elm_size, num_dims, size,
                                          double_buffering, global_offset,
                                          local_offset, local_size,
                                          attr);
@@ -319,7 +319,7 @@ void GridMPICUDA3D::FixupBufferPointers() {
 void GridMPICUDA3D::EnsureRemoteGrid(const IntArray &local_offset,
                                      const IntArray &local_size) {
   if (remote_grid_ == NULL) {
-    remote_grid_ = GridMPICUDA3D::Create(elm_size_, num_dims_,
+    remote_grid_ = GridMPICUDA3D::Create(type_, elm_size_, num_dims_,
                                          size_, false, global_offset_,
                                          local_offset, local_size,
                                          0);
@@ -348,7 +348,7 @@ GridSpaceMPICUDA::~GridSpaceMPICUDA() {
 }
 
 GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
-    int elm_size, int num_dims, const IntArray &size,
+    PSType type, int elm_size, int num_dims, const IntArray &size,
     bool double_buffering, const IntArray &global_offset,
     int attr) {
   IntArray grid_size = size;
@@ -372,7 +372,7 @@ GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
                 local_offset, local_size);
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
-  GridMPICUDA3D *g = GridMPICUDA3D::Create(elm_size, num_dims, grid_size,
+  GridMPICUDA3D *g = GridMPICUDA3D::Create(type, elm_size, num_dims, grid_size,
                                            double_buffering,
                                            grid_global_offset, local_offset,
                                            local_size, attr);
