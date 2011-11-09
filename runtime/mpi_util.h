@@ -30,32 +30,32 @@ static inline int MPI_GET_RANK(MPI_Comm comm) {
 
 // displaying mpi rank can be achieved mpirun command-line option in OpenMPI
 #if 0
-#define LOG_VERBOSE_MPI()                                         \
-  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"    \
-   <<"[VERBOSE:" << __FUNC_ID__                                   \
-   << "@" << LOGGING_FILE_BASENAME(__FILE__)                      \
+#define LOG_VERBOSE_MPI()                                       \
+  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"  \
+   <<"[VERBOSE:" << __FUNC_ID__                                 \
+   << "@" << LOGGING_FILE_BASENAME(__FILE__)                    \
    << "#"  << __LINE__ << "] ")
-#define LOG_DEBUG_MPI()                                        \
-  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]" \
+#define LOG_DEBUG_MPI()                                         \
+  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"  \
    <<"[DEBUG:" << __FUNC_ID__                                   \
    << "@" << LOGGING_FILE_BASENAME(__FILE__)                    \
    << "#"  << __LINE__ << "] ")
-#define LOG_WARNING_MPI()                                         \
-  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"   \
-   <<"[WARNING:" << __FUNC_ID__                                   \
-   << "@" << LOGGING_FILE_BASENAME(__FILE__)                      \
+#define LOG_WARNING_MPI()                                       \
+  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"  \
+   <<"[WARNING:" << __FUNC_ID__                                 \
+   << "@" << LOGGING_FILE_BASENAME(__FILE__)                    \
    << "#"  << __LINE__ << "] ")
 
 #define LOG_ERROR_MPI()                                         \
-  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"   \
+  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"  \
    <<"[ERROR:" << __FUNC_ID__                                   \
-   << "@" << LOGGING_FILE_BASENAME(__FILE__)                      \
+   << "@" << LOGGING_FILE_BASENAME(__FILE__)                    \
    << "#"  << __LINE__ << "] ")
 
-#define LOG_INFO_MPI()                                         \
-  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"   \
-   <<"[INFO:" << __FUNC_ID__                                   \
-   << "@" << LOGGING_FILE_BASENAME(__FILE__)                      \
+#define LOG_INFO_MPI()                                          \
+  (std::cerr << "[MPI:" << MPI_GET_RANK(MPI_COMM_WORLD) << "]"  \
+   <<"[INFO:" << __FUNC_ID__                                    \
+   << "@" << LOGGING_FILE_BASENAME(__FILE__)                    \
    << "#"  << __LINE__ << "] ")
 #else
 #define LOG_VERBOSE_MPI LOG_VERBOSE
