@@ -86,7 +86,7 @@ class GridMPI: public Grid {
   virtual void Resize(const IntArray &local_offset,
                       const IntArray &local_size);
   
-  int Reduce(PSReduceOp op, void *out);
+  virtual int Reduce(PSReduceOp op, void *out);
 
  protected:
   bool empty_;
@@ -217,12 +217,12 @@ class GridSpaceMPI: public GridSpace {
   int GetProcessRank(const IntArray &proc_index) const;
   //! Reduce a grid with binary operator op.
   /*
-   * \param g The grid to reduce.
-   * \param op The binary operator to apply.
    * \param out The destination scalar buffer.
+   * \param op The binary operator to apply.   
+   * \param g The grid to reduce.
    * \return The number of reduced elements.
    */
-  int ReduceGrid(void *out, PSReduceOp op, GridMPI *g);
+  virtual int ReduceGrid(void *out, PSReduceOp op, GridMPI *g);
 
  protected:
   int num_dims_;

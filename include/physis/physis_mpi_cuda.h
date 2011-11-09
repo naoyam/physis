@@ -96,6 +96,7 @@ extern "C" {
 #define PS_FUNCTION_DEVICE static inline
 #endif
 
+#if ! defined(PHYSIS_RUNTIME) && ! defined(PHYSIS_USER)
   PS_FUNCTION_DEVICE size_t __PSGridCalcOffset3D(int x, int y, int z,
                                             int pitch, int dimy) {
     return x + y * pitch + z * pitch * dimy;
@@ -248,7 +249,8 @@ extern "C" {
       return g->halo[0][1] + offset;
     }
    }
-
+#endif
+  
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
   extern float* __PSGridGetAddrFloat3D_0_bw(
       __PSGrid3DFloatDev *g, int x, int y, int z);
@@ -391,6 +393,18 @@ extern "C" {
   extern index_t __PSGetLocalOffset(int dim);
 
   extern __PSDomain __PSDomainShrink(__PSDomain *dom, int width);
+
+  //! Reduces a grid with an operator.
+  /*!
+    \param buf A pointer to the output buffer.
+    \param op A binary operator to reduce elements.
+    \param g A grid.
+   */
+  extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                                  __PSGridMPI *g);
+  extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                                  __PSGridMPI *g);
+  
 
 #ifdef __cplusplus
 }

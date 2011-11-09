@@ -40,7 +40,7 @@ if (MPI_ENABLED AND CUDA_ENABLED)
   cuda_add_library(physis_rt_mpi_cuda ${RUNTIME_COMMON_SRC}
     mpi_cuda_runtime.cc grid.cc grid_mpi.cc grid_mpi_cuda.cc
     grid_util.cc rpc_mpi.cc rpc_mpi_cuda.cc mpi_wrapper.cc
-    buffer_cuda.cu)
+    buffer_cuda.cu reduce_mpi_cuda.cu)
   install(TARGETS physis_rt_mpi_cuda DESTINATION lib)
   add_executable(test_mpi_cuda_runtime test_mpi_cuda_runtime.cc)
   target_link_libraries(test_mpi_cuda_runtime physis_rt_mpi_cuda

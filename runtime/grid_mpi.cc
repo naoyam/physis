@@ -346,7 +346,7 @@ std::ostream &GridMPI::Print(std::ostream &os) const {
 }
 
 template <class T>
-int ReduceGrid(GridMPI *g, PSReduceOp op, T *out) {
+int ReduceGridMPI(GridMPI *g, PSReduceOp op, T *out) {
   size_t nelms = g->local_size().accumulate(g->num_dims());
   if (nelms == 0) return 0;
   boost::function<T (T, T)> func = GetReducer<T>(op);
@@ -363,10 +363,10 @@ int GridMPI::Reduce(PSReduceOp op, void *out) {
   int rv = 0;
   switch (type_) {
     case PS_FLOAT:
-      rv = ReduceGrid<float>(this, op, (float*)out);
+      rv = ReduceGridMPI<float>(this, op, (float*)out);
       break;
     case PS_DOUBLE:
-      rv = ReduceGrid<double>(this, op, (double*)out);
+      rv = ReduceGridMPI<double>(this, op, (double*)out);
       break;
     default:
       PSAbort(1);
@@ -1045,32 +1045,26 @@ void LoadSubgrid(GridMPI *gm, GridSpaceMPI *gs,
   return;
 }
 
-template <class T>
-void ReduceGridTemplate(void *out, PSReduceOp op,
-                        GridMPI *g, MPI_Comm comm) {
-  T v;
-  if (g->Reduce(op, &v) == 0) {
-    v = GetReductionDefaultValue<T>(op);
-  }
-  MPI_Datatype type = GetMPIDataType(g->type());
-  MPI_Op mpi_op = GetMPIOp(op);
-  //LOG_DEBUG() << "Local reduction: " << v << "\n";
-  PS_MPI_Reduce(&v, out, 1, type, mpi_op, 0, comm);
-  return;
-}
 
 int GridSpaceMPI::ReduceGrid(void *out, PSReduceOp op,
                              GridMPI *g) {
-  switch (g->type()) {
-    case PS_FLOAT:
-      ReduceGridTemplate<float>(out, op, g, comm());
-      break;
-    case PS_DOUBLE:
-      ReduceGridTemplate<double>(out, op, g, comm());
-      break;
-    default:
-      PSAbort(1);
+  void *p = malloc(g->elm_size());
+  if (g->Reduce(op, p) == 0) {
+    switch (g->type()) {
+      case PS_FLOAT:
+        *(float*)p = GetReductionDefaultValue<float>(op);
+        break;
+      case PS_DOUBLE:
+        *(double*)p = GetReductionDefaultValue<float>(op);
+        break;
+      default:
+        PSAbort(1);
+    }
   }
+  MPI_Datatype type = GetMPIDataType(g->type());
+  MPI_Op mpi_op = GetMPIOp(op);
+  PS_MPI_Reduce(p, out, 1, type, mpi_op, 0, comm_);
+  free(p);
   return g->num_elms();
 }
 

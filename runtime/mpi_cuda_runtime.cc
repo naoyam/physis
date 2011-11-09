@@ -483,6 +483,17 @@ extern "C" {
     }
     return shrinked_dom;
   }
+
+  void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                           __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);
+  }
+  
+  void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                            __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);    
+  }
+  
   
 #ifdef __cplusplus
 }

@@ -52,6 +52,9 @@ class GridMPICUDA3D: public GridMPI {
                                 const IntArray &local_size);
 
   void SetCUDAStream(cudaStream_t strm);
+  
+  virtual int Reduce(PSReduceOp op, void *out);
+  
   // REFACTORING: this is an ugly fix to make things work...
   //protected:
  public:
@@ -135,6 +138,16 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
   virtual void HandleFetchReply(GridRequest &req, GridMPI *g,
                                 std::map<int, FetchInfo> &fetch_map,  GridMPI *sg);
   virtual std::ostream& PrintLoadNeighborProf(std::ostream &os) const;
+
+  //! Reduce a grid with binary operator op.
+  /*
+   * \param out The destination scalar buffer.
+   * \param op The binary operator to apply.   
+   * \param g The grid to reduce.
+   * \return The number of reduced elements.
+   */
+  virtual int ReduceGrid(void *out, PSReduceOp op, GridMPI *g);
+  
  protected:
   BufferHost *buf;
   std::map<int, performance::DataCopyProfile*> load_neighbor_prof_;

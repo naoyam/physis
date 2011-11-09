@@ -299,7 +299,7 @@ void GridMPICUDA3D::FixupBufferPointers() {
   if (data_buffer_[0]) {
     dev_.pitch = static_cast<BufferCUDADev3D*>(buffer())
         ->GetPitch() / elm_size();
-    LOG_VERBOSE() << "Pitch: " << dev_.pitch << "\n";
+    LOG_DEBUG() << "Pitch: " << dev_.pitch << "\n";
     for (int i = 0; i < num_dims(); ++i) {
       dev_.dim[i]  = size()[i];
       dev_.local_size[i] = local_size()[i];
@@ -327,6 +327,8 @@ void GridMPICUDA3D::EnsureRemoteGrid(const IntArray &local_offset,
     remote_grid_->Resize(local_offset, local_size);
   }
 }
+
+
 
 //
 // Grid Space
@@ -821,6 +823,29 @@ std::ostream& GridSpaceMPICUDA::PrintLoadNeighborProf(std::ostream &os) const {
   }
   return os << sj.str() << "\n";
 }
+
+int GridSpaceMPICUDA::ReduceGrid(void *out, PSReduceOp op,
+                                 GridMPI *g) {
+  void *p = malloc(g->elm_size());
+  if (g->Reduce(op, p) == 0) {
+    switch (g->type()) {
+      case PS_FLOAT:
+        *(float*)p = GetReductionDefaultValue<float>(op);
+        break;
+      case PS_DOUBLE:
+        *(double*)p = GetReductionDefaultValue<float>(op);
+        break;
+      default:
+        PSAbort(1);
+    }
+  }
+  MPI_Datatype type = GetMPIDataType(g->type());
+  MPI_Op mpi_op = GetMPIOp(op);
+  PS_MPI_Reduce(p, out, 1, type, mpi_op, 0, comm_);
+  free(p);
+  return g->num_elms();
+}
+
 
 } // namespace runtime
 } // namespace physis

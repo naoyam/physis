@@ -76,7 +76,7 @@ class Grid {
    * \param out The buffer to store the reduced scalar value.
    * \return The number of reduced elements.
    */
-  int Reduce(PSReduceOp op, void *out);
+  virtual int Reduce(PSReduceOp op, void *out);
   
  protected:
   int id_;

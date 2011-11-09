@@ -69,8 +69,8 @@ namespace physis {
 namespace runtime {
 template <class T>
 MPI_Datatype GetMPIDataType() {
-  MPI_Datatype t;
-  return t;
+  PSAssert(0);
+  return MPI_INT; // dummy; never reach here.
 }
 
 template <> inline
