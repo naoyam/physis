@@ -277,9 +277,6 @@ such aggressive optimizations at translation time.
 Reduction
 ---------
 
-** THE FOLLOWING IS NOT YET IMPLEMENTED.** It describes the current plan
-for data reductions in Physis.	   
-
 Physis provides two methods for reductions. First, grid data can be
 reduced to a scalar value with intrinsic `PSReduce`: 
 
@@ -297,6 +294,8 @@ The naming and semantics are adopted from the MPI reduction
 operations. The result of reduction is stored at the memory location
 referenced by the first parameter, `v`, whose type is a pointer to the
 element type of the grid parameter.
+
+** THE FOLLOWING REDUCTION INTERFACE IS NOT YET IMPLEMENTED. ** 
 
 The same intrinsic also allows for more flexible, in-place data
 reduction with a user-defined stencil-like function:
