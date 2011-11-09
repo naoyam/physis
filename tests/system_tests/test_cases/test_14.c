@@ -1,5 +1,5 @@
 /*
- * TEST: Grid reduction OP=PS_MAX
+ * TEST: Grid reduction OP=PS_MIN
  * DIM: 3
  * PRIORITY: 2
  */
@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include "physis/physis.h"
 
-#define N 4
+#define N 8
 #define REAL float
 #define PSGrid3D PSGrid3DFloat
 #define PSGrid3DNew PSGrid3DFloatNew
@@ -17,7 +17,7 @@ REAL reduce(REAL *g) {
   REAL v = g[0];
   int i;
   for (i = 1; i < N*N*N; ++i) {
-    v = (v > g[i]) ? v : g[i];
+    v = (v > g[i]) ? g[i] : v;
   }
   return v;
 }
@@ -29,11 +29,11 @@ int main(int argc, char *argv[]) {
   float *indata = (float *)malloc(sizeof(REAL) * nelms);
   int i;
   for (i = 0; i < nelms; i++) {
-    indata[i] = i;
+    indata[i] = i+10;
   }
   PSGridCopyin(g1, indata);
   float v;
-  PSReduce(&v, PS_MAX, g1);
+  PSReduce(&v, PS_MIN, g1);
   float v_ref = reduce(indata);
   fprintf(stderr, "Reduction result: %f, reference: %f\n", v, v_ref);
   if (v != v_ref) {

@@ -1,5 +1,5 @@
 /*
- * TEST: Mixing different grid dimensions
+ * TEST: Run multiple iterations of 7-point stencil
  * DIM: 3
  * PRIORITY: 1 
  */
@@ -7,63 +7,90 @@
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 8
+#define N 32
+#define ITER 5
 
-void kernel(const int x, const int y, const int z,
-            PSGrid3DFloat g1, PSGrid3DFloat g2) {
-  float v = PSGridGet(g1, x, y, z);
+void kernel1(const int x, const int y, const int z,
+             PSGrid3DFloat g1, PSGrid3DFloat g2) {
+  float v = PSGridGet(g1, x, y, z) +
+      PSGridGet(g1, x+1, y, z) + PSGridGet(g1, x-1, y, z) +
+      PSGridGet(g1, x, y+1, z) + PSGridGet(g1, x, y-1, z) +
+      PSGridGet(g1, x, y, z-1) + PSGridGet(g1, x, y, z+1);
   PSGridEmit(g2, v);
   return;
 }
 
-void dump(float *buf, size_t len, FILE *out) {
+#define GET(g, x, y, z) g[(x) + (y) * N + (z) * N * N]
+
+void kernel_ref(float *input, float *output, int halo_width) {
+  int i, j, k;
+  for (i = halo_width; i < N-halo_width; ++i) {
+    for (j = halo_width; j < N-halo_width; ++j) {
+      for (k = halo_width; k < N-halo_width; ++k) {
+        float v = GET(input, i, j, k) +
+            GET(input, i-1, j, k) + GET(input, i+1, j, k) +
+            GET(input, i, j-1, k) + GET(input, i, j+1, k) +
+            GET(input, i, j, k-1) + GET(input, i, j, k+1);
+        GET(output, i, j, k) = v;
+      }
+    }
+  }
+  return;
+}
+
+void check(float *input, float *output) {
   int i;
-  for (i = 0; i < len; ++i) {
-    fprintf(out, "%f\n", buf[i]);
+  for (i = 0; i < N*N*N; ++i) {
+    if (input[i] != output[i]) {
+      printf("Mismatch at %d: %f != %f\n", i,
+             input[i], output[i]);
+      exit(1);
+    }
   }
 }
 
-#define IDX3(x, y, z) ((x) + (y) * N + (z) * N * N)
-#define IDX2(x, y) ((x) + (y) * N)
+#define halo_width (1)
+
+void dump(float *input) {
+  int i;
+  for (i = 0; i < N*N*N; ++i) {
+    printf("%f\n", input[i]);
+  }
+}
 
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 3, N, N, N);
   PSGrid3DFloat g1 = PSGrid3DFloatNew(N, N, N);
-  PSGrid3DFloat g2 = PSGrid3DFloatNew(1, N, N);
-  PSDomain3D d = PSDomain3DNew(0, 1, 0, N, 0, N);
+  PSGrid3DFloat g2 = PSGrid3DFloatNew(N, N, N);  
+
+  PSDomain3D d = PSDomain3DNew(0+halo_width, N-halo_width,
+                               0+halo_width, N-halo_width,
+                               0+halo_width, N-halo_width);
   size_t nelms = N*N*N;
-  int i, j, k;
   
   float *indata = (float *)malloc(sizeof(float) * nelms);
-
+  int i;
   for (i = 0; i < nelms; i++) {
     indata[i] = i;
   }
-  float *outdata = (float *)malloc(sizeof(float) * nelms);
+  float *outdata_ps = (float *)malloc(sizeof(float) * nelms);
+  float *outdata = (float *)malloc(sizeof(float) * nelms);  
     
   PSGridCopyin(g1, indata);
+  PSGridCopyin(g2, indata);
 
-  PSStencilRun(PSStencilMap(kernel, d, g1, g2));
+
+  PSStencilRun(PSStencilMap(kernel1, d, g1, g2),
+               PSStencilMap(kernel1, d, g2, g1),
+               ITER);
     
-  PSGridCopyout(g2, outdata);
-    
-  for (i = 0; i < 1; ++i) {
-    for (j = 0; j < N; ++j) {
-      for (k = 0; k < N; ++k) {
-        if (indata[IDX3(i, j, k)] != outdata[IDX2(j, k)]) {
-          printf("Error: mismatch at %d,%d,%d, in: %f, out: %f\n",
-                 i, j, k, indata[IDX3(i, j, k)], outdata[IDX2(j, k)]);
-          exit(1);
-        }
-      }
-    }
-  }
+  PSGridCopyout(g1, outdata_ps);
+
+  dump(outdata_ps);
 
   PSGridFree(g1);
   PSGridFree(g2);  
   PSFinalize();
-
-  //dump(outdata, N*N, stdout);
   free(indata);
   free(outdata);
   return 0;
