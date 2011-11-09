@@ -304,7 +304,7 @@ function get_reference_exe_name()
 	    target=cuda
 	    ;;
     esac
-    local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.manual.$target.exe
+    local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.$target.exe
     echo $ref_exe
 }
 
@@ -319,7 +319,7 @@ function execute_reference()
 	echo "[EXECUTE] No reference implementation found." >&2
 	# Check if other implementation variants exist. If true,
 	# warn about the lack of an implementation for this target
-	if ls ${CMAKE_CURRENT_BINARY_DIR}/tests/$src_name.manual.*.exe > \
+	if ls ${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.*.exe > \
 	    /dev/null 2>&1 ; then
 	    warn "Missing reference implementation for $target?"
 	fi
