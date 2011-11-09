@@ -44,9 +44,9 @@ class GridMPICUDA3D: public GridMPI {
   virtual void InitBuffer();
   virtual std::ostream &Print(std::ostream &os) const;
   __PSGrid3DDev *GetDev() { return &dev_; }
-  virtual void CopyoutHalo(int dim, unsigned width, int fw, bool diagonal);
-  virtual void CopyoutHalo3D0(unsigned width, int fw);
-  virtual void CopyoutHalo3D1(unsigned width, int fw);
+  virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
+  virtual void CopyoutHalo3D0(unsigned width, bool fw);
+  virtual void CopyoutHalo3D1(unsigned width, bool fw);
   virtual void *GetAddress(const IntArray &indices);  
   virtual void EnsureRemoteGrid(const IntArray &loal_offset,
                                 const IntArray &local_size);

@@ -140,12 +140,13 @@ std::ostream &GridMPICUDA3D::Print(std::ostream &os) const {
   return os;
 }
 
-// fw: 1 or 0 . if 1, prepare buffer for sending halo for forward
-// access. if 0 prepare for backward access.
-void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, int fw,
+
+void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, bool fw,
                                 bool diagonal) {
   PSAssert(num_dims() <= 3);
   halo_has_diagonal_ = diagonal;
+
+  int fw_idx = (fw) ? 1: 0;
 
   IntArray halo_offset;
   if (!fw) halo_offset[dim] = local_size_[dim] - width;
@@ -155,11 +156,11 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, int fw,
 
   // First, copy out of CUDA device memory to CUDA pinned host memory
 #if USE_MAPPED
-  BufferCUDAHostMapped *halo_cuda_host = halo_self_cuda_[dim][fw];    
+  BufferCUDAHostMapped *halo_cuda_host = halo_self_cuda_[dim][fw_idx];    
 #else
-  BufferCUDAHost *halo_cuda_host = halo_self_cuda_[dim][fw];  
+  BufferCUDAHost *halo_cuda_host = halo_self_cuda_[dim][fw_idx];  
 #endif
-  BufferHost *halo_mpi_host = halo_self_mpi_[dim][fw];
+  BufferHost *halo_mpi_host = halo_self_mpi_[dim][fw_idx];
   halo_cuda_host->EnsureCapacity(linear_size);
   static_cast<BufferCUDADev3D*>(buffer())->Copyout(
       *halo_cuda_host, halo_offset, halo_size);
@@ -195,10 +196,11 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, int fw,
 }
 
 // REFACTORING: This is almost identical to the parent class implementation. 
-void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, int fw) {
+void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, bool fw) {
   int nd = 3;
+  int fw_idx = fw ? 1 : 0;
   // copy diag
-  char *buf = (char*)halo_self_mpi_[1][fw]->Get();
+  char *buf = (char*)halo_self_mpi_[1][fw_idx]->Get();
   IntArray sg_offset;
   if (!fw) sg_offset[1] = local_size_[1] - width;
   IntArray sg_size(local_size_[0], width, halo_bw_width_[2]);
@@ -212,7 +214,7 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, int fw) {
   // copy halo
   sg_size[2] = local_size_[2];
   // different
-  halo_self_cuda_[1][fw]->Copyout(buf, sg_size.accumulate(nd));
+  halo_self_cuda_[1][fw_idx]->Copyout(buf, sg_size.accumulate(nd));
   buf += sg_size.accumulate(nd) * elm_size_;
   
   // copy diag
@@ -223,8 +225,10 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, int fw) {
 }
 
 // REFACTORING: This is almost identical to the parent class implementation. 
-void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, int fw) {
-  char *buf = (char*)halo_self_mpi_[0][fw]->Get();
+//void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, int fw) {
+void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, bool fw) {
+  int fw_idx = fw ? 1 : 0;
+  char *buf = (char*)halo_self_mpi_[0][fw_idx]->Get();
   size_t line_size = elm_size_ * width;  
   size_t xoffset = fw ? 0 : local_size_[0] - width;
   char *halo_bw_1 = (char*)halo_peer_cuda_[1][0]->Get() + xoffset * elm_size_;
@@ -232,7 +236,7 @@ void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, int fw) {
   char *halo_bw_2 = (char*)halo_peer_cuda_[2][0]->Get() + xoffset * elm_size_;
   char *halo_fw_2 = (char*)halo_peer_cuda_[2][1]->Get() + xoffset * elm_size_;
   //char *halo_0 = data_[0] + xoffset * elm_size_;
-  char *halo_0 = (char*)halo_self_cuda_[0][fw]->Get();
+  char *halo_0 = (char*)halo_self_cuda_[0][fw_idx]->Get();
   for (int k = 0; k < halo_bw_width_[2]+local_size_[2]+halo_fw_width_[2]; ++k) {
     // copy from the 2nd-dim backward halo 
     char *t = halo_bw_1;
