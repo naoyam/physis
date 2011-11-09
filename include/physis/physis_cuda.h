@@ -119,6 +119,12 @@ extern "C" {
   extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
+  
+  extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                                  __PSGrid *g);
+
+  extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                                   __PSGrid *g);
 
 
 #ifdef __cplusplus

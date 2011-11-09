@@ -9,6 +9,8 @@
 
 #include "runtime/runtime_common.h"
 #include "runtime/runtime_common_cuda.h"
+#include "runtime/cuda_util.h"
+#include "runtime/reduce.h"
 #include "physis/physis_cuda.h"
 
 #include <stdarg.h>
@@ -173,7 +175,6 @@ extern "C" {
     CUDA_SAFE_CALL(cudaMemcpy(((char *)g->p0) + offset, buf, g->elm_size,
                               cudaMemcpyHostToDevice));
   }
-  
 
 #ifdef __cplusplus
 }
