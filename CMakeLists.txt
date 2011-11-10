@@ -23,8 +23,10 @@ set(PS_DEBUG TRUE)
 set(AUTO_DOUBLE_BUFFERING FALSE)
   
 find_package(CUDA)
-if (CUDA_FOUND)
-  set(CUDA_ENABLED TRUE)
+if (CUDA_FOUND AND
+    (CUDA_VERSION VERSION_EQUAL "4.0") OR
+    (CUDA_VERSION VERSION_GREATER "4.0"))
+    set(CUDA_ENABLED TRUE)
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
   foreach(i ${CUDA_LIBRARIES})
@@ -60,6 +62,8 @@ if (CUDA_FOUND)
   set(CUDA_CUT_LIBRARIES ${CUDA_CUT_LIBRARY})
   message(STATUS "CUDA_CUT_LIBRARIES=${CUDA_CUT_LIBRARIES}")
 else()
+  message(STATUS "Compatible CUDA toolkit (4.0 or higher) not found.")
+  message(STATUS "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")
   set(CUDA_ENABLED FALSE)
 endif()
 
