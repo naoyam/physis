@@ -581,7 +581,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = ${PROJECT_SOURCE_DIR}
+INPUT                  = ${PROJECT_SOURCE_DIR}/translator  ${PROJECT_SOURCE_DIR}/runtime ${PROJECT_SOURCE_DIR}/util ${PROJECT_SOURCE_DIR}/common ${PROJECT_SOURCE_DIR}/include 
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
