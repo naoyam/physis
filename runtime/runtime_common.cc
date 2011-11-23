@@ -47,6 +47,7 @@ void PSInitCommon(int *argc, char ***argv) {
   vector<string> opts;
   if (ParseOption(argc, argv, opt_name, 0, opts)) {
       __ps_trace = stderr;
+      LOG_INFO() << "Tracing enabled\n";
   }
 }
 
