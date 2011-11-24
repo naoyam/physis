@@ -49,7 +49,14 @@ Clone the Git repository or download a tar package from the ROSE website.
 ### Installing librose.a fails
 Edit the top-level libtool on the build directory so that the
 compiler_lib_search_path variable (located in the very end of
-the file) include the installation lib directory. 
+the file) include the installation lib directory.
+
+### OpenMPI parsing
+To parse OpenMPI's header files, option --disable-visibility needs to
+be passed to the configure script of OpenMPI, or define
+OMPI_C_HAVE_VISIBILITY 0 before including mpi.h.
+
+See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
 
 # Usage
 * Declaration modifier
