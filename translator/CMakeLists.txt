@@ -26,7 +26,9 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   reference_translator.cc kernel.cc alias_analysis.cc SageBuilderEx.cc
   stencil_analysis.cc stencil_range.cc translation_util.cc
   reference_runtime_builder.cc runtime_builder.cc
-  rose_ast_attribute.cc reduce.cc)
+  rose_ast_attribute.cc reduce.cc
+  optimizer/optimizer.cc optimizer/reference_optimizer.cc
+  optimizer/optimization_passes.cc)
 
 #if (MPI_ENABLED)
 #  set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
@@ -72,8 +74,4 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-ref.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref DESTINATION bin)
 
-
 install(DIRECTORY ../include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
-
-
-

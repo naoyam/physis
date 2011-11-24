@@ -17,10 +17,16 @@
 #include "translator/translation_context.h"
 #include "translator/translator.h"
 #include "translator/configuration.h"
+#include "translator/optimizer/optimizer.h"
+#include "translator/optimizer/reference_optimizer.h"
+#include "translator/optimizer/cuda_optimizer.h"
+#include "translator/optimizer/mpi_optimizer.h"
+#include "translator/optimizer/mpi_cuda_optimizer.h"
 
 using std::string;
 namespace bpo = boost::program_options;
 namespace pt = physis::translator;
+namespace pto = physis::translator::optimizer;
 
 namespace physis {
 namespace translator {
@@ -126,6 +132,24 @@ void set_output_filename(SgFile *file, string suffix) {
   return;
 }
 
+static pto::Optimizer *GetOptimizer(TranslationContext *tx,
+                                    SgProject *proj,
+                                    CommandLineOptions &opts,
+                                    Configuration *cfg) {
+  pto::Optimizer *optimizer = NULL;
+  if (opts.ref_trans) {
+    optimizer = new pto::ReferenceOptimizer(proj, tx, cfg);
+  } else if (opts.cuda_trans) {
+    optimizer = new pto::CUDAOptimizer(proj, tx, cfg);
+  } else if (opts.mpi_trans) {
+    optimizer = new pto::MPIOptimizer(proj, tx, cfg);    
+  } else if (opts.mpi_cuda_trans) {
+    optimizer = new pto::MPICUDAOptimizer(proj, tx, cfg);        
+  }
+  PSAssert(optimizer != NULL);
+  return optimizer;
+}
+
 } // namespace translator
 } // namespace physis
 
@@ -144,7 +168,7 @@ int main(int argc, char *argv[]) {
   if (opts.config_file_path.first) {
     config.LoadFile(opts.config_file_path.second);
   }
-  
+
   if (opts.ref_trans) {
     trans = new pt::ReferenceTranslator(config);
     filename_suffix = "ref.c";
@@ -182,7 +206,7 @@ int main(int argc, char *argv[]) {
   LOG_DEBUG() << "Rose command line: " << sj << "\n";
 #endif  
   
-  // Build the AST used by ROSE
+  // Build AST
   SgProject* proj = frontend(argvec);
   proj->skipfinalCompileStep(true);
 
@@ -199,12 +223,26 @@ int main(int argc, char *argv[]) {
   pt::TranslationContext tx(proj);
 
   trans->SetUp(proj, &tx);
-  LOG_DEBUG() << "Translating the AST\n";  
+
+  pto::Optimizer *optimizer = GetOptimizer(&tx, proj, opts,
+                                           &config);
+
+  LOG_INFO() << "Performing optimization Stage 1\n";
+  optimizer->Stage1();
+  LOG_INFO() << "Optimization Stage 1 done\n";
+  
+  LOG_INFO() << "Translating the AST\n";
   trans->Translate();
   // TODO: optimization is disabled
   //trans->Optimize();
-  LOG_DEBUG() << "Translation done\n";
+  LOG_INFO() << "Translation done\n";
+  
+  LOG_INFO() << "Performing optimization Stage 2\n";
+  optimizer->Stage2();
+  LOG_INFO() << "Optimization Stage 2 done\n";
+  
   trans->Finish();
+  delete optimizer;
   
   pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
 
