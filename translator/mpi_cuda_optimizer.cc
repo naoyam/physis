@@ -148,7 +148,7 @@ void MPICUDAOptimizer::GridPreCalcAddr(SgFunctionDeclaration *func) {
     // variable reference. It's safe to put it to the very beginning
     // of the function.
     si::prependStatement(center_addr, func_def->get_body());
-    // 4. Replace each call with the variable reference plus offset
+    // 4. Replace each call with the variable referece plus offset
     FOREACH (cit, calls.begin(), calls.end()) {
       SgFunctionCallExp *call = *cit;
       StencilIndexAttribute *sia =

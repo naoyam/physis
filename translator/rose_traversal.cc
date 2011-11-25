@@ -10,6 +10,24 @@
 
 namespace physis {
 namespace translator {
+namespace rose_util {
+
+void RoseASTTraversal::VisitInternal(SgNode *node) {
+  if (isSgForStatement(node))
+    Visit(isSgForStatement(node));
+  if (isSgTypedefDeclaration(node)) 
+    Visit(isSgTypedefDeclaration(node));
+  if (isSgClassDeclaration(node))
+    Visit(isSgClassDeclaration(node));
+  if (isSgFunctionCallExp(node))
+    Visit(isSgFunctionCallExp(node));
+  if (isSgExpression(node))
+    Visit(isSgExpression(node));
+  if (isSgFunctionDeclaration(node))
+    Visit(isSgFunctionDeclaration(node));
+  
+  Visit(node);
+}
 
 void RoseASTTraversal::traverseTopDown(SgNode *node) {
   LOG_DEBUG() << "Visiting " << node->class_name()
@@ -28,15 +46,7 @@ void RoseASTTraversal::traverseTopDown(SgNode *node) {
     scopeStack.push_back(isSgScopeStatement(node));
   }
 
-  if (isSgForStatement(node)) {
-    visit(isSgForStatement(node));
-  } else if (isSgTypedefDeclaration(node)) {
-    visit(isSgTypedefDeclaration(node));
-  } else if (isSgClassDeclaration(node)) {
-    visit(isSgClassDeclaration(node));
-  } else if (isSgFunctionCallExp(node)) {
-    visit(isSgFunctionCallExp(node));
-  }
+  VisitInternal(node);
 
   if (doesSkipChildren()) {
     setSkipChildren(false);
@@ -95,18 +105,9 @@ void RoseASTTraversal::traverseBottomUp(SgNode *node) {
 
   // LOG_DEBUG() << "Visiting " << node->class_name() << "\n";
 
-  if (isSgForStatement(node)) {
-    visit(isSgForStatement(node));
-  } else if (isSgTypedefDeclaration(node)) {
-    visit(isSgTypedefDeclaration(node));
-  } else if (isSgClassDeclaration(node)) {
-    visit(isSgClassDeclaration(node));
-  } else if (isSgFunctionCallExp(node)) {
-    visit(isSgFunctionCallExp(node));
-  } else if (isSgFunctionDeclaration(node)) {
-    visit(isSgFunctionDeclaration(node));
-  }
+  VisitInternal(node);
 }
 
+} // namespace rose_util
 } // namespace translator
 } // namespace physis

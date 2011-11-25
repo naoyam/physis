@@ -41,10 +41,14 @@
 extern "C" {
 #endif
 
+  // TODO: index type is internal to Physis, so it should be prefixed
+  // with __PS. Replace index_t with __PSIndexType.
 #if defined(PHYSIS_INDEX_INT32)
   typedef int32_t index_t;
+  typedef int32_t PSIndexType;
 #elif defined(PHYSIS_INDEX_INT64)
   typedef int64_t index_t;
+  typedef int64_t PSIndexType;  
 #endif
   
   enum physis_error_code {

@@ -52,11 +52,18 @@ class ReferenceTranslator : public Translator {
                             SgInitializedName *gv,
                             bool isKernel);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
-  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv); 
-  virtual SgExpression *buildOffset(SgInitializedName *gv,
-                                    SgScopeStatement *scope,
-                                    int numDim,
-                                    SgExpressionPtrList &args);
+  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv);
+  //! Build an offset expression.
+  /*!
+    @param gv The grid to get a offset.
+    @param num_dim The number of dimensions.
+    @param args The index argument list.
+    @param is_kernel True if the expression is used in a stencil kernel.
+   */
+  virtual SgExpression *BuildOffset(SgInitializedName *gv,
+                                    int num_dim,
+                                    SgExprListExp *args,
+                                    bool is_kernel);
   virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);

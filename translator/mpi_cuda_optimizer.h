@@ -12,6 +12,8 @@
 #include "translator/translator_common.h"
 #include "translator/mpi_cuda_translator.h"
 
+// TODO: Merge this to optimizer/mpi_cuda_optimizer.h
+
 namespace physis {
 namespace translator {
 

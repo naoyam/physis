@@ -10,6 +10,8 @@
 
 #define PHYSIS_TRANSLATOR
 
+#define PS_INDEX_TYPE_NAME "PSIndexType"
+
 #include <set>
 #include <list>
 #include <vector>

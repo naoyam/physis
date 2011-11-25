@@ -23,7 +23,7 @@ class StencilMap;
 class Run;
 class Grid;
 
-class Translator: public RoseASTTraversal {
+class Translator: public rose_util::RoseASTTraversal {
  public:
   Translator(const Configuration &config);
   virtual ~Translator() {}
@@ -50,6 +50,7 @@ class Translator: public RoseASTTraversal {
   // types in physis_common.h
   //SgType *uvec_type_;
   SgType *ivec_type_;
+  SgType *index_type_;
   SgClassDeclaration *grid_decl_;
   SgTypedefType *grid_type_;
   SgType *grid_ptr_type_;
@@ -64,9 +65,8 @@ class Translator: public RoseASTTraversal {
 
   virtual void buildGridDecl();
 
-  virtual void visit(SgClassDeclaration *node) {}
-  virtual void visit(SgFunctionCallExp *node);
-  virtual void visit(SgFunctionDeclaration *node);
+  virtual void Visit(SgFunctionCallExp *node);
+  virtual void Visit(SgFunctionDeclaration *node);
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node) {}
   virtual void translateInit(SgFunctionCallExp *node) {}
   virtual void translateNew(SgFunctionCallExp *node,

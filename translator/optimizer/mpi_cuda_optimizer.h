@@ -21,8 +21,9 @@ class MPICUDAOptimizer: public Optimizer {
                    physis::translator::TranslationContext *tx,
                    physis::translator::Configuration *config)
       : Optimizer(proj, tx, config) {}
-  
   virtual ~MPICUDAOptimizer() {}
+  virtual void Stage1();
+  virtual void Stage2();
 };
 
 } // namespace optimizer

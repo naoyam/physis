@@ -25,6 +25,7 @@ Translator::Translator(const Configuration &config):
     global_scope_(NULL),
     tx_(NULL),
     ivec_type_(NULL),
+    index_type_(NULL),    
     grid_decl_(NULL),
     grid_type_(NULL),
     grid_ptr_type_(NULL),
@@ -48,6 +49,8 @@ void Translator::SetUp(SgProject *project, TranslationContext *context) {
 
   ivec_type_ = sb::buildArrayType(sb::buildIntType(),
                                   sb::buildIntVal(PS_MAX_DIM));
+  index_type_ = sb::buildOpaqueType(PS_INDEX_TYPE_NAME,
+                                   global_scope_);
   buildGridDecl();
 
   dom_type_ = isSgTypedefType(
@@ -72,6 +75,7 @@ void Translator::Finish() {
   tx_ = NULL;
   global_scope_ = NULL;
   ivec_type_ = NULL;
+  index_type_ = NULL;  
   grid_decl_ = NULL;
   grid_type_ = NULL;
   grid_ptr_type_ = NULL;
@@ -115,14 +119,14 @@ void Translator::buildGridDecl() {
   }
 }
 
-void Translator::visit(SgFunctionDeclaration *node) {
+void Translator::Visit(SgFunctionDeclaration *node) {
   if (tx_->isKernel(node)) {
     LOG_DEBUG() << "translate kernel declaration\n";
     translateKernelDeclaration(node);
   }
 }
 
-void Translator::visit(SgFunctionCallExp *node) {
+void Translator::Visit(SgFunctionCallExp *node) {
   if (tx_->isNewCall(node)) {
     LOG_DEBUG() << "call to grid new found\n";
     const string name = rose_util::getFuncName(node);

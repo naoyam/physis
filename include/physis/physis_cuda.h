@@ -87,6 +87,14 @@ extern "C" {
 #endif    
     int dim[3];
   } __PSGrid3DDoubleDev;
+
+  typedef struct {
+    void *p0;
+#ifdef AUTO_DOUBLE_BUFFERING    
+    void *p1;
+#endif    
+    int dim[3];
+  } __PSGridDev;
   
   typedef struct {
     char *p0;
@@ -107,7 +115,8 @@ extern "C" {
   typedef __PSGrid *PSGrid1DDouble;
   typedef __PSGrid *PSGrid2DDouble;
   typedef __PSGrid *PSGrid3DDouble;
-#define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])
+  //#define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])
+#define PSGridDim(p, d) ((p)->dim[(d)])
 #define __PSGridDimDev(p, d) ((p)->dim[d])
 #else
   extern __PSGridDimDev(void *p, int);
@@ -119,6 +128,48 @@ extern "C" {
   extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
+
+#ifdef PHYSIS_USER
+#define CUDA_DEVICE
+#else
+#define CUDA_DEVICE __device__
+#endif
+  
+  inline PSIndexType __PSGridGetOffset1D(__PSGrid *g, PSIndexType i1) {
+    return i1;
+  }
+  inline PSIndexType __PSGridGetOffset2D(__PSGrid *g, PSIndexType i1,
+                                         PSIndexType i2) {
+    return i1 + i2 * PSGridDim(g, 0);
+  }
+  inline PSIndexType __PSGridGetOffset3D(__PSGrid *g, PSIndexType i1,
+                                         PSIndexType i2, PSIndexType i3) {
+    return i1 + i2 * PSGridDim(g, 0) + i3 * PSGridDim(g, 0)
+        * PSGridDim(g, 1);
+  }
+  
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffset1DDev(void *g,
+                                            PSIndexType i1) {
+    return i1;
+  }
+  
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffset2DDev(void *g,
+                                            PSIndexType i1,
+                                            PSIndexType i2) {
+    return i1 + i2 * PSGridDim((__PSGridDev *)g, 0);
+  }
+
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffset3DDev(void *g,
+                                            PSIndexType i1,
+                                            PSIndexType i2,
+                                            PSIndexType i3) {
+    return i1 + i2 * PSGridDim((__PSGridDev*)g, 0)
+        + i3 * PSGridDim((__PSGridDev*)g, 0)
+        * PSGridDim((__PSGridDev*)g, 1);
+  }
   
   extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                                   __PSGrid *g);

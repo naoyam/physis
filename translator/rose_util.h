@@ -13,6 +13,7 @@
 #include "physis/internal_common.h"
 
 namespace physis {
+namespace translator {
 namespace rose_util {
 
 // This doesn't work.
@@ -143,7 +144,19 @@ template <class T>
 inline bool IsIntLikeType(const T *t) {
   return IsIntLikeType(t->get_type());
 }
+
+//! Check an AST node is conditional
+/*!
+  @param node An AST node.
+  @return The conditional node or statement govering the given node.
+ */
+SgNode *IsConditional(const SgNode *node);
+
+//! Find the nearest common parent.
+SgNode *FindCommonParent(SgNode *n1, SgNode *n2);
+
 }  // namespace rose_util
+}  // namespace translator
 }  // namespace physis
 
 #endif /* PHYSIS_TRANSLATOR_ROSE_UTIL_H__ */

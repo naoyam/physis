@@ -232,7 +232,6 @@ class TranslationContext {
   void registerStencilIndex(SgFunctionCallExp *call, const StencilIndexList &sil);
   const StencilIndexList* findStencilIndex(SgFunctionCallExp *call);
 
-
  protected:
   SgFunctionCallExpPtrList getGridCalls(SgScopeStatement *scope,
                                         string methodName);

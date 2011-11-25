@@ -27,6 +27,20 @@ class Configuration {
   virtual ~Configuration() {}
   virtual int LoadFile(const std::string &path);
   virtual std::ostream &print(std::ostream &os) const;
+  template <class T>
+  bool Lookup(const std::string &key_name, T &value) const {
+    //LOG_DEBUG() << "Lookup Key: " << key_name << "\n";
+    if (!tbl_.HasKey(key_name)) return false;
+    //LOG_DEBUG() << "Key exits: " << key_name << "\n";
+    const LuaValue *lv = tbl_.Find(key_name)->second;
+    lv->get(value);
+    return true;
+  }
+  bool LookupFlag(const std::string &key_name) const {
+    bool f = false;
+    if (!Lookup<bool>(key_name, f)) return false;
+    return f;
+  }
   
  protected:
   typedef std::string KeyDesc;

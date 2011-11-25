@@ -198,38 +198,19 @@ void ReferenceTranslator::translateNew(SgFunctionCallExp *node,
   return;
 }
 
-SgExpression *ReferenceTranslator::buildOffset(SgInitializedName *gv,
-                                               SgScopeStatement *scope,
-                                               int numDim,
-                                               SgExpressionPtrList &args) {
+SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
+                                               int num_dim,
+                                               SgExprListExp *args,
+                                               bool is_kernel) {
   /*
-    if (3d)
-    offset = grid_dimx(g) * grid_dimy(g) * k + grid_dimx(g) * j + i
-    if (2d)
-    offset = grid_dimx(g) * j + i
-    if (1d)
-    offset = i
+    __PSGridGetOffsetND(g, i)
   */
-
-  SgExpression *offset = NULL;
-  SgTreeCopy ch;
-  for (int i = 0; i < numDim; i++) {
-    SgExpression *dim_offset = isSgExpression(args[i]->copy(ch));
-    for (int j = 0; j < i; j++) {
-      SgExprListExp *arg =
-          sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(), scope),
-                               sb::buildIntVal(j));
-      dim_offset =
-          sb::buildMultiplyOp(dim_offset,
-                              sb::buildFunctionCallExp(grid_dim_get_func_, arg));
-    }
-    if (offset) {
-      offset = sb::buildAddOp(offset, dim_offset);
-    } else {
-      offset = dim_offset;
-    }
-  }
-  return offset;
+  std::string func_name =
+      "__PSGridGetOffset" + toString(num_dim) + "D";
+  SgExprListExp *func_args = isSgExprListExp(si::deepCopyNode(args));
+  func_args->prepend_expression(sb::buildVarRefExp(gv->get_name()));
+  return sb::buildFunctionCallExp(func_name, index_type_,
+                                  func_args);
 }
 
 
@@ -239,19 +220,20 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   /*
     (type*)(g->p0)[offset]
   */
-  SgTreeCopy tc;
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgScopeStatement *scope = getContainingScopeStatement(node);
-  SgExpression *offset = buildOffset(gv, scope, nd,
-                                     node->get_args()->get_expressions());
+  SgExpression *offset = BuildOffset(gv, nd,
+                                     node->get_args(),
+                                     isKernel);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpression *p0 =
       sb::buildArrowExp(g, sb::buildVarRefExp("p0",
                                               grid_decl_->get_definition()));
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
-
+  p0->addNewAttribute(GridGetAttr::name,
+                      new GridGetAttr(gv, isKernel));
   si::replaceExpression(node, p0);
 }
 
@@ -263,16 +245,18 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
-  SgExpressionPtrList args;
-  FOREACH(it, params.begin(), params.end()) {
-    SgInitializedName *p = *it;
-    args.push_back(sb::buildVarRefExp(p, getContainingScopeStatement(node)));
+  //SgExpressionPtrList args;
+  SgExprListExp *args = sb::buildExprListExp();
+  for (int i = 0; i < nd; ++i) {
+    SgInitializedName *p = params[i];
+    args->append_expression(
+        sb::buildVarRefExp(p, getContainingScopeStatement(node)));
   }
 
-  SgExpression *offset = buildOffset(gv, getContainingScopeStatement(node),
-                                     nd, args);
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(),
-                                      getContainingScopeStatement(node));
+  SgExpression *offset = BuildOffset(gv, nd, args, true);
+  SgVarRefExp *g =
+      sb::buildVarRefExp(gv->get_name(),
+                         getContainingScopeStatement(node));
 #if defined(AUTO_DOUBLE_BUFFERING)
   string dst_buf_name = "p1";
 #else
@@ -285,9 +269,9 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
 
-  SgTreeCopy tc;
   SgExpression *rhs =
-      isSgExpression(node->get_args()->get_expressions()[0]->copy(tc));
+      si::copyExpression(node->get_args()->get_expressions()[0]);
+  
   LOG_DEBUG() << "emit rhs: " << rhs->unparseToString() << "\n";
 
   SgExpression *emit = sb::buildAssignOp(lhs, rhs);
@@ -816,7 +800,8 @@ void ReferenceTranslator::translateSet(SgFunctionCallExp *node,
   int nd = gt->getNumDim();
   SgScopeStatement *scope = getContainingScopeStatement(node);    
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
-  SgExpressionPtrList &args = node->get_args()->get_expressions();
+  SgExpressionPtrList &
+      args = node->get_args()->get_expressions();
   SgExpressionPtrList indices;
   FOREACH (it, args.begin(), args.begin() + nd) {
     indices.push_back(*it);

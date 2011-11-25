@@ -29,10 +29,12 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   reference_runtime_builder.cc runtime_builder.cc
   rose_ast_attribute.cc reduce.cc
   optimizer/optimizer.cc optimizer/reference_optimizer.cc
-  optimizer/optimization_passes.cc)
+  optimizer/optimization_passes.cc
+  optimizer/unconditional_get.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
-  mpi_translator.cc mpi_runtime_builder.cc)
+  mpi_translator.cc mpi_runtime_builder.cc
+  optimizer/mpi_optimizer.cc)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi
@@ -40,7 +42,9 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   cuda_translator.cc
-  cuda_builder.cc)
+  cuda_builder.cc  
+  optimizer/cuda_optimizer.cc)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-cuda.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda
@@ -49,7 +53,8 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda
 set(PHYSISC_SRC ${PHYSISC_SRC}
   mpi_cuda_translator.cc
   mpi_cuda_runtime_builder.cc
-  mpi_cuda_optimizer.cc)
+  mpi_cuda_optimizer.cc
+  optimizer/mpi_cuda_optimizer.cc)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-cuda.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda

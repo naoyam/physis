@@ -168,8 +168,8 @@ LuaTable *LuaLoader::LoadTable(lua_State *L, bool root) const {
       continue;
     }
     LOG_DEBUG_LUA() << lua_typename(L, lua_type(L, -2))
-                << " - "
-                << lua_typename(L, lua_type(L, -1)) << "\n";
+                    << " - "
+                    << lua_typename(L, lua_type(L, -1)) << "\n";
     LuaValue *cv = NULL;
     if (lua_istable(L, -1)) {
       LOG_DEBUG_LUA() << "Nested table\n";

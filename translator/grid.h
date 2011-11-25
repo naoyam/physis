@@ -164,6 +164,24 @@ class Grid {
 
 typedef std::set<Grid*> GridSet;
 
+class GridGetAttr: public AstAttribute {
+ public:
+  GridGetAttr(SgInitializedName *gv,
+              bool in_kernel): gv_(gv), in_kernel_(in_kernel) {}
+  virtual ~GridGetAttr() {}
+  static const std::string name;
+  bool in_kernel() const { return in_kernel_; }
+  SgInitializedName *gv() const { return gv_; }
+ protected:
+  SgInitializedName *gv_;  
+  bool in_kernel_;
+};
+
+class GridEmitAttr: public AstAttribute {
+ public:
+  static const std::string name;
+};
+
 } // namespace translator
 } // namespace physis
 

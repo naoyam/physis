@@ -9,6 +9,10 @@
 #ifndef PHYSIS_PHYSIS_H_
 #define PHYSIS_PHYSIS_H_
 
+#if defined(PHYSIS_USER)
+#include "physis/physis_user.h"
+#endif
+
 #if defined(PHYSIS_REF)
 #include "physis/physis_ref.h"
 #elif defined(PHYSIS_CUDA)
@@ -19,9 +23,6 @@
 #include "physis/physis_mpi_cuda.h"
 #endif
 
-#if defined(PHYSIS_USER)
-#include "physis/physis_user.h"
-#endif
 
 #include "physis/math.h"
 

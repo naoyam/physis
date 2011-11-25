@@ -215,5 +215,9 @@ SgExpression *Grid::BuildAttributeExpr() {
   if (!attribute_) return NULL;
   return si::copyExpression(attribute_);
 }
+
+const std::string GridGetAttr::name = "PSGridGet";
+const std::string GridEmitAttr::name = "PSGridEmit";
+
 } // namespace translator
 } // namespace physis

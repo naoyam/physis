@@ -46,6 +46,18 @@ extern "C" {
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   extern void __PSGridGet(__PSGrid *g, void *buf, ...);
 
+  inline PSIndexType __PSGridGetOffset1D(__PSGrid *g, PSIndexType i1) {
+    return i1;
+  }
+  inline PSIndexType __PSGridGetOffset2D(__PSGrid *g, PSIndexType i1,
+                                         PSIndexType i2) {
+    return i1 + i2 * PSGridDim(g, 0);
+  }
+  inline PSIndexType __PSGridGetOffset3D(__PSGrid *g, PSIndexType i1,
+                                         PSIndexType i2, PSIndexType i3) {
+    return i1 + i2 * PSGridDim(g, 0) + i3 * PSGridDim(g, 0) * PSGridDim(g, 1);
+  }
+
   typedef void (*ReducerFunc)();
   
   //extern void __PSReduceGrid(void *buf, __PSGrid *g, ReducerFunc f);

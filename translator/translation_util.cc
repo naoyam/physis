@@ -36,6 +36,10 @@ SgType *BuildIndexType(SgScopeStatement *scope) {
 #endif
 }
 
+SgType *BuildIndexType2(SgScopeStatement *scope) {
+  return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, scope);
+}
+
 SgExpression *BuildIndexVal(index_t v) {
   return rose_util::BuildIntLikeVal(v);
 }

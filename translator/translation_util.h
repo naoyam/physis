@@ -18,6 +18,7 @@ namespace translator {
 SgType *BuildInt32Type(SgScopeStatement *scope=NULL);
 SgType *BuildInt64Type(SgScopeStatement *scope=NULL);
 SgType *BuildIndexType(SgScopeStatement *scope=NULL);
+SgType *BuildIndexType2(SgScopeStatement *scope=NULL);
 
 SgExpression *BuildIndexVal(index_t v);
 

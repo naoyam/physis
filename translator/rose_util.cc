@@ -15,6 +15,7 @@ using namespace physis;
 using namespace physis::util;
 
 namespace physis {
+namespace translator {
 namespace rose_util {
 
 SgType *getType(SgNode *topLevelNode, const string &typeName) {
@@ -257,5 +258,35 @@ bool IsIntLikeType(const SgType *t) {
   }
   return t->isIntegerType();
 }
+
+SgNode *IsConditional(const SgNode *node) {
+  while (true) {
+    SgNode *parent = node->get_parent();
+    // Stop if no parent found
+    if (!parent) break;
+    // True if the parent is a node for conditional execution
+    if (isSgIfStmt(parent) ||
+        isSgConditionalExp(parent)) {
+      return parent;
+    }
+    // Stop when crossing function boundary
+    if (isSgFunctionDeclaration(parent)) {
+      break;
+    }
+    node = parent;
+  }
+  return NULL;
+}
+
+
+SgNode *FindCommonParent(SgNode *n1, SgNode *n2) {
+  while (n1) {
+    if (n1 == n2 || si::isAncestor(n1, n2)) return n1;
+    n1 = n1->get_parent();
+  }
+  return NULL;
+}
+
 }  // namespace rose_util
+}  // namespace translator
 }  // namespace physis

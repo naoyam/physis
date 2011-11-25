@@ -21,8 +21,9 @@ class ReferenceOptimizer: public Optimizer {
                      physis::translator::TranslationContext *tx,
                      physis::translator::Configuration *config)
       : Optimizer(proj, tx, config) {}
-  
   virtual ~ReferenceOptimizer() {}
+  virtual void Stage1();
+  virtual void Stage2();
 };
 
 } // namespace optimizer

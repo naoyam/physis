@@ -76,7 +76,9 @@ void CUDATranslator::translateKernelDeclaration(
     exp->set_type(new_type);
   }
 
-  
+  // This is unnecessary because PSGridDim is defined as a macro that
+  // work both in host and device.
+  /*
   Rose_STL_Container<SgNode*> gdim_calls =
       NodeQuery::querySubTree(node, V_SgFunctionCallExp);
   SgFunctionSymbol *gdim_dev =
@@ -88,6 +90,7 @@ void CUDATranslator::translateKernelDeclaration(
       continue;
     fc->set_function(sb::buildFunctionRefExp(gdim_dev));
   }
+  */
   
   return;
 }
@@ -95,6 +98,7 @@ void CUDATranslator::translateKernelDeclaration(
 void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                                   SgInitializedName *grid_arg,
                                   bool is_kernel) {
+#if 0  
   if (!(is_kernel && flag_pre_calc_grid_address_)) {
     ReferenceTranslator::translateGet(func_call_exp,
                                       grid_arg,
@@ -132,15 +136,20 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                       sb::buildVarRefExp("p0",
                                          grid_decl_->get_definition())),
                   sb::buildPointerType(grid_type->getElmType())),
-              buildOffset(grid_arg,
-                          func_body,
+              BuildOffset(grid_arg,
                           num_dim,
-                          func_call_exp->get_args()->get_expressions()))));
+                          func_call_exp->get_args(),
+                          is_kernel))));
   func_body->prepend_statement(var_ptr);
   SgExpression *grid_get_exp =
       sb::buildPointerDerefExp(sb::buildVarRefExp(var_ptr));
 
   si::replaceExpression(func_call_exp, grid_get_exp);
+#else
+  ReferenceTranslator::translateGet(func_call_exp,
+                                    grid_arg,
+                                    is_kernel);
+#endif  
 }
 
 SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
@@ -502,7 +511,7 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
 //   GridType *gt = tx_->findGridType(gv->get_type());
 //   int nd = gt->getNumDim();
 //   SgScopeStatement *scope = getContainingScopeStatement(node);    
-//   SgExpression *offset = buildOffset(gv, scope, nd,
+//   SgExpression *offset = BuildOffset(gv, scope, nd,
 //                                      node->get_args()->get_expressions());
 //   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
 //   SgExpression *p1 =
@@ -523,6 +532,24 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
 //   si::replaceExpression(node, set, false);
 // }
 
+SgExpression *CUDATranslator::BuildOffset(SgInitializedName *gv,
+                                          int num_dim,
+                                          SgExprListExp *args,
+                                          bool is_kernel) {
+  /*
+    __PSGridGetOffsetND(g, i)
+  */
+  std::string func_name
+      = "__PSGridGetOffset" + toString(num_dim) + "D";
+  if (is_kernel) {
+    func_name += "Dev";
+  }
+  SgExprListExp *func_args = isSgExprListExp(si::deepCopyNode(args));
+  func_args->prepend_expression(sb::buildVarRefExp(gv->get_name()));
+  return sb::buildFunctionCallExp(func_name, index_type_,
+                                  func_args);
+}
 
 } // namespace translator
 } // namespace physis
+

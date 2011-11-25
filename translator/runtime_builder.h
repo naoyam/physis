@@ -11,6 +11,9 @@
 
 #include "translator/translator_common.h"
 
+namespace si = SageInterface;
+namespace sb = SageBuilder;
+
 namespace physis {
 namespace translator {
 
@@ -27,7 +30,6 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
                                           int dim, int right,
                                           SgExpression *width,
                                           int factor, int offset);
-
 
 } // namespace translator
 } // namespace physis

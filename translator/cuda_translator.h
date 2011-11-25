@@ -73,6 +73,11 @@ class CUDATranslator : public ReferenceTranslator {
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) const;
 
+  virtual SgExpression *BuildOffset(SgInitializedName *gv,
+                                    int num_dim,
+                                    SgExprListExp *args,
+                                    bool is_kernel);
+
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,

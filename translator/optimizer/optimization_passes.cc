@@ -7,6 +7,10 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/rose_util.h"
+
+namespace si = SageInterface;
+namespace sb = SageBuilder;
 
 namespace physis {
 namespace translator {
@@ -19,6 +23,11 @@ void null_optimization(
   pre_process(proj, tx, __FUNCTION__);
 }
 
+void grid_index_cse(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx) {
+  pre_process(proj, tx, __FUNCTION__);
+}
 
 } // namespace pass
 } // namespace optimizer

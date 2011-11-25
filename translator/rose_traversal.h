@@ -15,6 +15,7 @@
 
 namespace physis {
 namespace translator {
+namespace rose_util {
 
 class RoseASTTraversal {
  public:
@@ -23,15 +24,20 @@ class RoseASTTraversal {
   virtual void traverseBottomUp(SgNode *node);
   virtual void traverseTopDown(SgNode *node);
 
+ private:
+  void VisitInternal(SgNode *node);
+  
  protected:
   list<SgStatement*> stmtStack;
   list<SgFunctionDeclaration*> funcStack;
   list<SgScopeStatement*> scopeStack;
-  virtual void visit(SgForStatement *node) {}
-  virtual void visit(SgTypedefDeclaration *node) {}
-  virtual void visit(SgFunctionCallExp *node) {}
-  virtual void visit(SgClassDeclaration *node) {}
-  virtual void visit(SgFunctionDeclaration *node) {}
+  virtual void Visit(SgForStatement *node) {}
+  virtual void Visit(SgTypedefDeclaration *node) {}
+  virtual void Visit(SgFunctionCallExp *node) {}
+  virtual void Visit(SgClassDeclaration *node) {}
+  virtual void Visit(SgExpression *node) {}
+  virtual void Visit(SgFunctionDeclaration *node) {}
+  virtual void Visit(SgNode *node) {}
   bool skipChildren;
   virtual void setSkipChildren(bool s = true) {
     skipChildren = s;
@@ -68,6 +74,7 @@ class RoseASTTraversal {
   }
 };
 
+} // namespace rose_util
 } // namespace translator
 } // namespace physis
 
