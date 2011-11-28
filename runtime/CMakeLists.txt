@@ -49,3 +49,19 @@ if (MPI_ENABLED AND CUDA_ENABLED)
   target_link_libraries(test_grid_mpi_cuda_3d physis_rt_mpi_cuda
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
 endif()
+
+if (OPENCL_ENABLED)
+  include_directories(${OPENCL_INCLUDE_PATH})
+  add_library(physis_rt_opencl ${RUNTIME_COMMON_SRC}
+      opencl_gridcp.cc
+      opencl_gridinit.cc
+      opencl_kernelinit.cc
+      opencl_misc.cc
+      opencl_psinit.cc
+      opencl_runtime.cc
+    )
+  install(
+    TARGETS physis_rt_opencl
+    DESTINATION lib
+    )
+endif()
