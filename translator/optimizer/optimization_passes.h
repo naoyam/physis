@@ -31,7 +31,43 @@ extern void null_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx);
 
-//! Common subexpression elimination in grid index calculations.
+//! Inline stencil kernels.
+/*!
+  This optimization itself may have no performance improvement, but
+  is required by other optimizations such as register blocking.
+  
+  From:
+  \code
+  void kernel(const int x, const int y, ...) {
+  }
+  void run_kernel(...) {
+    for {
+      kernel(...);
+    }
+  }
+  \endcode
+
+  To:
+  \code
+  void kernel(const int x, const int y, ...) {
+  }
+  void run_kernel(...) {
+    for {
+      <kernel inlined here>
+    }
+  }
+  \endcode
+*/
+extern void kernel_inlining(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx);
+
+// TODO
+extern void register_blocking(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx);
+
+//! Common subexpression elimination in grid offset calculations.
 /*!
   From:
   \code
@@ -43,10 +79,11 @@ extern void null_optimization(
   \code
   int index = x + y*nx + z*nx*ny;
   g[index] // GridGet(x, y, z);
-  g[index+1] // GridGet(x+1, y, z);  
+  g[index+1] // GridGet(x+1, y, z);
   \endcode
  */
-extern void grid_index_cse(
+// TODO
+extern void offset_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx);
     
@@ -73,7 +110,7 @@ extern void grid_index_cse(
   \endcode
   
  */
-extern void make_conditional_get_unconditional(
+extern void unconditional_get(
     SgProject *proj,
     physis::translator::TranslationContext *tx);
 

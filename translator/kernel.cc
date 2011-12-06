@@ -133,5 +133,7 @@ void Kernel::appendChild(SgFunctionCallExp *call, Kernel *child) {
   assert(calls.insert(std::make_pair(call, child)).second);
 }
 
+const std::string RunKernelAttribute::name = "RunKernel";
+
 } // namespace translator
 } // namespace physis

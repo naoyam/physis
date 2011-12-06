@@ -155,6 +155,16 @@ SgNode *IsConditional(const SgNode *node);
 //! Find the nearest common parent.
 SgNode *FindCommonParent(SgNode *n1, SgNode *n2);
 
+template <class T>
+T *GetASTAttribute(const SgNode *node) {
+  return static_cast<T*>(node->getAttribute(T::name));
+}
+
+template <class T>
+void AddASTAttribute(SgNode *node, T *attr) {
+  node->addNewAttribute(T::name, attr);
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

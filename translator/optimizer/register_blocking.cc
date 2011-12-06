@@ -8,6 +8,8 @@
 
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/rose_util.h"
+#include "translator/runtime_builder.h"
+#include "translator/translation_util.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -17,17 +19,10 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-void null_optimization(
+void register_blocking(
     SgProject *proj,
     physis::translator::TranslationContext *tx) {
   pre_process(proj, tx, __FUNCTION__);
-}
-
-void offset_cse(
-    SgProject *proj,
-    physis::translator::TranslationContext *tx) {
-  pre_process(proj, tx, __FUNCTION__);
-  // TODO
 }
 
 } // namespace pass

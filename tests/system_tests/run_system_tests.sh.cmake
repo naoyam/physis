@@ -127,11 +127,25 @@ function generate_empty_translation_configuration()
 
 function generate_translation_configurations_ref()
 {
+    local configs=""    
     if [ $# -gt 0 ]; then
-		echo $1
+		configs=$*
     else
-		generate_empty_translation_configuration
+		configs=$(generate_empty_translation_configuration)
     fi
+    local kernel_inlining='true false'
+    local new_configs=""
+    local idx=0
+    for i in $kernel_inlining; do
+		for j in $configs; do
+			local c=config.ref.$idx
+			idx=$(($idx + 1))
+			cat $j > $c
+			echo "OPT_KERNEL_INLINING = $i" >> $c
+			new_configs="$new_configs $c"
+		done
+    done
+    echo $new_configs
 }
 
 function generate_translation_configurations_cuda()
@@ -145,17 +159,21 @@ function generate_translation_configurations_cuda()
     fi
     local pre_calc='true false'
     local bsize="64,4,1 32,8,1"
+	local kernel_inlining='true fales'
     local new_configs=""
     local idx=0
     for i in $pre_calc; do
 		for j in $bsize; do
-			for k in $configs; do
-				local c=config.cuda.$idx
-				idx=$(($idx + 1))
-				cat $k > $c
-				echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
-				echo "CUDA_BLOCK_SIZE = {$j}" >> $c
-				new_configs="$new_configs $c"
+			for l in $kernel_inlining; do
+				for k in $configs; do
+					local c=config.cuda.$idx
+					idx=$(($idx + 1))
+					cat $k > $c
+					echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
+					echo "CUDA_BLOCK_SIZE = {$j}" >> $c
+					echo "OPT_KERNEL_INLINING = $l" >> $c
+					new_configs="$new_configs $c"
+				done
 			done
 		done
     done
@@ -607,7 +625,7 @@ function get_test_cases()
 					echo "[EXECUTE] Trying with process configurations: $np_target"
                     # Make sure compiled binaries are synched to other nodes
 		    # This is a temporary workaround for the Raccoon cluster.
-					sleep 30
+					#sleep 30
 				fi
 				for np in $np_target; do
 					if execute $SHORTNAME $TARGET $np $DIM; then

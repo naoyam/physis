@@ -198,7 +198,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     return;
   }
 
-  Reduce *rd = tx_->GetReduce(node);
+  Reduce *rd = rose_util::GetASTAttribute<Reduce>(node);
   if (rd) {
     LOG_DEBUG() << "Translating Reduce\n";
     LOG_DEBUG() << node->unparseToString() << "\n";

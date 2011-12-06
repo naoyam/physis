@@ -58,12 +58,15 @@ class ReferenceTranslator : public Translator {
     @param gv The grid to get a offset.
     @param num_dim The number of dimensions.
     @param args The index argument list.
-    @param is_kernel True if the expression is used in a stencil kernel.
+    @param is_kernel True if the expression is used in a stencil
+    kernel.
+    @param scope The scope this node is used.
    */
   virtual SgExpression *BuildOffset(SgInitializedName *gv,
                                     int num_dim,
                                     SgExprListExp *args,
-                                    bool is_kernel);
+                                    bool is_kernel,
+                                    SgScopeStatement *scope);
   virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);

@@ -17,9 +17,12 @@ void ReferenceOptimizer::Stage1() {
 }
 
 void ReferenceOptimizer::Stage2() {
+  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
+    pass::kernel_inlining(proj_, tx_);
+  }
 #if 0  
-  if (config_->LookupFlag("OPT_MAKE_CONDITIONAL_GET_UNCONDITIONAL")) {
-    pass::make_conditional_get_unconditional(proj_, tx_);
+  if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
+    pass::unconditional_get(proj_, tx_);
   }
 #endif
 }

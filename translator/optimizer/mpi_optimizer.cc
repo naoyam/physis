@@ -17,6 +17,9 @@ void MPIOptimizer::Stage1() {
 }
 
 void MPIOptimizer::Stage2() {
+  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
+    pass::kernel_inlining(proj_, tx_);
+  }
 }
 
 } // namespace optimizer

@@ -74,6 +74,14 @@ class Kernel {
   void analyzeGridReads(TranslationContext &tx);  
 };
 
+class RunKernelAttribute: public AstAttribute {
+ public:
+  RunKernelAttribute() {}
+  virtual ~RunKernelAttribute() {}
+  static const std::string name;  
+};
+
+
 } // namespace translator
 } // namespace physis
 

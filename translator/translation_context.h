@@ -207,15 +207,6 @@ class TranslationContext {
   bool isNewCall(SgFunctionCallExp *ce);
   bool isNewFunc(const string &funcName);
 
-
-  //! Returns a Reduce attribute object for a reduce call.
-  /*!
-    \param call A function call.
-    \return The Reduce object for the call when it is a call to Reduce
-    intrinsic. NULL otherwise.
-   */
-  Reduce *GetReduce(SgFunctionCallExp *call) const;
-
   // ool isGridTypeSpecificCall(SgFunctionCallExp *ce);
   // gInitializedName* getGridVarUsedInFuncCall(SgFunctionCallExp *call);
   string getGridFuncName(SgFunctionCallExp *call);

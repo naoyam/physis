@@ -68,6 +68,13 @@ See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
 * Do not insert statements and expressions while traversing. Already
   traversed nodes seem fine to edit, but editing remaining nodes
   results in backend errors.
+* buildVarRefExp with NULL scope is ok, but resultant AST may not be
+  analyzable and translatable anymore.
+* Use SageInterface's methods for manipulating AST nodes and
+  edges. node->append_statement() seems to be just connecting an edge
+  from the parent to the child, but the pointer from the child to the
+  parent is not set correctly.
+
   
 # Questions
 * SageInterface::lookupNamedTypeInParentScopes

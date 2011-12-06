@@ -17,8 +17,11 @@ void CUDAOptimizer::Stage1() {
 }
 
 void CUDAOptimizer::Stage2() {
-  if (config_->LookupFlag("OPT_MAKE_CONDITIONAL_GET_UNCONDITIONAL")) {
-    pass::make_conditional_get_unconditional(proj_, tx_);
+  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
+    pass::kernel_inlining(proj_, tx_);
+  }
+  if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
+    pass::unconditional_get(proj_, tx_);
   }
 }
 

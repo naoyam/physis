@@ -139,7 +139,8 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
               BuildOffset(grid_arg,
                           num_dim,
                           func_call_exp->get_args(),
-                          is_kernel))));
+                          is_kernel,
+                          getContainingScopeStatement(func_call_exp)))));
   func_body->prepend_statement(var_ptr);
   SgExpression *grid_get_exp =
       sb::buildPointerDerefExp(sb::buildVarRefExp(var_ptr));
@@ -195,7 +196,7 @@ SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
   // int i;
   SgVariableDeclaration *loop_index =
       sb::buildVariableDeclaration("i", sb::buildIntType(), NULL, block);
-  block->append_statement(loop_index);
+  si::appendStatement(loop_index, block);
   // i = 0;
   SgStatement *loop_init =
       sb::buildAssignStatement(sb::buildVarRefExp(loop_index),
@@ -259,7 +260,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
       sbx::buildDim3Declaration("block_dim", BuildBlockDimX(),
                                 BuildBlockDimY(),  BuildBlockDimZ(),
                                 outer_block);
-  outer_block->append_statement(block_dim);
+  si::appendStatement(block_dim, outer_block);
   
   SgBasicBlock *loop_body = sb::buildBasicBlock();
 
@@ -276,7 +277,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         sbx::buildCudaCallFuncSetCacheConfig(func_sym,
                                              sbx::cudaFuncCachePreferL1);
     // Append invocation statement ahead of the loop
-    outer_block->append_statement(sb::buildExprStatement(cache_config));
+    si::appendStatement(sb::buildExprStatement(cache_config), outer_block);
 
     string stencil_name = "s" + toString(stencil_idx);
     SgVarRefExp *sv = sb::buildVarRefExp(stencil_name);
@@ -289,7 +290,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
                                 BuildBlockDimX(),
                                 BuildBlockDimY(),
                                 outer_block);
-    outer_block->append_statement(grid_dim);
+    si::appendStatement(grid_dim, outer_block);
 
     // Generate Kernel invocation code
     SgCudaKernelExecConfig *cuda_config =
@@ -299,7 +300,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     SgCudaKernelCallExp *cuda_call =
         sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(func_sym),
                                     args, cuda_config);
-    loop_body->append_statement(sb::buildExprStatement(cuda_call));
+    si::appendStatement(sb::buildExprStatement(cuda_call), loop_body);
     appendGridSwap(sm, sv, loop_body);
   }
   return loop_body;
@@ -363,8 +364,12 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   run_func->get_functionModifier().setCudaKernel();
   // Build and set the function body
   SgBasicBlock *func_body = BuildRunKernelBody(stencil, dom_arg);
-  run_func->get_definition()->set_body(func_body);
-
+  // This is not a correct way to set a function body. Use
+  //SageInterface API instead.
+  //run_func->get_definition()->set_body(func_body);
+  si::appendStatement(func_body, run_func->get_definition());
+  // Mark this function as RunKernel
+  rose_util::AddASTAttribute(run_func, new RunKernelAttribute());  
   return run_func;
 }
 
@@ -431,8 +436,8 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         ("y", sb::buildIntType(), NULL, block);
     SgVariableDeclaration *z_index = sb::buildVariableDeclaration
         ("z", sb::buildIntType(), NULL, block);
-    block->append_statement(y_index);
-    block->append_statement(x_index);
+    si::appendStatement(y_index, block);
+    si::appendStatement(x_index, block);
     index_args.push_back(sb::buildVarRefExp(x_index));
     index_args.push_back(sb::buildVarRefExp(y_index));
 
@@ -465,7 +470,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
     block->append_statement(
         BuildDomainInclusionCheck(range_checking_idx, domain));
     
-    block->append_statement(loop_index);
+    si::appendStatement(loop_index, block);
 
     SgExpression *loop_incr =
         sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
@@ -474,7 +479,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         sb::buildBasicBlock(sb::buildExprStatement(kernel_call));
     SgStatement *loop
         = sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
-    block->append_statement(loop);
+    si::appendStatement(loop, block);
   }
 
   return block;
@@ -535,7 +540,8 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
 SgExpression *CUDATranslator::BuildOffset(SgInitializedName *gv,
                                           int num_dim,
                                           SgExprListExp *args,
-                                          bool is_kernel) {
+                                          bool is_kernel,
+                                          SgScopeStatement *scope) {
   /*
     __PSGridGetOffsetND(g, i)
   */
@@ -545,7 +551,8 @@ SgExpression *CUDATranslator::BuildOffset(SgInitializedName *gv,
     func_name += "Dev";
   }
   SgExprListExp *func_args = isSgExprListExp(si::deepCopyNode(args));
-  func_args->prepend_expression(sb::buildVarRefExp(gv->get_name()));
+  func_args->prepend_expression(
+      sb::buildVarRefExp(gv->get_name(), scope));
   return sb::buildFunctionCallExp(func_name, index_type_,
                                   func_args);
 }

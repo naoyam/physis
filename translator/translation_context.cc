@@ -810,16 +810,10 @@ void TranslationContext::AnalyzeReduce() {
     LOG_DEBUG() << "Call to reduce found: "
                 << call->unparseToString() << "\n";
     Reduce *rd = new Reduce(call);
-    call->addNewAttribute(Reduce::name, rd);
+    rose_util::AddASTAttribute(call, rd);
   }
   LOG_INFO() << "Reduction analysis done.\n";  
 }
-
-Reduce *TranslationContext::GetReduce(SgFunctionCallExp *call) const {
-  Reduce *rd = static_cast<Reduce*>(call->getAttribute(Reduce::name));
-  return rd;
-}
-
 
 } // namespace translator
 } // namespace physis

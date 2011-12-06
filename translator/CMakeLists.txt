@@ -30,7 +30,9 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   rose_ast_attribute.cc reduce.cc
   optimizer/optimizer.cc optimizer/reference_optimizer.cc
   optimizer/optimization_passes.cc
-  optimizer/unconditional_get.cc)
+  optimizer/unconditional_get.cc
+  optimizer/kernel_inlining.cc
+  optimizer/register_blocking.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   mpi_translator.cc mpi_runtime_builder.cc

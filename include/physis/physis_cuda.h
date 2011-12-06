@@ -149,20 +149,20 @@ extern "C" {
   }
   
   CUDA_DEVICE
-  inline PSIndexType __PSGridGetOffset1DDev(void *g,
+  inline PSIndexType __PSGridGetOffset1DDev(const void *g,
                                             PSIndexType i1) {
     return i1;
   }
   
   CUDA_DEVICE
-  inline PSIndexType __PSGridGetOffset2DDev(void *g,
+  inline PSIndexType __PSGridGetOffset2DDev(const void *g,
                                             PSIndexType i1,
                                             PSIndexType i2) {
     return i1 + i2 * PSGridDim((__PSGridDev *)g, 0);
   }
 
   CUDA_DEVICE
-  inline PSIndexType __PSGridGetOffset3DDev(void *g,
+  inline PSIndexType __PSGridGetOffset3DDev(const void *g,
                                             PSIndexType i1,
                                             PSIndexType i2,
                                             PSIndexType i3) {

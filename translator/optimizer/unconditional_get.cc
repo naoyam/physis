@@ -280,7 +280,7 @@ static void ProcessConditionalExp(SgPntrArrRefExp *get_exp,
 }
 
 
-void make_conditional_get_unconditional(
+void unconditional_get(
     SgProject *proj,
     physis::translator::TranslationContext *tx) {
   pre_process(proj, tx, __FUNCTION__);

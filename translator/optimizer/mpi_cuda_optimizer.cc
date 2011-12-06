@@ -19,8 +19,8 @@ void MPICUDAOptimizer::Stage1() {
 void MPICUDAOptimizer::Stage2() {
   // TODO: support this optimization
 #if 0  
-  if (config_->LookupFlag("OPT_MAKE_CONDITIONAL_GET_UNCONDITIONAL")) {
-    pass::make_conditional_get_unconditional(proj_, tx_);
+  if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
+    pass::unconditional_get(proj_, tx_);
   }
 #endif  
 }
