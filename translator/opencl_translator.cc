@@ -48,15 +48,8 @@ OpenCLTranslator::OpenCLTranslator(const Configuration &config):
   }
 } // OpenCLTranslator
 
-#ifdef USING_OLD_SOURCE
-void OpenCLTranslator::run()
-{
-  ReferenceTranslator::run();
-#else
 void OpenCLTranslator::Finish()
 {
-#endif
-
   LOG_INFO() << "Adding #ifndef " << kernel_mode_macro() << "\n";
   std::string str_insert = "#ifndef ";
   str_insert += kernel_mode_macro();

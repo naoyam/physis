@@ -37,11 +37,8 @@ namespace physis {
         //     ...
         //   }
         bool flag_pre_calc_grid_address_;
-#ifdef USING_OLD_SOURCE
-        void run();
-#else
+
         void Finish();
-#endif
 
         virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
         virtual SgExpression *buildOffset(

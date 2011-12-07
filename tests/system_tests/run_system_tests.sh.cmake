@@ -204,6 +204,15 @@ function generate_translation_configurations_mpi_cuda()
     echo $new_configs
 }
 
+function generate_translation_configurations_opencl()
+{
+    if [ $# -gt 0 ]; then
+	echo $1
+    else
+	generate_empty_translation_configuration
+    fi
+}
+
 function generate_translation_configurations()
 {
     target=$1
@@ -219,6 +228,9 @@ function generate_translation_configurations()
 	    ;;
 	mpi-cuda)
 	    generate_translation_configurations_mpi_cuda
+	    ;;
+	opencl)
+	    generate_translation_configurations_opencl
 	    ;;
 	*)
 	    generate_empty_compile_configuration
@@ -284,6 +296,16 @@ function compile()
 	    mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
 		'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 	    ;;
+  opencl)
+      OPENCL_LDFLAGS=-lOpenCL
+	    if [ "${OPENCL_ENABLED}" != "TRUE" ]; then
+		echo "[COMPILE] Skipping OpenCL compilation (not supported)"
+		return 0
+	    fi
+	    src_file="$src_file_base".c
+	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS &&
+	    c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base"
+	    ;;
 	*)
 	    exit_error "Unsupported target"
 	    ;;
@@ -303,6 +325,9 @@ function get_reference_exe_name()
 	mpi-cuda)
 	    target=cuda
 	    ;;
+  opencl)
+      target=ref
+      ;;
     esac
     local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.$target.exe
     echo $ref_exe
@@ -369,6 +394,10 @@ function execute()
 	    ;;
 	mpi-cuda)
 	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
+	    ;;
+  opencl)
+      exename=$(basename $1 .c).$target
+	    ./$exename > $exename.out
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
