@@ -40,7 +40,7 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
       sb::buildVariableDeclaration("t", val->get_type(),
                                    sb::buildAssignInitializer(val),
                                    tb);
-  tb->append_statement(decl);
+  si::appendStatement(decl, tb);
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSGridSet");
   PSAssert(fs);

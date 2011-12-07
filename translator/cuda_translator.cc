@@ -467,8 +467,8 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
 
     SgVariableDeclaration* t[] = {x_index, y_index};
     vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
-    block->append_statement(
-        BuildDomainInclusionCheck(range_checking_idx, domain));
+    si::appendStatement(
+        BuildDomainInclusionCheck(range_checking_idx, domain), block);
     
     si::appendStatement(loop_index, block);
 

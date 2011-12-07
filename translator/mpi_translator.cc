@@ -165,10 +165,10 @@ void MPITranslator::translateInit(SgFunctionCallExp *node) {
                                      sb::buildArrayType(sb::buildPointerType(client_func_type)),
                                      ai, tmp_block);
   PSAssert(clients);
-  tmp_block->append_statement(clients);
+  si::appendStatement(clients, tmp_block);
   node->append_arg(sb::buildVarRefExp(clients));
 
-  tmp_block->append_statement(si::copyStatement(getContainingStatement(node)));
+  si::appendStatement(si::copyStatement(getContainingStatement(node)), tmp_block);
   si::replaceStatement(getContainingStatement(node), tmp_block);
   return;
 }
@@ -211,8 +211,8 @@ void MPITranslator::translateRun(SgFunctionCallExp *node,
   // OPTIONAL: Is freeing the old argument list object necessary?
   node->set_args(args);
 
-  tmp_block->append_statement(si::copyStatement
-                              (getContainingStatement(node)));  
+  si::appendStatement(si::copyStatement
+                      (getContainingStatement(node)), tmp_block);
   si::replaceStatement(getContainingStatement(node), tmp_block);
 }
 
@@ -263,7 +263,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
       }
       // Create an inner scope for declaring variables
       SgBasicBlock *bb = sb::buildBasicBlock();
-      //scope->append_statement(bb);
+      //si::appendStatement(bb, scope);
       statements.push_back(bb);
       SgFunctionCallExp *load_neighbor_call
           = BuildLoadNeighbor(gvref, sr, bb, reuse, overlap_arg);
@@ -280,7 +280,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
                 BuildCallLoadSubgridUniqueDim(gvref, sr, reuse)));
       } else {
         SgBasicBlock *tmp_block = sb::buildBasicBlock();
-        //scope->append_statement(tmp_block);
+        //si::appendStatement(tmp_block, scope);
         statements.push_back(tmp_block);
         SgVariableDeclaration *srv = sr.BuildPSGridRange("gr",
                                                          tmp_block);
@@ -341,8 +341,9 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
         = mpi_rt_builder_->BuildGetGridByID(
             BuildStencilFieldRef(stencil_ref,
                                  sb::buildVarRefExp(grid_id)));
-    scope->append_statement(sb::buildAssignStatement(grid_var,
-                                                     grid_real_addr));
+    si::appendStatement(sb::buildAssignStatement(grid_var,
+                                                 grid_real_addr),
+                        scope);
   }
 }
 
@@ -362,7 +363,7 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
       = sb::buildVariableDeclaration(stencil_name, stencil_ptr_type,
                                      init, function_body);
   SgVarRefExp *stencil_var = sb::buildVarRefExp(sdecl);
-  function_body->append_statement(sdecl);
+  si::appendStatement(sdecl, function_body);
 
   // run kernel function
   SgFunctionSymbol *fs = rose_util::getFunctionSymbol(smap->run());
@@ -375,13 +376,13 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
                                remote_grids, load_statements,
                                overlap_eligible, overlap_width);
   FOREACH (sit, load_statements.begin(), load_statements.end()) {
-    loop_body->append_statement(*sit);
+    si::appendStatement(*sit, loop_body);
   }
     
   // Call the stencil kernel
   SgExprListExp *args = sb::buildExprListExp(stencil_var);
   SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
-  loop_body->append_statement(sb::buildExprStatement(c));
+  si::appendStatement(sb::buildExprStatement(c), loop_body);
   appendGridSwap(smap, stencil_var, loop_body);
   DeactivateRemoteGrids(smap, stencil_var, loop_body,
                         remote_grids);
@@ -405,7 +406,7 @@ SgBasicBlock *MPITranslator::BuildRunBody(Run *run) {
   }
   SgVariableDeclaration *lv
       = sb::buildVariableDeclaration("i", sb::buildIntType(), NULL, block);
-  block->append_statement(lv);
+  si::appendStatement(lv, block);
   SgStatement *loopTest =
       sb::buildExprStatement(
           sb::buildLessThanOp(sb::buildVarRefExp(lv),
@@ -417,7 +418,7 @@ SgBasicBlock *MPITranslator::BuildRunBody(Run *run) {
                             sb::buildPlusPlusOp(sb::buildVarRefExp(lv)),
                             loopBody);
 
-  //block->append_statement(loop);  
+  //si::appendStatement(loop, block);  
   TraceStencilRun(run, loop, block);
 
   return block;

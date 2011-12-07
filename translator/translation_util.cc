@@ -76,7 +76,7 @@ SgVariableDeclaration *BuildPSOffsets(std::string name,
   SgVariableDeclaration *decl
       = sb::buildVariableDeclaration(name, BuildPSOffsetsType(),
                                      psoffset_init, scope);
-  scope->append_statement(decl);
+  si::appendStatement(decl, scope);
   return decl;
 }
 
@@ -94,14 +94,14 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
       = sb::buildVariableDeclaration(name,
                                      BuildPSGridRangeType(),
                                      NULL, block);
-  block->append_statement(decl);
+  si::appendStatement(decl, block);
 
   // gr.num_dims = v.num_dims
   SgVarRefExp *decl_ref = sb::buildVarRefExp(decl);
-  block->append_statement(
+  si::appendStatement(
       sb::buildAssignStatement(
           sb::buildDotExp(decl_ref, sb::buildVarRefExp("num_dims")),
-          rose_util::BuildIntLikeVal(v.num_dims)));
+          rose_util::BuildIntLikeVal(v.num_dims)), block);
 
   for (int i = 0; i < v.num_dims; ++i) {
     // set min_offsets[i]
@@ -114,7 +114,7 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
     stmt =sb::buildAssignStatement(
         sb::buildDotExp(min_offsets_exp, sb::buildVarRefExp("num")),
         rose_util::BuildIntLikeVal(min_offsets.num));
-    block->append_statement(stmt);
+    si::appendStatement(stmt, block);
 
     // fill __PSOffsets.offsets
     for (int j = 0; j < min_offsets.num; ++j) {
@@ -124,14 +124,14 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
                               sb::buildVarRefExp("offsets")),
               sb::buildIntVal(j*2)),
           rose_util::BuildIntLikeVal(min_offsets.offsets[j*2]));
-      block->append_statement(stmt);
+      si::appendStatement(stmt, block);
       stmt =sb::buildAssignStatement(
           sb::buildPntrArrRefExp(
               sb::buildDotExp(min_offsets_exp,
                               sb::buildVarRefExp("offsets")),
               sb::buildIntVal(j*2+1)),
           rose_util::BuildIntLikeVal(min_offsets.offsets[j*2]));
-      block->append_statement(stmt);
+      si::appendStatement(stmt, block);
     }
 
     SgExpression *max_offsets_exp =
@@ -142,7 +142,7 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
     stmt =sb::buildAssignStatement(
         sb::buildDotExp(max_offsets_exp, sb::buildVarRefExp("num")),
         rose_util::BuildIntLikeVal(max_offsets.num));
-    block->append_statement(stmt);
+    si::appendStatement(stmt, block);
 
     for (int j = 0; j < max_offsets.num; ++j) {
       stmt =sb::buildAssignStatement(
@@ -151,14 +151,14 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
                               sb::buildVarRefExp("offsets")),
               sb::buildIntVal(j*2)),
           rose_util::BuildIntLikeVal(max_offsets.offsets[j*2]));
-      block->append_statement(stmt);
+      si::appendStatement(stmt, block);
       stmt =sb::buildAssignStatement(
           sb::buildPntrArrRefExp(
               sb::buildDotExp(max_offsets_exp,
                               sb::buildVarRefExp("offsets")),
               sb::buildIntVal(j*2+1)),
           rose_util::BuildIntLikeVal(max_offsets.offsets[j*2]));
-      block->append_statement(stmt);
+      si::appendStatement(stmt, block);
     }
     
   }

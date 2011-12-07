@@ -171,13 +171,13 @@ SgVariableDeclaration *buildVarDecl(const string &name,
       sb::buildAssignInitializer(val, type);
   SgVariableDeclaration *sdecl
       = sb::buildVariableDeclaration(name, type, init, scope);
-  scope->append_statement(sdecl);
+  si::appendStatement(sdecl, scope);
   return sdecl;
 }
 
 void AppendExprStatement(SgScopeStatement *scope,
                          SgExpression *exp) {
-  scope->append_statement(sb::buildExprStatement(exp));
+  si::appendStatement(sb::buildExprStatement(exp), scope);
   return;
 }
 
@@ -209,7 +209,7 @@ SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
       = sb::buildAggregateInitializer(init_expr, vec_type);
   SgVariableDeclaration *decl
       = sb::buildVariableDeclaration(name, vec_type, init, block);
-  block->append_statement(decl);
+  si::appendStatement(decl, block);
   
   return decl;
 }
