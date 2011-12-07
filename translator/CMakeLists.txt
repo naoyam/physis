@@ -57,6 +57,26 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-cuda.cmake
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda DESTINATION bin)
 #endif ()
 
+#if (OPENCL_ENABLED)
+#  set(OPENCL_INCLUDE_DIR ${OPENCL_INCLUDE_DIRS})
+  set(PHYSISC_SRC ${PHYSISC_SRC}
+    opencl_translator.cc
+    opencl_translator_arghack.cc
+    opencl_translator_create_kernel.cc
+    opencl_translator_edit_kernel.cc
+    opencl_translator_getemit.cc
+    opencl_translator_misc.cc
+    opencl_translator_stencilrun.cc
+    )
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/physisc-opencl.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/physisc-opencl
+    )
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-opencl
+    DESTINATION
+    bin)
+#endif()
+
 add_executable(physisc ${PHYSISC_SRC})
 target_link_libraries(physisc ${ROSE_LIBRARIES})
 target_link_libraries(physisc ${JAVA_JVM_LIBRARY})

@@ -19,6 +19,9 @@
 //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
 #include "translator/mpi_cuda_translator.h"
 //#endif
+//#if defined(OPENCL_ENABLED)
+#include "translator/opencl_translator.h"
+//#endif
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
@@ -37,9 +40,11 @@ struct CommandLineOptions {
   bool cuda_trans;
   bool mpi_trans;
   bool mpi_cuda_trans;
+  bool opencl_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
                         mpi_trans(false), mpi_cuda_trans(false),
+                        opencl_trans(false),
                         config_file_path(std::make_pair(false, "")) {}
 };
 
@@ -61,6 +66,9 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   //#endif
   //#if defined(MPI_ENABLED) && defined(CUDA_ENABLED)
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
+  //#endif
+  //#ifdef OPENCL_ENABLED  
+  desc.add_options()("opencl", "OPENCL translation");
   //#endif
   desc.add_options()("list-targets", "List available targets");
 
@@ -117,12 +125,21 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   }
   //#endif
 
+  //#ifdef CUDA_ENABLED  
+  if (vm.count("opencl")) {
+    LOG_DEBUG() << "OPENCL translation.\n";
+    opts.opencl_trans = true;
+    return;
+  }
+  //#endif
+
   if (vm.count("list-targets")) {
     StringJoin sj(" ");
     sj << "ref";
     sj << "mpi";
     sj << "cuda";
     sj << "mpi-cuda";
+    sj << "opencl";
     std::cout << sj << "\n";
     exit(0);
   }
@@ -198,6 +215,15 @@ int main(int argc, char *argv[]) {
     //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
     //argvec.push_back("-I" + string(CUDA_INCLUDE_DIR));
     //argvec.push_back("-I" + string(CUDA_CUT_INCLUDE_DIR));
+  }
+  //#endif
+
+  //#ifdef OPENCL_ENABLED  
+  if (opts.opencl_trans) {
+    trans = new pt::OpenCLTranslator(config);
+    filename_suffix = "opencl.c";
+    argvec.push_back("-DPHYSIS_OPENCL");
+    //    argvec.push_back("-I" + string(OPENCL_INCLUDE_DIR));
   }
   //#endif
 
