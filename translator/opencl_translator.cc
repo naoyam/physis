@@ -57,15 +57,20 @@ void OpenCLTranslator::Finish()
 {
 #endif
 
-  LOG_INFO() << "Adding #ifndef PHYSIS_OPENCL_KERNEL_MODE\n";
+  LOG_INFO() << "Adding #ifndef " << kernel_mode_macro() << "\n";
+  std::string str_insert = "#ifndef ";
+  str_insert += kernel_mode_macro();
   si::attachArbitraryText(
     src_->get_globalScope(),
-    "#ifndef PHYSIS_OPENCL_KERNEL_MODE\n",
+    str_insert,
     PreprocessingInfo::before
     );
+  str_insert = "#endif /* #ifndef ";
+  str_insert += kernel_mode_macro();
+  str_insert += " */";
   si::attachArbitraryText(
     src_->get_globalScope(),
-    "#endif /* #ifndef PHYSIS_OPENCK_KERNEL_MODE */\n",
+    str_insert,
     PreprocessingInfo::after
     );
 

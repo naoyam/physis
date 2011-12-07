@@ -209,6 +209,17 @@ SgVariableDeclaration *OpenCLTranslator::generate2DGlobalsize(
     sg_gb = sb::buildVariableDeclaration(
       name_var, type_sg_gb, initval_gb, scope);
 
+    // !! Note
+    // This function calls "ceil", math.h needed
+    LOG_INFO() << "Inserting <math.h> because of ceil call.\n";
+    // TODO: The following does not work?
+    // si::insertHeader("math.h", PreprocessingInfo::before, src_->get_globalScope());
+    std::string str_insert = "";
+    str_insert += "#ifndef "; str_insert += kernel_mode_macro();
+    si::attachArbitraryText(src_->get_globalScope(), str_insert);
+    si::attachArbitraryText(src_->get_globalScope(), "#include <math.h>");
+    si::attachArbitraryText(src_->get_globalScope(), "#endif");
+
     return sg_gb;
 } // generate2DLocalsize
 

@@ -17,6 +17,8 @@ namespace physis {
         int block_dim_y_;
         int block_dim_z_;
 
+        std::string kernel_mode_macro() { return "PHYSIS_OPENCL_KERNEL_MODE"; } ;
+
         // If this flag is 'true', the Translator generates for grid_get in the
         // begining of the kernel. This optimization is effective for some cases such
         // as consecutive code block of 'if' and 'grid_get'. In which case, size of

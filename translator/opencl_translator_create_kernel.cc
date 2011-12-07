@@ -121,26 +121,32 @@ SgFunctionDeclaration *OpenCLTranslator::BuildRunKernel(
   SgBasicBlock *func_body = generateRunKernelBody(stencil, grid_arg, dom_arg);
   run_func->get_definition()->set_body(func_body);
 
-#if 1
   {
-    LOG_INFO() << "Adding #ifdef PHYSIS_OPENCL_KERNEL_MODE\n";
+    LOG_INFO() << "Adding #ifdef << " << kernel_mode_macro() << " \n";
+    std::string str_insert = "#else /* #ifndef ";
+    str_insert += kernel_mode_macro();
+    str_insert += "*/";
     si::attachArbitraryText(
       run_func,
-      "#else /* #ifndef PHYSIS_OPENCL_KERNEL_MODE */\n",
+      str_insert,
       PreprocessingInfo::before
       );
+    str_insert = "#endif /* #ifndef ";
+    str_insert += kernel_mode_macro();
+    str_insert += "*/";
     si::attachArbitraryText(
       run_func,
-      "#endif /*#ifndef PHYSIS_OPENCL_KERNEL_MODE */\n",
+      str_insert,
       PreprocessingInfo::after
       );
+    str_insert = "#ifndef ";
+    str_insert += kernel_mode_macro();
     si::attachArbitraryText(
       run_func,
-      "#ifndef PHYSIS_OPENCL_KERNEL_MODE\n",
+      str_insert,
       PreprocessingInfo::after
       );
   }
-#endif
 
   return run_func;
 } // genreateRunKernel
