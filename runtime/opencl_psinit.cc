@@ -129,7 +129,8 @@ namespace physis {
 
           if (found == 1) {
             // Initialization succeeded.
-            fprintf(stdout, "Initializing OpenCL platform and devices succeeded\n");
+            // FIXME: throwing to stderr for now
+            fprintf(stderr, "Initializing OpenCL platform and devices succeeded\n");
             err_status = 0;
             break;
           }
