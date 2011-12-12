@@ -8,6 +8,7 @@
 
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
+#include "translator/runtime_builder.h"
 
 namespace physis {
 namespace translator {
@@ -29,7 +30,8 @@ inline void pre_process(
  */
 extern void null_optimization(
     SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
 
 //! Inline stencil kernels.
 /*!
@@ -60,12 +62,21 @@ extern void null_optimization(
 */
 extern void kernel_inlining(
     SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
+// TODO
+extern void loop_peeling(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
 
 // TODO
 extern void register_blocking(
     SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
 
 //! Common subexpression elimination in grid offset calculations.
 /*!
@@ -85,7 +96,8 @@ extern void register_blocking(
 // TODO
 extern void offset_cse(
     SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
     
 //! Make conditional get unconditional.
 /*!
@@ -112,7 +124,8 @@ extern void offset_cse(
  */
 extern void unconditional_get(
     SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
 
 } // namespace pass
 } // namespace optimizer

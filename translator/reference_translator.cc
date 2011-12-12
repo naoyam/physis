@@ -235,8 +235,7 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
                                               grid_decl_->get_definition()));
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
-  p0->addNewAttribute(GridGetAttr::name,
-                      new GridGetAttr(gv, isKernel));
+  rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
   si::replaceExpression(node, p0);
 }
 
@@ -448,18 +447,18 @@ static string getStencilArgName() {
 
 SgFunctionCallExp *
 ReferenceTranslator::BuildKernelCall(StencilMap *s,
-                                        SgExpressionPtrList &indexArgs,
-                                        SgScopeStatement *containingScope) {
+                                     SgExpressionPtrList &indexArgs,
+                                     SgScopeStatement *containingScope) {
   SgClassDefinition *stencilDef = s->GetStencilTypeDefinition();
   SgVarRefExp *stencil = sb::buildVarRefExp(getStencilArgName(),
                                             containingScope);
   // append the fields of the stencil type to the argument list
   SgDeclarationStatementPtrList &members = stencilDef->get_members();
   SgExprListExp *args = sb::buildExprListExp();
-  FOREACH(it, indexArgs.begin(), indexArgs.end()) {
+  FOREACH (it, indexArgs.begin(), indexArgs.end()) {
     args->append_expression(*it);
   }
-  FOREACH(it, ++(members.begin()), members.end()) {
+  FOREACH (it, ++(members.begin()), members.end()) {
     SgVariableDeclaration *d = isSgVariableDeclaration(*it);
     assert(d);
     LOG_DEBUG() << "member: " << d->unparseToString() << "\n";
@@ -514,9 +513,9 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
   //   }
   // }
 
-  SgExpression *stencil = sb::buildVarRefExp(stencil_param);
-  SgExpression *minField = BuildStencilDomMinRef(stencil);
-  SgExpression *maxField = BuildStencilDomMaxRef(stencil);  
+  //SgExpression *stencil = sb::buildVarRefExp(stencil_param);
+  //SgExpression *minField = BuildStencilDomMinRef(stencil);
+  //SgExpression *maxField = BuildStencilDomMaxRef(stencil);  
   SgBasicBlock *loopBlock = block;
 
   LOG_DEBUG() << "Generating nested loop\n";
@@ -536,22 +535,33 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
         sb::buildVariableDeclaration(getLoopIndexName(i),
                                      sb::buildUnsignedIntType(),
                                      NULL, loopBlock);
+    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
+        indexDecl->get_variables()[0],
+        new RunKernelLoopVarAttribute(i+1));
     indexArgs.push_back(sb::buildVarRefExp(indexDecl));
-
+    SgExpression *loop_begin =
+        sb::buildPntrArrRefExp(
+            BuildStencilDomMinRef(sb::buildVarRefExp(stencil_param)),
+            sb::buildIntVal(i));
     SgStatement *init =
         sb::buildAssignStatement(
-            sb::buildVarRefExp(indexDecl),
-            sb::buildPntrArrRefExp(minField,
-                                   sb::buildIntVal(i)));
+            sb::buildVarRefExp(indexDecl), loop_begin);
+    SgExpression *loop_end =
+        sb::buildPntrArrRefExp(
+            BuildStencilDomMaxRef(sb::buildVarRefExp(stencil_param)),
+            sb::buildIntVal(i));
     SgStatement *test =
         sb::buildExprStatement(
             sb::buildLessThanOp(
-                sb::buildVarRefExp(indexDecl),
-                sb::buildPntrArrRefExp(maxField,
-                                       sb::buildIntVal(i))));
-    SgExpression *incr = sb::buildPlusPlusOp(sb::buildVarRefExp(indexDecl));
-
+                sb::buildVarRefExp(indexDecl), loop_end));
+    SgExpression *incr = sb::buildPlusPlusOp(
+        sb::buildVarRefExp(indexDecl));
     loopStatement = sb::buildForStatement(init, test, incr, innerBlock);
+    rose_util::AddASTAttribute(
+        loopStatement,
+        new RunKernelLoopAttribute(
+            i+1,indexDecl->get_variables()[0], loop_begin,
+            loop_end));
   }
   si::appendStatement(indexDecl, block);
   si::appendStatement(loopStatement, block);
@@ -568,8 +578,8 @@ SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
   SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
   SgType *stencil_type = sb::buildPointerType(s->stencil_type());
   SgInitializedName *stencil_param =
-  sb::buildInitializedName(getStencilArgName(),
-                           stencil_type);
+      sb::buildInitializedName(getStencilArgName(),
+                               stencil_type);
   parlist->append_arg(stencil_param);
   SgFunctionDeclaration *runFunc =
       sb::buildDefiningFunctionDeclaration(s->getRunName(),
@@ -582,7 +592,8 @@ SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
       BuildRunKernelBody(s, stencil_param),
       runFunc->get_definition());
       
-  rose_util::AddASTAttribute(runFunc, new RunKernelAttribute());
+  rose_util::AddASTAttribute(runFunc,
+                             new RunKernelAttribute(s, stencil_param));
 
   return runFunc;
 }

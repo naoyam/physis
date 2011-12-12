@@ -11,6 +11,7 @@
 
 #include "translator/translator_common.h"
 #include "translator/grid.h"
+#include "translator/map.h"
 
 namespace physis {
 namespace translator {
@@ -72,13 +73,6 @@ class Kernel {
  protected:
   void analyzeGridWrites(TranslationContext &tx);
   void analyzeGridReads(TranslationContext &tx);  
-};
-
-class RunKernelAttribute: public AstAttribute {
- public:
-  RunKernelAttribute() {}
-  virtual ~RunKernelAttribute() {}
-  static const std::string name;  
 };
 
 

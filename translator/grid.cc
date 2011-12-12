@@ -19,6 +19,8 @@ static const char *grid1dTypeKey = "__PSGrid1D";
 static const char *grid2dTypeKey = "__PSGrid2D";
 static const char *grid3dTypeKey = "__PSGrid3D";
 
+const string GridType::name = "GridType";
+
 unsigned GridType::getNumDimFromTypeName(const string &tname) {
   if (tname.find(grid1dTypeKey) != string::npos) {
     return 1;
@@ -216,7 +218,7 @@ SgExpression *Grid::BuildAttributeExpr() {
   return si::copyExpression(attribute_);
 }
 
-const std::string GridGetAttr::name = "PSGridGet";
+const std::string GridGetAttribute::name = "PSGridGet";
 const std::string GridEmitAttr::name = "PSGridEmit";
 
 } // namespace translator

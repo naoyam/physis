@@ -31,6 +31,30 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
                                           SgExpression *width,
                                           int factor, int offset);
 
+class RuntimeBuilder {
+ public:
+  RuntimeBuilder(SgScopeStatement *global_scope):
+      gs_(global_scope) {}
+  //!
+  /*!
+    \param 
+    \return
+   */
+  virtual SgFunctionCallExp *BuildGridDim(
+      SgExpression *grid_ref,
+      int dim) = 0;
+  //!
+  /*!
+    \param
+    \return
+   */
+  virtual SgExpression *BuildGridRefInRunKernel(
+      SgInitializedName *gv,
+      SgFunctionDeclaration *run_kernel) = 0;
+ protected:
+  SgScopeStatement *gs_;  
+};
+
 } // namespace translator
 } // namespace physis
 

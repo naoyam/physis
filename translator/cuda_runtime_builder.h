@@ -20,6 +20,9 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
  public:
   CUDARuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope) {}
+  virtual SgExpression *BuildGridRefInRunKernel(
+      SgInitializedName *gv,
+      SgFunctionDeclaration *run_kernel);
 };
 
 } // namespace translator

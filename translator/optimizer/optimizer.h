@@ -12,6 +12,7 @@
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/configuration.h"
+#include "translator/runtime_builder.h"
 
 namespace physis {
 namespace translator {
@@ -21,8 +22,9 @@ class Optimizer {
  public:
   Optimizer(SgProject *proj,
             physis::translator::TranslationContext *tx,
+            physis::translator::RuntimeBuilder *builder,
             physis::translator::Configuration *config)
-      : proj_(proj), tx_(tx), config_(config) {}
+      : proj_(proj), tx_(tx), builder_(builder), config_(config) {}
   virtual ~Optimizer() {}
   //! Pre-translation optimizations
   virtual void Stage1();
@@ -31,6 +33,7 @@ class Optimizer {
  protected:
   SgProject *proj_;  
   physis::translator::TranslationContext *tx_;
+  physis::translator::RuntimeBuilder *builder_;
   physis::translator::Configuration *config_;
 };
 

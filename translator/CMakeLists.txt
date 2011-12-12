@@ -32,6 +32,7 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   optimizer/optimization_passes.cc
   optimizer/unconditional_get.cc
   optimizer/kernel_inlining.cc
+  optimizer/loop_peeling.cc
   optimizer/register_blocking.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
@@ -44,7 +45,8 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   cuda_translator.cc
-  cuda_builder.cc  
+  cuda_builder.cc
+  cuda_runtime_builder.cc
   optimizer/cuda_optimizer.cc)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-cuda.cmake

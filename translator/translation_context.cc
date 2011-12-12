@@ -270,6 +270,9 @@ void TranslationContext::analyzeGridVars(DefUseAnalysis &dua) {
       LOG_DEBUG() << "Grid object of type "
                   << gt->toString() << " found: "
                   << in->unparseToString() << "\n";
+      if (!rose_util::GetASTAttribute<GridType>(in)) {
+          rose_util::AddASTAttribute(in, gt);
+      }
       changed |= handleGridDeclaration(in, *this, dua);
     }
     FOREACH(it, asns.begin(), asns.end()) {
@@ -420,8 +423,6 @@ void TranslationContext::build() {
   FOREACH (it, stencil_map_.begin(), stencil_map_.end()) {
     AnalyzeStencilRange(*(it->second), *this);
   }
-
-
 
   LOG_INFO() << "Translation context built\n";
   print(std::cout);

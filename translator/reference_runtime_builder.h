@@ -11,11 +11,12 @@
 
 #include "translator/translator_common.h"
 #include "translator/map.h"
+#include "translator/runtime_builder.h"
 
 namespace physis {
 namespace translator {
 
-class ReferenceRuntimeBuilder {
+class ReferenceRuntimeBuilder: public RuntimeBuilder {
  public:
   ReferenceRuntimeBuilder(SgScopeStatement *global_scope);
   virtual ~ReferenceRuntimeBuilder() {}
@@ -26,8 +27,13 @@ class ReferenceRuntimeBuilder {
   virtual SgFunctionCallExp *BuildGridGet(
       SgExpression *grid_var, 
       const SgExpressionPtrList &indices, SgType *elm_type);
+  virtual SgFunctionCallExp *BuildGridDim(SgExpression *grid_ref,
+                                          int dim);
+  virtual SgExpression *BuildGridRefInRunKernel(
+      SgInitializedName *gv,
+      SgFunctionDeclaration *run_kernel);
+  
  protected:
-  SgScopeStatement *gs_;
   SgType *index_t_;
 };
 

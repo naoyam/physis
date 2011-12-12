@@ -14,11 +14,11 @@ namespace translator {
 namespace optimizer {
 
 void Optimizer::Stage1() {
-  pass::null_optimization(proj_, tx_);
+  pass::null_optimization(proj_, tx_, builder_);
 }
 
 void Optimizer::Stage2() {
-  pass::null_optimization(proj_, tx_);
+  pass::null_optimization(proj_, tx_, builder_);
 }
 
 } // namespace optimizer

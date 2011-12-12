@@ -171,17 +171,6 @@ SgCudaKernelExecConfig *buildCudaKernelExecConfig(SgExpression *grid,
   return cuda_config;
 }
 
-SgExpression *buildGridDimVarExp(SgExpression *grid_var, int dim) {
-  ROSE_ASSERT(grid_var);
-  SgExpression *dim_var_exp =
-      sb::buildPntrArrRefExp(
-          sb::buildDotExp(
-              grid_var,
-              sb::buildVarRefExp(SgName("dim"))),
-          sb::buildIntVal(dim));
-  return dim_var_exp;
-}
-
 // WARNING: Do not use this; instead refer to the runtime builder
 // classes. This is Nomura's original, and uses dimension of the grid
 // that is found first in the argument list. That is not correct. CUDA

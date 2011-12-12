@@ -31,8 +31,8 @@ static void QueryGetInKernel(
     PSAssert(exp);
     
     // Traverse only GridGet
-    GridGetAttr *gga = static_cast<GridGetAttr*>
-        (exp->getAttribute(GridGetAttr::name));
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(exp);
     if (!gga) continue;
 
     // Optimization applied only to in-kernel get
@@ -43,8 +43,8 @@ static void QueryGetInKernel(
 }
 
 static SgInitializedName *GetGridFromGet(SgPntrArrRefExp *get) {
-  GridGetAttr *gga = static_cast<GridGetAttr*>
-      (get->getAttribute(GridGetAttr::name));
+  GridGetAttribute *gga =
+      rose_util::GetASTAttribute<GridGetAttribute>(get);
   PSAssert(gga);
   return gga->gv();
 }
@@ -282,7 +282,8 @@ static void ProcessConditionalExp(SgPntrArrRefExp *get_exp,
 
 void unconditional_get(
     SgProject *proj,
-    physis::translator::TranslationContext *tx) {
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   // Traverse grid gets in stencil kernels

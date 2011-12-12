@@ -29,7 +29,6 @@ SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
 SgExpression *buildStencilDimVarExp(StencilMap *stencil,
                                     SgExpression *stencil_var,
                                     int dim);
-SgExpression *buildGridDimVarExp(SgExpression *grid_var, int dim);
 
 // --- CUDA support ---
 enum cudaFuncCache {

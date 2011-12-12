@@ -20,7 +20,7 @@ void MPICUDAOptimizer::Stage2() {
   // TODO: support this optimization
 #if 0  
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
-    pass::unconditional_get(proj_, tx_);
+    pass::unconditional_get(proj_, tx_, builder_);
   }
 #endif  
 }

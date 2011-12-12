@@ -231,6 +231,10 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     StencilRange &sr = gr.find(gv)->second;
     sr.insert(stencil_indices);
     tx.registerStencilIndex(get_call, stencil_indices);
+    LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
+    rose_util::AddASTAttribute(
+        get_call,
+        new GridGetAttribute(gv, tx.isKernel(kernel), stencil_indices));
   }
   LOG_DEBUG() << "Stencil access: "
               << GridRangeMapToString(gr)

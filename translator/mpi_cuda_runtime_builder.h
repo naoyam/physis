@@ -10,6 +10,7 @@
 #define PHYSIS_TRANSLATOR_MPI_CUDA_RUNTIME_BUILDER_H_
 
 #include "translator/translator_common.h"
+#include "translator/mpi_runtime_builder.h"
 
 namespace physis {
 namespace translator {
@@ -20,6 +21,13 @@ SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim);
 SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
                                      SgExpression *width);
 SgExpression *BuildStreamBoundaryKernel(int idx);
+
+class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
+ public:
+  MPICUDARuntimeBuilder(SgScopeStatement *global_scope):
+      MPIRuntimeBuilder(global_scope) {}
+};
+
 } // namespace translator
 } // namespace physis
 

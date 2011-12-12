@@ -18,7 +18,7 @@ namespace translator {
 
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
     SgScopeStatement *global_scope):
-    gs_(global_scope) {
+    RuntimeBuilder(global_scope) {
   PSAssert(index_t_ = si::lookupNamedTypeInParentScopes("index_t", gs_));
 }
 
@@ -71,6 +71,48 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGet(
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
   return fc;
 }
+
+SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
+    SgExpression *grid_ref, int dim) {
+  // PSGridDim accepts an integer parameter designating dimension,
+  // where zero means the first dimension.
+  dim = dim - 1;
+  SgFunctionSymbol *fs
+      = si::lookupFunctionSymbolInParentScopes(
+          "PSGridDim", gs_);
+  PSAssert(fs);
+  SgExprListExp *args = sb::buildExprListExp(
+      grid_ref, sb::buildIntVal(dim));
+  SgFunctionCallExp *grid_dim = sb::buildFunctionCallExp(fs, args);
+  return grid_dim;
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
+    SgInitializedName *gv,
+    SgFunctionDeclaration *run_kernel) {
+  SgInitializedName *stencil_param = run_kernel->get_args()[0];
+  SgNamedType *type = isSgNamedType(
+      isSgPointerType(stencil_param->get_type())->get_base_type());
+  PSAssert(type);
+  SgClassDeclaration *stencil_class_decl
+      = isSgClassDeclaration(type->get_declaration());
+  PSAssert(stencil_class_decl);
+  SgClassDefinition *stencil_class_def =
+      isSgClassDeclaration(
+          stencil_class_decl->get_definingDeclaration())->
+      get_definition();
+  PSAssert(stencil_class_def);
+  SgVariableSymbol *grid_field =
+      si::lookupVariableSymbolInParentScopes(
+          gv->get_name(), stencil_class_def);
+  PSAssert(grid_field);
+  SgExpression *grid_ref =
+      rose_util::BuildFieldRef(sb::buildVarRefExp(stencil_param),
+                               sb::buildVarRefExp(grid_field));
+  return grid_ref;
+}
+
+
 
 } // namespace translator
 } // namespace physis

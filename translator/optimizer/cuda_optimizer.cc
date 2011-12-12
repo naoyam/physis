@@ -17,11 +17,20 @@ void CUDAOptimizer::Stage1() {
 }
 
 void CUDAOptimizer::Stage2() {
-  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
-    pass::kernel_inlining(proj_, tx_);
+  if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
+      config_->LookupFlag("OPT_LOOP_PEELING") ||
+      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+    pass::kernel_inlining(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_LOOP_PEELING") ||
+      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+    pass::loop_peeling(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+    pass::register_blocking(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
-    pass::unconditional_get(proj_, tx_);
+    pass::unconditional_get(proj_, tx_, builder_);
   }
 }
 

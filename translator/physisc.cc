@@ -16,6 +16,10 @@
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
+#include "translator/runtime_builder.h"
+#include "translator/cuda_runtime_builder.h"
+#include "translator/mpi_runtime_builder.h"
+#include "translator/mpi_cuda_runtime_builder.h"
 #include "translator/configuration.h"
 #include "translator/optimizer/optimizer.h"
 #include "translator/optimizer/reference_optimizer.h"
@@ -132,19 +136,40 @@ void set_output_filename(SgFile *file, string suffix) {
   return;
 }
 
+static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
+                                        CommandLineOptions &opts) {
+  pt::RuntimeBuilder *builder = NULL;
+  SgScopeStatement *gs = si::getFirstGlobalScope(proj);
+  if (opts.ref_trans) {
+    builder = new pt::ReferenceRuntimeBuilder(gs);
+  } else if (opts.cuda_trans) {
+    builder = new pt::CUDARuntimeBuilder(gs);
+  } else if (opts.mpi_trans) {
+    builder = new pt::MPIRuntimeBuilder(gs);
+  } else if (opts.mpi_cuda_trans) {
+    builder = new pt::MPICUDARuntimeBuilder(gs);
+  }
+  PSAssert(builder != NULL);
+  return builder;
+}
 static pto::Optimizer *GetOptimizer(TranslationContext *tx,
                                     SgProject *proj,
+                                    RuntimeBuilder *builder,
                                     CommandLineOptions &opts,
                                     Configuration *cfg) {
   pto::Optimizer *optimizer = NULL;
   if (opts.ref_trans) {
-    optimizer = new pto::ReferenceOptimizer(proj, tx, cfg);
+    optimizer = new pto::ReferenceOptimizer(proj, tx,
+                                            builder, cfg);
   } else if (opts.cuda_trans) {
-    optimizer = new pto::CUDAOptimizer(proj, tx, cfg);
+    optimizer = new pto::CUDAOptimizer(proj, tx,
+                                       builder, cfg);
   } else if (opts.mpi_trans) {
-    optimizer = new pto::MPIOptimizer(proj, tx, cfg);    
+    optimizer = new pto::MPIOptimizer(proj, tx,
+                                      builder, cfg);    
   } else if (opts.mpi_cuda_trans) {
-    optimizer = new pto::MPICUDAOptimizer(proj, tx, cfg);        
+    optimizer = new pto::MPICUDAOptimizer(proj, tx,
+                                          builder, cfg);        
   }
   PSAssert(optimizer != NULL);
   return optimizer;
@@ -224,8 +249,10 @@ int main(int argc, char *argv[]) {
 
   trans->SetUp(proj, &tx);
 
-  pto::Optimizer *optimizer = GetOptimizer(&tx, proj, opts,
-                                           &config);
+  // TODO: reuse this builder with the translator
+  pt::RuntimeBuilder *rt_builder = GetRTBuilder(proj, opts);
+  pto::Optimizer *optimizer =
+      GetOptimizer(&tx, proj, rt_builder, opts, &config);
 
   LOG_INFO() << "Performing optimization Stage 1\n";
   optimizer->Stage1();

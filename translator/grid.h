@@ -23,7 +23,7 @@ static const char *gridIndexNames[3] = {"x", "y", "z"};
 
 // Represents a grid type, not a particular grid object.
 // Grid objects are handled by class Grid.
-class GridType {
+class GridType: public AstAttribute {
   SgClassType *struct_type_;
   SgTypedefType *user_type_;
   unsigned num_dim_;
@@ -73,6 +73,8 @@ class GridType {
   getGridVarUsedInFuncCall(SgFunctionCallExp *call);
   static bool isGridCall(SgFunctionCallExp *ce);
   SgExpression *BuildElementTypeExpr();
+
+  const static string name;
  private:
   void findElementType();
 };
@@ -164,17 +166,31 @@ class Grid {
 
 typedef std::set<Grid*> GridSet;
 
-class GridGetAttr: public AstAttribute {
+class GridGetAttribute: public AstAttribute {
  public:
-  GridGetAttr(SgInitializedName *gv,
-              bool in_kernel): gv_(gv), in_kernel_(in_kernel) {}
-  virtual ~GridGetAttr() {}
+  GridGetAttribute(SgInitializedName *gv,
+                   bool in_kernel,
+                   const StencilIndexList &sil):
+      gv_(gv), in_kernel_(in_kernel), sil_(sil) {
+  }
+  virtual ~GridGetAttribute() {}
+  AstAttribute *copy() {
+    GridGetAttribute *a= new GridGetAttribute(gv_, in_kernel_, sil_);
+    return a;
+  }
   static const std::string name;
   bool in_kernel() const { return in_kernel_; }
+  void SetInKernel(bool t) { in_kernel_ = t; };
   SgInitializedName *gv() const { return gv_; }
+  void SetStencilIndexList(const StencilIndexList &sil) {
+    sil_ = sil;
+  }
+  const StencilIndexList &GetStencilIndexList() { return sil_; }
+  
  protected:
   SgInitializedName *gv_;  
   bool in_kernel_;
+  StencilIndexList sil_;
 };
 
 class GridEmitAttr: public AstAttribute {

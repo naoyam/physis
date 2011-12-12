@@ -62,6 +62,7 @@ struct StencilIndex {
 
 typedef std::vector<StencilIndex> StencilIndexList;
 
+
 class StencilIndexAttribute: public AstAttribute {
  public:
   StencilIndexAttribute(const StencilIndexList &sil)
@@ -81,12 +82,58 @@ class StencilIndexAttribute: public AstAttribute {
 
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims);
 bool StencilIndexRegularOrder(const StencilIndexList &sil, unsigned num_dims);
+bool StencilIndexRegularOrder(const StencilIndexList &sil);
 
-
+class StencilRegularIndexList {
+  typedef std::map<int, ssize_t> map_t;
+  map_t indices_;
+ public:
+  StencilRegularIndexList() {}
+  StencilRegularIndexList(const StencilIndexList &sil) {
+    PSAssert(StencilIndexRegularOrder(sil));
+    FOREACH (it, sil.begin(), sil.end()) {
+      indices_[it->dim] = it->offset;
+    }
+  }
+  ssize_t GetIndex(int dim) const;
+  void SetIndex(int dim, ssize_t index);
+  virtual ~StencilRegularIndexList() {}
+  std::map<int, ssize_t> indices() { return indices_; }
+  bool operator<(const StencilRegularIndexList &x) const {
+    FOREACH (it, indices_.begin(), indices_.end()) {
+      if (it->second < x.GetIndex(it->first)) {
+        return true;
+      } else if (it->second > x.GetIndex(it->first)) {
+        return false;
+      }
+    }
+    return false;
+  }
+  bool operator==(const StencilRegularIndexList &x) const {
+    return indices_ == x.indices_;
+  }
+  bool operator==(const StencilIndexList &x) const {
+    if (!StencilIndexRegularOrder(x)) return false;
+    StencilRegularIndexList xr(x);
+    return operator==(xr);
+  }
+  bool operator!=(const StencilIndexList &x) const {
+    return !operator==(x);
+  }
+  std::ostream &print(std::ostream &os) const {
+    StringJoin sj;
+    FOREACH (it, indices_.begin(), indices_.end()) {
+      sj << it->first << ": " << it->second;
+    }
+    os << "{" << sj << "}";
+    return os;
+  }
+};
 
 class StencilRange {
   StencilIndexList min_indices_[PS_MAX_DIM];
   StencilIndexList max_indices_[PS_MAX_DIM];
+  std::vector<StencilIndexList> all_indices_;
   int num_dims_;
   bool diagonal_;
   void insert(int dim, const StencilIndex &si);
@@ -117,6 +164,9 @@ class StencilRange {
   SgVariableDeclaration *BuildPSGridRange(
       std::string name, SgScopeStatement *block);
   int GetMaxWidth() const;
+  const std::vector<StencilIndexList> &all_indices() const {
+    return all_indices_;
+  }
 };
 
 } // namespace translator
@@ -130,6 +180,12 @@ inline std::ostream &operator<<(std::ostream &os,
 inline std::ostream& operator<<(std::ostream &os,
                                 const physis::translator::StencilRange &sr) {
   return sr.print(os);
+}
+
+inline std::ostream& operator<<(
+    std::ostream &os,
+    const physis::translator::StencilRegularIndexList &x) {
+  return x.print(os);
 }
 
 inline std::ostream& operator<<(std::ostream &os,

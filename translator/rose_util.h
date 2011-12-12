@@ -148,7 +148,8 @@ inline bool IsIntLikeType(const T *t) {
 //! Check an AST node is conditional
 /*!
   @param node An AST node.
-  @return The conditional node or statement govering the given node.
+  @return The conditional node if the given node is conditional. Null
+  otherwise. 
  */
 SgNode *IsConditional(const SgNode *node);
 
@@ -162,8 +163,64 @@ T *GetASTAttribute(const SgNode *node) {
 
 template <class T>
 void AddASTAttribute(SgNode *node, T *attr) {
+  PSAssert(attr);
+  if (GetASTAttribute<T>(node)) {
+    LOG_ERROR() << "Duplicated attribute: " << T::name << "\n";
+    PSAbort(1);
+  }
   node->addNewAttribute(T::name, attr);
 }
+
+template <class T>
+void CopyASTAttribute(SgNode *dst_node,
+                      const SgNode *src_node,
+                      bool deep=true) {
+  T *attr = GetASTAttribute<T>(src_node);
+  PSAssert(attr);
+  if (deep) {
+    attr = static_cast<T*>(attr->copy());
+  }
+  AddASTAttribute<T>(dst_node, attr);
+}
+
+template <class T>
+class QueryASTNodeVisitor: public AstSimpleProcessing {
+ public:
+  QueryASTNodeVisitor() {}
+  virtual void visit(SgNode *node) {
+    //LOG_DEBUG() << "query node: " << node->class_name() << "\n";
+    //if (isSgCudaKernelExecConfig(node)) { return; }
+    //LOG_DEBUG() << "query node: " << node->unparseToString() << "\n";
+    if (GetASTAttribute<T>(node)) {
+      nodes_.push_back(node);
+    }
+  }
+  std::vector<SgNode *> nodes_;  
+};
+
+//! Query tree nodes with a given attribute type.
+/*!
+  \param top A traversal root node.
+  \return A vector of nodes with an attribute of the given template
+  type. The order of nodes is the same as the pre-order traversal of
+  the tree.
+ */
+template <class T>
+std::vector<SgNode *>
+QuerySubTreeAttribute(SgNode *top) {
+  QueryASTNodeVisitor<T> q;
+  q.traverse(top, preorder);
+  return q.nodes_;
+}
+
+//! Build a field reference.
+/*!
+  \param struct_var A reference to a struct or a struct value.
+  \param field A reference to a field.
+  \return A reference to the field in the struct.
+*/
+SgExpression *BuildFieldRef(
+    SgExpression *struct_var, SgExpression *field);
 
 }  // namespace rose_util
 }  // namespace translator

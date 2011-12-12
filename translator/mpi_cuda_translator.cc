@@ -97,10 +97,19 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
   } else if (dim == 3) {
     SgVariableDeclaration *x_index = sb::buildVariableDeclaration
         ("x", sb::buildIntType(), NULL, block);
+    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
+        x_index->get_variables()[0],
+        new RunKernelLoopVarAttribute(1));
     SgVariableDeclaration *y_index = sb::buildVariableDeclaration
         ("y", sb::buildIntType(), NULL, block);
+    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
+        y_index->get_variables()[0],
+        new RunKernelLoopVarAttribute(2));
     SgVariableDeclaration *z_index = sb::buildVariableDeclaration
         ("z", sb::buildIntType(), NULL, block);
+    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
+        z_index->get_variables()[0],
+        new RunKernelLoopVarAttribute(3));
     si::appendStatement(x_index, block);    
     si::appendStatement(y_index, block);
     index_args.push_back(sb::buildVarRefExp(x_index));
@@ -125,13 +134,17 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
                                sbx::buildCudaIdxExp(sbx::kThreadIdxY)),
                 offset_exprs[1])));
     SgVariableDeclaration *loop_index = z_index;
+    SgExpression *loop_begin =
+        sb::buildPntrArrRefExp(min_field, sb::buildIntVal(2));
     SgStatement *loop_init = sb::buildAssignStatement(
         sb::buildVarRefExp(loop_index),
-        sb::buildPntrArrRefExp(min_field, sb::buildIntVal(2)));
+        loop_begin);
+    SgExpression *loop_end =
+        sb::buildPntrArrRefExp(max_field,
+                               sb::buildIntVal(2));
     SgStatement *loop_test = sb::buildExprStatement(
         sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
-                            sb::buildPntrArrRefExp(max_field,
-                                                   sb::buildIntVal(2))));
+                            loop_end));
     index_args.push_back(sb::buildVarRefExp(loop_index));
 
     SgVariableDeclaration* t[] = {x_index, y_index};
@@ -151,6 +164,10 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
     SgStatement *loop
         = sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
     si::appendStatement(loop, block);
+    rose_util::AddASTAttribute(
+        loop,
+        new RunKernelLoopAttribute(3, z_index->get_variables()[0],
+                                   loop_begin, loop_end));
   }
 
   return block;
@@ -857,7 +874,8 @@ SgFunctionDeclaration *MPICUDATranslator::BuildRunKernel(
   run_func->get_functionModifier().setCudaKernel();
   SgBasicBlock *func_body = BuildRunKernelBody(stencil, dom_arg);
   si::appendStatement(func_body, run_func->get_definition());
-  rose_util::AddASTAttribute(run_func, new RunKernelAttribute());
+  rose_util::AddASTAttribute(run_func,
+                             new RunKernelAttribute(stencil));
   return run_func;
 }
 
@@ -1189,12 +1207,14 @@ bool MPICUDATranslator::translateGetKernel(SgFunctionCallExp *node,
   SgFunctionCallExp *get_address_exp
       = sb::buildFunctionCallExp(get_address, args);
   // refactoring: merge the two attributes
-  get_address_exp->setAttribute(StencilIndexAttribute::name,
-                                new StencilIndexAttribute(*sil));
-  get_address_exp->setAttribute(GridCallAttribute::name,
-                                node->getAttribute(GridCallAttribute::name));
+  rose_util::AddASTAttribute<StencilIndexAttribute>(
+      get_address_exp,
+      new StencilIndexAttribute(*sil));
+  rose_util::CopyASTAttribute<GridCallAttribute>(
+      get_address_exp, node, false);
   SgExpression *x = sb::buildPointerDerefExp(get_address_exp);
   si::replaceExpression(node, x);
+  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);
   return true;
 }
 

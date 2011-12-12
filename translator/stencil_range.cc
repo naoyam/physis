@@ -7,10 +7,9 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/stencil_range.h"
-
-#include <limits.h>
-
 #include "translator/translation_util.h"
+#include "translator/physis_exception.h"
+#include <limits.h>
 
 namespace physis {
 namespace translator {
@@ -38,6 +37,10 @@ bool StencilIndexRegularOrder(const StencilIndexList &sil,
     if (si.dim != i+1) return false;
   }
   return true;
+}
+
+bool StencilIndexRegularOrder(const StencilIndexList &sil) {
+  return StencilIndexRegularOrder(sil, sil.size());
 }
 
 
@@ -88,6 +91,7 @@ void StencilRange::insert(const StencilIndexList &si) {
     if (si.offset) ++non_zero;
   }
   diagonal_ |= (non_zero > 1);
+  all_indices_.push_back(si);
   return;
 }
 
@@ -212,6 +216,16 @@ int StencilRange::GetMaxWidth() const {
   LOG_DEBUG() << "Stencil max width: " << wd << "\n";
   PSAssert(wd < INT_MAX);
   return (int)wd;
+}
+
+ssize_t StencilRegularIndexList::GetIndex(int dim) const {
+  PSAssert(isContained(indices_, dim));  
+  map_t::const_iterator it = indices_.find(dim);
+  return it->second;
+}
+
+void StencilRegularIndexList::SetIndex(int dim, ssize_t idx) {
+  indices_[dim] = idx;
 }
 
 } // namespace translator

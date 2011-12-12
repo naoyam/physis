@@ -21,6 +21,8 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
+// SageInterface has an function exactly for this purpose.
+#if 0
 static void RemoveUnusedLabel(SgProject *proj) {
   // Find used labels
   Rose_STL_Container<SgNode *> gotos =
@@ -42,10 +44,12 @@ static void RemoveUnusedLabel(SgProject *proj) {
     si::removeStatement(label);
   }
 }
+#endif
 
 void kernel_inlining(
     SgProject *proj,
-    physis::translator::TranslationContext *tx) {
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   //si::fixVariableReferences(proj);
@@ -58,7 +62,7 @@ void kernel_inlining(
         = rose_util::GetASTAttribute<RunKernelAttribute>(func);
     // Filter non RunKernel function
     if (!run_kernel_attr) continue;
-
+    
     Rose_STL_Container<SgNode *> calls =
         NodeQuery::querySubTree(proj, V_SgFunctionCallExp);
     FOREACH (calls_it, calls.begin(), calls.end()) {
@@ -90,8 +94,9 @@ void kernel_inlining(
   }
 
   // Remove unused lables created by doInline.
-  RemoveUnusedLabel(proj);
-
+  //RemoveUnusedLabel(proj);
+  si::removeUnusedLabels(proj);
+  
   // TODO: Does not work probably because the AST node linkage is
   //partially broken. 
   //cleanupInlinedCode(proj);

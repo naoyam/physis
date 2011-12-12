@@ -287,6 +287,15 @@ SgNode *FindCommonParent(SgNode *n1, SgNode *n2) {
   return NULL;
 }
 
+SgExpression *BuildFieldRef(
+    SgExpression *struct_var, SgExpression *field) {
+  if (isSgPointerType(struct_var->get_type())) {
+    return sb::buildArrowExp(struct_var, field);
+  } else {
+    return sb::buildDotExp(struct_var, field);
+  }
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

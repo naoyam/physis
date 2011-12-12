@@ -19,8 +19,9 @@ class ReferenceOptimizer: public Optimizer {
  public:
   ReferenceOptimizer(SgProject *proj,
                      physis::translator::TranslationContext *tx,
+                     physis::translator::RuntimeBuilder *builder,
                      physis::translator::Configuration *config)
-      : Optimizer(proj, tx, config) {}
+      : Optimizer(proj, tx, builder, config) {}
   virtual ~ReferenceOptimizer() {}
   virtual void Stage1();
   virtual void Stage2();

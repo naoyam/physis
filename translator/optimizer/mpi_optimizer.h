@@ -19,8 +19,9 @@ class MPIOptimizer: public Optimizer {
  public:
   MPIOptimizer(SgProject *proj,
                physis::translator::TranslationContext *tx,
+               physis::translator::RuntimeBuilder *builder,
                physis::translator::Configuration *config)
-      : Optimizer(proj, tx, config) {}
+      : Optimizer(proj, tx, builder, config) {}
   virtual ~MPIOptimizer() {}
   virtual void Stage1();
   virtual void Stage2();
