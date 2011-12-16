@@ -33,18 +33,21 @@ SgExpression *OpenCLTranslator::buildOffset(
   */
 
   SgExpression *offset = NULL;
-  SgTreeCopy ch;
   for (int i = 0; i < numDim; i++) {
     // z-4, for example
-    SgExpression *dim_offset = isSgExpression(args[i]->copy(ch));
+    SgExpression *dim_offset = si::copyExpression(args[i]);
 
     for (int j = 0; j < i; j++) { // j is the dimension
       // __PS_ga_dim_x
       std::string newargname = name_var_grid_dim(gv->get_name().getString(), j);
        // z * __PS_ga_dim_x * __PS_ga_dim_y, for example
       dim_offset =
-          sb::buildMultiplyOp(dim_offset,
+          sb::buildMultiplyOp(si::copyExpression(dim_offset),
+#ifdef DEBUG_FIX_CONSISTENCY
+                              sb::buildOpaqueVarRefExp(newargname, scope));
+#else
                               sb::buildVarRefExp(newargname));
+#endif
     }
     if (offset) {
       offset = sb::buildAddOp(offset, dim_offset);
@@ -68,8 +71,6 @@ void OpenCLTranslator::translateGet(
     This function should return __PS_ga_buf[offset]
     No cast should be needed as compared with CUDA translation code.
   */
-  SgTreeCopy tc;
-
   // Dimension
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
@@ -81,7 +82,11 @@ void OpenCLTranslator::translateGet(
 
   // p0: __PS_ga_buf
   std::string newargname = name_var_gridptr(gv->get_name().getString());
+#ifdef DEBUG_FIX_CONSISTENCY
+  SgExpression *p0 = sb::buildOpaqueVarRefExp(newargname, scope);
+#else
   SgExpression *p0 = sb::buildVarRefExp(newargname);
+#endif
 
   // No cast needed
   // p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
@@ -105,6 +110,7 @@ void OpenCLTranslator::translateEmit(SgFunctionCallExp *node,
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
 
+  SgScopeStatement *scope = getContainingScopeStatement(node);
   // Get the arguments of _the function_ (in device), not the argument of
   // PSGridEmit.
   // The first (nd) arguments should be "int x, int y, int z", for example.
@@ -112,25 +118,28 @@ void OpenCLTranslator::translateEmit(SgFunctionCallExp *node,
   SgExpressionPtrList args;
   FOREACH(it, params.begin(), params.end()) {
     SgInitializedName *p = *it;
-    args.push_back(sb::buildVarRefExp(p, getContainingScopeStatement(node)));
+    args.push_back(sb::buildVarRefExp(p, scope));
   }
 
   // Now args should be "x, y, z", for example
   // The following offset should return
   // x + y * __PS_ga_dim_x + z * __PS_ga_dim_x * __PS_ga_dim_y, for example
-  SgExpression *offset = buildOffset(gv, getContainingScopeStatement(node),
+  SgExpression *offset = buildOffset(gv, scope,
                                      nd, args);
 
   // __PS_ga_buf
   std::string newargname = name_var_gridptr(gv->get_name().getString());
+#ifdef DEBUG_FIX_CONSISTENCY
+  SgExpression *p1 = sb::buildOpaqueVarRefExp(newargname, scope);
+#else
   SgExpression *p1 = sb::buildVarRefExp(newargname);
+#endif
   // __PS_ga_buf[offset]
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
 
-  SgTreeCopy tc;
   SgExpression *rhs =
-      isSgExpression(node->get_args()->get_expressions()[0]->copy(tc));
+      si::copyExpression(node->get_args()->get_expressions()[0]);
   LOG_DEBUG() << "emit rhs: " << rhs->unparseToString() << "\n";
 
   SgExpression *emit = sb::buildAssignOp(lhs, rhs);

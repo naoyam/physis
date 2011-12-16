@@ -11,7 +11,7 @@
 namespace physis {
   namespace runtime {
 
-    std::string CLinfo::create_kernel_contents(std::string kernelfile) {
+    std::string CLbaseinfo::create_kernel_contents(std::string kernelfile) const {
       std::string ret_str = "";
       int num = 0;
 
@@ -100,7 +100,7 @@ namespace physis {
     } // create_kernel_contents
 
 
-    void CLinfo::create_program(std::string kernelfile) {
+    void CLbaseinfo::create_program(std::string kernelfile) {
       std::string str_kern = "";
       const char *cchar_kern = NULL;
       size_t size_kern = 0;
@@ -162,7 +162,7 @@ namespace physis {
     } // create_program
 
 
-    void CLinfo::create_kernel(std::string kernelname) {
+    void CLbaseinfo::create_kernel(std::string kernelname) {
       cl_int status = -1;
       err_status = 1;
 
@@ -183,7 +183,7 @@ namespace physis {
 
     } // create_kernel
 
-    void CLinfo::SetKernelArg(cl_uint arg_index, size_t arg_size, const void *arg_val){
+    void CLbaseinfo::SetKernelArg(cl_uint arg_index, size_t arg_size, const void *arg_val){
       cl_int status = -1;
       err_status = 1;
 
@@ -195,7 +195,7 @@ namespace physis {
       }
     } // SetKernelArg
 
-    void CLinfo::RunKernel(size_t *globalsize, size_t *localsize) {
+    void CLbaseinfo::RunKernel(size_t *globalsize, size_t *localsize) {
       cl_int status = -1;
       err_status = 1;
 

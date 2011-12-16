@@ -67,6 +67,8 @@ void OpenCLTranslator::Finish()
     PreprocessingInfo::after
     );
 
+  check_consistency();
+
 } // run
 
 

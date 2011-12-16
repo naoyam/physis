@@ -5,6 +5,10 @@
 #include <string>
 #include "translator/reference_translator.h"
 
+#define DEBUG_FIX_AST_APPEND  1
+#define DEBUG_FIX_DUP_SGEXP   1
+#define DEBUG_FIX_CONSISTENCY 1
+
 namespace physis {
   namespace translator {
 
@@ -37,6 +41,10 @@ namespace physis {
         //     ...
         //   }
         bool flag_pre_calc_grid_address_;
+
+        virtual void check_consistency(void);
+        virtual void check_consistency_variable(void);
+        virtual void check_consistency_function_definition(void);
 
         void Finish();
 
@@ -71,6 +79,10 @@ namespace physis {
         virtual SgBasicBlock *GenerateRunLoopBody(
                   Run *run,
                   SgScopeStatement *outer_block);
+        virtual SgExpression *BuildBlockDimX();
+        virtual SgExpression *BuildBlockDimY();
+        virtual SgExpression *BuildBlockDimZ();
+        virtual SgType *BuildOnDeviceGridType(GridType *gt);
 
 
         virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
@@ -87,12 +99,6 @@ namespace physis {
                   SgExpression *dom_ref);
 
 
-        virtual SgExpression *BuildBlockDimX();
-        virtual SgExpression *BuildBlockDimY();
-        virtual SgExpression *BuildBlockDimZ();
-        virtual SgType *BuildOnDeviceGridType(GridType *gt);
-
-
         virtual void arg_add_grid_type(
                       SgFunctionParameterList *args, SgType *type,
                       int num_dim, int num_pos_grid);
@@ -102,7 +108,8 @@ namespace physis {
                       SgFunctionParameterList *args, std::string name_arg,
                       std::string name_type, int num_dim);
         virtual void arg_add_dom_type(SgFunctionParameterList *args, int num_dim);
-        virtual SgExprListExp * new_arguments_of_funccall_in_device(SgExprListExp *argexplist);
+        virtual SgExprListExp * new_arguments_of_funccall_in_device(
+            SgExprListExp *argexplist, SgScopeStatement *scope = NULL);
 
 
         virtual std::string name_var_dom(int dim, int maxflag);

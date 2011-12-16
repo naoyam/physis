@@ -62,6 +62,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda DESTINATION bin)
   set(PHYSISC_SRC ${PHYSISC_SRC}
     opencl_translator.cc
     opencl_translator_arghack.cc
+    opencl_translator_consistency.cc
     opencl_translator_create_kernel.cc
     opencl_translator_edit_kernel.cc
     opencl_translator_getemit.cc

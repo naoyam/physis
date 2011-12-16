@@ -9,7 +9,7 @@
 namespace physis {
   namespace runtime {
 
-    CLinfo::CLinfo() {
+    CLbaseinfo::CLbaseinfo(unsigned int id_use) {
       cldevid = 0;
       clcontext = NULL;
       clqueue = NULL;
@@ -18,15 +18,16 @@ namespace physis {
       err_status = 0;
 
       // create context and queue
-      create_context_queue();
+      create_context_queue(id_use);
 
-    } // CLinfo()
+    } // CLbaseinfo()
 
-    CLinfo::~CLinfo() {
+    CLbaseinfo::~CLbaseinfo() {
       cleanupcl();
-    } // ~CLinfo()
+    } // ~CLbaseinfo()
 
-    void CLinfo::create_context_queue(void) {
+    // By default, use the 0th device from device list dev_ids
+    void CLbaseinfo::create_context_queue(unsigned int id_dev_use) {
       cl_context context = (cl_context) NULL;
       cl_device_id *dev_ids = (cl_device_id *) NULL;
       cl_device_type devtype = CL_DEVICE_TYPE_GPU;
@@ -108,8 +109,8 @@ namespace physis {
             }
 
             // Create command queue
-            // For now, use the 0th device from device list dev_ids
-            cldevid = dev_ids[0];
+            // By default, use the 0th device from device list dev_ids
+            cldevid = dev_ids[id_dev_use];
             queue = clCreateCommandQueue(context, cldevid, NULL, &status);
             if (status != CL_SUCCESS){
               fprintf(stderr, "Calling clCreateCommandQueue failed: status %i\n", status);
@@ -153,7 +154,7 @@ namespace physis {
     } // create_context_queue()
 
 
-    void CLinfo::cleanupcl(void) {
+    void CLbaseinfo::cleanupcl(void) {
 
       if (clkernel) clReleaseKernel(clkernel);
       if (clprog) clReleaseProgram(clprog);

@@ -65,3 +65,14 @@ if (OPENCL_ENABLED)
     DESTINATION lib
     )
 endif()
+
+if (MPI_ENABLED AND OPENCL_ENABLED AND 0)
+  add_library(physis_rt_mpi_opencl ${RUNTIME_COMMON_SRC}
+      grid_mpi_opencl.cc
+      mpi_opencl_runtime.cc
+  )
+  install(
+    TARGETS physis_rt_mpi_opencl
+    DESTINATION lib
+  )
+endif()

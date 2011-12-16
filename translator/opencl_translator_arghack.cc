@@ -3,6 +3,7 @@
 #include "translator/translation_context.h"
 
 namespace sb = SageBuilder;
+namespace si = SageInterface;
 
 namespace physis {
 namespace translator {
@@ -21,10 +22,18 @@ void OpenCLTranslator::arg_add_dom_type(
     SgInitializedName *newarg;
     newargname = name_var_dom(pos_dim, 0); // __PS_dom_?min
     newarg = sb::buildInitializedName(newargname, sb::buildLongType());
+#ifdef DEBUG_FIX_AST_APPEND
+    si::appendArg(params, newarg);
+#else
     params->append_arg(newarg);
+#endif
     newargname = name_var_dom(pos_dim, 1); // __PS_dom_?max
     newarg = sb::buildInitializedName(newargname, sb::buildLongType());
+#ifdef DEBUG_FIX_AST_APPEND
+    si::appendArg(params, newarg);
+#else
     params->append_arg(newarg);
+#endif
   } // for (pos_dim = 0; pos_dim < num_dim; pos_dim++)
 } // arg_add_dom_type
 
@@ -49,7 +58,11 @@ void OpenCLTranslator::arg_add_grid_type(
       for (pos_dim = 0; pos_dim < num_dim; pos_dim++) {
         newargname = name_var_grid_dim(name_arg, pos_dim);
         newarg = sb::buildInitializedName(newargname, sb::buildLongType());
+#ifdef DEBUG_FIX_AST_APPEND
+        si::appendArg(params, newarg);
+#else
         params->append_arg(newarg);
+#endif
       }
 
       // Add "__global float *__PS_ga_buf" to params
@@ -76,12 +89,20 @@ void OpenCLTranslator::arg_add_grid_type(
       newarg = sb::buildInitializedName(newargname, sb::buildOpaqueType(type_global_name, global_scope_));
 #endif
       // Now actually append new argument
+#ifdef DEBUG_FIX_AST_APPEND
+      si::appendArg(params, newarg);
+#else
       params->append_arg(newarg);
+#endif
 
       // Add "long __PS_ga_gridattr" to params
       newargname = name_var_gridattr(name_arg);
       newarg = sb::buildInitializedName(newargname, sb::buildLongType());
+#ifdef DEBUG_FIX_AST_APPEND
+      si::appendArg(params, newarg);
+#else
       params->append_arg(newarg);
+#endif
 
 } // arg_add_grid_type
 
@@ -153,7 +174,11 @@ void OpenCLTranslator::arg_add_grid_type(
 
 // new_arguments_of_funccall_in_device:
 // Generate the new argument of function call in device side source
-SgExprListExp * OpenCLTranslator::new_arguments_of_funccall_in_device(SgExprListExp *argexplist)
+SgExprListExp * 
+  OpenCLTranslator::new_arguments_of_funccall_in_device(
+    SgExprListExp *argexplist,
+    SgScopeStatement *scope
+)
 {
       SgExprListExp *newargexplist = sb::buildExprListExp();
       SgExpressionPtrList &argexpptr = argexplist->get_expressions();
@@ -167,13 +192,21 @@ SgExprListExp * OpenCLTranslator::new_arguments_of_funccall_in_device(SgExprList
           SgExpression *sgexp = *it;
           // Get variable type
           do {
-            SgVarRefExp *varexp = isSgVarRefExp(sgexp);
+            SgVarRefExp *varexp;
+#ifdef DEBUG_FIX_DUP_SGEXP
+            varexp = isSgVarRefExp(si::copyExpression(sgexp));
+#else
+            varexp = isSgVarRefExp(sgexp);
+#endif
             if (!varexp) break;
 
             // Check if it is grid type variable
             SgType *type = varexp->get_type();
             if (!GridType::isGridType(type)) break;
 
+#ifdef DEBUG_FIX_DUP_SGEXP
+            varexp = isSgVarRefExp(si::copyExpression(sgexp));
+#endif
             argname = varexp->get_symbol()->get_name().getString();
             LOG_DEBUG() << "Grid type argument " << argname << " found.\n";
 
@@ -185,16 +218,40 @@ SgExprListExp * OpenCLTranslator::new_arguments_of_funccall_in_device(SgExprList
             // Add __PS_ga_dim_x, __PS_ga_dim_y, __PS_ga_dim_z to params
             int pos_dim;
             for (pos_dim = 0; pos_dim < num_dim; pos_dim++) {
-               newargname = name_var_grid_dim(argname, pos_dim);
-               newargexplist->append_expression(sb::buildVarRefExp(newargname));
+              newargname = name_var_grid_dim(argname, pos_dim);
+#ifdef DEBUG_FIX_CONSISTENCY
+              si::appendExpression(newargexplist, sb::buildOpaqueVarRefExp(newargname, scope));
+#else
+#ifdef DEBUG_FIX_AST_APPEND
+              si::appendExpression(newargexplist, sb::buildVarRefExp(newargname));
+#else
+              newargexplist->append_expression(sb::buildVarRefExp(newargname));
+#endif
+#endif
             }
             // Add __PS_ga_buf to params
             newargname = name_var_gridptr(argname);
+#ifdef DEBUG_FIX_CONSISTENCY
+              si::appendExpression(newargexplist, sb::buildOpaqueVarRefExp(newargname, scope));
+#else
+#ifdef DEBUG_FIX_AST_APPEND
+            si::appendExpression(newargexplist, sb::buildVarRefExp(newargname));
+#else
             newargexplist->append_expression(sb::buildVarRefExp(newargname));
+#endif
+#endif
 
             // Add __PS_ga_gridattr" to params
             newargname = name_var_gridattr(argname);
+#ifdef DEBUG_FIX_CONSISTENCY
+              si::appendExpression(newargexplist, sb::buildOpaqueVarRefExp(newargname, scope));
+#else
+#ifdef DEBUG_FIX_AST_APPEND
+            si::appendExpression(newargexplist, sb::buildVarRefExp(newargname));
+#else
             newargexplist->append_expression(sb::buildVarRefExp(newargname));
+#endif
+#endif
 
             // Fixing up grid type variable argument done: reset
             sgexp = 0;
@@ -202,8 +259,13 @@ SgExprListExp * OpenCLTranslator::new_arguments_of_funccall_in_device(SgExprList
           } while(0);
 
             // Add the original expression to new arglist as it is
-          if (sgexp)
+          if (sgexp) {
+#ifdef DEBUG_FIX_AST_APPEND
+            si::appendExpression(newargexplist, sgexp);
+#else
             newargexplist->append_expression(sgexp);
+#endif
+          }
 
         } // FOREACH(it, fcargs.begin(), fcargs.end())
       }

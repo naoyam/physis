@@ -13,7 +13,8 @@
 namespace physis {
   namespace runtime {
 
-    void CLinfo::guess_kernelfile(const int *argc, char ***argv, std::string &filename, std::string &kernelname) {
+    void CLbaseinfo::guess_kernelfile
+      (const int *argc, char ***argv, std::string &filename, std::string &kernelname) const {
 
       char buf[BUFSIZE];
       // const char *tail;
@@ -47,7 +48,7 @@ namespace physis {
       kernelname = "__PSStencilRun_kernel";
     } // guess_kernelfile
 
-    std::string CLinfo::physis_opencl_h_include_path(void) {
+    std::string CLbaseinfo::physis_opencl_h_include_path(void) const {
       std::string ret = "";
 
       // FIXME

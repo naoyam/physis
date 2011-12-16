@@ -30,15 +30,26 @@ void OpenCLTranslator::translateKernelDeclaration(
     SgNodePtrList calls =
       NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
     FOREACH (it, calls.begin(), calls.end()) {
-      SgFunctionCallExp *fcexp = isSgFunctionCallExp(*it);
+      SgFunctionCallExp *fcexp;
+#if DEBUG_FIX_DUP_SGEXP
+      fcexp = isSgFunctionCallExp(si::copyExpression(isSgFunctionCallExp(*it)));
+#else
+      fcexp = isSgFunctionCallExp(*it);
+#endif
       std::string fcexpname = fcexp->getAssociatedFunctionSymbol()->get_name().getString();
       PSAssert(fcexp);
 
       // Get the argument list of the function
+#if DEBUG_FIX_DUP_SGEXP
+      fcexp = isSgFunctionCallExp(si::copyExpression(isSgFunctionCallExp(*it)));
+#endif
       SgExprListExp *argexplist = fcexp->get_args();
       LOG_DEBUG() << "Checking the arguments of function " << fcexpname << "\n";
       // Create new argument list
-      SgExprListExp *newargexplist = new_arguments_of_funccall_in_device(argexplist);
+      SgScopeStatement *scope_func = node_pos->get_scope();
+      SgExprListExp *newargexplist = 
+        new_arguments_of_funccall_in_device(argexplist, scope_func);
+      fcexp = isSgFunctionCallExp(*it);
       fcexp->set_args(newargexplist);
 
       // fcexp->set_function(sb::buildFunctionRefExp(gdim_dev));
@@ -110,11 +121,33 @@ void OpenCLTranslator::translateKernelDeclaration(
       } // if (GridType::isGridType(cur_type))
 
       // If the argument is not grid type, add it as it is
+#ifdef DEBUG_FIX_AST_APPEND
+      si::appendArg(newparams, newarg);
+#else
       newparams->append_arg(newarg);
+#endif
   } // FOREACH(it, oldargs.begin(), oldargs.end())
 
+#ifdef DEBUG_FIX_CONSISTENCY
+  if (1) {
+    // Set the scope of the arguments in function definition
+    // correctly
+    SgInitializedNamePtrList &newargs = newparams->get_args();
+
+    FOREACH(it, newargs.begin(), newargs.end()) {
+      SgInitializedName *newarg = isSgInitializedName(*it);
+      SgScopeStatement *scope_func = node_pos->get_scope();
+      newarg->set_scope(scope_func);
+    }
+  }
+#endif
+
   // And set the new parameter list
+#ifdef DEBUG_FIX_AST_APPEND
+  si::setParameterList(node_pos, newparams);
+#else
   node_pos->set_parameterList(newparams);
+#endif
 
   {
     LOG_INFO() << "Adding #ifdef << " << kernel_mode_macro() << " \n";

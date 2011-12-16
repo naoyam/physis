@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
   }
   
   // Run internal consistency tests on AST
-  // AstTests::runAllTests(proj);
+  //AstTests::runAllTests(proj);
 
   pt::TranslationContext tx(proj);
 
@@ -265,6 +265,10 @@ int main(int argc, char *argv[]) {
   trans->Finish();
   
   pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
+  //SgProject::set_verbose(100000);
+  //AstPostProcessing(proj);
+  //AstTests::testCompilerGeneratedNodes(proj);
+  //AstTests::runAllTests(proj);
 
   int b = backend(proj);
   LOG_INFO() << "Code generation complete.\n";
