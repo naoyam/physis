@@ -641,9 +641,6 @@ function get_test_cases()
 				if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
 					np_target=$MPI_PROC_DIM
 					echo "[EXECUTE] Trying with process configurations: $np_target"
-                    # Make sure compiled binaries are synched to other nodes
-		    # This is a temporary workaround for the Raccoon cluster.
-					#sleep 30
 				fi
 				for np in $np_target; do
 					if execute $SHORTNAME $TARGET $np $DIM; then
