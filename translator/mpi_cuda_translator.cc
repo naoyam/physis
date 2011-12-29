@@ -1213,8 +1213,8 @@ bool MPICUDATranslator::translateGetKernel(SgFunctionCallExp *node,
   rose_util::CopyASTAttribute<GridCallAttribute>(
       get_address_exp, node, false);
   SgExpression *x = sb::buildPointerDerefExp(get_address_exp);
+  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);  
   si::replaceExpression(node, x);
-  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);
   return true;
 }
 

@@ -491,7 +491,6 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
                                        SgInitializedName *gv) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
-
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgScopeStatement *scope = getContainingScopeStatement(node);  
@@ -528,8 +527,8 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
     LOG_DEBUG() << it->first << "->" << it->second << "\n";
   }
   SgExpression *x = sb::buildPointerDerefExp(get_address_exp);
+  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);  
   si::replaceExpression(node, x);
-  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);
   return true;
 }
 

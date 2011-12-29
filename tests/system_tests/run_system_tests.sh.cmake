@@ -133,50 +133,66 @@ function generate_translation_configurations_ref()
     else
 		configs=$(generate_empty_translation_configuration)
     fi
-    local kernel_inlining='true false'
     local new_configs=""
     local idx=0
-    for i in $kernel_inlining; do
-		for j in $configs; do
-			local c=config.ref.$idx
-			idx=$(($idx + 1))
-			cat $j > $c
-			echo "OPT_KERNEL_INLINING = $i" >> $c
-			new_configs="$new_configs $c"
-		done
-    done
+    local c=config.cuda.$idx
+	idx=$(($idx + 1))
+    echo "OPT_KERNEL_INLINING = false" >> $c
+    echo "OPT_LOOP_PEELING = false" >> $c
+    new_configs="$new_configs $c"
+
+    c=config.cuda.$idx
+	idx=$(($idx + 1))
+    echo "OPT_KERNEL_INLINING = true" >> $c
+    echo "OPT_LOOP_PEELING = false" >> $c
+    new_configs="$new_configs $c"
+
+    c=config.cuda.$idx
+	idx=$(($idx + 1))
+    echo "OPT_LOOP_PEELING = true" >> $c
+    new_configs="$new_configs $c"
+
     echo $new_configs
 }
-
 function generate_translation_configurations_cuda()
 {
     local configs=""    
     if [ $# -gt 0 ]; then
 		configs=$*
     else
-		configs=config.empty
-		echo -n "" > config.empty
+		configs=$(generate_empty_translation_configuration)
     fi
     local pre_calc='true false'
     local bsize="64,4,1 32,8,1"
-	local kernel_inlining='true fales'
     local new_configs=""
     local idx=0
     for i in $pre_calc; do
 		for j in $bsize; do
-			for l in $kernel_inlining; do
-				for k in $configs; do
-					local c=config.cuda.$idx
-					idx=$(($idx + 1))
-					cat $k > $c
-					echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
-					echo "CUDA_BLOCK_SIZE = {$j}" >> $c
-					echo "OPT_KERNEL_INLINING = $l" >> $c
-					new_configs="$new_configs $c"
-				done
+			for k in $configs; do
+				local c=config.cuda.$idx
+				idx=$(($idx + 1))
+				cat $k > $c
+				echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
+				echo "CUDA_BLOCK_SIZE = {$j}" >> $c
+				new_configs="$new_configs $c"
 			done
 		done
     done
+    for config in $new_configs; do
+        local c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_KERNEL_INLINING = true" >> $c
+        echo "OPT_LOOP_PEELING = false" >> $c
+        new_configs="$new_configs $c"
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_LOOP_PEELING = true" >> $c
+        new_configs="$new_configs $c"
+        echo "OPT_KERNEL_INLINING = false" >> $config
+        echo "OPT_LOOP_PEELING = false" >> $config
+     done	     
     echo $new_configs
 }
 
@@ -195,28 +211,30 @@ function generate_translation_configurations_mpi_cuda()
     if [ $# -gt 0 ]; then
 		configs=$*
     else
-		configs=config.empty
-		echo -n "" > config.empty
+		configs=$(generate_empty_translation_configuration)
     fi
-    configs=$(generate_translation_configurations_cuda "$configs")
+	local bsize="64,4,1 32,8,1"
     local overlap='false true'
     local multistream='false true'
     local new_configs=""
     local idx=0
-    for i in $overlap; do
-		for j in $multistream; do
-			for k in $configs; do
+	for l in $bsize; do
+		for i in $overlap; do
+			for j in $multistream; do
+				for k in $configs; do
 		# skip configurations with not all options enabled
-				if [ \( $i = 'true' -a $j = 'false' \)  \
-					-o \( $i = 'false' -a $j = 'true' \) ]; then
-					continue;
-				fi
-				local c=config.mpi-cuda.$idx
-				idx=$(($idx + 1))
-				cat $k > $c
-				echo "MPI_OVERLAP = $i" >> $c
-				echo "MULTISTREAM_BOUNDARY = $j" >> $c
-				new_configs="$new_configs $c"
+					if [ \( $i = 'true' -a $j = 'false' \)  \
+						-o \( $i = 'false' -a $j = 'true' \) ]; then
+						continue;
+					fi
+					local c=config.mpi-cuda.$idx
+					idx=$(($idx + 1))
+					cat $k > $c
+					echo "CUDA_BLOCK_SIZE = {$l}" >> $c
+					echo "MPI_OVERLAP = $i" >> $c
+					echo "MULTISTREAM_BOUNDARY = $j" >> $c
+					new_configs="$new_configs $c"
+				done
 			done
 		done
     done

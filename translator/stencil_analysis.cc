@@ -232,9 +232,13 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     sr.insert(stencil_indices);
     tx.registerStencilIndex(get_call, stencil_indices);
     LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
-    rose_util::AddASTAttribute(
-        get_call,
-        new GridGetAttribute(gv, tx.isKernel(kernel), stencil_indices));
+    // A kernel function is analyzed multiple times if it appears
+    // multiple times in use at stencil_map.
+    if (rose_util::GetASTAttribute<GridGetAttribute>(get_call) == NULL) {
+      rose_util::AddASTAttribute(
+          get_call,
+          new GridGetAttribute(gv, tx.isKernel(kernel), stencil_indices));
+    }
   }
   LOG_DEBUG() << "Stencil access: "
               << GridRangeMapToString(gr)
