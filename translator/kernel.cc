@@ -134,8 +134,6 @@ void Kernel::appendChild(SgFunctionCallExp *call, Kernel *child) {
 }
 
 const std::string RunKernelAttribute::name = "RunKernel";
-const std::string RunKernelLoopAttribute::name = "RunKernelLoop";
-const std::string RunKernelLoopVarAttribute::name = "RunKernelLoopVar";
 
 } // namespace translator
 } // namespace physis

@@ -535,9 +535,8 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
         sb::buildVariableDeclaration(getLoopIndexName(i),
                                      sb::buildUnsignedIntType(),
                                      NULL, loopBlock);
-    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
-        indexDecl->get_variables()[0],
-        new RunKernelLoopVarAttribute(i+1));
+    rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
+        indexDecl,  new RunKernelIndexVarAttribute(i+1));
     indexArgs.push_back(sb::buildVarRefExp(indexDecl));
     SgExpression *loop_begin =
         sb::buildPntrArrRefExp(

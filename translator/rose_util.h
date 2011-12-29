@@ -222,6 +222,14 @@ QuerySubTreeAttribute(SgNode *top) {
 SgExpression *BuildFieldRef(
     SgExpression *struct_var, SgExpression *field);
 
+//! Build a min expression.
+SgExpression *BuildMin(SgExpression *x, SgExpression *y);
+
+//! Build a maxb expression.
+SgExpression *BuildMax(SgExpression *x, SgExpression *y);
+
+
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

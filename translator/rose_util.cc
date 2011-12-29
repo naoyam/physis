@@ -296,6 +296,20 @@ SgExpression *BuildFieldRef(
   }
 }
 
+SgExpression *BuildMin(SgExpression *x,
+                       SgExpression *y) {
+  return sb::buildConditionalExp(
+      sb::buildLessThanOp(x, y),
+      si::copyExpression(x), si::copyExpression(y));
+}
+
+SgExpression *BuildMax(SgExpression *x,
+                       SgExpression *y) {
+  return sb::buildConditionalExp(
+      sb::buildGreaterThanOp(x, y),
+      si::copyExpression(x), si::copyExpression(y));
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

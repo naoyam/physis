@@ -10,6 +10,7 @@
 #define PHYSIS_RUNTIME_BUILDER_H_
 
 #include "translator/translator_common.h"
+#include "translator/translation_context.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -51,8 +52,18 @@ class RuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
+  
+  virtual SgExpression *BuildGet(  
+    SgInitializedName *gv,
+    SgExprListExp *offset_exprs,
+    SgScopeStatement *scope,
+    TranslationContext *tx, bool is_kernel) = 0;
+  virtual SgType *GetIndexType() {
+    return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
+  }
+      
  protected:
-  SgScopeStatement *gs_;  
+  SgScopeStatement *gs_;
 };
 
 } // namespace translator

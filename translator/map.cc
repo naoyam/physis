@@ -111,6 +111,9 @@ void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {
 }
 #endif
 
+const std::string RunKernelLoopAttribute::name = "RunKernelLoop";
+const std::string RunKernelIndexVarAttribute::name = "RunKernelIndexVar";
+
 } // namespace translator
 } // namespace physis
 

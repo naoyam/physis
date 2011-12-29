@@ -32,9 +32,23 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);
+  //!
+  /*!
+   */
+  virtual SgExpression *BuildOffset(
+      SgInitializedName *gv, int num_dim,
+      SgExprListExp *offset_exprs, bool is_kernel,
+      SgScopeStatement *scope);
+  virtual SgExpression *BuildGet(  
+    SgInitializedName *gv,
+    SgExprListExp *offset_exprs,
+    SgScopeStatement *scope,
+    TranslationContext *tx, bool is_kernel);
   
  protected:
   SgType *index_t_;
+  static const std::string  grid_type_name_;
+  SgClassDeclaration *GetGridDecl();
 };
 
 } // namespace translator

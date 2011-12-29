@@ -22,12 +22,6 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-static SgExpression *BuildMin(SgExpression *x,
-                              SgExpression *y) {
-  return sb::buildConditionalExp(sb::buildLessThanOp(x, y),
-                                 si::copyExpression(x),
-                                 si::copyExpression(y));
-}
 
 
 //! Return true if a given get MAY be guarded by a conditional node.
@@ -152,11 +146,12 @@ static void PeelFirstIterations(SgForStatement *loop,
   SgStatement *cond =
       sb::buildExprStatement(
           sb::buildLessThanOp(sb::buildVarRefExp(loop_var),
-                              loop_end));
+                              si::copyExpression(loop_end)));
   RunKernelLoopAttribute *peeled_iter_attr
       = rose_util::GetASTAttribute<RunKernelLoopAttribute>(
           peeled_iterations);
-  peeled_iter_attr->end() = loop_end;
+  peeled_iter_attr->end() = si::copyExpression(loop_end);
+  peeled_iter_attr->SetFirst();
   si::replaceStatement(original_cond, cond);
   si::insertStatementBefore(loop, peeled_iterations);
   si::removeStatement(original_cond);
@@ -185,9 +180,12 @@ static void PeelFirstIterations(SgForStatement *loop,
   RunKernelLoopAttribute *loop_attr
       = rose_util::GetASTAttribute<RunKernelLoopAttribute>(
           loop);
-  loop_attr->begin() = BuildMin(
-      loop_attr->begin(), loop_end);
+  loop_attr->begin() = rose_util::BuildMax(
+      si::copyExpression(loop_attr->begin()),
+      si::copyExpression(loop_end));
   LOG_DEBUG() << "Peeling of the first iterations done.\n";
+  // Only copies of loop_end is used, so the original is not needed.
+  si::deleteAST(loop_end);
   return;  
 }
 
@@ -224,8 +222,8 @@ static void PeelLastIterations(SgForStatement *loop,
                   si::getEnclosingFunctionDeclaration(loop)),
               loop_attr->dim()),
           sb::buildIntVal(peel_size));
-  SgExpression *loop_end = BuildMin(original_loop_end,
-                                    grid_end_offset);
+  SgExpression *loop_end = rose_util::BuildMin(
+      si::copyExpression(original_loop_end), grid_end_offset);
   SgStatement *cond =
       sb::buildExprStatement(
           sb::buildLessThanOp(sb::buildVarRefExp(loop_var),
@@ -234,7 +232,7 @@ static void PeelLastIterations(SgForStatement *loop,
   // Remove old condtional
   si::removeStatement(original_cond);
   //si::deleteAST(original_cond);
-  loop_attr->end() = loop_end;
+  loop_attr->end() = si::copyExpression(loop_end);
   
   // Prepend the peeled iterations
   si::insertStatementAfter(loop, peeled_iterations);
@@ -242,7 +240,8 @@ static void PeelLastIterations(SgForStatement *loop,
   // Set the loop begin and end of the peeled iterations.
   // The end is not affected; only the beginning needs to be
   // corrected.
-  peel_iter_attr->begin() = loop_end;
+  peel_iter_attr->begin() = si::copyExpression(loop_end);
+  peel_iter_attr->SetLast();
 }
 
 static void PeelLoop(

@@ -97,19 +97,16 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
   } else if (dim == 3) {
     SgVariableDeclaration *x_index = sb::buildVariableDeclaration
         ("x", sb::buildIntType(), NULL, block);
-    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
-        x_index->get_variables()[0],
-        new RunKernelLoopVarAttribute(1));
+    rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
+        x_index, new RunKernelIndexVarAttribute(1));
     SgVariableDeclaration *y_index = sb::buildVariableDeclaration
         ("y", sb::buildIntType(), NULL, block);
-    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
-        y_index->get_variables()[0],
-        new RunKernelLoopVarAttribute(2));
+    rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
+        y_index, new RunKernelIndexVarAttribute(2));
     SgVariableDeclaration *z_index = sb::buildVariableDeclaration
         ("z", sb::buildIntType(), NULL, block);
-    rose_util::AddASTAttribute<RunKernelLoopVarAttribute>(
-        z_index->get_variables()[0],
-        new RunKernelLoopVarAttribute(3));
+    rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
+        z_index, new RunKernelIndexVarAttribute(3));
     si::appendStatement(x_index, block);    
     si::appendStatement(y_index, block);
     index_args.push_back(sb::buildVarRefExp(x_index));

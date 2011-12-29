@@ -50,7 +50,7 @@ void Translator::SetUp(SgProject *project, TranslationContext *context) {
   ivec_type_ = sb::buildArrayType(sb::buildIntType(),
                                   sb::buildIntVal(PS_MAX_DIM));
   index_type_ = sb::buildOpaqueType(PS_INDEX_TYPE_NAME,
-                                   global_scope_);
+                                    global_scope_);
   buildGridDecl();
 
   dom_type_ = isSgTypedefType(

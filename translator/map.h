@@ -129,8 +129,7 @@ class RunKernelAttribute: public AstAttribute {
       stencil_map_(sm), stencil_param_(stencil_param) {}
   virtual ~RunKernelAttribute() {}
   AstAttribute *copy() {
-    return new RunKernelAttribute(stencil_map_,
-                                  stencil_param_);
+    return new RunKernelAttribute(stencil_map_, stencil_param_);
   }
   static const std::string name;
   StencilMap *stencil_map() { return stencil_map_; };
@@ -139,92 +138,48 @@ class RunKernelAttribute: public AstAttribute {
 
 class RunKernelLoopAttribute: public AstAttribute {
  public:
-#if 0  
+  enum Kind {
+    MAIN, FIRST, LAST
+  };
   RunKernelLoopAttribute(int dim, SgInitializedName *var,
                          SgExpression *begin,
-                         SgExpression *end):
-      dim_(dim), var_(var) {
-    AddBeginExpression(begin);
-    AddEndExpression(end);
-  }
-  RunKernelLoopAttribute(int dim, SgInitializedName *var,
-                         const vector<SgExpression *> &begin,
-                         const vector<SgExpression *> &end):
-      dim_(dim), var_(var), begin_(begin), end_(end) {}
-#endif
-  RunKernelLoopAttribute(int dim, SgInitializedName *var,
-                         SgExpression *begin,
-                         SgExpression *end):
-      dim_(dim), var_(var), begin_(begin), end_(end) {}
+                         SgExpression *end,
+                         Kind kind=MAIN):
+      dim_(dim), var_(var), begin_(begin), end_(end), kind_(kind)  {}
   
   virtual ~RunKernelLoopAttribute() {}
   AstAttribute *copy() {
     return new RunKernelLoopAttribute(dim_, var_,
-                                      begin_, end_);
+                                      begin_, end_, kind_);
   }
   static const std::string name;
   int dim() const { return dim_; }
   SgInitializedName *var() { return var_; }
-  SgExpression *begin() const { return begin_; }
-  SgExpression *end() const { return end_; }
+  SgExpression * const &begin() const { return begin_; }
+  SgExpression * const &end() const { return end_; }
   SgExpression *&begin() { return begin_; }
   SgExpression *&end() { return end_; }
-#if 0  
-  void AddBeginExpression(SgExpression *e) {
-    begin_.push_back(e);
-  }
-  void AddEndExpression(SgExpression *e) {
-    end_.push_back(e);
-  }
-  void SetBeginExpression(SgExpression *e) {
-    begin_.clear();
-    AddBeginExpression(e);
-  }
-  void SetEndExpression(SgExpression *e) {
-    end_.clear();
-    AddEndExpression(e);
-  }
-
-  const vector<SgExpression *> &GetBeginExpressions() const {
-    return begin_;
-  }
-  const vector<SgExpression *> &GetEndExpressions() const {
-    return end_;
-  }
-  SgExpression *GetFirstBeginExpression() const {
-    if (begin_.size() > 0) {
-      return *(begin_.begin());
-    } else {
-      return NULL;
-    }
-  }
-  SgExpression *GetFirstEndExpression() const {
-    if (end_.size() > 0) {
-      return *(end_.end());
-    } else {
-      return NULL;
-    }
-  }
-#endif      
+  void SetMain() { kind_ = MAIN; }
+  void SetFirst() { kind_ = FIRST; }
+  void SetLast() { kind_ = LAST; }
+  bool IsMain() { return kind_ == MAIN; }
+  bool IsFrist() { return kind_ == FIRST; }
+  bool IsLast() { return kind_ == LAST; }    
  protected:
   int dim_;
   SgInitializedName *var_;
-#if 0  
-  vector<SgExpression *> begin_;
-  vector<SgExpression *> end_;
-#endif
   SgExpression *begin_;
   SgExpression *end_;
-  
+  Kind kind_;
 };
 
-class RunKernelLoopVarAttribute: public AstAttribute {
+class RunKernelIndexVarAttribute: public AstAttribute {
  public:
-  RunKernelLoopVarAttribute(int dim):
+  RunKernelIndexVarAttribute(int dim):
       dim_(dim) {}
-  virtual ~RunKernelLoopVarAttribute() {}
+  virtual ~RunKernelIndexVarAttribute() {}
   AstAttribute *copy() {
-    return new RunKernelLoopVarAttribute(dim_);
+    return new RunKernelIndexVarAttribute(dim_);
   }
   static const std::string name;
   int dim() const {return dim_; }

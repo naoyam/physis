@@ -22,6 +22,9 @@ ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
   PSAssert(index_t_ = si::lookupNamedTypeInParentScopes("index_t", gs_));
 }
 
+const std::string
+ReferenceRuntimeBuilder::grid_type_name_ = "__PSGrid";
+
 SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGetID(
     SgExpression *grid_var) {
   SgFunctionSymbol *fs
@@ -112,6 +115,55 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
   return grid_ref;
 }
 
+SgExpression *ReferenceRuntimeBuilder::BuildOffset(
+    SgInitializedName *gv,
+    int num_dim,
+    SgExprListExp *offset_exprs,
+    bool is_kernel,
+    SgScopeStatement *scope) {
+  /*
+    __PSGridGetOffsetND(g, i)
+  */
+  std::string func_name =
+      "__PSGridGetOffset" + toString(num_dim) + "D";
+  SgExprListExp *func_args = isSgExprListExp(
+      si::deepCopyNode(offset_exprs));
+  func_args->prepend_expression(
+      sb::buildVarRefExp(gv->get_name(), scope));
+  return sb::buildFunctionCallExp(func_name, GetIndexType(),
+                                  func_args);
+}
+
+SgClassDeclaration *ReferenceRuntimeBuilder::GetGridDecl() {
+  LOG_DEBUG() << "grid type name: " << grid_type_name_ << "\n";
+  SgTypedefType *grid_type = isSgTypedefType(
+      si::lookupNamedTypeInParentScopes(grid_type_name_, gs_));
+  SgClassType *anont = isSgClassType(grid_type->get_base_type());
+  PSAssert(anont);
+  return isSgClassDeclaration(anont->get_declaration());
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildGet(
+    SgInitializedName *gv,
+    SgExprListExp *offset_exprs,
+    SgScopeStatement *scope,
+    TranslationContext *tx, bool is_kernel) {
+  GridType *gt = tx->findGridType(gv->get_type());
+  int nd = gt->getNumDim();
+  SgExpression *offset = BuildOffset(
+      gv, nd, offset_exprs, is_kernel, scope);
+  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
+  SgClassDeclaration *grid_decl = GetGridDecl();
+  SgExpression *buf =
+      sb::buildArrowExp(g,
+                        sb::buildVarRefExp("p0",
+                                           grid_decl->get_definition()));
+  SgExpression *elm_val = sb::buildPntrArrRefExp(
+      sb::buildCastExp(buf, sb::buildPointerType(gt->getElmType())),
+      offset);
+  //rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
+  return elm_val;
+}
 
 
 } // namespace translator
