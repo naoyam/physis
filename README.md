@@ -35,6 +35,7 @@ devices and network connections.
 
 ## News & Updates
 
+* 1 Jan 2012 - Version 0.2 available.
 * 22 Nov 2011 - Version 0.1 available.
 
 ## Supported Platforms
@@ -84,6 +85,8 @@ See docs/faq.md.
 The corresponding source of each version is attached with a Git tag
 with the version number.
 
+* Version 0.2 (1 Jan 2012)
+    * Optimization passes added.
 * Version 0.1 (22 Nov 2011)
     * The first pre-release version.
 
