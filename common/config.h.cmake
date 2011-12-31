@@ -3,8 +3,8 @@
 
 #cmakedefine CUDA_ENABLED
 #cmakedefine MPI_ENABLED
+#cmakedefine PS_WARNING
 #cmakedefine PS_DEBUG
-#cmakedefine PS_VERBOSE_DEBUG
 #cmakedefine PS_VERBOSE
 
 

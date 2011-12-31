@@ -167,12 +167,13 @@ static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
     paired_get_exp = *it;
   }
   
-  if (paired_get_exp)
+  if (paired_get_exp) {
     LOG_DEBUG() << "Peer of get found: "
                 << paired_get_exp->unparseToString()
                 << "\n";
-  else
+  } else {
     LOG_DEBUG() << "No peer found\n";
+  }
 
   // Make a bool var of the if conditional so that it can be reused
   // for the new if block with the same conditional.

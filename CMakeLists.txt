@@ -1,33 +1,75 @@
 cmake_minimum_required(VERSION 2.8)
 project(physis)
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake"
+  "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
 
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # config.h files are geneted into the binary dir
 include_directories(${CMAKE_BINARY_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wall -Wno-deprecated")
-if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -malign-double")
-endif ()
-message(STATUS "CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
-#set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-O0 -g -Wall -Wno-deprecated")
-set(PS_DEBUG TRUE)
-#set(PS_VERBOSE_DEBUG TRUE)
-#set(PS_VERBOSE TRUE)
-#set(PS_DEBUG TRUE)
+if (NOT CMAKE_BUILD_TYPE)
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
+endif (NOT CMAKE_BUILD_TYPE)
+message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
-#set(AUTO_DOUBLE_BUFFERING TRUE)
+function (add_flag var flag)
+  set (${var} "${${var}} ${flag}" PARENT_SCOPE)
+endfunction ()
+
+foreach (i CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+  unset (${i} CACHE)
+endforeach ()
+
+if (${CMAKE_C_COMPILER} MATCHES icc)
+  set (CMAKE_COMPILER_IS_ICC TRUE)
+  message (STATUS "Compiler is icc.")
+else ()
+  set (CMAKE_COMPILER_IS_ICC FALSE)
+endif ()
+
+# Add warning flags
+if (CMAKE_COMPILER_IS_GNUCXX)
+  set (WARN_FLAGS "-Wall -Wno-deprecated -Wno-unused-function")
+elseif (CMAKE_COMPILER_IS_ICC)
+  set (WARN_FLAGS "-Wall -Wcheck -Wno-deprecated -Wno-unused-function")
+endif ()
+
+add_flag (CMAKE_CXX_FLAGS "${WARN_FLAGS}")
+
+# CUDA on Linux requires this flag.
+if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -malign-double")
+  add_flag(CMAKE_CXX_FLAGS "-malign-double")
+endif ()
+
+# Optimization flags
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+
+# Logging configuration
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set (PS_DEBUG TRUE)
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  set (PS_DEBUG TRUE)
+endif ()
+
+set(PS_VERBOSE FALSE)
+set(PS_WARNING TRUE)
+
 set(AUTO_DOUBLE_BUFFERING FALSE)
   
 find_package(CUDA)
 if (CUDA_FOUND AND
     (CUDA_VERSION VERSION_EQUAL "4.0") OR
     (CUDA_VERSION VERSION_GREATER "4.0"))
-    set(CUDA_ENABLED TRUE)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_20)
+  set(CUDA_ENABLED TRUE)
+  set (CUDA_NVCC_FLAGS -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
   foreach(i ${CUDA_LIBRARIES})
     if (i MATCHES libcudart)
@@ -57,13 +99,14 @@ if (CUDA_FOUND AND
     NO_DEFAULT_PATH
     )
   # Now search system paths
-  find_library(CUDA_CUT_LIBRARY NAMES cutil ${cuda_cutil_name} DOC "Location of cutil library")
+  find_library(CUDA_CUT_LIBRARY NAMES cutil ${cuda_cutil_name}
+    DOC "Location of cutil library")
   mark_as_advanced(CUDA_CUT_LIBRARY)
   set(CUDA_CUT_LIBRARIES ${CUDA_CUT_LIBRARY})
   message(STATUS "CUDA_CUT_LIBRARIES=${CUDA_CUT_LIBRARIES}")
 else()
-  message(STATUS "Compatible CUDA toolkit (4.0 or higher) not found.")
-  message(STATUS "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")
+  message(WARNING "Compatible CUDA toolkit (4.0 or higher) not found.")
+  message(WARNING "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")
   set(CUDA_ENABLED FALSE)
 endif()
 

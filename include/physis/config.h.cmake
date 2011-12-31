@@ -7,8 +7,8 @@
 #cmakedefine CUDA_ENABLED
 #cmakedefine MPI_ENABLED
 #cmakedefine PS_DEBUG
-#cmakedefine PS_VERBOSE_DEBUG
 #cmakedefine PS_VERBOSE
+#cmakedefine PS_WARNING
 
 #cmakedefine AUTO_DOUBLE_BUFFERING
 

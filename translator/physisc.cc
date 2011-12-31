@@ -223,12 +223,12 @@ int main(int argc, char *argv[]) {
     exit(0);
   }
 
-#if defined(PS_VERBOSE_DEBUG)  
+#if defined(PS_VERBOSE)  
   physis::StringJoin sj;
   FOREACH (it, argvec.begin(), argvec.end()) {
     sj << *it;
   }
-  LOG_DEBUG() << "Rose command line: " << sj << "\n";
+  LOG_VERBOSE() << "Rose command line: " << sj << "\n";
 #endif  
   
   // Build AST

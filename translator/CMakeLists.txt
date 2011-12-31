@@ -5,6 +5,7 @@ link_directories(${PROJECT_BINARY_DIR}/util)
 # ROSE is required. Skip if not found.
 find_package(ROSE)
 if (NOT ROSE_FOUND)
+  message (WARNING "ROSE not found. Translators will not be built.")
   return()
 endif()
 

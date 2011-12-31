@@ -31,7 +31,7 @@
 #if defined(PS_VERBOSE)
 #define LOG_VERBOSE()                             \
   (std::cerr << "[VERBOSE:" << __FUNC_ID__        \
-   << "@" << LOGGING_FILE_BASENAME(__FILE__)    \
+   << "@" << LOGGING_FILE_BASENAME(__FILE__)      \
    << "#"  << __LINE__ << "] ")
 #else
 #define LOG_VERBOSE()  if (0) std::cerr 
@@ -46,10 +46,15 @@
 #define LOG_DEBUG()  if (0) std::cerr 
 #endif
 
+#if defined(PS_WARNING)
 #define LOG_WARNING()                           \
   (std::cerr << "[WARNING:" << __FUNC_ID__      \
    << "@" << LOGGING_FILE_BASENAME(__FILE__)    \
    << "#"  << __LINE__ << "] ")
+#else
+#define LOG_WARNING() if (0) std::cerr
+#endif
+
 #define LOG_ERROR()                             \
   (std::cerr << "[ERROR:" << __FUNC_ID__        \
    << "@" << LOGGING_FILE_BASENAME(__FILE__)    \
