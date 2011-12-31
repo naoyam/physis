@@ -1,5 +1,10 @@
 # Physis: A High-Level Domain-Specific Framework for Stencil Computations
 
+This is under active development, and is not yet ready for
+production use. The features listed here should work, but you would
+likely encounter issues that do not work as expected. Email the author
+if you are interested in more details. 
+
 ## Overview
 
 Physis is a framework for stencil computations that is designed for a
@@ -17,7 +22,7 @@ source code from Physis code, which is then compiled by a
 platform-native compiler to generate final executable code. The
 runtime component is a thin software layer that performs
 application-independent common tasks, such as management of GPU
-devices and network connections. 
+devices and network connections.
 
 ## Features
 
@@ -26,6 +31,10 @@ devices and network connections.
 * Virtual shared memory
 * No explicit parallel programming required
 * Tested with the [fourth fastest supercomputer](http://tsubame.gsic.titech.ac.jp)
+
+## News & Updates
+
+* 22 Nov 2011 - Version 0.1 available.
 
 ## Supported Platforms
 
@@ -68,6 +77,15 @@ See docs/compilation.md.
 ## FAQ
 
 See docs/faq.md.
+
+## Version History
+
+The corresponding source of each version is attached with a Git tag
+with the version number.
+
+* Version 0.1 (22 Nov 2011)
+    * The first pre-release version.
+
 
 ## Publications
 
