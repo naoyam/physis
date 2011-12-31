@@ -2,8 +2,9 @@
 
 This is under active development, and is not yet ready for
 production use. The features listed here should work, but you would
-likely encounter issues that do not work as expected. Email the author
-if you are interested in more details. 
+likely encounter issues that do not work as expected. Email the
+[author](http://matsu-www.is.titech.ac.jp/~naoya/) if you are
+interested in more details. 
 
 ## Overview
 
