@@ -67,6 +67,8 @@ class MPITranslator: public ReferenceTranslator {
   string get_addr_name_;
   string get_addr_no_halo_name_;
   string emit_addr_name_;
+
+  virtual void FixAST();
 };
 
 } // namespace translator

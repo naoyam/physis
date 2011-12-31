@@ -143,6 +143,7 @@ template <class T>
 inline bool IsIntLikeType(const T *t) {
   return IsIntLikeType(t->get_type());
 }
+
 }  // namespace rose_util
 }  // namespace physis
 

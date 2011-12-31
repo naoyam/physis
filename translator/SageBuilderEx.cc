@@ -84,7 +84,7 @@ SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
     func_decl->set_associatedClassDeclaration(class_decl);
     SgClassDefinition *class_def = class_decl->get_definition();
     if (class_def) {
-      class_def->append_member(func_decl);
+      si::appendStatement(func_decl, class_def);
     }
   }
   si::setOneSourcePositionForTransformation(func_decl);

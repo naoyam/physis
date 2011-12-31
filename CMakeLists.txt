@@ -8,7 +8,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # config.h files are geneted into the binary dir
 include_directories(${CMAKE_BINARY_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wall -Wno-deprecated")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wall -Wno-deprecated")
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SIZEOF_VOID_P EQUAL 4)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -malign-double")
 endif ()

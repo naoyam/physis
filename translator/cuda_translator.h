@@ -52,6 +52,8 @@ class CUDATranslator : public ReferenceTranslator {
   */  
   bool flag_pre_calc_grid_address_;
   
+  virtual void FixAST();
+  
  public:
   
   //! Generates a CUDA grid declaration for a stencil.
@@ -72,6 +74,7 @@ class CUDATranslator : public ReferenceTranslator {
       SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) const;
+
 
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateGet(SgFunctionCallExp *node,

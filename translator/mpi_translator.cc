@@ -28,7 +28,7 @@ MPITranslator::MPITranslator(const Configuration &config):
   get_addr_name_ = "__PSGridGetAddr";
   get_addr_no_halo_name_ = "__PSGridGetAddrNoHalo";
   emit_addr_name_ = "__PSGridEmitAddr";
-
+  
   const pu::LuaValue *lv
       = config.Lookup(Configuration::MPI_OVERLAP);
   if (lv) {
@@ -37,6 +37,8 @@ MPITranslator::MPITranslator(const Configuration &config):
   if (flag_mpi_overlap_) {
     LOG_INFO() << "Overlapping enabled\n";
   }
+  
+  validate_ast_ = false;
 }
 
 void MPITranslator::CheckSizes() {
@@ -185,6 +187,8 @@ void MPITranslator::translateRun(SgFunctionCallExp *node,
   // build argument list
   SgBasicBlock *tmp_block = sb::buildBasicBlock();  
   SgExprListExp *args = sb::buildExprListExp();
+  SgExpressionPtrList &original_args =
+      node->get_args()->get_expressions();
   // runner id
   args->append_expression(sb::buildIntVal(run->id()));
   // iteration count
@@ -195,9 +199,11 @@ void MPITranslator::translateRun(SgFunctionCallExp *node,
   }
   // number of stencils
   args->append_expression(sb::buildIntVal(run->stencils().size()));
-
+  
   ENUMERATE(i, it, run->stencils().begin(), run->stencils().end()) {
-    SgExpression *stencil_arg = it->first;
+    //SgExpression *stencil_arg = it->first;
+    SgExpression *stencil_arg =
+        si::copyExpression(original_args.at(i));
     StencilMap *stencil = it->second;    
     SgType *stencil_type = stencil->stencil_type();    
     SgVariableDeclaration *sdecl
@@ -393,7 +399,7 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
   SgExprListExp *args = sb::buildExprListExp(stencil_var);
   SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
   loop_body->append_statement(sb::buildExprStatement(c));
-  appendGridSwap(smap, stencil_var, loop_body);
+  appendGridSwap(smap, stencil_name, true, loop_body);
   DeactivateRemoteGrids(smap, stencil_var, loop_body,
                         remote_grids);
 
@@ -570,6 +576,10 @@ void MPITranslator::translateEmit(SgFunctionCallExp *node,
 
   SgExpression *emit = sb::buildAssignOp(lhs, rhs);
   si::replaceExpression(node, emit);
+}
+
+void MPITranslator::FixAST() {
+  // TODO
 }
 
 } // namespace translator

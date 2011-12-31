@@ -170,13 +170,13 @@ SgVariableDeclaration *buildVarDecl(const string &name,
       sb::buildAssignInitializer(val, type);
   SgVariableDeclaration *sdecl
       = sb::buildVariableDeclaration(name, type, init, scope);
-  scope->append_statement(sdecl);
+  si::appendStatement(sdecl, scope);
   return sdecl;
 }
 
 void AppendExprStatement(SgScopeStatement *scope,
                          SgExpression *exp) {
-  scope->append_statement(sb::buildExprStatement(exp));
+  si::appendStatement(sb::buildExprStatement(exp), scope);
   return;
 }
 
@@ -201,14 +201,14 @@ SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
   SgExprListExp *init_expr = sb::buildExprListExp();
   FOREACH (it, vec.begin(), vec.end()) {
     IntVector::value_type v = *it;
-    init_expr->append_expression(BuildIntLikeVal(v));
+    si::appendExpression(init_expr, BuildIntLikeVal(v));
   }
   
   SgAggregateInitializer *init
       = sb::buildAggregateInitializer(init_expr, vec_type);
   SgVariableDeclaration *decl
       = sb::buildVariableDeclaration(name, vec_type, init, block);
-  block->append_statement(decl);
+  si::appendStatement(decl, block);
   
   return decl;
 }
@@ -257,5 +257,7 @@ bool IsIntLikeType(const SgType *t) {
   }
   return t->isIntegerType();
 }
+
+
 }  // namespace rose_util
 }  // namespace physis

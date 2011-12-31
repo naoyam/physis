@@ -34,7 +34,8 @@ CUDATranslator::CUDATranslator(const Configuration &config):
     block_dim_x_(BLOCK_DIM_X_DEFAULT),
     block_dim_y_(BLOCK_DIM_Y_DEFAULT),
     block_dim_z_(BLOCK_DIM_Z_DEFAULT) {
-  target_specific_macro_ = "PHYSIS_CUDA";  
+  target_specific_macro_ = "PHYSIS_CUDA";
+  validate_ast_ = false;  
   flag_pre_calc_grid_address_ = false;
   const pu::LuaValue *lv
       = config.Lookup(Configuration::CUDA_PRE_CALC_GRID_ADDRESS);
@@ -292,7 +293,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(func_sym),
                                     args, cuda_config);
     loop_body->append_statement(sb::buildExprStatement(cuda_call));
-    appendGridSwap(sm, sv, loop_body);
+    appendGridSwap(sm, stencil_name, false, loop_body);
   }
   return loop_body;
 }
@@ -484,9 +485,17 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
   SgExpression *test_all = NULL;
   ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
     SgExpression *idx = sb::buildVarRefExp(*index_it);
+    SgExpression *dom_min = sb::buildPntrArrRefExp(
+        sb::buildDotExp(dom_ref,
+                        sb::buildVarRefExp("local_min")),
+        sb::buildIntVal(dim));
+    SgExpression *dom_max = sb::buildPntrArrRefExp(
+        sb::buildDotExp(dom_ref,
+                        sb::buildVarRefExp("local_max")),
+        sb::buildIntVal(dim));
     SgExpression *test = sb::buildOrOp(
-        sb::buildLessThanOp(idx, BuildDomMinRef(dom_ref, dim)),
-        sb::buildGreaterOrEqualOp(idx, BuildDomMaxRef(dom_ref, dim)));
+        sb::buildLessThanOp(idx, dom_min),
+        sb::buildGreaterOrEqualOp(idx, dom_max));
     if (test_all) {
       test_all = sb::buildOrOp(test_all, test);
     } else {
@@ -524,6 +533,9 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
 //   si::replaceExpression(node, set, false);
 // }
 
+void CUDATranslator::FixAST() {
+  // TODO
+}
 
 } // namespace translator
 } // namespace physis

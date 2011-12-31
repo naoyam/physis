@@ -42,7 +42,15 @@ class ReferenceTranslator : public Translator {
   }
 
  protected:
-
+  bool validate_ast_;
+  //! Fixes inconsistency in AST.
+  virtual void FixAST();
+  //! Validates AST consistency.
+  /*!
+    Aborts when validation fails. Checking can be disabled with toggle
+    variable validate_ast_.
+   */
+  virtual void ValidateASTConsistency();
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
@@ -79,11 +87,12 @@ class ReferenceTranslator : public Translator {
    */
   virtual SgBasicBlock *BuildRunKernelBody(
       StencilMap *s, SgInitializedName *stencil_param);
-  virtual void appendGridSwap(StencilMap *mc, SgExpression *stencil,
+  virtual void appendGridSwap(StencilMap *mc, const string &stencil,
+                              bool is_stencil_ptr,
                               SgScopeStatement *scope);
   virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *s, SgExpressionPtrList &indexArgs,
-      SgScopeStatement *containingScope);
+      SgInitializedName *stencil_param);
   virtual void defineMapSpecificTypesAndFunctions();
   virtual SgBasicBlock *BuildRunBody(Run *run);
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
@@ -124,7 +133,7 @@ class ReferenceTranslator : public Translator {
                                              SgExpression *field) const;
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
-  
+  virtual void FixGridType();
 };
 
 } // namespace translator
