@@ -47,8 +47,8 @@ extern "C" {
                                      int dim,
                                      const PSVectorInt size,
                                      int double_buffering,
-                                     const PSVectorInt global_offset,
-                                     int attr);
+                                     int attr,
+                                     const PSVectorInt global_offset);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

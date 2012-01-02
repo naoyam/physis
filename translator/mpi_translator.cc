@@ -459,9 +459,6 @@ SgExprListExp *MPITranslator::generateNewArg(
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g) {
   args->append_expression(rose_util::buildNULL());
-  SgExpression *attr = g->BuildAttributeExpr();
-  if (!attr) attr = sb::buildIntVal(0);
-  args->append_expression(attr);
   return;
 }
 
@@ -485,7 +482,8 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
 }
 
 bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
-                                       SgInitializedName *gv) {
+                                       SgInitializedName *gv,
+                                       bool is_periodic) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
 

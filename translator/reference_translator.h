@@ -50,12 +50,15 @@ class ReferenceTranslator : public Translator {
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel);
+                            bool is_kernel,
+                            bool is_regular);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
   virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv); 
   virtual SgExpression *buildOffset(SgInitializedName *gv,
                                     SgScopeStatement *scope,
                                     int numDim,
+                                    const StencilIndexList *sil,
+                                    bool is_periodic,
                                     SgExpressionPtrList &args);
   virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);

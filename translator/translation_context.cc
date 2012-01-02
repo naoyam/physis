@@ -608,6 +608,10 @@ TranslationContext::getGridGetCalls(SgScopeStatement *scope) {
   return getGridCalls(scope, "get");
 }
 
+SgFunctionCallExpPtrList
+TranslationContext::getGridGetPeriodicCalls(SgScopeStatement *scope) {
+  return getGridCalls(scope, "get_periodic");
+}
 
 void TranslationContext::print(ostream &os) const {
   os << "TranslationContext:\n";

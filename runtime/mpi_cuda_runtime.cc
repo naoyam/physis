@@ -247,8 +247,8 @@ extern "C" {
   __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
-                              const PSVectorInt global_offset,
-                              int attr) {
+                              int attr,
+                              const PSVectorInt global_offset) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 

@@ -94,11 +94,11 @@ void CUDATranslator::translateKernelDeclaration(
 
 void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                                   SgInitializedName *grid_arg,
-                                  bool is_kernel) {
+                                  bool is_kernel, bool is_periodic) {
   if (!(is_kernel && flag_pre_calc_grid_address_)) {
     ReferenceTranslator::translateGet(func_call_exp,
                                       grid_arg,
-                                      is_kernel);
+                                      is_kernel, is_periodic);
     return;
   }
   PSAssert(func_call_exp);
@@ -133,8 +133,9 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                                          grid_decl_->get_definition())),
                   sb::buildPointerType(grid_type->getElmType())),
               buildOffset(grid_arg,
-                          func_body,
-                          num_dim,
+                          func_body, num_dim,
+                          tx_->findStencilIndex(func_call_exp),
+                          is_periodic,
                           func_call_exp->get_args()->get_expressions()))));
   func_body->prepend_statement(var_ptr);
   SgExpression *grid_get_exp =

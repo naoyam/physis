@@ -17,7 +17,7 @@ void test0() {
   PSVectorInt global_offset = {0, 0, 0};
   PSVectorInt grid_size = {N, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
@@ -37,7 +37,7 @@ void test1() {
   PSVectorInt global_offset = {0, 0, 0};
   PSVectorInt grid_size = {N, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
@@ -61,7 +61,7 @@ void test2() {
   PSVectorInt global_offset = {1, 0, 0};
   PSVectorInt grid_size = {N-1, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
@@ -81,7 +81,7 @@ void test3() {
   PSVectorInt global_offset = {0, 0, 0};
   PSVectorInt grid_size = {N, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
@@ -101,7 +101,7 @@ void test4() {
   PSVectorInt global_offset = {1, 0, 0};
   PSVectorInt grid_size = {N-2, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
@@ -122,7 +122,7 @@ void test5() {
   PSVectorInt grid_size = {N, N, N};
   int num_elms = N*N*N;
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
 
   float *idata = new float[num_elms];
   float *odata = new float[num_elms];
@@ -155,7 +155,7 @@ void test6() {
   PSVectorInt global_offset = {0, 0, 0};
   PSVectorInt grid_size = {N, N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
   float *data = (float*)g->_data();
