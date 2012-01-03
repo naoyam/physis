@@ -30,7 +30,7 @@ void test1() {
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
   gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false);
+                         IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -62,7 +62,7 @@ void test2() {
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
   gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false);
+                         IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -88,7 +88,7 @@ void test3() {
   //print_grid<float>(g, gs->my_rank_, std::cerr);
 
   if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), false);
+                                   IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -113,7 +113,7 @@ void test4() {
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
-  gs->ExchangeBoundaries(gid, IntArray(halo), IntArray(halo), true);
+  gs->ExchangeBoundaries(gid, IntArray(halo), IntArray(halo), true, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 

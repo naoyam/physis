@@ -86,6 +86,18 @@ class StencilMap {
 
   SgExpressionPtrList &GetArgs() { return fc_->get_args()->get_expressions(); }
 
+  //! Returns true if a grid is accessed with get_periodic.
+  /*!
+    \param gv Grid param name.
+    \return True if the grid is accessed with get_periodic.
+   */
+  bool IsGridPeriodic(SgInitializedName *gv) const;
+  //! Marks a grid as accessed with get_periodic.
+  /*!
+    \param gv Grid param name.
+  */
+  void SetGridPeriodic(SgInitializedName *gv);  
+
  protected:
   SgExpression *dom;
   int numDim;
@@ -108,6 +120,7 @@ class StencilMap {
   SgInitializedNamePtrList grid_args_;
   SgInitializedNamePtrList grid_params_;  
   SgFunctionCallExp *fc_;
+  std::set<SgInitializedName*> grid_periodic_set_;
 
  private:
   // NOTE: originally dimenstion is added to names, but it is probably

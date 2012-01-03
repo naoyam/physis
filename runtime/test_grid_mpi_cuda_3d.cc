@@ -88,7 +88,7 @@ void test3() {
                                     false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
-  gs->ExchangeBoundaries(g->id(), halo, halo, false);
+  gs->ExchangeBoundaries(g->id(), halo, halo, false, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
   delete gs;
@@ -107,7 +107,7 @@ void test4() {
                                     false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
-  gs->ExchangeBoundaries(g->id(), halo, halo, true);
+  gs->ExchangeBoundaries(g->id(), halo, halo, true, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
   delete gs;

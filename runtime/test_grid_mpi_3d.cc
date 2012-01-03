@@ -82,7 +82,7 @@ void test3() {
                               false, global_offset, 0);
   init_grid(g);
   IntArray halo(1, 1, 1);
-  gs->ExchangeBoundaries(g->id(), halo, halo, false);
+  gs->ExchangeBoundaries(g->id(), halo, halo, false, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
   delete gs;
@@ -142,7 +142,7 @@ void test6() {
                               false, global_offset, 0);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), false);
+  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), false, false, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);
@@ -164,7 +164,7 @@ void test7() {
                               false, global_offset, 0);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), true);
+  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), true, false, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);

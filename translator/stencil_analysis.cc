@@ -235,6 +235,9 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     StencilRange &sr = gr.find(gv)->second;
     sr.insert(stencil_indices);
     tx.registerStencilIndex(get_call, stencil_indices);
+    if (tx.getGridFuncName(get_call) == GridType::get_periodic_name) {
+      sm.SetGridPeriodic(gv);
+    }
   }
   LOG_DEBUG() << "Stencil access: "
               << GridRangeMapToString(gr)

@@ -148,7 +148,8 @@ void Translator::visit(SgFunctionCallExp *node) {
     SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(node);
     assert(gv);
     string methodName = tx_->getGridFuncName(node);
-    if (methodName == "get" || methodName == "get_periodic") {
+    if (methodName == GridType::get_name ||
+        methodName == GridType::get_periodic_name) {
       LOG_DEBUG() << "translating " << methodName << "\n";
       bool is_periodic = methodName == "get_periodic";
       node->addNewAttribute(
@@ -175,13 +176,13 @@ void Translator::visit(SgFunctionCallExp *node) {
             (!tx_->isKernel(caller) && translateGetHost(node, gv)))) {
         translateGet(node, gv, tx_->isKernel(caller), is_periodic);
       }
-    } else if (methodName == "emit") {
+    } else if (methodName == GridType::emit_name) {
       LOG_DEBUG() << "translating emit\n";
       node->addNewAttribute(GridCallAttribute::name,
                             new GridCallAttribute(
                                 gv, GridCallAttribute::EMIT));
       translateEmit(node, gv);
-    } else if (methodName == "set") {
+    } else if (methodName == GridType::set_name) {
       LOG_DEBUG() << "translating set\n";
       translateSet(node, gv);
     } else {
