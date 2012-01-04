@@ -134,7 +134,7 @@ void test4(int *argc, char ***argv) {
   set_grid(outdata, N, N, N, 0.0);
   PSGridCopyin(g, indata);
   PSVectorInt halo = {1,1,1};
-  __PSLoadNeighbor(g, halo, halo,  0, 0, 0);
+  __PSLoadNeighbor(g, halo, halo,  0, 0, 0, 0);
   PSGridCopyout(g, outdata);
   print_grid<float>(static_cast<GridMPICUDA3D*>(g), 0, std::cout);
   PSFinalize();
@@ -193,7 +193,7 @@ void test6() {
   GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size, false, global_offset);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(*g, IntArray(1, 1, 1), IntArray(1, 1, 1), false);
+  GridMPI *g2 = gs->LoadNeighbor(*g, IntArray(1, 1, 1), IntArray(1, 1, 1), false, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);
@@ -214,7 +214,7 @@ void test7() {
   GridMPI *g = gs->CreateGrid(sizeof(float), NDIM, global_size, false, global_offset);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(*g, IntArray(1, 1, 1), IntArray(1, 1, 1), true);
+  GridMPI *g2 = gs->LoadNeighbor(*g, IntArray(1, 1, 1), IntArray(1, 1, 1), true, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);

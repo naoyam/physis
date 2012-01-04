@@ -357,17 +357,17 @@ extern "C" {
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadNeighborStage1(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadNeighborStage2(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
                               int reuse);
   extern void __PSLoadSubgrid2D(__PSGridMPI *g, 
