@@ -483,8 +483,8 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
   }
 
   // Receiving halo for backward access
-  RecvBoundaries(grid, dim, halo_fw_width, false, diagonal,
-                 fw_size, prof_dwn);
+  RecvBoundaries(grid, dim, halo_bw_width, false, diagonal,
+                 bw_size, prof_dwn);
   
   // Receiving halo for forward access
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
@@ -643,8 +643,8 @@ void GridSpaceMPICUDA::ExchangeBoundaries(
                      fw_size, prof_dwn, req_fw);
 
   // Receiving halo for backward access
-  RecvBoundaries(grid, dim, halo_fw_width, false, diagonal,
-                 fw_size, prof_dwn);
+  RecvBoundaries(grid, dim, halo_bw_width, false, diagonal,
+                 bw_size, prof_dwn);
   
   // Receiving halo for forward access
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
