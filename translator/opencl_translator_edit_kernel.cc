@@ -25,7 +25,7 @@ void OpenCLTranslator::translateKernelDeclaration(
   // Fixup argument list in function calls
   // If a grid type variable is in argument list, change it to
   // "__PS_ga_dim_x, ... , __PS_ga_buf, __PS_ga_attr"
-  {
+  if (1) {
     // Check function calls in the body
     SgNodePtrList calls =
       NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
@@ -59,7 +59,7 @@ void OpenCLTranslator::translateKernelDeclaration(
   }
 
   // Rename the call to kernel function to __PS_opencl_InDeviceFunc
-  {
+  if (1) {
       // Search function call
       SgNodePtrList calls =
         NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
@@ -85,7 +85,7 @@ void OpenCLTranslator::translateKernelDeclaration(
   // to __PS_opencl_kernel, for example
   // https://mailman.nersc.gov/pipermail/rose-public/2011-April/000919.html
   //
-  {
+  if (1) {
     std::string oldkernelname = node->get_name().getString();
     std::string newkernelname = name_new_kernel(oldkernelname);
 
@@ -121,10 +121,14 @@ void OpenCLTranslator::translateKernelDeclaration(
       } // if (GridType::isGridType(cur_type))
 
       // If the argument is not grid type, add it as it is
+#ifdef DEBUG_FIX_CONSISTENCY
+      SgTreeCopy tc;
+      newarg = isSgInitializedName(newarg->copy(tc));
 #ifdef DEBUG_FIX_AST_APPEND
       si::appendArg(newparams, newarg);
 #else
       newparams->append_arg(newarg);
+#endif
 #endif
   } // FOREACH(it, oldargs.begin(), oldargs.end())
 
@@ -140,6 +144,7 @@ void OpenCLTranslator::translateKernelDeclaration(
       newarg->set_scope(scope_func);
     }
   }
+
 #endif
 
   // And set the new parameter list

@@ -66,10 +66,14 @@ if (OPENCL_ENABLED)
     )
 endif()
 
-if (MPI_ENABLED AND OPENCL_ENABLED AND 0)
+if (MPI_ENABLED AND OPENCL_ENABLED)
   add_library(physis_rt_mpi_opencl ${RUNTIME_COMMON_SRC}
+      buffer_opencl.cc
       grid_mpi_opencl.cc
       mpi_opencl_runtime.cc
+      mpi_opencl_runtime_extra.cc
+      rpc_mpi_opencl.cc
+      rpc_opencl_mpi.cc
   )
   install(
     TARGETS physis_rt_mpi_opencl

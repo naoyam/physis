@@ -253,6 +253,7 @@ int main(int argc, char *argv[]) {
   
   // Run internal consistency tests on AST
   //AstTests::runAllTests(proj);
+  //generateDOT(*proj, "before");
 
   pt::TranslationContext tx(proj);
 
@@ -268,6 +269,7 @@ int main(int argc, char *argv[]) {
   //SgProject::set_verbose(100000);
   //AstPostProcessing(proj);
   //AstTests::testCompilerGeneratedNodes(proj);
+  //generateDOT(*proj, "after");
   //AstTests::runAllTests(proj);
 
   int b = backend(proj);

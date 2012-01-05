@@ -82,11 +82,7 @@ void OpenCLTranslator::translateGet(
 
   // p0: __PS_ga_buf
   std::string newargname = name_var_gridptr(gv->get_name().getString());
-#ifdef DEBUG_FIX_CONSISTENCY
-  SgExpression *p0 = sb::buildOpaqueVarRefExp(newargname, scope);
-#else
   SgExpression *p0 = sb::buildVarRefExp(newargname);
-#endif
 
   // No cast needed
   // p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
@@ -129,11 +125,8 @@ void OpenCLTranslator::translateEmit(SgFunctionCallExp *node,
 
   // __PS_ga_buf
   std::string newargname = name_var_gridptr(gv->get_name().getString());
-#ifdef DEBUG_FIX_CONSISTENCY
-  SgExpression *p1 = sb::buildOpaqueVarRefExp(newargname, scope);
-#else
   SgExpression *p1 = sb::buildVarRefExp(newargname);
-#endif
+
   // __PS_ga_buf[offset]
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";

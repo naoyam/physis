@@ -116,6 +116,7 @@ namespace physis {
 
       do {
         // Create program
+        LOG_DEBUG() << "Calling clCreateProgram\n";
         clprog = clCreateProgramWithSource(clcontext, 1, &cchar_kern, &size_kern, &status);
         if (status != CL_SUCCESS) {
           fprintf(stderr, "Calling clCreateProgramWithSource failed: status %i.\n", status);
@@ -126,6 +127,7 @@ namespace physis {
         // Currently can be NULL
 
         // build program
+        LOG_DEBUG() << "Calling clBuildProgram\n";
         status = clBuildProgram(clprog, 0, NULL, NULL, NULL, NULL);
         if (status != CL_SUCCESS) {
           fprintf(stderr, "Calling clBuildProgram failed: status %i.\n", status);
@@ -172,6 +174,7 @@ namespace physis {
 
       // Now create kernel
       do {
+        LOG_DEBUG() << "Calling clCreateKernel\n";
         clkernel = clCreateKernel(clprog, kernelname.c_str(), &status);
         if (status != CL_SUCCESS) {
           fprintf(stderr, "Calling clCreateKernel failed: status %i.\n", status);
