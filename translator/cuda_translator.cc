@@ -35,7 +35,8 @@ CUDATranslator::CUDATranslator(const Configuration &config):
     block_dim_y_(BLOCK_DIM_Y_DEFAULT),
     block_dim_z_(BLOCK_DIM_Z_DEFAULT) {
   target_specific_macro_ = "PHYSIS_CUDA";
-  validate_ast_ = false;  
+  //validate_ast_ = false;
+  validate_ast_ = true;  
   flag_pre_calc_grid_address_ = false;
   const pu::LuaValue *lv
       = config.Lookup(Configuration::CUDA_PRE_CALC_GRID_ADDRESS);
@@ -87,9 +88,13 @@ void CUDATranslator::translateKernelDeclaration(
     PSAssert(fc);
     if (fc->getAssociatedFunctionSymbol() != grid_dim_get_func_)
       continue;
-    fc->set_function(sb::buildFunctionRefExp(gdim_dev));
+    SgFunctionCallExp *new_call =
+        sb::buildFunctionCallExp(
+            sb::buildFunctionRefExp(gdim_dev),
+            isSgExprListExp(si::copyExpression(
+                fc->get_args())));
+    si::replaceExpression(fc, new_call);
   }
-  
   return;
 }
 
@@ -105,9 +110,8 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
   PSAssert(func_call_exp);
   PSAssert(grid_arg);
 
-  SgFunctionDeclaration *func_decl = getContainingFunction(func_call_exp);
-  PSAssert(func_decl);
-  SgFunctionDefinition *func_def = func_decl->get_definition();
+  SgFunctionDefinition *func_def =
+      si::getEnclosingFunctionDefinition(func_call_exp);
   PSAssert(func_def);
   SgBasicBlock *func_body = func_def->get_body();
   PSAssert(func_body);
@@ -138,7 +142,7 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                           tx_->findStencilIndex(func_call_exp),
                           is_periodic,
                           func_call_exp->get_args()->get_expressions()))));
-  func_body->prepend_statement(var_ptr);
+  si::prependStatement(var_ptr, func_body);
   SgExpression *grid_get_exp =
       sb::buildPointerDerefExp(sb::buildVarRefExp(var_ptr));
 
@@ -188,7 +192,7 @@ SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
   // int i;
   SgVariableDeclaration *loop_index =
       sb::buildVariableDeclaration("i", sb::buildIntType(), NULL, block);
-  block->append_statement(loop_index);
+  si::appendStatement(loop_index, block);
   // i = 0;
   SgStatement *loop_init =
       sb::buildAssignStatement(sb::buildVarRefExp(loop_index),
@@ -209,15 +213,15 @@ SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
   TraceStencilRun(run, loop, block);
   
   // cudaThreadSynchronize after each loop
-  block->insert_statement(
-      loop, sb::buildExprStatement(BuildCudaThreadSynchronize()), false);
+  si::insertStatementAfter(
+      loop,
+      sb::buildExprStatement(BuildCudaThreadSynchronize()));
   
   return block;
 }
 
-SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(int stencil_idx,
-                                                      StencilMap *sm,
-                                                      SgVarRefExp *sv) const {
+SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(
+    int stencil_idx, StencilMap *sm, const string &sv_name) const {
   // Build an argument list by expanding members of the parameter struct
   // e.g., struct {a, b, c}; -> (s.a, s.b, s.c)
   SgExprListExp *args = sb::buildExprListExp();
@@ -229,7 +233,8 @@ SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(int stencil_idx,
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
     SgExpression *arg =
-        sb::buildDotExp(sv, sb::buildVarRefExp(member_decl));
+        sb::buildDotExp(sb::buildVarRefExp(sv_name),
+                        sb::buildVarRefExp(member_decl));
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
     // If the type of the member is grid, pass the device pointer.
     GridType *gt = tx_->findGridType(vars[0]->get_type());
@@ -241,7 +246,7 @@ SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(int stencil_idx,
       // skip the grid index
       ++member;
     }
-    args->append_expression(arg);
+    si::appendExpression(args, arg);
   }
   return args;
 }
@@ -252,7 +257,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
       sbx::buildDim3Declaration("block_dim", BuildBlockDimX(),
                                 BuildBlockDimY(),  BuildBlockDimZ(),
                                 outer_block);
-  outer_block->append_statement(block_dim);
+  si::appendStatement(block_dim, outer_block);
   
   SgBasicBlock *loop_body = sb::buildBasicBlock();
 
@@ -269,20 +274,35 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         sbx::buildCudaCallFuncSetCacheConfig(func_sym,
                                              sbx::cudaFuncCachePreferL1);
     // Append invocation statement ahead of the loop
-    outer_block->append_statement(sb::buildExprStatement(cache_config));
+    si::appendStatement(sb::buildExprStatement(cache_config), outer_block);
 
     string stencil_name = "s" + toString(stencil_idx);
-    SgVarRefExp *sv = sb::buildVarRefExp(stencil_name);
-    SgExprListExp *args = BuildCUDAKernelArgList(stencil_idx, sm, sv);    
+    SgExprListExp *args = BuildCUDAKernelArgList(
+        stencil_idx, sm, stencil_name);
+
+    SgExpression *dom_max0 =
+        sb::buildPntrArrRefExp(
+            sb::buildDotExp(
+                sb::buildDotExp(sb::buildVarRefExp(stencil_name),
+                                sb::buildVarRefExp(GetStencilDomName())),
+            sb::buildVarRefExp("local_max")),
+        sb::buildIntVal(0));
+    SgExpression *dom_max1 =
+        sb::buildPntrArrRefExp(
+            sb::buildDotExp(
+                sb::buildDotExp(sb::buildVarRefExp(stencil_name),
+                                sb::buildVarRefExp(GetStencilDomName())),
+            sb::buildVarRefExp("local_max")),
+        sb::buildIntVal(1));
 
     SgVariableDeclaration *grid_dim =
         BuildGridDimDeclaration(stencil_name + "_grid_dim",
-                                BuildStencilDomMaxRef(sv, 0),
-                                BuildStencilDomMaxRef(sv, 1),
+                                dom_max0,
+                                dom_max1,
                                 BuildBlockDimX(),
                                 BuildBlockDimY(),
                                 outer_block);
-    outer_block->append_statement(grid_dim);
+    si::appendStatement(grid_dim, outer_block);
 
     // Generate Kernel invocation code
     SgCudaKernelExecConfig *cuda_config =
@@ -292,7 +312,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     SgCudaKernelCallExp *cuda_call =
         sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(func_sym),
                                     args, cuda_config);
-    loop_body->append_statement(sb::buildExprStatement(cuda_call));
+    si::appendStatement(sb::buildExprStatement(cuda_call), loop_body);
     appendGridSwap(sm, stencil_name, false, loop_body);
   }
   return loop_body;
@@ -305,8 +325,8 @@ SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
   string elm_name = gt->getElmType()->unparseToString();
   std::transform(elm_name.begin(), elm_name.begin() +1,
                  elm_name.begin(), toupper);
-  string ondev_type_name = "__PSGrid" + toString(nd) + "D"
-                           + elm_name + "Dev";
+  string ondev_type_name = "__PSGridDev" + toString(nd) + "D"
+      + elm_name;
   LOG_DEBUG() << "On device grid type name: "
               << ondev_type_name << "\n";
   SgType *t =
@@ -339,7 +359,7 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
       // skip the grid index
       ++member;
     }
-    params->append_arg(arg);
+    si::appendArg(params, arg);
   }
   PSAssert(dom_arg);
 
@@ -356,11 +376,13 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   run_func->get_functionModifier().setCudaKernel();
   // Build and set the function body
   SgBasicBlock *func_body = BuildRunKernelBody(stencil, dom_arg);
-  run_func->get_definition()->set_body(func_body);
+  // Set function body
+  si::appendStatement(func_body, run_func->get_definition());
 
   return run_func;
 }
 
+// Expresions themselves in index_args are used (no copy)
 SgExprListExp *CUDATranslator::BuildKernelCallArgList(
     StencilMap *stencil,
     SgExpressionPtrList &index_args) {
@@ -368,7 +390,7 @@ SgExprListExp *CUDATranslator::BuildKernelCallArgList(
 
   SgExprListExp *args = sb::buildExprListExp();
   FOREACH(it, index_args.begin(), index_args.end()) {
-    args->append_expression(*it);
+    si::appendExpression(args, *it);
   }
   
   // append the fields of the stencil type to the argument list  
@@ -385,7 +407,7 @@ SgExprListExp *CUDATranslator::BuildKernelCallArgList(
       // skip the grid index field
       ++it;
     }
-    args->append_expression(exp);
+    si::appendExpression(args, exp);
   }
 
   return args;
@@ -397,7 +419,7 @@ SgFunctionCallExp *CUDATranslator::BuildKernelCall(
   SgExprListExp *args  = BuildKernelCallArgList(stencil, index_args);
   SgFunctionCallExp *func_call =
       sb::buildFunctionCallExp(
-          rose_util::getFunctionSymbol(stencil->getKernel()), args);
+          sb::buildFunctionRefExp(stencil->getKernel()), args);
   return func_call;
 }
 
@@ -408,10 +430,6 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
   SgBasicBlock *block = sb::buildBasicBlock();
   si::attachComment(block, "Generated by " + string(__FUNCTION__));
   
-  SgExpression *domain = sb::buildVarRefExp(dom_arg);
-  SgExpression *min_field = BuildDomMinRef(domain);
-  SgExpression *max_field = BuildDomMaxRef(domain);
-
   SgExpressionPtrList index_args;
 
   int dim = stencil->getNumDim();
@@ -424,8 +442,8 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         ("y", sb::buildIntType(), NULL, block);
     SgVariableDeclaration *z_index = sb::buildVariableDeclaration
         ("z", sb::buildIntType(), NULL, block);
-    block->append_statement(y_index);
-    block->append_statement(x_index);
+    si::appendStatement(y_index, block);
+    si::appendStatement(x_index, block);
     index_args.push_back(sb::buildVarRefExp(x_index));
     index_args.push_back(sb::buildVarRefExp(y_index));
 
@@ -444,6 +462,8 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
                 sbx::buildCudaIdxExp(sbx::kBlockDimY)),
                            sbx::buildCudaIdxExp(sbx::kThreadIdxY))));
     SgVariableDeclaration *loop_index = z_index;
+    SgExpression *min_field = BuildDomMinRef(sb::buildVarRefExp(dom_arg));
+    SgExpression *max_field = BuildDomMaxRef(sb::buildVarRefExp(dom_arg));
     SgStatement *loop_init = sb::buildAssignStatement(
         sb::buildVarRefExp(loop_index),
         sb::buildPntrArrRefExp(min_field, sb::buildIntVal(2)));
@@ -455,10 +475,11 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
 
     SgVariableDeclaration* t[] = {x_index, y_index};
     vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
-    block->append_statement(
-        BuildDomainInclusionCheck(range_checking_idx, domain));
+    si::appendStatement(
+        BuildDomainInclusionCheck(range_checking_idx, dom_arg),
+        block);
     
-    block->append_statement(loop_index);
+    si::appendStatement(loop_index, block);
 
     SgExpression *loop_incr =
         sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
@@ -467,7 +488,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         sb::buildBasicBlock(sb::buildExprStatement(kernel_call));
     SgStatement *loop
         = sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
-    block->append_statement(loop);
+    si::appendStatement(loop, block);
   }
 
   return block;
@@ -475,7 +496,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
 
 SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
     const vector<SgVariableDeclaration*> &indices,
-    SgExpression *dom_ref) const {
+    SgInitializedName *dom_arg) const {
   // check x and y domain coordinates, like:
   // if (x < dom.local_min[0] || x >= dom.local_max[0] ||
   //     y < dom.local_min[1] || y >= dom.local_max[1]) {
@@ -486,11 +507,11 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
   ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
     SgExpression *idx = sb::buildVarRefExp(*index_it);
     SgExpression *dom_min = sb::buildPntrArrRefExp(
-        sb::buildDotExp(dom_ref,
+        sb::buildDotExp(sb::buildVarRefExp(dom_arg),
                         sb::buildVarRefExp("local_min")),
         sb::buildIntVal(dim));
     SgExpression *dom_max = sb::buildPntrArrRefExp(
-        sb::buildDotExp(dom_ref,
+        sb::buildDotExp(sb::buildVarRefExp(dom_arg),
                         sb::buildVarRefExp("local_max")),
         sb::buildIntVal(dim));
     SgExpression *test = sb::buildOrOp(
@@ -534,8 +555,48 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
 // }
 
 void CUDATranslator::FixAST() {
-  // TODO
+  // Change the dummy grid type to the actual one even if AST
+  // validation is disabled
+  FixGridType();
+  // Use the ROSE variable reference fix
+  if (validate_ast_) {
+    si::fixVariableReferences(project_);
+  }
 }
+
+// Change dummy Grid type to real type so that the whole AST can be
+// validated.
+void CUDATranslator::FixGridType() {
+  SgNodePtrList vdecls =
+      NodeQuery::querySubTree(project_, V_SgVariableDeclaration);
+  SgType *real_grid_type =
+      si::lookupNamedTypeInParentScopes("__PSGrid");
+  PSAssert(real_grid_type);
+  FOREACH (it, vdecls.begin(), vdecls.end()) {
+    SgVariableDeclaration *vdecl = isSgVariableDeclaration(*it);
+    SgInitializedNamePtrList &vars = vdecl->get_variables();
+    FOREACH (vars_it, vars.begin(), vars.end()) {
+      SgInitializedName *var = *vars_it;
+      if (GridType::isGridType(var->get_type())) {
+        var->set_type(sb::buildPointerType(real_grid_type));
+      }
+    }
+  }
+  SgNodePtrList params =
+      NodeQuery::querySubTree(project_, V_SgFunctionParameterList);
+  FOREACH (it, params.begin(), params.end()) {
+    SgFunctionParameterList *pl = isSgFunctionParameterList(*it);
+    SgInitializedNamePtrList &vars = pl->get_args();
+    FOREACH (vars_it, vars.begin(), vars.end()) {
+      SgInitializedName *var = *vars_it;
+      if (GridType::isGridType(var->get_type())) {
+        var->set_type(sb::buildPointerType(real_grid_type));
+      }
+    }
+  }
+  
+}
+
 
 } // namespace translator
 } // namespace physis

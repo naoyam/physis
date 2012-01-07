@@ -20,6 +20,7 @@ SgFunctionCallExp *BuildCudaThreadSynchronize(void) {
   return fc;
 }
 
+// TODO: AST check
 SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y,
                                  SgExpression *z) {
   SgFunctionSymbol *fs

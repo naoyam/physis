@@ -15,6 +15,15 @@ SgClassDeclaration *cuda_dim3_decl() {
   static SgClassDeclaration *dim3_decl = NULL;
   if (!dim3_decl) {
     dim3_decl = sb::buildStructDeclaration(SgName("dim3"), NULL);
+    si::appendStatement(
+        sb::buildVariableDeclaration("x", sb::buildIntType()),
+        dim3_decl->get_definition());
+    si::appendStatement(
+        sb::buildVariableDeclaration("y", sb::buildIntType()),
+        dim3_decl->get_definition());
+    si::appendStatement(
+        sb::buildVariableDeclaration("z", sb::buildIntType()),
+        dim3_decl->get_definition());
   }
   return dim3_decl;
 }
@@ -30,10 +39,17 @@ SgClassDefinition *cuda_dim3_def() {
 SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
   static SgMemberFunctionDeclaration *ctor_decl = NULL;
   if (!ctor_decl) {
+    /*
     ctor_decl = buildMemberFunctionDeclaration(SgName("dim3"),
                                                NULL,
                                                NULL,
                                                cuda_dim3_decl());
+    */
+    ctor_decl = sb::buildNondefiningMemberFunctionDeclaration(
+        SgName("dim3"), sb::buildVoidType(),
+        sb::buildFunctionParameterList(),
+        cuda_dim3_decl()->get_definition());
+    //si::appendStatement(ctor_decl, cuda_dim3_decl()->get_definition());
   }
   return ctor_decl;
 }
@@ -48,8 +64,12 @@ SgEnumDeclaration *cuda_enum_cuda_func_cache() {
         sb::buildEnumDeclaration(SgName("cudaFuncCache"), sb::topScopeStack());
     SgInitializedNamePtrList &members = enum_func_cache->get_enumerators();
     for (int i = 0; i < 3; i++) {
-      members.push_back(sb::buildInitializedName(
-          SgName(enum_names[i]), enum_func_cache->get_type()));
+      SgInitializedName *in =
+          sb::buildInitializedName(
+              SgName(enum_names[i]), enum_func_cache->get_type());
+      members.push_back(in);
+      in->set_parent(enum_func_cache);
+      in->set_scope(sb::topScopeStack());
     }
   }
   return enum_func_cache;
@@ -58,8 +78,8 @@ SgEnumDeclaration *cuda_enum_cuda_func_cache() {
 SgFunctionDeclaration *cuda_func_set_cache_config() {
   SgFunctionDeclaration *func_set_cache_config = NULL;
   if (!func_set_cache_config) {
-    SgFunctionParameterTypeList *params = sb::buildFunctionParameterTypeList();
-    params->append_argument(sb::buildIntType());
+    SgFunctionParameterTypeList *params =
+        sb::buildFunctionParameterTypeList(sb::buildIntType());
     func_set_cache_config =
         sb::buildNondefiningFunctionDeclaration(
             SgName("cudaFuncSetCacheConfig"),
@@ -70,7 +90,7 @@ SgFunctionDeclaration *cuda_func_set_cache_config() {
   return func_set_cache_config;
 }
 }  // namespace
-
+/*
 SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
     const SgName &name,
     SgFunctionType *type,
@@ -90,12 +110,13 @@ SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
   si::setOneSourcePositionForTransformation(func_decl);
   return func_decl;
 }
-
+*/
 SgFunctionCallExp *buildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
     const cudaFuncCache cache_config) {
   ROSE_ASSERT(kernel);
-  SgEnumVal *enum_val = buildEnumVal(cache_config, cuda_enum_cuda_func_cache());
+  SgEnumVal *enum_val = buildEnumVal(cache_config,
+                                     cuda_enum_cuda_func_cache());
   SgExprListExp *args =
       sb::buildExprListExp(sb::buildFunctionRefExp(kernel), enum_val);
 
@@ -114,10 +135,9 @@ SgVariableDeclaration *buildDim3Declaration(const SgName &name,
                                             SgScopeStatement *scope) {
   SgClassType *dim3_type = cuda_dim3_decl()->get_type();
   SgExprListExp *expr_list = sb::buildExprListExp();
-  SgExpressionPtrList &members = expr_list->get_expressions();
-  members.push_back(dimx);
-  members.push_back(dimy);
-  members.push_back(dimz);
+  si::appendExpression(expr_list, dimx);
+  si::appendExpression(expr_list, dimy);
+  si::appendExpression(expr_list, dimz);  
   SgConstructorInitializer *init =
       sb::buildConstructorInitializer(cuda_dim3_ctor_decl(),
                                       expr_list,
@@ -150,7 +170,7 @@ SgEnumVal* buildEnumVal(unsigned int value, SgEnumDeclaration* decl) {
   SgInitializedNamePtrList &members = decl->get_enumerators();
   ROSE_ASSERT(value < members.size());
   SgInitializedName *name = members[value];
-  SgEnumVal* enum_val= new SgEnumVal(value, decl, name->get_name());
+  SgEnumVal* enum_val= sb::buildEnumVal_nfi(value, decl, name->get_name());
   ROSE_ASSERT(enum_val);
   si::setOneSourcePositionForTransformation(enum_val);
   return enum_val;
@@ -167,7 +187,8 @@ SgCudaKernelExecConfig *buildCudaKernelExecConfig(SgExpression *grid,
   }
   SgCudaKernelExecConfig *cuda_config =
       sb::buildCudaKernelExecConfig_nfi(grid, blocks, shared, stream);
-  ROSE_ASSERT(cuda_config);  
+  ROSE_ASSERT(cuda_config);
+  si::setOneSourcePositionForTransformation(cuda_config);
   return cuda_config;
 }
 
@@ -215,23 +236,34 @@ SgExpression *buildStencilDimVarExp(StencilMap *stencil,
 }
 
 SgExpression *buildCudaIdxExp(const CudaDimentionIdx idx) {
+  static SgVariableDeclaration *threadIdx = NULL;  
+  static SgVariableDeclaration *blockIdx = NULL;
+  static SgVariableDeclaration *blockDim = NULL;  
+  if (!blockIdx) {
+    threadIdx = sb::buildVariableDeclaration("threadIdx",
+                                            cuda_dim3_decl()->get_type());
+    blockIdx = sb::buildVariableDeclaration("blockIdx",
+                                            cuda_dim3_decl()->get_type());
+    blockDim = sb::buildVariableDeclaration("blockDim",
+                                            cuda_dim3_decl()->get_type());
+  }
   SgVarRefExp *var = NULL;
   SgVarRefExp *xyz = NULL;
   switch (idx) {
     case kBlockDimX:
     case kBlockDimY:
     case kBlockDimZ:
-      var = sb::buildVarRefExp("blockDim");
+      var = sb::buildVarRefExp(blockDim);
       break;
     case kBlockIdxX:
     case kBlockIdxY:
     case kBlockIdxZ:
-      var = sb::buildVarRefExp("blockIdx");
+      var = sb::buildVarRefExp(blockIdx);
       break;
     case kThreadIdxX:
     case kThreadIdxY:
     case kThreadIdxZ:
-      var = sb::buildVarRefExp("threadIdx");
+      var = sb::buildVarRefExp(threadIdx);
       break;
     default:
       ROSE_ASSERT(false);
