@@ -77,18 +77,26 @@ class Grid {
    * \return The number of reduced elements.
    */
   virtual int Reduce(PSReduceOp op, void *out);
+
+  
+  virtual void Save();
+  virtual void Restore();
   
  protected:
   int id_;
 
   virtual void InitBuffer();
+  virtual void DeleteBuffers();
   Buffer *data_buffer_[2];
   char *data_[2];
   int attr_;
   // the source is address of ordinary memory region
   virtual void Copyin(void *dst, const void *src, size_t size);
   // the dstination is address of ordinary memory region  
-  virtual void Copyout(void *dst, const void *src, size_t size); 
+  virtual void Copyout(void *dst, const void *src, size_t size);
+  virtual void SaveToFile(const void *buf, size_t len) const;
+  virtual void RestoreFromFile(void *buf, size_t len);
+  
 };
 
 class GridSpace {
@@ -99,6 +107,10 @@ class GridSpace {
   void DeleteGrid(Grid *g);
   void DeleteGrid(int id);
   //void ReduceGrid(Grid *g, void *buf);
+
+  virtual void Save();
+  virtual void Restore();
+  
  protected:
   bool RegisterGrid(Grid *g);
   bool DeregisterGrid(Grid *g);

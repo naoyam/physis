@@ -41,6 +41,7 @@ class GridMPICUDA3D: public GridMPI {
       const IntArray &local_offset, const IntArray &local_size,
       int attr);
   virtual ~GridMPICUDA3D();
+  virtual void DeleteBuffers();
   virtual void InitBuffer();
   virtual std::ostream &Print(std::ostream &os) const;
   __PSGrid3DDev *GetDev() { return &dev_; }
@@ -54,6 +55,10 @@ class GridMPICUDA3D: public GridMPI {
   void SetCUDAStream(cudaStream_t strm);
   
   virtual int Reduce(PSReduceOp op, void *out);
+
+  virtual void Save();
+  virtual void Restore();
+
   
   // REFACTORING: this is an ugly fix to make things work...
   //protected:

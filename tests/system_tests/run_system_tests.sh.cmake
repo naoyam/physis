@@ -17,6 +17,7 @@ FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
+CFLAGS="${CFLAGS} -g"
 DIE_IMMEDIATELY=0
 ###############################################################
 set -u

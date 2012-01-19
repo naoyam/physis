@@ -117,6 +117,7 @@ class GridMPI: public Grid {
   // variale is set true again. 
   bool remote_grid_active_;
   virtual void InitBuffer();
+  virtual void DeleteBuffers();
   virtual void FixupBufferPointers();
 };
 
@@ -223,6 +224,9 @@ class GridSpaceMPI: public GridSpace {
    * \return The number of reduced elements.
    */
   virtual int ReduceGrid(void *out, PSReduceOp op, GridMPI *g);
+
+  //virtual void Save() const;
+  //virtual void Restore();
 
  protected:
   int num_dims_;

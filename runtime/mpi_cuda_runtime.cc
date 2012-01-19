@@ -36,6 +36,8 @@ __PSStencilRunClientFunction *__PS_stencils;
 
 namespace {
 
+int num_local_processes;
+
 int GetNumberOfLocalProcesses(int *argc, char ***argv) {
   vector<string> opts;
   string option_string = "physis-nlp";
@@ -68,8 +70,24 @@ void InitCUDA(int my_rank, int num_local_processes) {
   for (int i = 0; i < num_stream_boundary_kernel; ++i) {
     CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_kernel[i]));
   }
-
   return;
+}
+
+//! Preliminary checkpoint support
+/*!
+  Not well tested.
+  CUDA context may not be completely deleted just with
+  cudaThreadExit. 
+ */
+void Checkpoint() {
+  gs->Save();
+  CUDA_SAFE_CALL(cudaThreadExit());
+}
+
+//! Preliminary restart support
+void Restart() {
+  InitCUDA(pinfo->rank(), num_local_processes);
+  gs->Restore();
 }
 
 template <class T>
@@ -140,9 +158,9 @@ extern "C" {
 
     LOG_INFO() << "Process size: " << proc_size << "\n";
 
-    int nlp = GetNumberOfLocalProcesses(argc, argv);
-
-    InitCUDA(rank, nlp);
+    num_local_processes = GetNumberOfLocalProcesses(argc, argv);
+    
+    InitCUDA(rank, num_local_processes);
 
     gs = new GridSpaceMPICUDA(grid_num_dims, grid_size,
                               proc_num_dims, proc_size, rank);
@@ -261,8 +279,10 @@ extern "C" {
       return NULL;
     }
     
-    return master->GridNew(type, elm_size, dim, gsize,
-                           double_buffering, IntArray(), attr);
+    __PSGridMPI *g = master->GridNew(type, elm_size, dim, gsize,
+                                     double_buffering, IntArray(), attr);
+
+    return g;
   }
 
   // same as mpi_runtime.cc
@@ -352,6 +372,7 @@ extern "C" {
     master->StencilRun(id, iter, num_stencils, stencils, stencil_sizes);
     delete[] stencils;
     delete[] stencil_sizes;
+    // testing checkpointing
     return;
   }
 

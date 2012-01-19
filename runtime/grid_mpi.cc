@@ -110,20 +110,38 @@ void GridMPI::InitBuffer() {
 }
 
 GridMPI::~GridMPI() {
+  DeleteBuffers();
+}
+
+void GridMPI::DeleteBuffers() {
   if (empty_) return;
   // The buffers for the last dimension is the same as data buffer, so
   // freeing is not required.
   for (int i = 0; i < num_dims_-1; ++i) {
-    if (halo_self_fw_) FREE(halo_self_fw_[i]);
-    if (halo_self_bw_) FREE(halo_self_bw_[i]);
-    if (halo_peer_fw_) FREE(halo_peer_fw_[i]);
-    if (halo_peer_bw_) FREE(halo_peer_bw_[i]);
+    if (halo_self_fw_ && halo_self_fw_[i]) {
+      FREE(halo_self_fw_[i]);
+    }
+    if (halo_self_bw_ && halo_self_bw_[i]) {
+      FREE(halo_self_bw_[i]);
+    }
+    if (halo_peer_fw_ && halo_peer_fw_[i]) {
+      FREE(halo_peer_fw_[i]);
+    }
+    if (halo_peer_bw_ && halo_peer_bw_[i]) {
+      FREE(halo_peer_bw_[i]);
+    }
   }
-  if (halo_self_fw_) delete[] halo_self_fw_;
-  if (halo_self_bw_) delete[] halo_self_bw_;
-  if (halo_peer_fw_) delete[] halo_peer_fw_;
-  if (halo_peer_bw_) delete[] halo_peer_bw_;
-  if (remote_grid_) delete remote_grid_;
+  delete[] halo_self_fw_;
+  halo_self_fw_ = NULL;
+  delete[] halo_self_bw_;
+  halo_self_bw_ = NULL;
+  delete[] halo_peer_fw_;
+  halo_peer_fw_ = NULL;
+  delete[] halo_peer_bw_;
+  halo_peer_bw_ = NULL;
+  delete remote_grid_;
+  remote_grid_ = NULL;
+  Grid::DeleteBuffers();
 }
 
 void GridMPI::EnsureRemoteGrid(const IntArray &local_offset,

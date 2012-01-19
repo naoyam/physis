@@ -39,26 +39,6 @@ GridMPICUDA3D::GridMPICUDA3D(
   delete[] halo_self_bw_;
   halo_self_bw_ = NULL;
 
-#if USE_MAPPED  
-  halo_self_cuda_ = new BufferCUDAHostMapped*[num_dims_][2];
-#else
-  halo_self_cuda_ = new BufferCUDAHost*[num_dims_][2];  
-#endif
-  halo_self_mpi_ = new BufferHost*[num_dims_][2];
-  halo_peer_cuda_ = new BufferCUDAHost*[num_dims_][2];
-  halo_peer_dev_ = new BufferCUDADev*[num_dims_][2];
-  for (int i = 0; i < num_dims_; ++i) {
-    for (int j = 0; j < 2; ++j) {
-#if USE_MAPPED      
-      halo_self_cuda_[i][j] = new BufferCUDAHostMapped(elm_size);
-#else
-      halo_self_cuda_[i][j] = new BufferCUDAHost(elm_size);      
-#endif      
-      halo_self_mpi_[i][j] = new BufferHost(elm_size);
-      halo_peer_cuda_[i][j] = new BufferCUDAHost(elm_size);
-      halo_peer_dev_[i][j] = new BufferCUDADev(elm_size);
-    }
-  }
   FixupBufferPointers();
 }
 
@@ -77,34 +57,79 @@ GridMPICUDA3D *GridMPICUDA3D::Create(
 
 
 GridMPICUDA3D::~GridMPICUDA3D() {
+  DeleteBuffers();
+}
+
+void GridMPICUDA3D::DeleteBuffers() {
   if (empty_) return;
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
-      delete halo_self_cuda_[i][j];
-      delete halo_self_mpi_[i][j];
-      delete halo_peer_cuda_[i][j];
-      delete halo_peer_dev_[i][j];
+      if (halo_self_cuda_) {
+        delete halo_self_cuda_[i][j];
+        halo_self_cuda_[i][j] = NULL;
+      }
+      if (halo_self_mpi_) {
+        delete halo_self_mpi_[i][j];
+        halo_self_mpi_[i][j] = NULL;
+      }
+      if (halo_peer_cuda_) {
+        delete halo_peer_cuda_[i][j];
+        halo_peer_cuda_[i][j] = NULL;
+      }
+      if (halo_peer_dev_) {
+        delete halo_peer_dev_[i][j];
+        halo_peer_dev_[i][j] = NULL;
+      }
     }
     halo_peer_fw_[i] = NULL;
     halo_peer_bw_[i] = NULL;    
   }
   delete[] halo_self_cuda_;
+  halo_self_cuda_ = NULL;
   delete[] halo_self_mpi_;
+  halo_self_mpi_ = NULL;
   delete[] halo_peer_cuda_;
+  halo_peer_cuda_ = NULL;
   delete[] halo_peer_dev_;
+  halo_peer_dev_ = NULL;
+  GridMPI::DeleteBuffers();
 }
+
 
 void GridMPICUDA3D::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
+
   if (empty_) return;
   data_buffer_[0] = new BufferCUDADev3D(num_dims(), elm_size());
   data_buffer_[0]->Allocate(local_size());
   if (double_buffering_) {
-    data_buffer_[1] = new BufferCUDADev(num_dims(), elm_size());
+    data_buffer_[1] = new BufferCUDADev3D(num_dims(), elm_size());
     data_buffer_[1]->Allocate(local_size());    
   } else {
     data_buffer_[1] = data_buffer_[0];
   }
+  
+#if USE_MAPPED  
+  halo_self_cuda_ = new BufferCUDAHostMapped*[num_dims_][2];
+#else
+  halo_self_cuda_ = new BufferCUDAHost*[num_dims_][2];  
+#endif
+  halo_self_mpi_ = new BufferHost*[num_dims_][2];
+  halo_peer_cuda_ = new BufferCUDAHost*[num_dims_][2];
+  halo_peer_dev_ = new BufferCUDADev*[num_dims_][2];
+  for (int i = 0; i < num_dims_; ++i) {
+    for (int j = 0; j < 2; ++j) {
+#if USE_MAPPED      
+      halo_self_cuda_[i][j] = new BufferCUDAHostMapped(elm_size());
+#else
+      halo_self_cuda_[i][j] = new BufferCUDAHost(elm_size());      
+#endif      
+      halo_self_mpi_[i][j] = new BufferHost(elm_size());
+      halo_peer_cuda_[i][j] = new BufferCUDAHost(elm_size());
+      halo_peer_dev_[i][j] = new BufferCUDADev(elm_size());
+    }
+  }
+
   FixupBufferPointers();
 }
 
@@ -332,7 +357,30 @@ void GridMPICUDA3D::EnsureRemoteGrid(const IntArray &local_offset,
   }
 }
 
+void GridMPICUDA3D::Save() {
+  LOG_DEBUG() << "Saving grid\n";
+  Buffer *buf = static_cast<BufferCUDADev3D*>(
+      data_buffer_[0]);
+  // Copyout
+  void *data = buf->Copyout();
+  SaveToFile(data, buf->GetLinearSize());
+  free(data);
+  DeleteBuffers();
+}
 
+void GridMPICUDA3D::Restore() {
+  LOG_DEBUG() << "Restoring grid\n";
+  LOG_DEBUG() << "Initializing buffer\n";
+  InitBuffer();
+  LOG_DEBUG() << "Buffer initialized\n";
+  // Read from a file
+  BufferCUDADev3D *buf = static_cast<BufferCUDADev3D*>(
+      data_buffer_[0]);
+  void *data = malloc(buf->GetLinearSize());
+  RestoreFromFile(data, buf->GetLinearSize());
+  // Copyin
+  buf->Copyin(data, IntArray((index_t)0), buf->size());
+}
 
 //
 // Grid Space
