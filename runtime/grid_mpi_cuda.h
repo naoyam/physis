@@ -15,7 +15,9 @@
 #include "runtime/timing.h"
 #include "physis/physis_mpi_cuda.h"
 
+#ifdef USE_CUDA_PITCHED_MEMORY
 #define USE_MAPPED 1
+#endif
 
 namespace physis {
 namespace runtime {

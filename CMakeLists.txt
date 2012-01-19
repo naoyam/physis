@@ -161,6 +161,12 @@ if (ENABLE_REDUCE)
   add_definitions(-DENABLE_REDUCE)
 endif ()
 
+set (USE_CUDA_PITCHED_MEMORY TRUE CACHE BOOL
+  "Use the CUDA pitched memory (i.e., allocates memory by cudaMalloc3D)")
+if (USE_CUDA_PITCHED_MEMORY)
+  add_definitions(-DUSE_CUDA_PITCHED_MEMORY)
+endif ()
+
 add_subdirectory(common)
 add_subdirectory(include/physis)
 add_subdirectory(util)

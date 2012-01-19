@@ -100,7 +100,11 @@ void GridMPICUDA3D::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
 
   if (empty_) return;
+#ifdef USE_CUDA_PITCHED_MEMORY  
   data_buffer_[0] = new BufferCUDADev3D(num_dims(), elm_size());
+#else
+  data_buffer_[0] = new BufferCUDADev(num_dims(), elm_size());  
+#endif
   data_buffer_[0]->Allocate(local_size());
   if (double_buffering_) {
     data_buffer_[1] = new BufferCUDADev3D(num_dims(), elm_size());
@@ -134,7 +138,11 @@ void GridMPICUDA3D::InitBuffer() {
 }
 
 void GridMPICUDA3D::SetCUDAStream(cudaStream_t strm) {
+#ifdef USE_CUDA_PITCHED_MEMORY  
   static_cast<BufferCUDADev3D*>(data_buffer_[0])->strm() = strm;
+#else
+  static_cast<BufferCUDADev*>(data_buffer_[0])->strm() = strm;
+#endif
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
       halo_peer_dev_[i][j]->strm() = strm;
@@ -187,8 +195,13 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, bool fw,
 #endif
   BufferHost *halo_mpi_host = halo_self_mpi_[dim][fw_idx];
   halo_cuda_host->EnsureCapacity(linear_size);
+#ifdef USE_CUDA_PITCHED_MEMORY  
   static_cast<BufferCUDADev3D*>(buffer())->Copyout(
       *halo_cuda_host, halo_offset, halo_size);
+#else
+  static_cast<BufferCUDADev*>(buffer())->Copyout(
+      *halo_cuda_host, halo_offset, halo_size);
+#endif
 
   // Next, copy out to the halo buffer from CUDA pinned host memory
   halo_mpi_host->EnsureCapacity(CalcHaloSize(dim, width, diagonal));
@@ -326,8 +339,12 @@ void GridMPICUDA3D::FixupBufferPointers() {
   dev_.diag = halo_has_diagonal();
   LOG_VERBOSE() << "Diag: " << dev_.diag << "\n";
   if (data_buffer_[0]) {
+#ifdef USE_CUDA_PITCHED_MEMORY    
     dev_.pitch = static_cast<BufferCUDADev3D*>(buffer())
         ->GetPitch() / elm_size();
+#else
+    dev_.pitch = buffer()->size()[0];
+#endif
     LOG_DEBUG() << "Pitch: " << dev_.pitch << "\n";
     for (int i = 0; i < num_dims(); ++i) {
       dev_.dim[i]  = size()[i];
@@ -716,8 +733,13 @@ void GridSpaceMPICUDA::HandleFetchRequest(GridRequest &req, GridMPI *g) {
                      req.my_rank, 0, comm_, MPI_STATUS_IGNORE));
   size_t bytes = finfo.peer_size.accumulate(nd) * g->elm_size();
   buf->EnsureCapacity(bytes);
+#ifdef USE_CUDA_PITCHED_MEMORY  
   static_cast<BufferCUDADev3D*>(gm->buffer())->Copyout(
       *buf, finfo.peer_offset - g->local_offset(), finfo.peer_size);
+#else
+  static_cast<BufferCUDADev*>(gm->buffer())->Copyout(
+      *buf, finfo.peer_offset - g->local_offset(), finfo.peer_size);
+#endif  
   SendGridRequest(my_rank_, req.my_rank, comm_, FETCH_REPLY);
   MPI_Request mr;
   buf->MPIIsend(req.my_rank, comm_, &mr, IntArray(), IntArray(bytes));
@@ -736,9 +758,15 @@ void GridSpaceMPICUDA::HandleFetchReply(GridRequest &req, GridMPI *g,
   buf->EnsureCapacity(bytes);
   buf->Buffer::MPIRecv(req.my_rank, comm_, IntArray(bytes));
   LOG_DEBUG() << "Fetch reply received\n";
+#ifdef USE_CUDA_PITCHED_MEMORY  
   static_cast<BufferCUDADev3D*>(sgm->buffer())->Copyin(
       *buf, finfo.peer_offset - sg->local_offset(),
       finfo.peer_size);
+#else
+  static_cast<BufferCUDADev*>(sgm->buffer())->Copyin(
+      *buf, finfo.peer_offset - sg->local_offset(),
+      finfo.peer_size);
+#endif  
   sgm->FixupBufferPointers();
   return;
 }
@@ -777,8 +805,12 @@ void *GridMPICUDA3D::GetAddress(const IntArray &indices_param) {
     }
   }
 
+#ifdef USE_CUDA_PITCHED_MEMORY
   size_t pitch =  static_cast<BufferCUDADev3D*>(buffer())->GetPitch()
       / elm_size_;
+#else
+  size_t pitch =  buffer()->size()[0];
+#endif
   
   return (void*)(_data() +
                  GridCalcOffset3D( indices, local_size(), pitch)
