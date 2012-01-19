@@ -32,7 +32,10 @@ if (CUDA_ENABLED)
   include_directories(${CUDA_INCLUDE_DIR})
   include_directories(${CUDA_CUT_INCLUDE_DIR})
   cuda_add_library(physis_rt_cuda ${RUNTIME_COMMON_SRC}
-    cuda_runtime.cc reduce_cuda.cu buffer_cuda.cu)
+    cuda_runtime.cc buffer_cuda.cu)
+  if (ENABLE_REDUCE)
+    cuda_add_library(physis_rt_cuda reduce_cuda.cc)
+  endif ()
   install(TARGETS physis_rt_cuda DESTINATION lib)
 endif()
 
@@ -40,7 +43,10 @@ if (MPI_ENABLED AND CUDA_ENABLED)
   cuda_add_library(physis_rt_mpi_cuda ${RUNTIME_COMMON_SRC}
     mpi_cuda_runtime.cc grid.cc grid_mpi.cc grid_mpi_cuda.cc
     grid_util.cc rpc_mpi.cc rpc_mpi_cuda.cc mpi_wrapper.cc
-    buffer_cuda.cu reduce_mpi_cuda.cu)
+    buffer_cuda.cu)
+  if (ENABLE_REDUCE)
+    cuda_add_library(physis_rt_mpi_cuda reduce_mpi_cuda.cc)
+  endif ()
   install(TARGETS physis_rt_mpi_cuda DESTINATION lib)
   add_executable(test_mpi_cuda_runtime test_mpi_cuda_runtime.cc)
   target_link_libraries(test_mpi_cuda_runtime physis_rt_mpi_cuda

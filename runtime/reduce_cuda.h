@@ -16,6 +16,8 @@
 #include <thrust/reduce.h>
 #include <thrust/device_ptr.h>
 #include <thrust/extrema.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/functional.h>
 
 namespace physis {
 namespace runtime {

@@ -53,8 +53,9 @@ class GridMPICUDA3D: public GridMPI {
                                 const IntArray &local_size);
 
   void SetCUDAStream(cudaStream_t strm);
-  
+#ifdef ENABLE_REDUCE
   virtual int Reduce(PSReduceOp op, void *out);
+#endif  
 
   virtual void Save();
   virtual void Restore();

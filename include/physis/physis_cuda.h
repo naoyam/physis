@@ -170,12 +170,14 @@ extern "C" {
         + i3 * PSGridDim((__PSGridDev*)g, 0)
         * PSGridDim((__PSGridDev*)g, 1);
   }
-  
+
+#ifdef ENABLE_REDUCE
   extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                                   __PSGrid *g);
 
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                    __PSGrid *g);
+#endif
 
 
 #ifdef __cplusplus

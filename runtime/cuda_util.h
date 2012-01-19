@@ -9,9 +9,6 @@
 #ifndef PHYSIS_RUNTIME_CUDA_UTIL_H_
 #define PHYSIS_RUNTIME_CUDA_UTIL_H_
 
-#include <thrust/transform_reduce.h>
-#include <thrust/functional.h>
-
 namespace physis {
 namespace runtime {
 

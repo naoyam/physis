@@ -69,8 +69,8 @@ set(AUTO_DOUBLE_BUFFERING FALSE)
   
 find_package(CUDA)
 if (CUDA_FOUND AND
-    (CUDA_VERSION VERSION_EQUAL "4.0") OR
-    (CUDA_VERSION VERSION_GREATER "4.0"))
+    (CUDA_VERSION VERSION_EQUAL "3.0") OR
+    (CUDA_VERSION VERSION_GREATER "3.0"))
   set(CUDA_ENABLED TRUE)
   set (CUDA_NVCC_FLAGS -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
@@ -153,6 +153,13 @@ if (DOXYGEN_FOUND)
 else ()
   message(STATUS "Doxygen not found. Some documentation is not generated.")
 endif()
+
+# Enable PSReduce by default. Disable if ENABLE_REDUCE is set to false.
+set (ENABLE_REDUCE TRUE CACHE BOOL
+  "Enable PSReduce intrinsic. Requires Thrust for GPU.")
+if (ENABLE_REDUCE)
+  add_definitions(-DENABLE_REDUCE)
+endif ()
 
 add_subdirectory(common)
 add_subdirectory(include/physis)

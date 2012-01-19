@@ -170,6 +170,7 @@ int ReduceGridMPICUDA(GridMPICUDA3D *g, PSReduceOp op, T *out) {
   return nelms;
 }
 
+
 int GridMPICUDA3D::Reduce(PSReduceOp op, void *out) {
   int rv = 0;
   switch (type_) {
