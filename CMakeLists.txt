@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 # CMAKE_BUILD_TYPE must be set before calling project.
-if (NOT CMAKE_BUILD_TYPE)
-  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
-endif (NOT CMAKE_BUILD_TYPE)
+set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
 message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
 project(physis)
