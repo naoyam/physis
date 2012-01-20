@@ -59,6 +59,9 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda DESTINATION bin)
 
 #if (OPENCL_ENABLED)
 #  set(OPENCL_INCLUDE_DIR ${OPENCL_INCLUDE_DIRS})
+  set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -DOPENCL_DEVICE_HEADER_PATH=\\\"${CMAKE_INSTALL_PREFIX}/include\\\""
+    )
   set(PHYSISC_SRC ${PHYSISC_SRC}
     opencl_translator.cc
     opencl_translator_arghack.cc

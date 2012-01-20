@@ -248,7 +248,7 @@ function generate_translation_configurations_mpi_opencl()
 		# skip configurations with not all options enabled
 		if [ \( $i = 'true' -a $j = 'false' \)  \
 			-o \( $i = 'false' -a $j = 'true' \) ]; then
-		    continue;
+		    true continue;
 		fi
 		local c=config.mpi-opencl.$idx
 		idx=$(($idx + 1))

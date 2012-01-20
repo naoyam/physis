@@ -86,11 +86,16 @@ SgVariableDeclaration *MPIOpenCLTranslator::BuildGridSizeDeclaration(
     LOG_INFO() << "Inserting <math.h> because of ceil call.\n";
     // TODO: The following does not work?
     // si::insertHeader("math.h", PreprocessingInfo::before, src_->get_globalScope());
-    std::string str_insert = "";
-    str_insert += "#ifndef "; str_insert += kernel_mode_macro();
-    si::attachArbitraryText(src_->get_globalScope(), str_insert);
-    si::attachArbitraryText(src_->get_globalScope(), "#include <math.h>");
-    si::attachArbitraryText(src_->get_globalScope(), "#endif");
+    static int math_h_included_p = false;
+    if (!math_h_included_p){
+      std::string str_insert = "";
+      str_insert += "#ifndef "; str_insert += kernel_mode_macro();
+      si::attachArbitraryText(src_->get_globalScope(), str_insert);
+      si::attachArbitraryText(src_->get_globalScope(), "#include <math.h>");
+      si::attachArbitraryText(src_->get_globalScope(), "#endif");
+
+      math_h_included_p = 1;
+    }
 
     return sg_gb;
 }

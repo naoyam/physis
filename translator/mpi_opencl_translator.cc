@@ -81,6 +81,10 @@ void MPIOpenCLTranslator::Finish() {
     PreprocessingInfo::after
     );
 
+
+#ifndef OPENCL_DEVICE_HEADER_PATH
+#warning "WARNING: OPENCL_DEVICE_HEADER_PATH not set.\n"
+#else
   {
     const char *header_lists[] = {
       "physis/physis_mpi_opencl_device.h",
@@ -89,16 +93,24 @@ void MPIOpenCLTranslator::Finish() {
 
     int num;
     std::string contents_headers = "\n";
+    std::string header_path;
+
+#if 0
+    const char *cpath_file = __FILE__;
+    char *cpath_dup = strdup(cpath_file);
+    char *cpos_slash = strrchr(cpath_dup, '/');
+    if (cpos_slash)
+      *cpos_slash = 0;
+    header_path = cpath_dup;
+    free(cpath_dup);
+    header_path += "/../include/";
+#else
+    header_path = OPENCL_DEVICE_HEADER_PATH;
+    header_path += "/";
+#endif
 
     for (num = 0; header_lists[num]; num++) {
-      const char *cpath_file = __FILE__;
-      char *cpath = strdup(cpath_file);
-      char *cpos_slash = strrchr(cpath, '/');
-      if (cpos_slash)
-        *cpos_slash = 0;
-      std::string path = cpath;
-      free(cpath);
-      path += "/../include/";
+      std::string path = header_path;
       path += header_lists[num];
       const char *file_read = path.c_str();
 
@@ -124,7 +136,6 @@ void MPIOpenCLTranslator::Finish() {
     } // (num = 0; header_lists[num]; num++)
 
     LOG_DEBUG() << "Adding the contents of device headers\n";
-#if 1
     str_insert += "\n";
     str_insert += "#ifdef ";
     str_insert += kernel_mode_macro();
@@ -141,9 +152,9 @@ void MPIOpenCLTranslator::Finish() {
       str_insert,
       PreprocessingInfo::before
       );
-#endif
 
   }
+#endif
 
   // opencl_trans_->Finish();
   MPITranslator::Finish();
