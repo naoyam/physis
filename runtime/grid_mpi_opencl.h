@@ -114,6 +114,12 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                     const IntArray &global_offset,
                                     int attr,
                                     CLbaseinfo *clinfo);
+  virtual GridMPIOpenCL3D *CreateGrid(
+                                    PSType type, int elm_size, int num_dims,
+                                    const IntArray &size,
+                                    bool double_buffering,
+                                    const IntArray &global_offset,
+                                    int attr);
   virtual bool SendBoundaries(GridMPIOpenCL3D *grid, int dim, unsigned width,
                               bool forward, bool diagonal,
                               ssize_t halo_size,

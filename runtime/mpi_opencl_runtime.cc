@@ -22,6 +22,19 @@ __PSStencilRunClientFunction *__PS_stencils;
 } // namespace physis
 
 
+namespace physis {
+namespace runtime {
+
+CLMPIbaseinfo *clinfo_generic;
+CLMPIbaseinfo *clinfo_inner;
+CLMPIbaseinfo *clinfo_boundary_copy;
+std::vector<CLMPIbaseinfo *> clinfo_boundary_kernel;
+
+CLMPIbaseinfo *clinfo_nowusing;
+
+} // namespace runtime
+} // namespace physis
+
 namespace {
 
 int GetNumberOfLocalProcesses(int *argc, char ***argv) {
@@ -56,6 +69,8 @@ T __PSGridGet(__PSGridMPI *g, va_list args) {
 #ifdef __cplusplus
 extern "C" {
 #endif
+  unsigned int num_clinfo_boundary_kernel;
+
   // Assumes extra arguments. The first argument is the number of
   // dimensions, and each of the remaining ones is the size of
   // respective dimension.

@@ -206,11 +206,60 @@ function generate_translation_configurations_mpi_cuda()
 
 function generate_translation_configurations_opencl()
 {
+    local configs=""    
     if [ $# -gt 0 ]; then
-	echo $1
+	configs=$*
     else
-	generate_empty_translation_configuration
+	configs=config.empty
+	echo -n "" > config.empty
     fi
+    local bsize="64,4,1 32,8,1"
+    local new_configs=""
+    local idx=0
+	for j in $bsize; do
+	    for k in $configs; do
+		local c=config.opencl.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "OPENCL_BLOCK_SIZE = {$j}" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    echo $new_configs
+}
+
+function generate_translation_configurations_mpi_opencl()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+	configs=$*
+    else
+	configs=config.empty
+	echo -n "" > config.empty
+    fi
+    configs=$(generate_translation_configurations_opencl "$configs")
+    local overlap='false true'
+    local multistream='false true'
+    local new_configs=""
+    local idx=0
+    for i in $overlap; do
+	for j in $multistream; do
+	    for k in $configs; do
+		# skip configurations with not all options enabled
+		if [ \( $i = 'true' -a $j = 'false' \)  \
+			-o \( $i = 'false' -a $j = 'true' \) ]; then
+		    continue;
+		fi
+		local c=config.mpi-opencl.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "MPI_OVERLAP = $i" >> $c
+		echo "MULTISTREAM_BOUNDARY = $j" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    done
+    echo $new_configs
 }
 
 function generate_translation_configurations()
@@ -231,6 +280,9 @@ function generate_translation_configurations()
 	    ;;
 	opencl)
 	    generate_translation_configurations_opencl
+	    ;;
+	mpi-opencl)
+	    generate_translation_configurations_mpi_opencl
 	    ;;
 	*)
 	    generate_empty_compile_configuration
@@ -306,6 +358,16 @@ function compile()
 	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS &&
 	    c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base"
 	    ;;
+	mpi-opencl)
+      OPENCL_LDFLAGS=-lOpenCL
+	    if [ "${MPI_ENABLED}" != "TRUE" -o "${OPENCL_ENABLED}" != "TRUE" ]; then
+		echo "[COMPILE] Skipping MPI-OpenCL compilation (not supported)"
+		return 0
+	    fi
+	    src_file="$src_file_base".c			
+	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_CFLAGS $CFLAGS &&
+	    mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base"
+	    ;;
 	*)
 	    exit_error "Unsupported target"
 	    ;;
@@ -326,6 +388,9 @@ function get_reference_exe_name()
 	    target=cuda
 	    ;;
   opencl)
+      target=ref
+      ;;
+  mpi-opencl)
       target=ref
       ;;
     esac
@@ -398,6 +463,10 @@ function execute()
   opencl)
       exename=$(basename $1 .c).$target
 	    ./$exename > $exename.out
+	    ;;
+	mpi-opencl)
+      exename=$(basename $1 .c).$target
+	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
@@ -619,12 +688,12 @@ function get_test_cases()
 		fi
 		if [ "$STAGE" = "COMPILE" ]; then continue; fi
 		np_target=1
-		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
+		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" -o "$TARGET" = "mpi-opencl" ]; then
 		    np_target=$MPI_PROC_DIM
 		    echo "[EXECUTE] Trying with process configurations: $np_target"
                     # Make sure compiled binaries are synched to other nodes
 		    # This is a temporary workaround for the Raccoon cluster.
-		    sleep 30
+		    sleep 5
 		fi
 		for np in $np_target; do
 		    if execute $SHORTNAME $TARGET $np $DIM; then

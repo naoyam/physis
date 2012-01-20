@@ -21,7 +21,8 @@ GridMPIOpenCL3D::GridMPIOpenCL3D(
             local_offset, local_size, attr),
     grid_clinfo_(clinfo_in)
 {
-  
+
+  dev_.p0 = 0;  
   if (empty_) return;
 
   // These pointers are replaced with buffer substrate in this class
@@ -108,6 +109,7 @@ void GridMPIOpenCL3D::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
   if (empty_) return;
   data_buffer_[0] = new BufferOpenCLDev3D(num_dims(), elm_size(), grid_clinfo_);
+  LOG_DEBUG() << "Calling data_buffer[0]->Allocate with size " << local_size() << "\n";
   data_buffer_[0]->Allocate(local_size());
   if (double_buffering_) {
     data_buffer_[1] = new BufferOpenCLDev(num_dims(), elm_size(), grid_clinfo_);
@@ -384,16 +386,14 @@ void GridMPIOpenCL3D::FixupBufferPointers() {
     data_[0] = 0;
     data_[1] = 0;
   }
-  
+
   dev_.p0 = data_[0];
   dev_.diag = halo_has_diagonal();
   LOG_VERBOSE() << "Diag: " << dev_.diag << "\n";
   if (data_buffer_[0]) {
-#if 1
     dev_.pitch = static_cast<BufferOpenCLDev*>(buffer())
         ->GetPitch() / elm_size();
     LOG_DEBUG() << "Pitch: " << dev_.pitch << "\n";
-#endif
     for (int i = 0; i < num_dims(); ++i) {
       dev_.dim[i]  = size()[i];
       dev_.local_size[i] = local_size()[i];
@@ -403,9 +403,7 @@ void GridMPIOpenCL3D::FixupBufferPointers() {
       clmem_halo_peer_bw_[i] = halo_peer_dev_[i][0]->Get_buf_mem();
 
       for (int j = 0; j < 2; ++j) {
-#if 0
         dev_.halo[i][j] = halo_peer_dev_[i][j]->Get_buf_mem();
-#endif
       }
       dev_.halo_width[i][1] = halo_fw_width()[i];
       dev_.halo_width[i][0] = halo_bw_width()[i];
@@ -495,6 +493,17 @@ GridMPIOpenCL3D *GridSpaceMPIOpenCL::CreateGrid(
   DataCopyProfile *profs = new DataCopyProfile[num_dims * 2];
   load_neighbor_prof_.insert(make_pair(g->id(), profs));
   return g;
+}
+
+GridMPIOpenCL3D *GridSpaceMPIOpenCL::CreateGrid(
+    PSType type, int elm_size, int num_dims, const IntArray &size,
+    bool double_buffering, const IntArray &global_offset,
+    int attr)
+{
+  PSAssert(space_clinfo_ != NULL);
+  return CreateGrid(
+      type, elm_size, num_dims, size, double_buffering,
+      global_offset, attr, space_clinfo_);
 }
 
 // Jut copy out halo from GPU memory

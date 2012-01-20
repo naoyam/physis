@@ -89,7 +89,9 @@ void BufferOpenCLHost::MPISend(int dst, MPI_Comm comm,
 //
 BufferOpenCLDev::BufferOpenCLDev(size_t elm_size, CLbaseinfo *clinfo_in)
     : Buffer(elm_size),
-      base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/ {
+      base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/,
+      buf_mem(0)
+{
   pinned_buf_ = new BufferOpenCLHost(elm_size);
   deleter_ = BufferOpenCLDev::DeleteChunk; // But this deleter_ won't be used
   pitch = 0;
@@ -97,7 +99,9 @@ BufferOpenCLDev::BufferOpenCLDev(size_t elm_size, CLbaseinfo *clinfo_in)
 
 BufferOpenCLDev::BufferOpenCLDev(int num_dims, size_t elm_size, CLbaseinfo *clinfo_in)
     : Buffer(num_dims, elm_size),
-      base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/ {
+      base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/,
+      buf_mem(0)
+{
   pinned_buf_ = new BufferOpenCLHost(num_dims, elm_size);
   deleter_ = BufferOpenCLDev::DeleteChunk;  // But this deleter_ won't be used
   pitch = 0;
@@ -142,8 +146,10 @@ void BufferOpenCLDev::Copyin(const BufferOpenCLHost &buf,
 
   // CUDA code waits here until stream completes all operations
   CLbaseinfo *clinfo_use = stream_clinfo();
-  if (!clinfo_use)
+  if (!clinfo_use) {
+    LOG_DEBUG() << "Currently stream not set\n";
     clinfo_use = base_clinfo();
+  }
   PSAssert(clinfo_use);
   cl_command_queue buf_queue_ = clinfo_use->get_queue();
   PSAssert(buf_queue_ != 0);
@@ -155,7 +161,7 @@ void BufferOpenCLDev::Copyin(const BufferOpenCLHost &buf,
     LOG_DEBUG() << "Calling clEnqueueWriteBuffer() failed.\n";
   }
   // And block
-  clEnqueueBarrier(buf_queue_);
+  clFinish(buf_queue_);
 }
 
 void BufferOpenCLDev::Copyout(void *buf, const IntArray &offset,
@@ -177,8 +183,10 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
 
   // CUDA code waits here until stream completes all operations
   CLbaseinfo *clinfo_use = stream_clinfo();
-  if (!clinfo_use)
+  if (!clinfo_use) {
+    LOG_DEBUG() << "Currently stream not set\n";
     clinfo_use = base_clinfo();
+  }
   PSAssert(clinfo_use);
   cl_command_queue buf_queue_ = clinfo_use->get_queue();
   PSAssert(buf_queue_ != 0);
@@ -190,7 +198,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
     LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
   }
   // And block
-  clEnqueueBarrier(buf_queue_);
+  clFinish(buf_queue_);
 }
 
   
@@ -215,10 +223,18 @@ void BufferOpenCLDev::GetChunk_CL(
 )
 {
   *ret_p_mem = 0;
-  *ret_pitch = 0;
+  // FIXME
+  // FIXME
+  // NEEDCHECK
+  *ret_pitch = size[0] * elm_size_;
   if (size.accumulate(num_dims_) >0) {
     cl_int status;
-    cl_context buf_context_ = stream_clinfo()->get_context();
+    CLbaseinfo *clinfo_use = stream_clinfo();
+    if (!clinfo_use)
+      clinfo_use = base_clinfo();
+    PSAssert(clinfo_use);
+
+    cl_context buf_context_ = clinfo_use->get_context();
     PSAssert(buf_context_);
     *ret_p_mem = clCreateBuffer(
       buf_context_, CL_MEM_READ_WRITE, GetLinearSize(size), NULL, &status);

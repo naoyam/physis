@@ -31,6 +31,26 @@ namespace physis {
         cl_kernel clkernel;
         cl_program clprog;
 
+        cl_uint cl_num_platforms;
+        cl_platform_id *cl_pl_ids;
+        cl_uint cl_num_devices;
+        cl_device_id *cl_dev_ids;
+
+        unsigned int cl_block_events_p;
+
+        // create_context_queue is split into 3 parts
+        virtual void get_platform_ids(cl_uint &num_platforms, cl_platform_id *&platform_ids);
+        virtual void create_context_from_pls(
+            cl_uint num_platforms, cl_platform_id *cl_pl_ids_in,
+            cl_uint &num_devices, cl_device_id *&dev_ids, cl_context &context
+            );
+        // The following is public
+        // virtual cl_command_queue create_queue_from_context(
+            //unsigned int id_dev_use, cl_device_id *dev_ids, cl_context context
+            //);
+        // The following is public
+        //virtual void create_context_queue_from_platform_ids(
+          //unsigned int id, cl_uint num_platforms, cl_platform_id *platform_ids);
         virtual void create_context_queue(unsigned int id_default = 0);
         virtual void cleanupcl(void);
 
@@ -38,8 +58,16 @@ namespace physis {
         virtual std::string create_kernel_contents(std::string kernelfile) const;
 
       public:
-        CLbaseinfo(unsigned int id_default = 0);
+        CLbaseinfo();
+        CLbaseinfo(
+          unsigned int id_default, unsigned int create_queue_p,
+          unsigned int block_events_p);
         virtual ~CLbaseinfo();
+
+        virtual cl_command_queue create_queue_from_context(
+            unsigned int id_dev_use, cl_device_id *dev_ids, cl_context context
+            );
+
         virtual int get_status(void) const { return err_status; }
 
         virtual void guess_kernelfile(const int *argc, char ***argv, 
@@ -52,6 +80,7 @@ namespace physis {
 
         virtual cl_context get_context() { return clcontext; }
         virtual cl_command_queue get_queue() { return clqueue; }
+        virtual unsigned int get_block_events_p() { return cl_block_events_p; }
 
     }; // class CLbaseinfo
 

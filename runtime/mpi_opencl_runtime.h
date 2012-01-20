@@ -7,6 +7,9 @@
 #include "runtime/rpc_opencl_mpi.h"
 #include <vector>
 
+// FIXME
+// FIXME
+// Get this back this later!!
 #define NUM_CLINFO_BOUNDARY_KERNEL 16
 
 namespace physis {
@@ -27,21 +30,23 @@ extern GridSpaceMPIOpenCL *gs;
 namespace physis {
 namespace runtime {
 
-extern CLMPIinfo *clinfo_generic;
-extern CLMPIinfo *clinfo_inner;
-extern CLMPIinfo *clinfo_boundary_copy;
-extern std::vector<CLMPIinfo *> clinfo_boundary_kernel;
+extern CLMPIbaseinfo *clinfo_generic;
+extern CLMPIbaseinfo *clinfo_inner;
+extern CLMPIbaseinfo *clinfo_boundary_copy;
+extern std::vector<CLMPIbaseinfo *> clinfo_boundary_kernel;
 
-extern CLMPIinfo *clinfo_nowusing;
+extern CLMPIbaseinfo *clinfo_nowusing;
 
 } // namespace runtime
 } // namespace physis
 
-namespace {
-void InitOpenCL(
+namespace physis {
+namespace runtime {
+extern void InitOpenCL(
     int my_rank, int num_local_processes, int *argc, char ***argv
 );
-void DestroyOpenCL(void);
-}
+extern void DestroyOpenCL(void);
+} // namespace runtime
+} // namespace physis
 
 #endif /* PHYSIS_RUNTIME_MPI_OPENCL_RUNTIME_H_ */

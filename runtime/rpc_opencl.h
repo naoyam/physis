@@ -20,7 +20,7 @@ namespace physis {
       protected:
 
       public:
-        CLinfo(unsigned int id_default = 0): CLbaseinfo(id_default) {};
+        CLinfo(): CLbaseinfo() {};
         virtual ~CLinfo() {};
 
         virtual __PSGrid* GridNew(int elm_size, int num_dims, PSVectorInt dim, int double_buffering);

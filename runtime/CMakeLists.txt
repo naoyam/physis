@@ -50,14 +50,18 @@ if (MPI_ENABLED AND CUDA_ENABLED)
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
 endif()
 
+set(RUNTIME_OPENCL_COMMON_SRC
+  opencl_kernelinit.cc
+  opencl_misc.cc
+  opencl_psinit.cc
+)
+
 if (OPENCL_ENABLED)
   include_directories(${OPENCL_INCLUDE_PATH})
   add_library(physis_rt_opencl ${RUNTIME_COMMON_SRC}
+      ${RUNTIME_OPENCL_COMMON_SRC}
       opencl_gridcp.cc
       opencl_gridinit.cc
-      opencl_kernelinit.cc
-      opencl_misc.cc
-      opencl_psinit.cc
       opencl_runtime.cc
     )
   install(
@@ -68,12 +72,14 @@ endif()
 
 if (MPI_ENABLED AND OPENCL_ENABLED)
   add_library(physis_rt_mpi_opencl ${RUNTIME_COMMON_SRC}
+      grid.cc grid_mpi.cc grid_util.cc rpc_mpi.cc mpi_wrapper.cc
+      ${RUNTIME_OPENCL_COMMON_SRC}
       buffer_opencl.cc
       grid_mpi_opencl.cc
-      mpi_opencl_runtime.cc
-      mpi_opencl_runtime_extra.cc
-      rpc_mpi_opencl.cc
       rpc_opencl_mpi.cc
+      mpi_opencl_runtime_extra.cc
+      mpi_opencl_runtime.cc
+      rpc_mpi_opencl.cc
   )
   install(
     TARGETS physis_rt_mpi_opencl

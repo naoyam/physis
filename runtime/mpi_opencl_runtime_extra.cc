@@ -1,9 +1,10 @@
 #include "runtime/mpi_opencl_runtime.h"
+#include "physis/physis_mpi_opencl.h"
 
-using namespace physis::runtime;
+namespace phru = physis::runtime;
 
-namespace {
-
+namespace physis {
+namespace runtime {
 
 void InitOpenCL(
     int my_rank, int num_local_processes, int *argc, char ***argv
@@ -12,41 +13,46 @@ void InitOpenCL(
   // Assumes each local process has successive process rank
   int dev_id = my_rank % num_local_processes;
 
-  clinfo_generic = new CLMPIinfo(dev_id);
-  clinfo_inner = new CLMPIinfo(dev_id);
-  clinfo_boundary_copy = new CLMPIinfo(dev_id);
+  LOG_DEBUG() << "Creating generic clqueue.\n";
+  phru::clinfo_generic = new phru::CLMPIbaseinfo(dev_id, 1, 0);
+  phru::clinfo_inner = 0;
+  phru::clinfo_boundary_copy = 0;
 
   std::string filen, kerneln;
-  clinfo_generic->guess_kernelfile(argc, argv, filen, kerneln);
+  phru::clinfo_generic->guess_kernelfile(argc, argv, filen, kerneln);
+  phru::clinfo_generic->set_kernel_filen(filen);
 
-  clinfo_generic->create_program(filen);
-  clinfo_inner->create_program(filen);
-  clinfo_boundary_copy->create_program(filen);
 
   num_clinfo_boundary_kernel = NUM_CLINFO_BOUNDARY_KERNEL;
   unsigned int i;
-  for (i = 0; i < num_clinfo_boundary_kernel; i++) {
-      CLMPIinfo *clinfo_bk_new = new CLMPIinfo(dev_id);
-      clinfo_bk_new->create_program(filen);
-      clinfo_boundary_kernel.push_back(clinfo_bk_new);
+// FIXME
+// FIXME
+// Get this back later
+  for (i = 0; i < ::num_clinfo_boundary_kernel; i++) {
   }
 
   // Default
-  clinfo_nowusing = clinfo_generic;
+  phru::clinfo_nowusing = phru::clinfo_generic;
 }
 
 void DestroyOpenCL(void) {
-  delete clinfo_generic;
-  delete clinfo_inner;
-  delete clinfo_boundary_copy;
+  if (phru::clinfo_generic)
+    delete phru::clinfo_generic;
+  if (phru::clinfo_inner)
+    delete phru::clinfo_inner;
+  if (phru::clinfo_boundary_copy)
+    delete phru::clinfo_boundary_copy;
 
-  FOREACH(it, clinfo_boundary_kernel.begin(), clinfo_boundary_kernel.end())
+  FOREACH(it, phru::clinfo_boundary_kernel.begin(), phru::clinfo_boundary_kernel.end())
   {
-    CLMPIinfo *cl_deleteNow = *it;
+    CLMPIbaseinfo *cl_deleteNow = *it;
     delete cl_deleteNow;
   }
-  clinfo_boundary_kernel.clear();
+  phru::clinfo_boundary_kernel.clear();
 }
+
+} // namespace runtime
+} // namespace physis
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,51 +60,150 @@ extern "C" {
 
 void __PSSetKernel(
       const char *kernelname,
-      enum CL_STREAM_FLAG strm_flg, unsigned int strm_num)
+      enum CL_STREAM_FLAG strm_flg, unsigned int strm_num,
+      const char *header_path)
 {
     std::string string_kernelname = kernelname;
-    CLMPIinfo *cl_it;
+
+    PSAssert(phru::clinfo_generic);
+
+    phru::clinfo_nowusing = phru::clinfo_generic;
+    if (!phru::clinfo_nowusing->get_prog()) {
+      phru::clinfo_nowusing->set_header_include_path(header_path);
+      std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
+      phru::clinfo_nowusing->create_program(kernel_filen);
+    }
+
     switch(strm_flg) {
       case USE_GENERIC:
-        clinfo_nowusing = clinfo_generic;
+        phru::clinfo_nowusing = phru::clinfo_generic;
         break;
+
       case USE_INNER:
-        clinfo_nowusing = clinfo_inner;
+        if (!phru::clinfo_inner) {
+          LOG_DEBUG() << "Creating inner clqueue.\n";
+          phru::clinfo_inner = new phru::CLMPIbaseinfo(*(phru::clinfo_generic));
+        }
+        phru::clinfo_nowusing = phru::clinfo_inner;
         break;
+
       case USE_BOUNDARY_COPY:
-        clinfo_nowusing = clinfo_boundary_copy;
+        if (!phru::clinfo_boundary_copy) {
+          LOG_DEBUG() << "Creating boundary_copy clqueue.\n";
+          phru::clinfo_boundary_copy = new phru::CLMPIbaseinfo(*(phru::clinfo_generic));
+        }
+        phru::clinfo_nowusing = phru::clinfo_boundary_copy;
+        break;
+
       case USE_BOUNDARY_KERNEL:
         if (strm_num >= num_clinfo_boundary_kernel) {
-          clinfo_nowusing = clinfo_generic;
+          phru::clinfo_nowusing = phru::clinfo_generic;
           break;
         }
 
-        cl_it = clinfo_generic;
-        ENUMERATE(j, it, clinfo_boundary_kernel.begin(), clinfo_boundary_kernel.end()) {
-          cl_it = *it;
-          if ((unsigned int) j >= strm_num) break;
+        while (phru::clinfo_boundary_kernel.size() < strm_num) {
+          LOG_DEBUG() << "Creating boundary_kernel clqueue.\n";
+          phru::CLMPIbaseinfo *clinfo_bk_new = new phru::CLMPIbaseinfo(*(phru::clinfo_generic));
+          phru::clinfo_boundary_kernel.push_back(clinfo_bk_new);
         }
-        clinfo_nowusing = cl_it;
+
+        {
+          phru::CLMPIbaseinfo *cl_it = phru::clinfo_generic;
+          ENUMERATE(j, it, phru::clinfo_boundary_kernel.begin(), phru::clinfo_boundary_kernel.end()) {
+            cl_it = *it;
+            if ((unsigned int) j >= strm_num) break;
+          }
+          phru::clinfo_nowusing = cl_it;
+        }
         break;
 
       default:
-        clinfo_nowusing = clinfo_generic;
+        LOG_DEBUG() << "The flag value " << strm_flg << 
+          " does not match any of the registered values.\n";
+        PSAbort(1);
+
+        phru::clinfo_nowusing = phru::clinfo_generic;
         break;
     }
-    clinfo_nowusing->create_kernel(string_kernelname);
+
+    phru::clinfo_nowusing->create_kernel(string_kernelname);
 } // __PSSetKernel
+
+void __PS_CL_ThreadSynchronize(void){
+  if (phru::clinfo_generic)
+    phru::clinfo_generic->sync_queue();
+  if (phru::clinfo_inner)
+    phru::clinfo_inner->sync_queue();
+  if (phru::clinfo_boundary_copy)
+    phru::clinfo_boundary_copy->sync_queue();
+
+  FOREACH(it, phru::clinfo_boundary_kernel.begin(), phru::clinfo_boundary_kernel.end())
+  {
+    phru::CLMPIbaseinfo *cl_usenow = *it;
+    cl_usenow->sync_queue();
+  }
+}
 
 void __PSSetKernelArg(unsigned int arg_index, size_t arg_size, const void *arg_val)
 {
-    clinfo_nowusing->SetKernelArg((cl_uint) arg_index, arg_size, arg_val);
+    phru::clinfo_nowusing->SetKernelArg((cl_uint) arg_index, arg_size, arg_val);
 } // __PSSetKernelArg
 
 void __PSSetKernelArgCLMem(unsigned int arg_index, const void *arg_val){
-    clinfo_nowusing->SetKernelArg((cl_uint) arg_index, sizeof(cl_mem), arg_val);
+    phru::clinfo_nowusing->SetKernelArg((cl_uint) arg_index, sizeof(cl_mem), arg_val);
 } // __PSSetKernelArgCLMem
 
+void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
+    unsigned int argc = *p_argc;
+    int dim = 0;
+    int fwbw = 0;
+
+    { void *buf = g->p0 ; __PSSetKernelArgCLMem(argc, (void *)(&buf)); argc++; }
+    for (dim = 0; dim < 3; dim++) {
+      long j = g->dim[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+    }
+    for (dim = 0; dim < 3; dim++) {
+      long j = g->local_size[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+    }
+    for (dim = 0; dim < 3; dim++) {
+      long j = g->local_offset[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+    }
+    { long j = g->pitch; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
+    for (dim = 0; dim < 3; dim++) {
+      for (fwbw = 0 ; fwbw < 2; fwbw++) {
+        void *buf = g->halo[dim][fwbw]; 
+        __PSSetKernelArgCLMem(argc, (void *)(&buf)); argc++;
+      }
+    }
+    for (dim = 0; dim < 3; dim++) {
+      for (fwbw = 0 ; fwbw < 2; fwbw++) {
+        long j = g->halo_width[dim][fwbw];
+        __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+      }
+    }
+    { long j = g->diag; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
+
+    *p_argc = argc;
+} // __PSSetKernelArg_Grid3DFloat
+
+void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom) {
+    unsigned int argc = *p_argc;
+    int dim = 0;
+
+    for (dim = 0; dim < 3; dim++) {
+      long j;
+
+      j= p_dom->local_min[dim];
+      __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+      j= p_dom->local_max[dim];
+      __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+    }
+
+    *p_argc = argc;
+} // __PSSetKernelArg_Dom
+
 void __PSRunKernel(size_t *globalsize, size_t *localsize){
-    clinfo_nowusing->RunKernel(globalsize, localsize);
+    phru::clinfo_nowusing->RunKernel(globalsize, localsize);
 } // __PSRunKernel
 
 
@@ -106,5 +211,3 @@ void __PSRunKernel(size_t *globalsize, size_t *localsize){
 }
 #endif
 
-
-} // namespace

@@ -26,8 +26,6 @@ namespace physis {
 
       const char *header_lists[] = {
 #if 0
-        "physis/physis_opencl_kernel.h",
-        "physis/physis_opencl.h",
 #endif
         NULL
       };
@@ -37,9 +35,6 @@ namespace physis {
     ret_str += "#define PHYSIS_OPENCL_KERNEL_MODE\n";
     ret_str += "#undef PHYSIS_USER\n";
 #if 0
-#ifdef __x86_64__
-    ret_str += "#define __x86_64__\n\n";
-#endif
 #endif
     // For double usage
     ret_str += "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
@@ -190,11 +185,18 @@ namespace physis {
       cl_int status = -1;
       err_status = 1;
 
+#if 0
+      LOG_DEBUG() << "Calling clSetKernelArg() for " << arg_index
+        << " with size " << arg_size << " .\n";
+#endif
       status = clSetKernelArg(clkernel, arg_index, arg_size, arg_val);
       if (status == CL_SUCCESS) {
         err_status = 0;
       } else {
-        fprintf(stderr, "Calling clSetKernelArg failed: status %i\n", status);
+        fprintf(
+          stderr, 
+          "Calling clSetKernelArg failed for index %i with size %zi:"
+          " status %i\n", arg_index, arg_size, status);
       }
     } // SetKernelArg
 
@@ -203,12 +205,22 @@ namespace physis {
       err_status = 1;
 
       // Now use dimension 2
+      LOG_DEBUG() << "Calling clEnqueueNDRangeKernel.\n";
       status = clEnqueueNDRangeKernel(clqueue, clkernel, 2, NULL, globalsize, localsize, 0, NULL, NULL);
       if (status == CL_SUCCESS) {
         err_status = 0;
       } else {
         fprintf(stderr, "Calling clEnqueueNDRangeKernel failed: status %i\n", status);
       }
+
+      // FIXME
+      // TODO
+      // Block
+      if (cl_block_events_p)
+        clFinish(clqueue);
+      else
+        clEnqueueBarrier(clqueue);
+
     } // RunKernel
 
 

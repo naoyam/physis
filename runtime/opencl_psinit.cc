@@ -9,40 +9,54 @@
 namespace physis {
   namespace runtime {
 
-    CLbaseinfo::CLbaseinfo(unsigned int id_use) {
-      cldevid = 0;
-      clcontext = NULL;
-      clqueue = NULL;
-      clkernel = NULL;
-      clprog = NULL;
-      err_status = 0;
-
+    CLbaseinfo::CLbaseinfo():
+      err_status(0),
+      cldevid(0),
+      clcontext(0),
+      clqueue(0),
+      clkernel(0),
+      clprog(0),
+      cl_num_platforms(0),
+      cl_pl_ids(0),
+      cl_num_devices(0),
+      cl_dev_ids(0),
+      cl_block_events_p(1)
+    {
       // create context and queue
-      create_context_queue(id_use);
+      create_context_queue(0);
+    } // CLbaseinfo()
 
+    CLbaseinfo::CLbaseinfo(unsigned int id_use, unsigned int create_queue_p, unsigned int block_events_p):
+      err_status(0),
+      cldevid(0),
+      clcontext(0),
+      clqueue(0),
+      clkernel(0),
+      clprog(0),
+      cl_num_platforms(0),
+      cl_pl_ids(0),
+      cl_num_devices(0),
+      cl_dev_ids(0),
+      cl_block_events_p(block_events_p)
+    {
+      // create context and queue
+      if (create_queue_p) 
+        create_context_queue(id_use);
     } // CLbaseinfo()
 
     CLbaseinfo::~CLbaseinfo() {
       cleanupcl();
     } // ~CLbaseinfo()
 
-    // By default, use the 0th device from device list dev_ids
-    void CLbaseinfo::create_context_queue(unsigned int id_dev_use) {
-      cl_context context = (cl_context) NULL;
-      cl_device_id *dev_ids = (cl_device_id *) NULL;
-      cl_device_type devtype = CL_DEVICE_TYPE_GPU;
 
-      cl_platform_id *platform_ids = (cl_platform_id *) NULL;
-      cl_platform_id selected_platform_id = (cl_platform_id) NULL;
+    void CLbaseinfo::create_context_queue(cl_uint id_use) {
+      // It seems that get_platforms_ids takes much longer
+      // than the rest parts (create_context_queue_from_platform_ids),
+      // and as get_platform_ids has to be called only once per
+      // platform, split get_platform_ids part out.
 
-      cl_command_queue queue = (cl_command_queue) NULL;
-
-      cl_int status = -1;
-      cl_uint num_platforms = 0;
-      cl_uint num_devices = 0;
-
-      err_status = 1;
-
+      // clcontext must be shared with queues, so this is also split
+      // out
 
       /*
         1 obtain platform ID
@@ -56,10 +70,26 @@ namespace physis {
        99 then set context and command queue
       */
 
-      // obtain platform ID
-      do {
-        cl_uint id_pos = 0;
+      get_platform_ids(cl_num_platforms, cl_pl_ids);
+      create_context_from_pls(
+        cl_num_platforms, cl_pl_ids,
+        cl_num_devices, cl_dev_ids, clcontext
+      );
+      clqueue = create_queue_from_context(id_use, cl_dev_ids, clcontext);
+    }
 
+    void CLbaseinfo::get_platform_ids(cl_uint &num_platforms, cl_platform_id *&platform_ids){
+
+      cl_int status = -1;
+
+      /*
+        1 obtain platform ID
+           * the function oclGetPlatformID() is not in OpenCL specification and is NVIDIA's
+             original implementation, license being unclear
+      */
+
+      do {
+        LOG_DEBUG() << "Getting platform ids.\n";
         status = clGetPlatformIDs(0, NULL, &num_platforms);
         if (status != CL_SUCCESS) {
           fprintf(stderr, "Calling clGetPlatformIDs() failed: status %i.\n", status);
@@ -76,11 +106,41 @@ namespace physis {
           fprintf(stderr, "Calling clGetPlatformIDs() failed: status %i\n", status);
           break;
         }
+      } while(0);
+
+    } // get_platform_ids
+
+    void CLbaseinfo::create_context_from_pls(
+      cl_uint num_platforms, cl_platform_id *cl_pl_ids_in,
+      cl_uint &num_devices, cl_device_id *&dev_ids, cl_context &context
+    )
+    {
+      cl_int status = -1;
+
+      /*
+        2 obtain device ID (and the number of devices available)
+        3 create the device list
+        4 create context from the device list
+      */
+
+      cl_platform_id *platform_ids = cl_pl_ids_in;
+      cl_platform_id selected_platform_id = (cl_platform_id) NULL;
+      cl_device_type devtype = CL_DEVICE_TYPE_GPU;
+
+      num_devices = 0;
+      dev_ids = 0;
+      context = 0;
+
+
+      do {
+        cl_uint id_pos = 0;
+
+        if (!platform_ids) break; // Immidiate jump
 
         for (id_pos = 0; id_pos < num_platforms; id_pos++) {
-          int found = 0;
           selected_platform_id = platform_ids[id_pos];
 
+          LOG_DEBUG() << "Getting device ids.\n";
           do {
             // obtain device ID (and the number of devices available)
             status = clGetDeviceIDs(selected_platform_id, devtype, 0, NULL, &num_devices);
@@ -102,69 +162,79 @@ namespace physis {
             }
 
             // Create context
+            LOG_DEBUG() << "Creating context.\n";
             context = clCreateContext(NULL, num_devices, dev_ids, NULL, NULL, &status);
             if (status != CL_SUCCESS){
               fprintf(stderr, "Calling clCreteContext() failed: status %i\n", status);
               break;
             }
 
-            // Create command queue
-            // By default, use the 0th device from device list dev_ids
-            cldevid = dev_ids[id_dev_use];
-            queue = clCreateCommandQueue(context, cldevid, NULL, &status);
-            if (status != CL_SUCCESS){
-              fprintf(stderr, "Calling clCreateCommandQueue failed: status %i\n", status);
-              break;
-            }
-
-            // Okay, now GPU device is found and context, command queue successfully created.
-            found = 1;
+            // succeeded
+            status = 0;
 
           } while(0);
-
-          // Cleanup
-          if (platform_ids) delete [] (platform_ids);
-          if (dev_ids) delete [] (dev_ids);
-          platform_ids =  (cl_platform_id *) NULL;
-          dev_ids = (cl_device_id *) NULL;
-
-          if (found == 1) {
-            // Initialization succeeded.
-            // FIXME: throwing to stderr for now
-            fprintf(stderr, "Initializing OpenCL platform and devices succeeded\n");
-            err_status = 0;
-            break;
-          }
 
         } // for (id_pos = 0; id_pos < num_platforms; id_pos++)
 
       } while(0);
 
-      // Cleanup
-      if (platform_ids) delete [] (platform_ids);
-      if (dev_ids) delete [] (dev_ids);
-      if (err_status) {
+    } // create_context_from_pls
+
+    cl_command_queue CLbaseinfo::create_queue_from_context(
+      unsigned int id_dev_use, cl_device_id *dev_ids, cl_context context
+    ) {
+
+      cl_int status = -1;
+      cl_command_queue ret_queue = 0;
+
+      /*
+        5 create command queue
+      */
+
+      do {
+          if (!dev_ids) break; // Immediate jump
+          if (!context) break; // Immediate jump
+          // Create command queue
+          // By default, use the 0th device from device list dev_ids
+          LOG_DEBUG() << "Creating command queue.\n";
+          LOG_DEBUG() << "Using device id " << id_dev_use << " .\n";
+          cldevid = dev_ids[id_dev_use];
+          ret_queue = clCreateCommandQueue(context, cldevid, NULL, &status);
+          if (status != CL_SUCCESS){
+            fprintf(stderr, "Calling clCreateCommandQueue failed: status %i\n", status);
+            break;
+            } 
+        } while (0);
+
+      if (!ret_queue) {
         fprintf(stderr, "Initializing OpenCL platform or devices failed.\n");
       }
 
-      // set context and queue
-      clcontext = context;
-      clqueue = queue;
-
-    } // create_context_queue()
+      return ret_queue;
+    }
 
 
     void CLbaseinfo::cleanupcl(void) {
 
+
       if (clkernel) clReleaseKernel(clkernel);
       if (clprog) clReleaseProgram(clprog);
       if (clqueue) clReleaseCommandQueue(clqueue);
-      if (clcontext) clReleaseContext(clcontext);
 
-      clkernel = NULL;
-      clprog = NULL;
-      clqueue = NULL;
-      clcontext = NULL;
+
+      if (clcontext) clReleaseContext(clcontext);
+      if (cl_dev_ids) delete[] (cl_dev_ids);
+      if (cl_pl_ids) delete[] (cl_pl_ids);
+
+
+      clkernel = 0;
+      clprog = 0;
+      clqueue = 0;
+
+      clcontext = 0;
+
+      cl_pl_ids = 0;
+      cl_dev_ids = 0;
 
     } // cleanupcl()
 

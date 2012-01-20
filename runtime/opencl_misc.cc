@@ -32,7 +32,6 @@ namespace physis {
         strncpy(buf, argi, len);
         pos = buf + len;
 #if 0
-        sprintf(pos, "%s", ".cl");
 #else
         sprintf(pos, "%s", ".c");
 #endif
@@ -55,18 +54,6 @@ namespace physis {
       // Currently no header files are included in kernel code
 
 #if 0
-      char buf[BUFSIZE];
-      char *pos = NULL;
-
-      snprintf(buf, BUFSIZE, "%s", __FILE__);
-      pos = strrchr(buf, '/');
-      if (!pos) return ret;
-      *pos = 0;
-      pos = strrchr(buf, '/');
-      if (!pos) return ret;
-      *pos = 0;
-      ret = buf;
-      ret += "/include";
 #endif
 
       return ret;

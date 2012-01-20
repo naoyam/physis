@@ -63,15 +63,19 @@ SgBasicBlock *OpenCLTranslator::BuildRunBody(Run *run)
 //
 SgBasicBlock *OpenCLTranslator::block_setkernelarg(
     SgVariableDeclaration *argc_idx,
-    SgAssignInitializer *sginit
+    SgAssignInitializer *sginit,
+    SgType *sgtype
 )
 {
     // Initialize block
     SgBasicBlock *block_ret = sb::buildBasicBlock();
 
-    // long int j;
+    SgType *sgtype_j = sgtype;
+    if (!sgtype_j)
+      sgtype_j = sb::buildLongType();
+    // TYPE j; (TYPE: default: Long)
     SgVariableDeclaration *j_idx = 
-       sb::buildVariableDeclaration("j", sb::buildLongType(), NULL, block_ret);
+       sb::buildVariableDeclaration("j", sgtype_j, NULL, block_ret);
 #ifdef DEBUG_FIX_AST_APPEND
     si::appendStatement(j_idx, block_ret);
 #else
@@ -414,9 +418,23 @@ SgBasicBlock *OpenCLTranslator::GenerateRunLoopBody(
 
         // find s0.g (grid type)
         const SgInitializedNamePtrList &vars = member_decl->get_variables();
-        GridType *gt = tx_->findGridType(vars[0]->get_type());
-        if (!gt) continue;
+        SgType *member_type = vars[0]->get_type();
+        GridType *gt = tx_->findGridType(member_type);
+        if (!gt) {
+          if (Domain::isDomainType(member_type)) 
+            continue; // Domain type already done
 
+          // Add normal type
+          si::appendStatement(
+            block_setkernelarg(
+              argc_idx, sb::buildAssignInitializer(arg_sg), member_type
+                ),
+            loop_body);
+          continue; // Done
+        }
+
+
+         // Handle grid type
         // Dimension
         int num_dim = sm->getNumDim();
         int pos_dim;
@@ -553,7 +571,11 @@ SgBasicBlock *OpenCLTranslator::GenerateRunLoopBody(
                   sb::buildArrowExp(arg_sg, sb::buildVarRefExp("gridattr"))
                 )));
 #endif
-        } // 
+        } //
+
+        // skip index
+        member++;
+ 
       } // FOREACH(member, members.begin(), members.end())
     }
 

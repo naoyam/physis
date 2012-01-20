@@ -61,6 +61,7 @@ namespace physis {
         virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
 
 
+      public:
         virtual SgVariableDeclaration *generate2DLocalsize(
             std::string name_var,
             SgExpression *block_dimx, SgExpression *block_dimy,
@@ -72,16 +73,22 @@ namespace physis {
             SgScopeStatement *scope);
 
 
+      protected:
         virtual SgBasicBlock *BuildRunBody(Run *run);
+      public:
         virtual SgBasicBlock *block_setkernelarg(
             SgVariableDeclaration *argc_idx,
-            SgAssignInitializer *sginit);
+            SgAssignInitializer *sginit,
+            SgType *sgtype = 0);
+      protected:
         virtual SgBasicBlock *GenerateRunLoopBody(
                   Run *run,
                   SgScopeStatement *outer_block);
+      public:
         virtual SgExpression *BuildBlockDimX();
         virtual SgExpression *BuildBlockDimY();
         virtual SgExpression *BuildBlockDimZ();
+      protected:
         virtual SgType *BuildOnDeviceGridType(GridType *gt);
 
 
@@ -120,6 +127,7 @@ namespace physis {
         virtual std::string name_var_gridptr(std::string oldname) { return "__PS_" + oldname + "_buf"; };
         virtual std::string name_var_gridattr(int offset) { return name_var_grid(offset, "attr"); };
         virtual std::string name_var_gridattr(std::string oldname) { return "__PS_" + oldname + "_attr"; };
+      public:
         virtual std::string name_new_kernel(std::string oldname) { return "__PS_opencl_" + oldname; };
 
     }; // class OpenCLTranslator: public ReferenceTranslator 

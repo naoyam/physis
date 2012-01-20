@@ -133,6 +133,9 @@ void BufferHost::Copyin(const void *buf, const IntArray &offset,
 
 void BufferHost::Copyout(void *buf, const IntArray &offset,
                          const IntArray &s) {
+  LOG_INFO() << "offset, s, size() :" << offset << " " <<
+    s << " " << size() << "\n";
+  LOG_INFO() << "offset + s: " << offset + s << "\n";
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -175,6 +178,8 @@ void BufferHost::MPISend(int dst, MPI_Comm comm, const IntArray &offset,
 
 void BufferHost::MPIIsend(int dst, MPI_Comm comm, MPI_Request *req,
                           const IntArray &offset, const IntArray &s) {
+
+  LOG_DEBUG() << "offset, s, size() " << offset << " " << s << " " << size() << "\n";
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);

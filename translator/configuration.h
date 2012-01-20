@@ -21,12 +21,14 @@ class Configuration: public pu::Configuration {
   enum ConfigKey {
     CUDA_PRE_CALC_GRID_ADDRESS,
     CUDA_BLOCK_SIZE,
+    OPENCL_BLOCK_SIZE,
     MPI_OVERLAP,
     MULTISTREAM_BOUNDARY};
   Configuration() {
     AddKey(CUDA_PRE_CALC_GRID_ADDRESS,
            "CUDA_PRE_CALC_GRID_ADDRESS");
     AddKey(CUDA_BLOCK_SIZE, "CUDA_BLOCK_SIZE");
+    AddKey(OPENCL_BLOCK_SIZE, "OPENCL_BLOCK_SIZE");
     AddKey(MPI_OVERLAP, "MPI_OVERLAP");
     AddKey(MULTISTREAM_BOUNDARY, "MULTISTREAM_BOUNDARY");    
   }

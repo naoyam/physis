@@ -19,6 +19,8 @@
 #include "physis/physis_mpi_cuda.h"
 #elif defined(PHYSIS_OPENCL)
 #include "physis/physis_opencl.h"
+#elif defined(PHYSIS_MPI_OPENCL)
+#include "physis/physis_mpi_opencl.h"
 #endif
 
 #if defined(PHYSIS_USER)
