@@ -66,7 +66,8 @@ SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
                                      StencilRange &sr,
                                      SgScopeStatement *scope,
                                      SgExpression *reuse,
-                                     SgExpression *overlap) {
+                                     SgExpression *overlap,
+                                     bool is_periodic) {
   SgFunctionSymbol *load_neighbor_func
       = si::lookupFunctionSymbolInParentScopes("__PSLoadNeighbor");
   IntVector fw, bw;
@@ -81,7 +82,8 @@ SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
                            sb::buildVarRefExp(fw_decl),
                            sb::buildVarRefExp(bw_decl),
                            sb::buildIntVal(diag_needed),
-                           reuse, overlap);
+                           reuse, overlap,
+                           sb::buildIntVal(is_periodic));
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(load_neighbor_func,
                                                    load_neighbor_args);
   return fc;

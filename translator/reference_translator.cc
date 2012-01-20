@@ -145,7 +145,10 @@ SgExprListExp *ReferenceTranslator::generateNewArg(
                              sb::buildIntVal(gt->getNumDim()),
                              sb::buildVarRefExp(dim_decl),
                              sb::buildBoolValExp(false));
-#endif  
+#endif
+  //SgExpression *attr = g->BuildAttributeExpr();
+  //if (!attr) attr = sb::buildIntVal(0);
+  //si::appendExpression(new_args, attr);
   appendNewArgExtra(new_args, g);
   return new_args;
 }
@@ -205,6 +208,8 @@ void ReferenceTranslator::translateNew(SgFunctionCallExp *node,
 SgExpression *ReferenceTranslator::buildOffset(SgInitializedName *gv,
                                                SgScopeStatement *scope,
                                                int numDim,
+                                               const StencilIndexList *sil,
+                                               bool is_periodic,
                                                SgExpressionPtrList &args) {
   /*
     if (3d)
@@ -216,16 +221,28 @@ SgExpression *ReferenceTranslator::buildOffset(SgInitializedName *gv,
   */
 
   SgExpression *offset = NULL;
-  SgTreeCopy ch;
-  for (int i = 0; i < numDim; i++) {
-    SgExpression *dim_offset = isSgExpression(args[i]->copy(ch));
-    for (int j = 0; j < i; j++) {
-      SgExprListExp *arg =
-          sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(), scope),
-                               sb::buildIntVal(j));
-      dim_offset =
-          sb::buildMultiplyOp(dim_offset,
-                              sb::buildFunctionCallExp(grid_dim_get_func_, arg));
+  for (int i = 1; i <= numDim; i++) {
+    SgExpression *dim_offset = si::copyExpression(args[i-1]);
+    if (is_periodic) {
+      const StencilIndex &si = sil->at(i-1);
+      // si.dim is assumed to be equal to i, i.e., the i'th index
+      // variable is always used for the i'th index when accessing
+      // grids. This assumption is made to simplify the implementation
+      // of MPI versions, and is actually possible to be relaxed in
+      // shared-memory verions such as reference and cuda. Here we
+      // assume si.dim can actually be different from i.
+      if (si.dim != i || si.offset != 0) {
+        dim_offset = sb::buildModOp(
+            sb::buildAddOp(
+                dim_offset,
+                BuildGridDim(gv->get_name(), scope, i)),
+            BuildGridDim(gv->get_name(), scope, i));
+      }
+    }
+    for (int j = 1; j < i; j++) {
+      dim_offset = sb::buildMultiplyOp(dim_offset,
+                                       BuildGridDim(gv->get_name(),
+                                                    scope, j));
     }
     if (offset) {
       offset = sb::buildAddOp(offset, dim_offset);
@@ -236,10 +253,10 @@ SgExpression *ReferenceTranslator::buildOffset(SgInitializedName *gv,
   return offset;
 }
 
-
 void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
-                                       bool isKernel) {
+                                       bool is_kernel,
+                                       bool is_periodic) {
   /*
     (type*)(g->p0)[offset]
   */
@@ -247,8 +264,9 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgScopeStatement *scope = getContainingScopeStatement(node);
-  SgExpression *offset = buildOffset(gv, scope, nd,
-                                     node->get_args()->get_expressions());
+  SgExpression *offset = buildOffset(
+      gv, scope, nd, tx_->findStencilIndex(node), is_periodic,
+      node->get_args()->get_expressions());
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpression *p0 =
       sb::buildArrowExp(g, sb::buildVarRefExp("p0",
@@ -274,7 +292,7 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
   }
 
   SgExpression *offset = buildOffset(gv, getContainingScopeStatement(node),
-                                     nd, args);
+                                     nd, NULL, false, args);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(),
                                       getContainingScopeStatement(node));
 #if defined(AUTO_DOUBLE_BUFFERING)

@@ -63,7 +63,9 @@ class Translator: public RoseASTTraversal {
   string target_specific_macro_;
 
   virtual void buildGridDecl();
-
+  virtual SgFunctionCallExp *BuildGridDim(
+      const SgName &grid_name,
+      SgScopeStatement *scope, int dim);
   virtual void visit(SgClassDeclaration *node) {}
   virtual void visit(SgFunctionCallExp *node);
   virtual void visit(SgFunctionDeclaration *node);
@@ -73,19 +75,22 @@ class Translator: public RoseASTTraversal {
                             GridType *gt) {}
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel) {}
+                            bool isKernel, bool is_periodic) {}
   // Returns true if translation is done. If this function returns
   // false, translateGet is used.
   virtual bool translateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv) {
     return false;
   }
-  // Returns true if translation is done. If this function returns
-  // false, translateGet is used.  
+  //! Returns true if translation is done.
+  /*!
+    If this function returns false, translateGet is used.
+  */
   virtual bool translateGetKernel(SgFunctionCallExp *node,
-                                  SgInitializedName *gv) {
+                                  SgInitializedName *gv,
+                                  bool is_periodic) {
     return false;
-  } 
+  }
   virtual void translateEmit(SgFunctionCallExp *node,
                              SgInitializedName *gv) {}
   virtual void translateSet(SgFunctionCallExp *node,

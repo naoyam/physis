@@ -1139,7 +1139,8 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
 }
 
 bool MPICUDATranslator::translateGetKernel(SgFunctionCallExp *node,
-                                           SgInitializedName *gv) {
+                                           SgInitializedName *gv,
+                                           bool is_periodic) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
 

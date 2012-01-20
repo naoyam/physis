@@ -140,7 +140,9 @@ extern "C" {
   }
 
   enum PS_GRID_ATTRIBUTE {
-    PS_GRID_PERIODIC = 1 << 0
+    // just a dummy constant to avoid compile errors on empty enum
+    // declarations
+    PS_GRID_ATTRIBUTE_DUMMY = 1 << 0 
   };
   
 #define INVALID_GRID (NULL)

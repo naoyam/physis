@@ -287,8 +287,8 @@ extern "C" {
   __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
-                              const PSVectorInt global_offset,
-                              int attr) {
+                              int attr,
+                              const PSVectorInt global_offset) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
@@ -466,11 +466,12 @@ extern "C" {
   void __PSLoadNeighbor(__PSGridMPI *g,
                         const PSVectorInt halo_fw_width,
                         const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                        int diagonal, int reuse, int overlap,
+                        int periodic) {
     if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
     GridMPI *gm = (GridMPI*)g;
     gs->LoadNeighbor(gm, IntArray(halo_fw_width), IntArray(halo_bw_width),
-                     (bool)diagonal, reuse);
+                     (bool)diagonal, reuse, periodic);
     return;
   }
 

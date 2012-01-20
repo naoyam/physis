@@ -465,11 +465,11 @@ GridSpaceMPI::GridSpaceMPI(int num_dims, const IntArray &global_size,
   for (int i = 0; i < num_dims_; ++i) {
     IntArray neighbor = my_idx_; // Usually {0, 0, my_rank_}
     neighbor[i] += 1;
-    // wrap around
+    // wrap around for periodic boundary access
     neighbor[i] %= proc_size_[i];
     fw_neighbors_[i] = GetProcessRank(neighbor);
     neighbor[i] = my_idx_[i] - 1;
-    // wrap around     
+    // wrap around for periodic boundary access     
     if (neighbor[i] < 0) {
       neighbor[i] = (neighbor[i] + proc_size_[i]) % proc_size_[i];
     }
@@ -533,7 +533,8 @@ GridMPI *GridSpaceMPI::CreateGrid(PSType type, int elm_size,
 // Note: width is unsigned. 
 void GridSpaceMPI::ExchangeBoundariesAsync(
     GridMPI *grid, int dim, unsigned halo_fw_width, unsigned halo_bw_width,
-    bool diagonal, std::vector<MPI_Request> &requests) const {
+    bool diagonal, bool periodic,
+    std::vector<MPI_Request> &requests) const {
   
   if (grid->empty_) return;
   
@@ -544,11 +545,18 @@ void GridSpaceMPI::ExchangeBoundariesAsync(
       * grid->elm_size_;
   ssize_t bw_size = grid->CalcHaloSize(dim, halo_bw_width, diagonal)
       * grid->elm_size_;
+
+  LOG_DEBUG() << "Periodic?: " << periodic << "\n";
+
+  /*
+    Send and receive ordering must match. First get the halo for the
+    forward access, and then the halo for the backward access.
+   */
   
   if (halo_fw_width > 0 &&
-      grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim]) {
-    PSAssert(grid->local_offset_[dim] + grid->local_size_[dim] + halo_fw_width
-             <= grid->size_[dim]);
+      (periodic ||
+       grid->local_offset_[dim] + grid->local_size_[dim]
+       < grid->size_[dim])) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << fw_size
                 << " bytes for fw access from " << fw_peer << "\n";
@@ -568,9 +576,9 @@ void GridSpaceMPI::ExchangeBoundariesAsync(
     grid->halo_fw_width_[dim] = 0;
     grid->halo_fw_size_[dim].assign(0);
   }
-  
-  if (halo_bw_width > 0 && grid->local_offset_[dim] > 0) {
-    PSAssert(grid->local_offset_[dim] >= halo_bw_width);
+
+  if (halo_bw_width > 0 &&
+      (periodic || grid->local_offset_[dim] > 0)) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << bw_size
                 << " bytes for bw access from " << bw_peer << "\n";
@@ -591,20 +599,9 @@ void GridSpaceMPI::ExchangeBoundariesAsync(
     grid->halo_bw_size_[dim].assign(0);
   }
 
-  // Sends out the halo for backward access
-  if (halo_bw_width > 0 &&
-      grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim]) {
-    LOG_DEBUG() << "[" << my_rank_ << "] "
-                << "Sending halo of " << bw_size << " bytes"
-                << " for bw access to " << fw_peer << "\n";
-    grid->CopyoutHalo(dim, halo_bw_width, false, diagonal);
-    MPI_Request req;
-    CHECK_MPI(PS_MPI_Isend(grid->halo_self_bw_[dim], bw_size, MPI_BYTE,
-                        fw_peer, tag, comm_, &req));
-  }
-
   // Sends out the halo for forward access
-  if (halo_fw_width > 0 && grid->local_offset_[dim] > 0) {
+  if (halo_fw_width > 0 &&
+      (periodic || grid->local_offset_[dim] > 0)) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Sending halo of " << fw_size << " bytes"
                 << " for fw access to " << bw_peer << "\n";
@@ -614,6 +611,20 @@ void GridSpaceMPI::ExchangeBoundariesAsync(
                         bw_peer, tag, comm_, &req));
   }
 
+   // Sends out the halo for backward access
+  if (halo_bw_width > 0 &&
+      (periodic || 
+       grid->local_offset_[dim] + grid->local_size_[dim]
+       < grid->size_[dim])) {
+    LOG_DEBUG() << "[" << my_rank_ << "] "
+                << "Sending halo of " << bw_size << " bytes"
+                << " for bw access to " << fw_peer << "\n";
+    grid->CopyoutHalo(dim, halo_bw_width, false, diagonal);
+    MPI_Request req;
+    CHECK_MPI(PS_MPI_Isend(grid->halo_self_bw_[dim], bw_size, MPI_BYTE,
+                        fw_peer, tag, comm_, &req));
+  }
+
   return;
 }
 
@@ -621,14 +632,17 @@ void GridSpaceMPI::ExchangeBoundaries(GridMPI *grid,
                                       int dim,
                                       unsigned halo_fw_width,
                                       unsigned halo_bw_width,
-                                      bool diagonal) const {
+                                      bool diagonal,
+                                      bool periodic) const {
   std::vector<MPI_Request> requests;
   ExchangeBoundariesAsync(grid, dim, halo_fw_width,
-                          halo_bw_width, diagonal, requests);
+                          halo_bw_width, diagonal,
+                          periodic, requests);
   FOREACH (it, requests.begin(), requests.end()) {
     MPI_Request *req = &(*it);
     CHECK_MPI(MPI_Wait(req, MPI_STATUS_IGNORE));
   }
+  
   return;
 }
 #if 0
@@ -648,16 +662,19 @@ void GridSpaceMPI::ExchangeBoundariesAsync(
   for (int i = g->num_dims_ - 1; i >= 0; --i) {
     LOG_DEBUG() << "Exchanging dimension " << i << " data\n";
     ExchangeBoundariesAsync(*g, i, halo_fw_width[i],
-                            halo_bw_width[i], diagonal, requests);
+                            halo_bw_width[i], diagonal,
+                            periodic,requests);
   }
   return;
 }
 #endif
 
+// TODO: reuse is used?
 void GridSpaceMPI::ExchangeBoundaries(int grid_id,
                                       const IntArray &halo_fw_width,
                                       const IntArray &halo_bw_width,
                                       bool diagonal,
+                                      bool periodic, 
                                       bool reuse) const {
   LOG_DEBUG() << "GridSpaceMPI::ExchangeBoundaries\n";
 
@@ -667,9 +684,8 @@ void GridSpaceMPI::ExchangeBoundaries(int grid_id,
     PSAssert(halo_fw_width[i] >=0);
     PSAssert(halo_bw_width[i] >=0);
     ExchangeBoundaries(g, i, halo_fw_width[i],
-                       halo_bw_width[i], diagonal);
+                       halo_bw_width[i], diagonal, periodic);
   }
-  
   return;
 }
 
@@ -961,11 +977,14 @@ GridMPI *GridSpaceMPI::LoadNeighbor(GridMPI *g,
                                     const IntArray &halo_bw_width,
                                     bool diagonal,
                                     bool reuse,
+                                    bool periodic,
                                     const bool *fw_enabled,
                                     const bool *bw_enabled) {
   int nd = g->num_dims();
 
-  // check whether exchangeNeighbor can be used
+  // Check whether exchangeNeighbor can be used.
+  // TODO: What stencil is not possible to handle with
+  // exchangeNeighbor? Does this actually happen?
   bool overlap = true;
   for (int i = 0; i < nd; ++i) {
     if (halo_fw_width[i] + min_partition_[i] > 0 ||
@@ -983,6 +1002,10 @@ GridMPI *GridSpaceMPI::LoadNeighbor(GridMPI *g,
     }
   }
 
+  // Don't know why overlap can be negative. Assume it's true for
+  // now. 
+  PSAssert(overlap);
+
   if (overlap) {
     // Use ExchangeBoundaries
 
@@ -999,10 +1022,12 @@ GridMPI *GridSpaceMPI::LoadNeighbor(GridMPI *g,
     IntArray halo_bw_width_tmp(halo_bw_width);
     halo_bw_width_tmp.SetNoLessThan(0);
     ExchangeBoundaries(g->id(), halo_fw_width_tmp,
-                       halo_bw_width_tmp, diagonal, reuse);
+                       halo_bw_width_tmp, diagonal, periodic, reuse);
     return NULL;
   } else {
     // Use LoadSubgrid
+    // NOTE: periodic is not supported.
+    PSAssert(!periodic);
     IntArray grid_offset(g->local_offset());
     grid_offset = grid_offset - halo_bw_width;
     grid_offset.SetNoLessThan(0);

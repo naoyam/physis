@@ -73,6 +73,11 @@ class GridType {
   getGridVarUsedInFuncCall(SgFunctionCallExp *call);
   static bool isGridCall(SgFunctionCallExp *ce);
   SgExpression *BuildElementTypeExpr();
+  
+  static const string get_name;
+  static const string get_periodic_name;
+  static const string emit_name;
+  static const string set_name;  
  private:
   void findElementType();
 };

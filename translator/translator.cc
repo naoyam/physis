@@ -115,6 +115,18 @@ void Translator::buildGridDecl() {
   }
 }
 
+SgFunctionCallExp *Translator::BuildGridDim(
+    const SgName &grid_name,
+    SgScopeStatement *scope, int dim) {
+  SgExprListExp *arg =
+      sb::buildExprListExp(
+          sb::buildVarRefExp(grid_name, scope),
+          sb::buildIntVal(dim-1));
+  SgFunctionCallExp *get_dim =
+      sb::buildFunctionCallExp(grid_dim_get_func_, arg);
+  return get_dim;
+}
+
 void Translator::visit(SgFunctionDeclaration *node) {
   if (tx_->isKernel(node)) {
     LOG_DEBUG() << "translate kernel declaration\n";
@@ -136,31 +148,41 @@ void Translator::visit(SgFunctionCallExp *node) {
     SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(node);
     assert(gv);
     string methodName = tx_->getGridFuncName(node);
-    if (methodName == "get") {
-      LOG_DEBUG() << "translating get\n";
-      node->addNewAttribute(GridCallAttribute::name,
-                            new GridCallAttribute(gv,
-                                                  GridCallAttribute::GET));
+    if (methodName == GridType::get_name ||
+        methodName == GridType::get_periodic_name) {
+      LOG_DEBUG() << "translating " << methodName << "\n";
+      bool is_periodic = methodName == "get_periodic";
+      node->addNewAttribute(
+          GridCallAttribute::name,
+          new GridCallAttribute(
+              gv,
+              (is_periodic) ? GridCallAttribute::GET_PERIODIC :
+              GridCallAttribute::GET));
       SgFunctionDeclaration *caller = getContainingFunction(node);
       if (tx_->isKernel(caller)) {
         LOG_DEBUG() << "Translating grid get appearing in kernel\n";
       } else {
         LOG_DEBUG() << "Translating grid get appearing in host\n";
+        if (is_periodic) {
+          LOG_ERROR() << "Get periodic in host not allowed.\n";
+          PSAbort(1);
+        }
       }
       // Call getkernel first if it's used in kernel; if true
       // returned, done. otherwise, try gethost if it's used in host;
       // the final fallback is translateget.
-      if (!((tx_->isKernel(caller) && translateGetKernel(node, gv)) ||
+      if (!((tx_->isKernel(caller) &&
+             translateGetKernel(node, gv, is_periodic)) ||
             (!tx_->isKernel(caller) && translateGetHost(node, gv)))) {
-        translateGet(node, gv, tx_->isKernel(caller));
+        translateGet(node, gv, tx_->isKernel(caller), is_periodic);
       }
-    } else if (methodName == "emit") {
+    } else if (methodName == GridType::emit_name) {
       LOG_DEBUG() << "translating emit\n";
       node->addNewAttribute(GridCallAttribute::name,
                             new GridCallAttribute(
                                 gv, GridCallAttribute::EMIT));
       translateEmit(node, gv);
-    } else if (methodName == "set") {
+    } else if (methodName == GridType::set_name) {
       LOG_DEBUG() << "translating set\n";
       translateSet(node, gv);
     } else {
