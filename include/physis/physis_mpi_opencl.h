@@ -44,9 +44,7 @@ extern "C" {
     int local_size[3];
     int local_offset[3];     
     int pitch;
-#if 0
     void *halo[3][2];
-#endif
     int halo_width[3][2];        
     int diag;    
   } __PSGrid3DDev;
@@ -57,9 +55,7 @@ extern "C" {
     int local_size[3];
     int local_offset[3]; 
     int pitch;
-#if 0
     float *halo[3][2];  
-#endif  
     int halo_width[3][2];    
     int diag;    
   } __PSGrid3DFloatDev;
@@ -70,9 +66,7 @@ extern "C" {
     int local_size[3];
     int local_offset[3]; 
     int pitch;
-#if 0
     double *halo[3][2];
-#endif  
     int halo_width[3][2];
     int diag;
   } __PSGrid3DDoubleDev;
@@ -154,10 +148,14 @@ enum CL_STREAM_FLAG {
 
   extern void __PSSetKernel(
       const char *kernelname,
-      enum CL_STREAM_FLAG strm_flg, unsigned int strm_num);
+      enum CL_STREAM_FLAG strm_flg, unsigned int strm_num,
+      const char *header_path);
   extern void __PSSetKernelArg(unsigned int arg_index, size_t arg_size, const void *arg_val);
   extern void __PSSetKernelArgCLMem(unsigned int arg_index, const void *arg_val);
-  extern void __PSRunKernel(size_t *globalsize, size_t *localsize);  
+  extern void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g);
+  extern void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom);
+  extern void __PSRunKernel(size_t *globalsize, size_t *localsize);
+  extern void __PS_CL_ThreadSynchronize(void);
   
 
 #ifdef __cplusplus
