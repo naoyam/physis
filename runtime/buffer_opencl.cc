@@ -195,8 +195,54 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
       0, GetLinearSize(size), buf.Get(),
       0, NULL, NULL);
   if (status != CL_SUCCESS) {
-    LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
+      LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
   }
+
+  // And block
+  clFinish(buf_queue_);
+}
+
+void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
+                            const IntArray &size, const IntArray &total_size) {
+  if ((size[1] == 0) && (size[2] == 0)) {
+    Copyout(buf, offset, size);
+    return;
+  }
+
+  buf.EnsureCapacity(num_dims_, elm_size_, size);
+
+  // CUDA code waits here until stream completes all operations
+  CLbaseinfo *clinfo_use = stream_clinfo();
+  if (!clinfo_use) {
+    LOG_DEBUG() << "Currently stream not set\n";
+    clinfo_use = base_clinfo();
+  }
+  PSAssert(clinfo_use);
+  cl_command_queue buf_queue_ = clinfo_use->get_queue();
+  PSAssert(buf_queue_ != 0);
+
+  int zord = 0;
+  int yord = 0;
+  char *ptr_pos = (char *)(buf.Get());
+  size_t size_read_once = size[0] * elm_size_;
+  for (zord = offset[2]; zord < offset[2] + size[2]; zord++){
+    for (yord = offset[1]; yord < offset[1] + size[1]; yord++) {
+
+      int offset_pos = offset[0] + yord * total_size[0]
+          + zord * total_size[0] * total_size[1];
+      offset_pos *= elm_size_;
+      cl_int status = clEnqueueReadBuffer(
+        buf_queue_, Get_buf_mem(), CL_FALSE, /* Once no block */
+        offset_pos, size_read_once, ptr_pos,
+        0, NULL, NULL);
+      ptr_pos += size_read_once; /* DONT FORGET TO SHIFT BUFFER!! */
+      if (status != CL_SUCCESS) {
+        LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed"
+          << " for yord, zord:" << yord << ", " << zord <<"\n";
+      } // if (status != CL_SUCCESS)
+    } // for (yord = offset[1]; yord < offset[1] + size[1]; yord++)
+  } // for (zord = offset[2]; zord < offset[2] + size[2]; zord++)
+
   // And block
   clFinish(buf_queue_);
 }

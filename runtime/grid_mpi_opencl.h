@@ -121,12 +121,12 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                     const IntArray &global_offset,
                                     int attr);
   virtual bool SendBoundaries(GridMPIOpenCL3D *grid, int dim, unsigned width,
-                              bool forward, bool diagonal,
+                              bool forward, bool diagonal, bool periodic,
                               ssize_t halo_size,
                               performance::DataCopyProfile &prof,
                               MPI_Request &req) const;
   virtual bool RecvBoundaries(GridMPIOpenCL3D *grid, int dim, unsigned width,
-                              bool forward, bool diagonal,
+                              bool forward, bool diagonal, bool periodic,
                               ssize_t halo_size,
                               performance::DataCopyProfile &prof) const;
   
@@ -134,23 +134,27 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                   int dim,
                                   unsigned halo_fw_width,
                                   unsigned halo_bw_width,
-                                  bool diagonal) const;
+                                  bool diagonal,
+                                  bool periodic) const;
   virtual void ExchangeBoundariesStage1(GridMPI *grid,
                                         int dim,
                                         unsigned halo_fw_width,
                                         unsigned halo_bw_width,
-                                        bool diagonal) const;
+                                        bool diagonal,
+                                        bool periodic) const;
   virtual void ExchangeBoundariesStage2(GridMPI *grid,
                                         int dim,
                                         unsigned halo_fw_width,
                                         unsigned halo_bw_width,
-                                        bool diagonal) const;
+                                        bool diagonal,
+                                        bool periodic) const;
 
   virtual GridMPI *LoadNeighbor(GridMPI *g,
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 CLbaseinfo *cl_stream=0);
@@ -158,7 +162,8 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 CLbaseinfo *cl_stream = 0);
@@ -166,7 +171,8 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 CLbaseinfo *cl_stream=0);

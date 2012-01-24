@@ -12,6 +12,8 @@ SgExpression *OpenCLTranslator::buildOffset(
     SgInitializedName *gv,
     SgScopeStatement *scope,
     int numDim,
+    const StencilIndexList *sil,
+    bool is_periodic,
     SgExpressionPtrList &args)
 {
 
@@ -36,6 +38,27 @@ SgExpression *OpenCLTranslator::buildOffset(
   for (int i = 0; i < numDim; i++) {
     // z-4, for example
     SgExpression *dim_offset = si::copyExpression(args[i]);
+
+    if (is_periodic) {
+      const StencilIndex &si = sil->at(i);
+      // si.dim is assumed to be equal to i+1, i.e., the i'th index
+      // variable is always used for the i'th index when accessing
+      // grids. This assumption is made to simplify the implementation
+      // of MPI versions, and is actually possible to be relaxed in
+      // shared-memory verions such as reference and cuda. Here we
+      // assume si.dim can actually be different from i.
+      if (si.dim != i+1 || si.offset != 0) {
+        std::string varname = name_var_grid_dim(gv->get_name().getString(), i);
+        dim_offset = sb::buildModOp(
+            sb::buildAddOp(
+              dim_offset,
+              sb::buildOpaqueVarRefExp(varname, scope)
+              ),
+            sb::buildOpaqueVarRefExp(varname, scope)
+            );
+      }
+    }
+
 
     for (int j = 0; j < i; j++) { // j is the dimension
       // __PS_ga_dim_x
@@ -64,7 +87,7 @@ SgExpression *OpenCLTranslator::buildOffset(
 void OpenCLTranslator::translateGet(
     SgFunctionCallExp *node,
     SgInitializedName *gv,
-    bool isKernel
+    bool isKernel, bool is_periodic
 )
 {
   /*
@@ -78,6 +101,7 @@ void OpenCLTranslator::translateGet(
   SgScopeStatement *scope = getContainingScopeStatement(node);
   // offset: x + y * __PS_ga_dim_x + z * __PS_ga_dim_x * __PS_ga_dim_y
   SgExpression *offset = buildOffset(gv, scope, nd,
+                                     tx_->findStencilIndex(node), is_periodic,
                                      node->get_args()->get_expressions());
 
   // p0: __PS_ga_buf
@@ -121,7 +145,9 @@ void OpenCLTranslator::translateEmit(SgFunctionCallExp *node,
   // The following offset should return
   // x + y * __PS_ga_dim_x + z * __PS_ga_dim_x * __PS_ga_dim_y, for example
   SgExpression *offset = buildOffset(gv, scope,
-                                     nd, args);
+                                     nd,
+                                     NULL, false,
+                                     args);
 
   // __PS_ga_buf
   std::string newargname = name_var_gridptr(gv->get_name().getString());

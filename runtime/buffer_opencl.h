@@ -95,6 +95,8 @@ class BufferOpenCLDev: public Buffer {
                        const IntArray &size);                       
   virtual void Copyout(BufferOpenCLHost &buf, const IntArray &offset,
                        const IntArray &size);                       
+  virtual void Copyout(BufferOpenCLHost &buf, const IntArray &offset,
+                       const IntArray &size, const IntArray &total_size);                       
   virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
                        const IntArray &size);
   virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,

@@ -362,6 +362,7 @@ void BufferCUDADev3D::Copyin(const BufferHost &buf, const IntArray &offset,
 void BufferCUDADev3D::Copyin(const BufferCUDAHost &buf,
                              const IntArray &offset,
                              const IntArray &size) {
+  // TODO: this must be refined.  
   EnsureCapacity(offset+size);
   cudaMemcpy3DParms parms = {0};
   parms.srcPtr = make_cudaPitchedPtr(

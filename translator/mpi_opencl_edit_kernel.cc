@@ -133,8 +133,11 @@ void MPIOpenCLTranslator::translateKernelDeclaration(
 }
 
 
-bool MPIOpenCLTranslator::translateGetKernel(SgFunctionCallExp *node,
-                                           SgInitializedName *gv) {
+bool MPIOpenCLTranslator::translateGetKernel(
+          SgFunctionCallExp *node,
+          SgInitializedName *gv,
+          bool is_periodic
+) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
 

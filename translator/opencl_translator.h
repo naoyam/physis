@@ -53,11 +53,13 @@ namespace physis {
                     SgInitializedName *gv,
                     SgScopeStatement *scope,
                     int numDim,
+                    const StencilIndexList *sil,
+                    bool is_periodic,
                     SgExpressionPtrList &args);
         virtual void translateGet(
                   SgFunctionCallExp *node,
                   SgInitializedName *gv,
-                  bool isKernel);
+                  bool isKernel, bool is_periodic);
         virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
 
 

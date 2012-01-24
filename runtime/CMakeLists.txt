@@ -71,6 +71,7 @@ if (OPENCL_ENABLED)
 endif()
 
 if (MPI_ENABLED AND OPENCL_ENABLED)
+  include_directories(${OPENCL_INCLUDE_PATH})
   add_library(physis_rt_mpi_opencl ${RUNTIME_COMMON_SRC}
       grid.cc grid_mpi.cc grid_util.cc rpc_mpi.cc mpi_wrapper.cc
       ${RUNTIME_OPENCL_COMMON_SRC}

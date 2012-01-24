@@ -248,7 +248,7 @@ function generate_translation_configurations_mpi_opencl()
 		# skip configurations with not all options enabled
 		if [ \( $i = 'true' -a $j = 'false' \)  \
 			-o \( $i = 'false' -a $j = 'true' \) ]; then
-		    true continue;
+		    continue;
 		fi
 		local c=config.mpi-opencl.$idx
 		idx=$(($idx + 1))
@@ -365,7 +365,7 @@ function compile()
 		return 0
 	    fi
 	    src_file="$src_file_base".c			
-	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_CFLAGS $CFLAGS &&
+	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include -I${OPENCL_INCLUDE_PATH} $MPI_CFLAGS $CFLAGS &&
 	    mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base"
 	    ;;
 	*)

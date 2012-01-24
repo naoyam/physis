@@ -244,7 +244,7 @@ void GridMPIOpenCL3D::CopyoutHalo(int dim, unsigned width, bool fw,
   BufferHost *halo_mpi_host = halo_self_mpi_[dim][fw_idx];
   halo_opencl_host->EnsureCapacity(linear_size);
   static_cast<BufferOpenCLDev3D*>(buffer())->Copyout(
-      *halo_opencl_host, halo_offset, halo_size);
+      *halo_opencl_host, halo_offset, halo_size, local_size_);
 
   // Next, copy out to the halo buffer from OpenCL pinned host memory
   halo_mpi_host->EnsureCapacity(CalcHaloSize(dim, width, diagonal));
@@ -509,13 +509,13 @@ GridMPIOpenCL3D *GridSpaceMPIOpenCL::CreateGrid(
 // Jut copy out halo from GPU memory
 void GridSpaceMPIOpenCL::ExchangeBoundariesStage1(
     GridMPI *g, int dim, unsigned halo_fw_width,
-    unsigned halo_bw_width, bool diagonal) const {
+    unsigned halo_bw_width, bool diagonal,
+    bool periodic ) const {
 
   GridMPIOpenCL3D *grid = static_cast<GridMPIOpenCL3D*>(g);
   if (grid->empty_) return;
 
-  bool is_periodic = grid->AttributeSet(PS_GRID_PERIODIC);
-  LOG_DEBUG() << "Periodic grid?: " << is_periodic << "\n";
+  LOG_DEBUG() << "Periodic grid?: " << periodic << "\n";
 
   DataCopyProfile *profs = find<int, DataCopyProfile*>(
       load_neighbor_prof_, g->id(), NULL);
@@ -525,7 +525,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage1(
   // Sends out the halo for backward access
 
   if (halo_bw_width > 0 &&
-      (is_periodic ||
+      (periodic ||
        grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
 #if defined(PS_VERBOSE)            
     LOG_DEBUG() << "Sending halo of " << bw_size << " elements"
@@ -538,7 +538,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage1(
   
   // Sends out the halo for forward access
   if (halo_fw_width > 0 &&
-      (is_periodic || grid->local_offset_[dim] > 0)) {
+      (periodic || grid->local_offset_[dim] > 0)) {
 #if defined(PS_VERBOSE)            
     LOG_DEBUG() << "Sending halo of " << fw_size << " elements"
                 << " for fw access to " << bw_peer << "\n";
@@ -555,7 +555,8 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage1(
 // Note: width is unsigned. 
 void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
     GridMPI *g, int dim, unsigned halo_fw_width,
-    unsigned halo_bw_width, bool diagonal) const {
+    unsigned halo_bw_width, bool diagonal,
+    bool periodic) const {
 
   GridMPIOpenCL3D *grid = static_cast<GridMPIOpenCL3D*>(g);
   if (grid->empty_) return;
@@ -564,8 +565,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
   int bw_peer = bw_neighbors_[dim];
   ssize_t fw_size = grid->CalcHaloSize(dim, halo_fw_width, diagonal);
   ssize_t bw_size = grid->CalcHaloSize(dim, halo_bw_width, diagonal);
-  bool is_periodic = grid->AttributeSet(PS_GRID_PERIODIC);
-  LOG_DEBUG() << "Periodic grid?: " << is_periodic << "\n";
+  LOG_DEBUG() << "Periodic grid?: " << periodic << "\n";
 
   DataCopyProfile *profs = find<int, DataCopyProfile*>(
       load_neighbor_prof_, g->id(), NULL);
@@ -579,7 +579,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
   MPI_Request req_fw;
   
   if (halo_bw_width > 0 &&
-      (is_periodic ||
+      (periodic ||
        grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
     st.Start();
     grid->halo_self_mpi_[dim][0]->MPIIsend(fw_peer, comm_, &req_bw,
@@ -590,7 +590,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
   
   // Sends out the halo for forward access
   if (halo_fw_width > 0 &&
-      (is_periodic || grid->local_offset_[dim] > 0)) {
+      (periodic || grid->local_offset_[dim] > 0)) {
     st.Start();        
     grid->halo_self_mpi_[dim][1]->MPIIsend(bw_peer, comm_, &req_fw,
                                            IntArray(), IntArray(fw_size));
@@ -599,12 +599,12 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
   }
 
   // Receiving halo for backward access
-  RecvBoundaries(grid, dim, halo_fw_width, false, diagonal,
-                 fw_size, prof_dwn);
+  RecvBoundaries(grid, dim, halo_bw_width, false, diagonal,
+                 periodic, bw_size, prof_dwn);
   
   // Receiving halo for forward access
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
-                 fw_size, prof_upw);
+                 periodic, fw_size, prof_upw);
 
   // Ensure the exchanges are done. Otherwise, the send buffers can be
   // overwritten by the next iteration.
@@ -618,6 +618,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
 bool GridSpaceMPIOpenCL::SendBoundaries(GridMPIOpenCL3D *grid, int dim,
                                       unsigned width,
                                       bool forward, bool diagonal,
+                                      bool periodic,
                                       ssize_t halo_size,
                                       DataCopyProfile &prof,
                                       MPI_Request &req) const {
@@ -628,7 +629,7 @@ bool GridSpaceMPIOpenCL::SendBoundaries(GridMPIOpenCL3D *grid, int dim,
 
   // Do nothing if this process is on the end of the dimension and
   // periodic boundary is not set.
-  if (!grid->AttributeSet(PS_GRID_PERIODIC)) {
+  if (!periodic) {
     if ((!forward &&
          grid->local_offset_[dim] + grid->local_size_[dim] == grid->size_[dim]) ||
         (forward && grid->local_offset_[dim] == 0)) {
@@ -665,11 +666,10 @@ bool GridSpaceMPIOpenCL::SendBoundaries(GridMPIOpenCL3D *grid, int dim,
 bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
                                       unsigned width,
                                       bool forward, bool diagonal,
-                                      ssize_t halo_size,
+                                      bool periodic, ssize_t halo_size,
                                       DataCopyProfile &prof) const {
   int peer = forward ? fw_neighbors_[dim] : bw_neighbors_[dim];
   int dir_idx = forward ? 1 : 0;
-  bool is_periodic = grid->AttributeSet(PS_GRID_PERIODIC);
   bool is_last_process =
       grid->local_offset_[dim] + grid->local_size_[dim]
       == grid->size_[dim];
@@ -677,7 +677,7 @@ bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
   Stopwatch st;
 
   if (width == 0 ||
-      (!is_periodic && ((forward && is_last_process) ||
+      (!periodic && ((forward && is_last_process) ||
                         (!forward && is_first_process)))) {
     if (forward) {
       grid->halo_fw_width_[dim] = 0;
@@ -690,7 +690,7 @@ bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
   }
 
 #if defined(PS_DEBUG)
-  if (!is_periodic) {
+  if (!periodic) {
     if( (forward && grid->local_offset_[dim] +
         grid->local_size_[dim] + width
          > grid->size_[dim]) ||
@@ -739,15 +739,14 @@ bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
 // Note: width is unsigned. 
 void GridSpaceMPIOpenCL::ExchangeBoundaries(
     GridMPI *g, int dim, unsigned halo_fw_width,
-    unsigned halo_bw_width, bool diagonal) const {
+    unsigned halo_bw_width, bool diagonal, bool periodic) const {
 
   GridMPIOpenCL3D *grid = static_cast<GridMPIOpenCL3D*>(g);
   if (grid->empty_) return;
 
   ssize_t fw_size = grid->CalcHaloSize(dim, halo_fw_width, diagonal);
   ssize_t bw_size = grid->CalcHaloSize(dim, halo_bw_width, diagonal);
-  bool is_periodic = grid->AttributeSet(PS_GRID_PERIODIC);
-  LOG_DEBUG() << "Periodic grid?: " << is_periodic << "\n";
+  LOG_DEBUG() << "Periodic grid?: " << periodic << "\n";
 
   DataCopyProfile *profs = find<int, DataCopyProfile*>(
       load_neighbor_prof_, g->id(), NULL);
@@ -758,20 +757,20 @@ void GridSpaceMPIOpenCL::ExchangeBoundaries(
   // Sends out the halo for backward access
   bool req_bw_active =
       SendBoundaries(grid, dim, halo_bw_width, false, diagonal,
-                     bw_size, prof_upw, req_bw);
+                     periodic, bw_size, prof_upw, req_bw);
   
   // Sends out the halo for forward access
   bool req_fw_active =
       SendBoundaries(grid, dim, halo_fw_width, true, diagonal,
-                     fw_size, prof_dwn, req_fw);
+                     periodic, fw_size, prof_dwn, req_fw);
 
   // Receiving halo for backward access
-  RecvBoundaries(grid, dim, halo_fw_width, false, diagonal,
-                 fw_size, prof_dwn);
+  RecvBoundaries(grid, dim, halo_bw_width, false, diagonal,
+                 periodic, bw_size, prof_dwn);
   
   // Receiving halo for forward access
   RecvBoundaries(grid, dim, halo_fw_width, true, diagonal,
-                 fw_size, prof_upw);
+                 periodic, fw_size, prof_upw);
 
   // Ensure the exchanges are done. Otherwise, the send buffers can be
   // overwritten by the next iteration.
@@ -882,7 +881,7 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighbor(
     GridMPI *g,
     const IntArray &halo_fw_width,
     const IntArray &halo_bw_width,
-    bool diagonal,  bool reuse,
+    bool diagonal,  bool reuse, bool periodic,
     const bool *fw_enabled,  const bool *bw_enabled,
     CLbaseinfo *cl_stream) {
   
@@ -890,7 +889,7 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighbor(
   GridMPIOpenCL3D *gmc = static_cast<GridMPIOpenCL3D*>(g);
   gmc->SetOpenCLinfo(cl_stream);
   GridMPI *rg = GridSpaceMPI::LoadNeighbor(g, halo_fw_width, halo_bw_width,
-                                           diagonal, reuse, fw_enabled,
+                                           diagonal, reuse, periodic, fw_enabled,
                                            bw_enabled);
   gmc->SetOpenCLinfo(0);
   return rg;
@@ -900,7 +899,7 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighborStage1(
     GridMPI *g,
     const IntArray &halo_fw_width,
     const IntArray &halo_bw_width,
-    bool diagonal,  bool reuse,
+    bool diagonal,  bool reuse, bool periodic,
     const bool *fw_enabled,  const bool *bw_enabled,
     CLbaseinfo *cl_stream)
 {
@@ -916,7 +915,8 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighborStage1(
   for (int i = g->num_dims_ - 2; i >= 0; --i) {  
     LOG_VERBOSE() << "Exchanging dimension " << i << " data\n";
     ExchangeBoundariesStage1(g, i, halo_fw_width[i],
-                             halo_bw_width[i], diagonal);
+                             halo_bw_width[i], diagonal,
+                             periodic);
   }
   gmc->SetOpenCLinfo(0);
   return NULL;
@@ -926,7 +926,7 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighborStage2(
     GridMPI *g,
     const IntArray &halo_fw_width,
     const IntArray &halo_bw_width,
-    bool diagonal,  bool reuse,
+    bool diagonal,  bool reuse, bool periodic,
     const bool *fw_enabled,  const bool *bw_enabled,
     CLbaseinfo *cl_stream) {
   
@@ -941,13 +941,13 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighborStage2(
   // Does not perform staging for the continuous dimension. 
   int i = g->num_dims_ - 1;
   ExchangeBoundaries(g, i, halo_fw_width[i],
-                     halo_bw_width[i], diagonal);
+                     halo_bw_width[i], diagonal, periodic);
 
   // For the non-continuous dimensions, finish the exchange steps 
   for (int i = g->num_dims_ - 2; i >= 0; --i) {
     LOG_VERBOSE() << "Exchanging dimension " << i << " data\n";
     ExchangeBoundariesStage2(g, i, halo_fw_width[i],
-                             halo_bw_width[i], diagonal);
+                             halo_bw_width[i], diagonal, periodic);
   }
   gmc->SetOpenCLinfo(0);
   return NULL;
