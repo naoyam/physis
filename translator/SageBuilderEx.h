@@ -52,7 +52,8 @@ enum CudaDimentionIdx {
 
 SgFunctionCallExp *buildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
-    const cudaFuncCache cache_config);
+    const cudaFuncCache cache_config,
+    SgScopeStatement *global_scope);
 
 SgVariableDeclaration *buildDim3Declaration(const SgName &name,
                                             SgExpression *dimx,

@@ -272,7 +272,8 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     // Set the SM on-chip memory to prefer the L1 cache
     SgFunctionCallExp *cache_config =
         sbx::buildCudaCallFuncSetCacheConfig(func_sym,
-                                             sbx::cudaFuncCachePreferL1);
+                                             sbx::cudaFuncCachePreferL1,
+                                             global_scope_);
     // Append invocation statement ahead of the loop
     si::appendStatement(sb::buildExprStatement(cache_config), outer_block);
 

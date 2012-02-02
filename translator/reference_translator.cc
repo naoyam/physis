@@ -752,7 +752,7 @@ void ReferenceTranslator::translateRun(SgFunctionCallExp *node,
       node->get_args()->get_expressions();
   int num_remaining_args = original_args.size();
   // if iteration count is not specified, add 1 to the arg list
-  if (!run->count()) {
+  if (!run->HasCount()) {
     si::appendExpression(args, sb::buildIntVal(1));
   } else {
     si::appendExpression(args, si::copyExpression(original_args.back()));

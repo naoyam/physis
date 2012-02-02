@@ -111,7 +111,7 @@ SgInitializedName *getInitializedName(SgVarRefExp *var);
 string generateUniqueName(SgScopeStatement *scope = NULL,
                           const string &prefix = "__v");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
-SgExpression *buildNULL();
+SgExpression *buildNULL(SgScopeStatement *global_scope);
 SgVariableDeclaration *buildVarDecl(const string &name,
                                     SgType *type,
                                     SgExpression *val,

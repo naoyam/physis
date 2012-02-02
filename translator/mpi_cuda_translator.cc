@@ -350,7 +350,7 @@ void MPICUDATranslator::ProcessStencilMap(
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  GenerateLoadRemoteGridRegion(smap, stencil_var, run, loop_body,
+  GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
                                remote_grids, load_statements,
                                overlap_eligible, overlap_width);
   bool overlap_enabled = flag_mpi_overlap_ &&  overlap_eligible;
@@ -365,7 +365,8 @@ void MPICUDATranslator::ProcessStencilMap(
   if (cache_config_done_.find(fs) == cache_config_done_.end()) {
     SgFunctionCallExp *cache_config =
         sbx::buildCudaCallFuncSetCacheConfig(fs,
-                                             sbx::cudaFuncCachePreferL1);
+                                             sbx::cudaFuncCachePreferL1,
+                                             global_scope_);
     function_body->append_statement(sb::buildExprStatement(cache_config));
     cache_config_done_.insert(fs);
     if (overlap_enabled) {
@@ -379,7 +380,8 @@ void MPICUDATranslator::ProcessStencilMap(
             function_body->append_statement(
                 sb::buildExprStatement(
                     sbx::buildCudaCallFuncSetCacheConfig(
-                        fs_boundary, sbx::cudaFuncCachePreferL1)));
+                        fs_boundary, sbx::cudaFuncCachePreferL1,
+                        global_scope_)));
           }
         }
       } else {
@@ -390,7 +392,8 @@ void MPICUDATranslator::ProcessStencilMap(
         function_body->append_statement(
             sb::buildExprStatement(
                 sbx::buildCudaCallFuncSetCacheConfig(
-                    fs_boundary, sbx::cudaFuncCachePreferL1)));
+                    fs_boundary, sbx::cudaFuncCachePreferL1,
+                    global_scope_)));
       }
       
       SgFunctionSymbol *fs_inner =
@@ -399,7 +402,8 @@ void MPICUDATranslator::ProcessStencilMap(
       function_body->append_statement(
           sb::buildExprStatement(
               sbx::buildCudaCallFuncSetCacheConfig(
-                  fs_inner, sbx::cudaFuncCachePreferL1)));
+                  fs_inner, sbx::cudaFuncCachePreferL1,
+                  global_scope_)));
     
     }
   }
@@ -574,10 +578,10 @@ void MPICUDATranslator::ProcessStencilMap(
     loop_body->append_statement(sb::buildExprStatement(c));
   }
   appendGridSwap(smap, stencil_name, true, loop_body);
-  DeactivateRemoteGrids(smap, stencil_var, loop_body,
+  DeactivateRemoteGrids(smap, sdecl, loop_body,
                         remote_grids);
 
-  FixGridAddresses(smap, stencil_var, function_body);
+  FixGridAddresses(smap, sdecl, function_body);
 }
 
 SgBasicBlock *MPICUDATranslator::BuildRunBody(Run *run) {

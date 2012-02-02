@@ -153,13 +153,16 @@ void SetFunctionStatic(SgFunctionDeclaration *fdecl) {
   fdecl->get_declarationModifier().get_storageModifier().setStatic();
 }
 
-SgExpression *buildNULL() {
-#if 0  
-  return sb::buildCastExp(sb::buildIntVal(0),
-                          sb::buildPointerType(sb::buildVoidType()));
-#else
-  return sb::buildVarRefExp("NULL");
-#endif
+SgExpression *buildNULL(SgScopeStatement *global_scope) {
+  static SgVariableDeclaration *dummy_null = NULL;
+  if (!dummy_null) {
+    dummy_null =
+        sb::buildVariableDeclaration(
+            "NULL",
+            sb::buildPointerType(sb::buildVoidType()),
+            NULL, global_scope);
+  }
+  return sb::buildVarRefExp(dummy_null);
 }
 
 SgVariableDeclaration *buildVarDecl(const string &name,

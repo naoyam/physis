@@ -54,14 +54,15 @@ SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
   return ctor_decl;
 }
 
-SgEnumDeclaration *cuda_enum_cuda_func_cache() {
+SgEnumDeclaration *cuda_enum_cuda_func_cache(
+    SgScopeStatement *global_scope) {
   static SgEnumDeclaration *enum_func_cache = NULL;
   static const char *enum_names[] = {"cudaFuncCachePreferNone",
                                      "cudaFuncCachePreferShared",
                                      "cudaFuncCachePreferL1"};
   if (!enum_func_cache) {
     enum_func_cache =
-        sb::buildEnumDeclaration(SgName("cudaFuncCache"), sb::topScopeStack());
+        sb::buildEnumDeclaration(SgName("cudaFuncCache"), global_scope);
     SgInitializedNamePtrList &members = enum_func_cache->get_enumerators();
     for (int i = 0; i < 3; i++) {
       SgInitializedName *in =
@@ -69,26 +70,12 @@ SgEnumDeclaration *cuda_enum_cuda_func_cache() {
               SgName(enum_names[i]), enum_func_cache->get_type());
       members.push_back(in);
       in->set_parent(enum_func_cache);
-      in->set_scope(sb::topScopeStack());
+      in->set_scope(enum_func_cache->get_scope());
     }
   }
   return enum_func_cache;
 }
 
-SgFunctionDeclaration *cuda_func_set_cache_config() {
-  SgFunctionDeclaration *func_set_cache_config = NULL;
-  if (!func_set_cache_config) {
-    SgFunctionParameterTypeList *params =
-        sb::buildFunctionParameterTypeList(sb::buildIntType());
-    func_set_cache_config =
-        sb::buildNondefiningFunctionDeclaration(
-            SgName("cudaFuncSetCacheConfig"),
-            cuda_enum_cuda_func_cache()->get_type(),
-            sb::buildFunctionParameterList(params),
-            sb::topScopeStack());
-  }
-  return func_set_cache_config;
-}
 }  // namespace
 /*
 SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
@@ -113,18 +100,20 @@ SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
 */
 SgFunctionCallExp *buildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
-    const cudaFuncCache cache_config) {
+    const cudaFuncCache cache_config,
+    SgScopeStatement *global_scope) {
   ROSE_ASSERT(kernel);
   SgEnumVal *enum_val = buildEnumVal(cache_config,
-                                     cuda_enum_cuda_func_cache());
+                                     cuda_enum_cuda_func_cache(global_scope));
   SgExprListExp *args =
       sb::buildExprListExp(sb::buildFunctionRefExp(kernel), enum_val);
 
-  // build a call to grid_new
+  // build a call to cudaFuncSetCacheConfig
+  SgFunctionSymbol *fs =
+      si::lookupFunctionSymbolInParentScopes("cudaFuncSetCacheConfig");
+  PSAssert(fs);
   SgFunctionCallExp *call =
-      sb::buildFunctionCallExp(
-          sb::buildFunctionRefExp(cuda_func_set_cache_config()),
-          args);
+      sb::buildFunctionCallExp(fs, args);
   return call;
 }
 
