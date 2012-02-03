@@ -67,20 +67,8 @@ GridMPI::GridMPI(PSType type, int elm_size, int num_dims,
     remote_grid_(NULL), remote_grid_active_(false) {
   
   empty_ = local_size_.accumulate(num_dims_) == 0;
-  if (empty_) return;
-
-  halo_self_fw_ = new char*[num_dims_];
-  halo_self_bw_ = new char*[num_dims_];
-  halo_peer_fw_ = new char*[num_dims_];
-  halo_peer_bw_ = new char*[num_dims_];
-  
-  for (int i = 0; i < num_dims_; ++i) {
-    halo_self_fw_[i] = NULL;
-    halo_self_bw_[i] = NULL;
-    halo_peer_fw_[i] = NULL;
-    halo_peer_bw_[i] = NULL;
-  }
 }
+
 // This is the only interface to create a GridMPI grid
 GridMPI *GridMPI::Create(PSType type, int elm_size,
                          int num_dims, const IntArray &size,
@@ -97,6 +85,8 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
 }
 
 void GridMPI::InitBuffer() {
+  LOG_DEBUG() << "Initializing GridMPI buffer\n";  
+  if (empty_) return;  
   data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
   data_buffer_[0]->Allocate(local_size_);
   if (double_buffering_) {
@@ -107,6 +97,19 @@ void GridMPI::InitBuffer() {
   }
   data_[0] = (char*)data_buffer_[0]->Get();
   data_[1] = (char*)data_buffer_[1]->Get();
+
+  halo_self_fw_ = new char*[num_dims_];
+  halo_self_bw_ = new char*[num_dims_];
+  halo_peer_fw_ = new char*[num_dims_];
+  halo_peer_bw_ = new char*[num_dims_];
+  
+  for (int i = 0; i < num_dims_; ++i) {
+    halo_self_fw_[i] = NULL;
+    halo_self_bw_[i] = NULL;
+    halo_peer_fw_[i] = NULL;
+    halo_peer_bw_[i] = NULL;
+  }
+  
 }
 
 GridMPI::~GridMPI() {
@@ -114,6 +117,7 @@ GridMPI::~GridMPI() {
 }
 
 void GridMPI::DeleteBuffers() {
+  LOG_DEBUG() << "GridMPI::DeleteBuffers()\n";
   if (empty_) return;
   // The buffers for the last dimension is the same as data buffer, so
   // freeing is not required.
@@ -131,15 +135,15 @@ void GridMPI::DeleteBuffers() {
       FREE(halo_peer_bw_[i]);
     }
   }
-  delete[] halo_self_fw_;
+  if (halo_self_fw_) delete[] halo_self_fw_;
   halo_self_fw_ = NULL;
-  delete[] halo_self_bw_;
+  if (halo_self_bw_) delete[] halo_self_bw_;
   halo_self_bw_ = NULL;
-  delete[] halo_peer_fw_;
+  if (halo_peer_fw_) delete[] halo_peer_fw_;
   halo_peer_fw_ = NULL;
-  delete[] halo_peer_bw_;
+  if (halo_peer_bw_) delete[] halo_peer_bw_;
   halo_peer_bw_ = NULL;
-  delete remote_grid_;
+  if (remote_grid_) delete remote_grid_;
   remote_grid_ = NULL;
   Grid::DeleteBuffers();
 }

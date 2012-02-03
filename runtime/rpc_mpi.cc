@@ -12,6 +12,13 @@
 #include "runtime/mpi_runtime.h"
 #include "runtime/mpi_wrapper.h"
 
+#ifdef ENABLE_CKPT
+#include <libcr.h>
+#include <blcr_common.h>
+#include <mpi.h>
+#include <mpi-ext.h>
+#endif
+
 namespace physis {
 namespace runtime {
 
@@ -322,6 +329,17 @@ void Master::StencilRun(int id, int iter, int num_stencils,
   LOG_DEBUG() << "Calling the stencil function\n";
   // call the stencil obj
   __PS_stencils[id](iter, stencils);
+#ifdef ENABLE_CKPT
+    timeval start, end;
+    int seq;
+    char* handle;    
+    gettimeofday(&start, NULL);
+    int res = OMPI_CR_Checkpoint(&handle, &seq, 0);
+    gettimeofday(&end, NULL);
+    fprintf(stderr, "OMPI_CR_Checkpoint (%d): %.6lf\n", res,
+            end.tv_sec -start.tv_sec + (end.tv_usec - start.tv_usec ) / 1000000.0);
+#endif
+  
   return;
 }
 
@@ -346,6 +364,16 @@ void Client::StencilRun(int id) {
   __PS_stencils[id](iter, stencils);
   delete[] stencil_sizes;
   delete[] stencils;
+#ifdef ENABLE_CKPT
+    timeval start, end;
+    int seq;
+    char* handle;    
+    gettimeofday(&start, NULL);
+    int res = OMPI_CR_Checkpoint(&handle, &seq, 0);
+    gettimeofday(&end, NULL);
+    fprintf(stderr, "OMPI_CR_Checkpoint (%d): %.6lf\n", res,
+            end.tv_sec -start.tv_sec + (end.tv_usec - start.tv_usec ) / 1000000.0);
+#endif
   return;
 }
 

@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
   PSGridCopyout(g2, outdata);
   dump(outdata);  
 
-  PSGridFree(g1);
-  PSGridFree(g2);
+  //PSGridFree(g1);
+  //PSGridFree(g2);
   PSFinalize();
   free(indata);
   free(outdata);

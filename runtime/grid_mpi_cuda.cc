@@ -29,17 +29,7 @@ GridMPICUDA3D::GridMPICUDA3D(
     const IntArray &local_offset, const IntArray &local_size,
     int attr):
     GridMPI(type, elm_size, num_dims, size, double_buffering, global_offset,
-            local_offset, local_size, attr) {
-  
-  if (empty_) return;
-
-  // These pointers are replaced with buffer substrate in this class
-  delete[]  halo_self_fw_;
-  halo_self_fw_ = NULL;
-  delete[] halo_self_bw_;
-  halo_self_bw_ = NULL;
-
-  FixupBufferPointers();
+            local_offset, local_size, attr), ckpt_data(NULL) {
 }
 
 GridMPICUDA3D *GridMPICUDA3D::Create(
@@ -61,6 +51,7 @@ GridMPICUDA3D::~GridMPICUDA3D() {
 }
 
 void GridMPICUDA3D::DeleteBuffers() {
+  LOG_DEBUG() << "GridMPICUDA3D::DeleteBuffers()\n";
   if (empty_) return;
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
@@ -84,6 +75,11 @@ void GridMPICUDA3D::DeleteBuffers() {
     halo_peer_fw_[i] = NULL;
     halo_peer_bw_[i] = NULL;    
   }
+  delete[] halo_peer_fw_;
+  halo_peer_fw_ = NULL;
+  delete[] halo_peer_bw_;
+  halo_peer_bw_ = NULL;
+  
   delete[] halo_self_cuda_;
   halo_self_cuda_ = NULL;
   delete[] halo_self_mpi_;
@@ -92,12 +88,13 @@ void GridMPICUDA3D::DeleteBuffers() {
   halo_peer_cuda_ = NULL;
   delete[] halo_peer_dev_;
   halo_peer_dev_ = NULL;
+  
   GridMPI::DeleteBuffers();
 }
 
 
 void GridMPICUDA3D::InitBuffer() {
-  LOG_DEBUG() << "Initializing grid buffer\n";
+  LOG_DEBUG() << "Initializing GridMPICUDA3D buffer\n";
 
   if (empty_) return;
 #ifdef USE_CUDA_PITCHED_MEMORY  
@@ -133,6 +130,11 @@ void GridMPICUDA3D::InitBuffer() {
       halo_peer_dev_[i][j] = new BufferCUDADev(elm_size());
     }
   }
+
+  halo_peer_fw_ = new char*[num_dims_];
+  halo_peer_bw_ = new char*[num_dims_];
+  halo_self_fw_ = NULL;  
+  halo_self_bw_ = NULL;
 
   FixupBufferPointers();
 }
@@ -349,7 +351,7 @@ void GridMPICUDA3D::FixupBufferPointers() {
     for (int i = 0; i < num_dims(); ++i) {
       dev_.dim[i]  = size()[i];
       dev_.local_size[i] = local_size()[i];
-      dev_.local_offset[i] = local_offset()[i];      
+      dev_.local_offset[i] = local_offset()[i];
       halo_peer_fw_[i] = (char*)halo_peer_dev_[i][1]->Get();
       halo_peer_bw_[i] = (char*)halo_peer_dev_[i][0]->Get();
 
@@ -379,10 +381,13 @@ void GridMPICUDA3D::Save() {
   Buffer *buf = static_cast<BufferCUDADev3D*>(
       data_buffer_[0]);
   // Copyout
-  void *data = buf->Copyout();
-  SaveToFile(data, buf->GetLinearSize());
-  free(data);
+  ckpt_data = buf->Copyout();
+  //SaveToFile(data, buf->GetLinearSize());
+  //LOG_DEBUG() << "Saved to file\n";
+  //free(data);
+  LOG_DEBUG() << "Deleting buffers\n";
   DeleteBuffers();
+  LOG_DEBUG() << "GridMPICUDA3D saving done\n";
 }
 
 void GridMPICUDA3D::Restore() {
@@ -393,10 +398,11 @@ void GridMPICUDA3D::Restore() {
   // Read from a file
   BufferCUDADev3D *buf = static_cast<BufferCUDADev3D*>(
       data_buffer_[0]);
-  void *data = malloc(buf->GetLinearSize());
-  RestoreFromFile(data, buf->GetLinearSize());
+  //void *data = malloc(buf->GetLinearSize());
+  //RestoreFromFile(data, buf->GetLinearSize());
   // Copyin
-  buf->Copyin(data, IntArray((index_t)0), buf->size());
+  buf->Copyin(ckpt_data, IntArray((index_t)0), buf->size());
+  ckpt_data = NULL;
 }
 
 //

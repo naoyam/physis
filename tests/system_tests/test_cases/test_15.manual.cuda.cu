@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
   dump(g1);
 
-  cudaDeviceReset();
+  cudaThreadExit();
   return 0;
 }
 

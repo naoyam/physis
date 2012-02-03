@@ -29,10 +29,13 @@ BufferCUDAHost::BufferCUDAHost(int num_dims,  size_t elm_size)
 }
 
 BufferCUDAHost::~BufferCUDAHost() {
+  LOG_DEBUG() << "DTOR: BufferCUDAHost\n";
   delete mpi_buf_;
+  LOG_DEBUG() << "DTOR: BufferCUDAHost done\n";  
 }
 
 void BufferCUDAHost::DeleteChunk(void *ptr) {
+  LOG_DEBUG() << "DeleteChunK (" << ptr << ")\n";
   CUDA_SAFE_CALL(cudaFreeHost(ptr));
   return;
 }
@@ -43,6 +46,7 @@ void *BufferCUDAHost::GetChunk(const IntArray &size) {
     LOG_INFO() << "Trying to allocate host pinned memory of "
 	       << GetLinearSize(size) << " bytes.\n";
     CUDA_SAFE_CALL(cudaMallocHost(&ptr, GetLinearSize(size)));
+    LOG_DEBUG() << "cudaMallocHost: " << ptr << "\n";
   }
   return ptr;
 }
@@ -308,8 +312,11 @@ BufferCUDADev3D::BufferCUDADev3D(int num_dims,   size_t elm_size)
 }
 
 BufferCUDADev3D::~BufferCUDADev3D() {
+  LOG_DEBUG() << "DTOR: BufferCUDADev3D\n";
   delete pinned_buf_;
+  LOG_DEBUG() << "DTOR: pinned_buf deleted\n";
   delete mapped_buf_;
+  LOG_DEBUG() << "DTOR: BufferCUDADev3D DONE\n";
 }
 
 cudaPitchedPtr BufferCUDADev3D::GetChunk3D(const IntArray &size) {

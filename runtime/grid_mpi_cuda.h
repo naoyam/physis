@@ -75,6 +75,8 @@ class GridMPICUDA3D: public GridMPI {
   BufferCUDAHost *(*halo_peer_cuda_)[2];
   BufferCUDADev *(*halo_peer_dev_)[2];
   virtual void FixupBufferPointers();
+ private:
+  void *ckpt_data;
 };
 
 class GridSpaceMPICUDA: public GridSpaceMPI {

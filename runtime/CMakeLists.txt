@@ -53,6 +53,10 @@ if (MPI_ENABLED AND CUDA_ENABLED)
   add_executable(test_mpi_cuda_runtime test_mpi_cuda_runtime.cc)
   target_link_libraries(test_mpi_cuda_runtime physis_rt_mpi_cuda
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
+  if (ENABLE_CKPT)
+    target_link_libraries(test_mpi_cuda_runtime
+      /home/nguyen/PHYSIS_CKPT/opt/blcr/lib/libcr.so)
+  endif ()
   add_executable(test_grid_mpi_cuda_3d test_grid_mpi_cuda_3d.cc)
   target_link_libraries(test_grid_mpi_cuda_3d physis_rt_mpi_cuda
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})

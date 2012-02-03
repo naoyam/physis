@@ -15,6 +15,12 @@
 #include <cutil.h>
 #include <cutil_inline_runtime.h>
 
+#ifdef ENABLE_CKPT
+#include <libcr.h>
+#include <blcr_common.h>
+#include <mpi.h>
+#include <mpi-ext.h>
+#endif
 using std::vector;
 using std::map;
 using std::string;
@@ -88,7 +94,38 @@ void Checkpoint() {
 void Restart() {
   InitCUDA(pinfo->rank(), num_local_processes);
   gs->Restore();
+  LOG_DEBUG() << "Restarted\n";
 }
+
+#ifdef ENABLE_CKPT
+static int my_callback_handler(void* arg){
+  struct timeval start, end;
+
+  gettimeofday(&start, NULL);
+  Checkpoint();
+  gettimeofday(&end, NULL);
+  LOG_DEBUG() << "Checkpoint(): "
+              << end.tv_sec -start.tv_sec + (end.tv_usec - start.tv_usec ) / 1000000.0
+              << " s\n";
+
+  gettimeofday(&start, NULL);
+  cr_checkpoint(0);
+  gettimeofday(&end, NULL);
+  LOG_DEBUG() << "cr_checkpoint(): "
+              << end.tv_sec -start.tv_sec + (end.tv_usec - start.tv_usec ) / 1000000.0
+              << " s\n";
+
+  gettimeofday(&start, NULL);
+  Restart();
+  gettimeofday(&end, NULL);
+  LOG_DEBUG() << "Restart(): "    
+              << end.tv_sec -start.tv_sec + (end.tv_usec - start.tv_usec ) / 1000000.0
+              << " s\n";
+
+  return 0;
+}
+#endif
+
 
 template <class T>
 T __PSGridGet(__PSGridMPI *g, va_list args) {
@@ -137,6 +174,12 @@ extern "C" {
     __PSStencilRunClientFunction *stencil_funcs
         = va_arg(vl, __PSStencilRunClientFunction*);
     va_end(vl);
+
+#ifdef ENABLE_CKPT
+    int cr = cr_init();
+    LOG_DEBUG() << "register my callback handler\n";
+    (void)cr_register_callback(my_callback_handler, &cr, CR_SIGNAL_CONTEXT);
+#endif
     
     MPI_Init(argc, argv);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -372,7 +415,7 @@ extern "C" {
     master->StencilRun(id, iter, num_stencils, stencils, stencil_sizes);
     delete[] stencils;
     delete[] stencil_sizes;
-    // testing checkpointing
+
     return;
   }
 

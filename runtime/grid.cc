@@ -36,12 +36,15 @@ void Grid::InitBuffer() {
 }
 
 void Grid::DeleteBuffers() {
-  if (data_[0]) {
+  LOG_DEBUG() << "Grid::DeleteBuffers()\n";
+  if (data_buffer_[0]) {
     delete data_buffer_[0];
+    data_buffer_[0] = NULL;
     data_[0] = NULL;
   }
-  if (double_buffering_ && data_[1]) {
+  if (double_buffering_ && data_buffer_[1]) {
     delete data_buffer_[1];
+    data_buffer_[1] = NULL;
     data_[1] = NULL;
   }
 }
@@ -149,7 +152,7 @@ void GridSpace::DeleteGrid(int id) {
 
 static string GetPath(size_t id) {
   char *ckpt_dir = getenv("PHYSIS_CHECKPOINT_DIR");
-  return (ckpt_dir? string(ckpt_dir) : ".") + "/" + toString(id);
+  return (ckpt_dir? string(ckpt_dir) : ".") + "/" + toString(id) + ".ckpt";
 }
 
 void Grid::SaveToFile(const void *buf, size_t len) const {

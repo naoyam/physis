@@ -167,6 +167,20 @@ if (USE_CUDA_PITCHED_MEMORY)
   add_definitions(-DUSE_CUDA_PITCHED_MEMORY)
 endif ()
 
+# Enable PSReduce by default. Disable if ENABLE_REDUCE is set to false.
+set (ENABLE_CKPT FALSE CACHE BOOL
+  "Enable checkpointing support (EXPERIMENTAL)")
+if (ENABLE_CKPT)
+  add_definitions(-DENABLE_CKPT)
+  # TODO: Need to auto-detect the BLCR location
+  include_directories(/home/nguyen/PHYSIS_CKPT/opt/blcr/include)
+  include_directories(/home/nguyen/PHYSIS_CKPT/openmpi-1.7/opal/include)
+  include_directories(/home/nguyen/PHYSIS_CKPT/openmpi-1.7)
+  include_directories(/home/nguyen/PHYSIS_CKPT/openmpi-1.7/opal/mca/event/libevent2013/libevent)
+  include_directories(/home/nguyen/PHYSIS_CKPT/openmpi-1.7/opal/mca/event/libevent2013/libevent/include)    
+endif ()
+
+
 add_subdirectory(common)
 add_subdirectory(include/physis)
 add_subdirectory(util)
