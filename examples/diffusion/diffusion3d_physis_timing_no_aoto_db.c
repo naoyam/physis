@@ -23,7 +23,7 @@
 #endif
 
 #define ENABLE_ERROR_CHECKING 0
-#define ENABLE_INIT_ON_GPU 1
+#define ENABLE_INIT_ON_GPU 0
 
 void kernel(const int x, const int y, const int z,
             PSGrid3DReal  g1,  PSGrid3DReal  g2,
@@ -73,6 +73,7 @@ void init(REAL *buff, const size_t nx, const size_t ny, const size_t nz,
   }
 }
 
+#if ENABLE_INIT_ON_GPU
 void init_kernel(const int jx, const int jy, const int jz,
                  PSGrid3DReal g,
                  REAL kx, REAL ky, REAL kz,
@@ -92,7 +93,7 @@ void init_kernel(const int jx, const int jy, const int jz,
       *(1.0 - az*cos(kz*z));
   PSGridEmit(g, f0);
 }
-
+#endif
 
 REAL accuracy(const REAL *b1, REAL *b2, const size_t len) {
   REAL err = 0.0;
@@ -167,8 +168,8 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "accuracy     : %e\n", err);  
   fprintf(stderr, "count        : %d\n", count);
   //free(answer);
-  PSGridFree(g1);
-  PSGridFree(g2);  
+  //PSGridFree(g1);
+  //PSGridFree(g2);  
   PSFinalize();
   return 0;
 }

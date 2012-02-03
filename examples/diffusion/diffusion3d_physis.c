@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "accuracy     : %e\n", err);
   fprintf(stderr, "count        : %d\n", count);
   free(answer);
-  PSGridFree(g);
+  //PSGridFree(g);
   PSFinalize();
   return 0;
 }
