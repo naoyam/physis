@@ -157,18 +157,22 @@ main(int argc, char *argv[])
   printf(" Start rehearsal measurement process.\n");
   printf(" Measure the performance in %d times.\n\n",nn);
 
+  /*
   cpu0 = second();
   gosa = jacobi(nn, a0, a1, a2, a3, b0, b1, b2, c0, c1, c2,
                 p0, p1, bnd, wrk1);
   cpu1 = second();
   cpu = cpu1 - cpu0;
-  flop = fflop(imax,jmax,kmax);
+  */
+  flop = fflop(imax,jmax,kmax);  
 
+  /*
   printf(" MFLOPS: %f time(s): %f %e\n\n",
          mflops(nn,cpu,flop),cpu,gosa);
+  */
 
-  nn= (int)(target/(cpu/3.0));
-  //nn=100;
+  //nn= (int)(target/(cpu/3.0));
+  nn=100;
   
   // make it even
   if (nn%2) ++nn;
@@ -282,7 +286,7 @@ set_param(int is[],char *size)
 void
 clearMat(PSGrid3DFloat Mat)
 {
-  PSGridFree(Mat);
+  //PSGridFree(Mat);
   return;
 }
 
