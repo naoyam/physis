@@ -130,7 +130,10 @@ SgValueExp *BuildIntLikeVal(long long v);
 
 void RedirectFunctionCalls(SgNode *node,
                            const std::string &current_func,
-                           SgFunctionRefExp *new_func);
+                           SgFunctionDeclaration *new_func);
+
+void RedirectFunctionCall(SgFunctionCallExp *call,
+                          SgExpression *new_target);
 
 
 SgFunctionDeclaration *CloneFunction(SgFunctionDeclaration *decl,
@@ -143,6 +146,12 @@ template <class T>
 inline bool IsIntLikeType(const T *t) {
   return IsIntLikeType(t->get_type());
 }
+
+void PrependExpression(SgExprListExp *exp_list,
+                       SgExpression *exp);
+
+void ReplaceFuncBody(SgFunctionDeclaration *func,
+                     SgBasicBlock *new_body);
 
 }  // namespace rose_util
 }  // namespace physis

@@ -46,7 +46,7 @@ class MPICUDATranslator: public MPITranslator {
    */
   virtual SgIfStmt *BuildDomainInclusionInnerCheck(
       const vector<SgVariableDeclaration*> &indices,
-      SgExpression *dom_ref, SgExpression *width,
+      SgInitializedName *dom_ref, SgExpression *width,
       SgStatement *ifclause) const;
   virtual void ProcessStencilMap(StencilMap *smap, SgVarRefExp *stencils,
                                  int stencil_index, Run *run,

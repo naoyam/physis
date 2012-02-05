@@ -29,7 +29,7 @@ class GridMPICUDA3D: public GridMPI {
                 bool double_buffering, const IntArray &global_offset,
                 const IntArray &local_offset, const IntArray &local_size,
                 int attr);
-  __PSGrid3DDev dev_;
+  __PSGridDev3D dev_;
   // the source is address of ordinary memory region
   virtual void Copyin(void *dst, const void *src, size_t size);
   // the dstination is address of ordinary memory region  
@@ -43,7 +43,7 @@ class GridMPICUDA3D: public GridMPI {
   virtual ~GridMPICUDA3D();
   virtual void InitBuffer();
   virtual std::ostream &Print(std::ostream &os) const;
-  __PSGrid3DDev *GetDev() { return &dev_; }
+  __PSGridDev3D *GetDev() { return &dev_; }
   virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
   virtual void CopyoutHalo3D0(unsigned width, bool fw);
   virtual void CopyoutHalo3D1(unsigned width, bool fw);

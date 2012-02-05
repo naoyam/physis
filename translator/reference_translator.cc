@@ -744,7 +744,6 @@ void ReferenceTranslator::translateRun(SgFunctionCallExp *node,
                                        Run *run) {
   SgFunctionDeclaration *runFunc = GenerateRun(run);
   si::insertStatementBefore(getContainingFunction(node), runFunc);
-  // redirect the call to the real function
   SgFunctionRefExp *ref = rose_util::getFunctionRefExp(runFunc);
 
   SgExprListExp *args = sb::buildExprListExp();

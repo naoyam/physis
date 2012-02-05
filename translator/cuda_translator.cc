@@ -506,7 +506,7 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
   
   SgExpression *test_all = NULL;
   ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
-    SgExpression *idx = sb::buildVarRefExp(*index_it);
+    SgVariableDeclaration *idx = *index_it;
     SgExpression *dom_min = sb::buildPntrArrRefExp(
         sb::buildDotExp(sb::buildVarRefExp(dom_arg),
                         sb::buildVarRefExp("local_min")),
@@ -516,8 +516,8 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
                         sb::buildVarRefExp("local_max")),
         sb::buildIntVal(dim));
     SgExpression *test = sb::buildOrOp(
-        sb::buildLessThanOp(idx, dom_min),
-        sb::buildGreaterOrEqualOp(idx, dom_max));
+        sb::buildLessThanOp(sb::buildVarRefExp(idx), dom_min),
+        sb::buildGreaterOrEqualOp(sb::buildVarRefExp(idx), dom_max));
     if (test_all) {
       test_all = sb::buildOrOp(test_all, test);
     } else {
