@@ -111,8 +111,19 @@ void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {
 }
 #endif
 
+
 const std::string RunKernelLoopAttribute::name = "RunKernelLoop";
 const std::string RunKernelIndexVarAttribute::name = "RunKernelIndexVar";
+
+
+bool StencilMap::IsGridPeriodic(SgInitializedName *gv) const {
+  return isContained<SgInitializedName*>(grid_periodic_set_, gv);
+}
+
+void StencilMap::SetGridPeriodic(SgInitializedName *gv) {
+  grid_periodic_set_.insert(gv);
+}
+
 
 } // namespace translator
 } // namespace physis

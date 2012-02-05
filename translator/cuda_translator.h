@@ -82,7 +82,7 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel);
+                            bool is_kernel, bool is_periodic);
   //virtual void translateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.

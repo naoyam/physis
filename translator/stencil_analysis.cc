@@ -201,6 +201,10 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   SgFunctionDeclaration *kernel = sm.getKernel();
   SgFunctionCallExpPtrList get_calls
       = tx.getGridGetCalls(kernel->get_definition());
+  SgFunctionCallExpPtrList get_periodic_calls
+      = tx.getGridGetPeriodicCalls(kernel->get_definition());
+  get_calls.insert(get_calls.end(), get_periodic_calls.begin(),
+                   get_periodic_calls.end());
   GridRangeMap &gr = sm.grid_stencil_range_map();
   FOREACH (it, get_calls.begin(), get_calls.end()) {
     SgFunctionCallExp *get_call = *it;
@@ -238,6 +242,9 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       rose_util::AddASTAttribute(
           get_call,
           new GridGetAttribute(gv, tx.isKernel(kernel), stencil_indices));
+    }
+    if (tx.getGridFuncName(get_call) == GridType::get_periodic_name) {
+      sm.SetGridPeriodic(gv);
     }
   }
   LOG_DEBUG() << "Stencil access: "

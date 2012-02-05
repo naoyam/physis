@@ -130,7 +130,8 @@ class MPICUDATranslator: public MPITranslator {
   std::string GetBoundarySuffix(int dim, bool fw);
   std::string GetBoundarySuffix();
   virtual bool translateGetKernel(SgFunctionCallExp *node,
-                                  SgInitializedName *gv);
+                                  SgInitializedName *gv,
+                                  bool is_periodic);
   void BuildFunctionParamList(SgClassDefinition *param_struct_def,
                               SgFunctionParameterList *&params,
                               SgInitializedName *&grid_arg,

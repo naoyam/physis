@@ -37,7 +37,8 @@ SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
                                      StencilRange &sr,
                                      SgScopeStatement *scope,
                                      SgExpression *reuse,
-                                     SgExpression *overlap);
+                                     SgExpression *overlap,
+                                     bool is_periodic);
 SgFunctionCallExp *BuildActivateRemoteGrid(SgExpression *grid_var,
                                            bool active);
 

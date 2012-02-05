@@ -232,6 +232,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
   SgIntVal *overlap_arg = sb::buildIntVal(0);
   // Ensure remote grid points available locally
   FOREACH (ait, smap->grid_params().begin(), smap->grid_params().end()) {
+
     SgInitializedName *grid_param = *ait;
     LOG_DEBUG() <<  "grid param: " << grid_param->unparseToString() << "\n";
     SgExpression *gvref = BuildStencilFieldRef(stencil_ref,
@@ -254,6 +255,9 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     
     StencilRange &sr = smap->GetStencilRange(grid_param);
     LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
+
+    bool is_periodic = smap->IsGridPeriodic(grid_param);
+    LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
     
     if (sr.IsNeighborAccess() && sr.num_dims() == smap->getNumDim()) {
       // If both zero, skip
@@ -266,10 +270,17 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
       //si::appendStatement(bb, scope);
       statements.push_back(bb);
       SgFunctionCallExp *load_neighbor_call
-          = BuildLoadNeighbor(gvref, sr, bb, reuse, overlap_arg);
+          = BuildLoadNeighbor(gvref, sr, bb, reuse, overlap_arg,
+                              is_periodic);
       rose_util::AppendExprStatement(bb, load_neighbor_call);
       overlap_width = std::max(sr.GetMaxWidth(), overlap_width);
     } else {
+      // EXPERIMENTAL
+      LOG_WARNING()
+          << "Support of this type of stencils is experimental,\n"
+          << "and may not work as expected. For example,\n"
+          << "periodic access is not supported.\n";
+      PSAssert(!is_periodic);
       overlap_eligible = false;
       // generate LoadSubgrid call
       if (sr.IsUniqueDim()) {
@@ -459,10 +470,10 @@ SgExprListExp *MPITranslator::generateNewArg(
 
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g) {
-  args->append_expression(rose_util::buildNULL());
-  SgExpression *attr = g->BuildAttributeExpr();
-  if (!attr) attr = sb::buildIntVal(0);
-  args->append_expression(attr);
+  // attribute
+  si::appendExpression(args, sb::buildIntVal(0));
+  // global offset
+  si::appendExpression(args, rose_util::buildNULL());
   return;
 }
 
@@ -488,7 +499,8 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
 }
 
 bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
-                                       SgInitializedName *gv) {
+                                       SgInitializedName *gv,
+                                       bool is_periodic) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
   GridType *gt = tx_->findGridType(gv->get_type());

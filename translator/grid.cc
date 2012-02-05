@@ -20,6 +20,10 @@ static const char *grid2dTypeKey = "__PSGrid2D";
 static const char *grid3dTypeKey = "__PSGrid3D";
 
 const string GridType::name = "GridType";
+const string GridType::get_name = "get";
+const string GridType::get_periodic_name = "get_periodic";
+const string GridType::emit_name = "emit";
+const string GridType::set_name = "set";
 
 unsigned GridType::getNumDimFromTypeName(const string &tname) {
   if (tname.find(grid1dTypeKey) != string::npos) {

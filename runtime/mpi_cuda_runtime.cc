@@ -265,8 +265,8 @@ extern "C" {
   __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
-                              const PSVectorInt global_offset,
-                              int attr) {
+                              int attr,
+                              const PSVectorInt global_offset) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
@@ -385,7 +385,8 @@ extern "C" {
   void __PSLoadNeighbor(__PSGridMPI *g,
                         const PSVectorInt halo_fw_width,
                         const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                        int diagonal, int reuse, int overlap,
+                        int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
@@ -393,43 +394,44 @@ extern "C" {
     }
     gs->LoadNeighbor(gm, IntArray(halo_fw_width),
                      IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
+                     diagonal, reuse, periodic,
                      NULL, NULL, strm);
     return;
   }
 
   void __PSLoadNeighborStage1(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse,
+                              int overlap, int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
     }
     gs->LoadNeighborStage1(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
 
   void __PSLoadNeighborStage2(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse,
+                              int overlap, int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
     }
     gs->LoadNeighborStage2(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
-  
   
 
   // same as mpi_runtime.cc  

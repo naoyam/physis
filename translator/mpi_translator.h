@@ -34,7 +34,8 @@ class MPITranslator: public ReferenceTranslator {
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
   virtual bool translateGetKernel(SgFunctionCallExp *node,
-                                  SgInitializedName *gv);
+                                  SgInitializedName *gv,
+                                  bool is_periodic);
   virtual bool translateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);

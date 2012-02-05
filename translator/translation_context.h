@@ -213,6 +213,7 @@ class TranslationContext {
 
   SgFunctionCallExpPtrList getGridEmitCalls(SgScopeStatement *scope);
   SgFunctionCallExpPtrList getGridGetCalls(SgScopeStatement *scope);
+  SgFunctionCallExpPtrList getGridGetPeriodicCalls(SgScopeStatement *scope);  
 
   void print(std::ostream &os) const;
 

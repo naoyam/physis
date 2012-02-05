@@ -166,13 +166,15 @@ class GridSpaceMPI: public GridSpace {
                                        unsigned halo_fw_width,
                                        unsigned halo_bw_width,
                                        bool diagonal,
+                                       bool periodic,
                                        std::vector<MPI_Request> &requests) const;
   
   // These two functions perform the same thing except for requiring
   // the different type first parameters. The former may be omitted.
   virtual void ExchangeBoundaries(GridMPI *grid, int dim,
                                   unsigned halo_fw_width, unsigned halo_bw_width,
-                                  bool diagonal) const;
+                                  bool diagonal,
+                                  bool periodic) const;
 
 #if 0
   void ExchangeBoundariesAsync(int grid_id,
@@ -185,7 +187,9 @@ class GridSpaceMPI: public GridSpace {
   virtual void ExchangeBoundaries(int grid_id,
                                   const IntArray &halo_fw_width,
                                   const IntArray &halo_bw_width,
-                                  bool diagonal, bool reuse=false) const;
+                                  bool diagonal,
+                                  bool periodic,
+                                  bool reuse=false) const;
 
 
   virtual GridMPI *LoadSubgrid(GridMPI *grid, const IntArray &grid_offset,
@@ -195,7 +199,8 @@ class GridSpaceMPI: public GridSpace {
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL);
 

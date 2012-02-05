@@ -50,22 +50,27 @@ class ReferenceTranslator : public Translator {
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel);
+                            bool is_kernel,
+                            bool is_periodic);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
-  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv);
+  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv);  
   //! Build an offset expression.
   /*!
     @param gv The grid to get a offset.
     @param num_dim The number of dimensions.
     @param args The index argument list.
     @param is_kernel True if the expression is used in a stencil
-    kernel.
+    kernel. 
+    @param is_periodic True if it is a periodic access.
+    @param sil The stencil index list of this access.
     @param scope The scope this node is used.
    */
   virtual SgExpression *BuildOffset(SgInitializedName *gv,
                                     int num_dim,
                                     SgExprListExp *args,
                                     bool is_kernel,
+                                    bool is_periodic,                                    
+                                    const StencilIndexList *sil,
                                     SgScopeStatement *scope);
   virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
