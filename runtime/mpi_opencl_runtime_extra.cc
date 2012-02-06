@@ -33,6 +33,17 @@ void InitOpenCL(
 
   // Default
   phru::clinfo_nowusing = phru::clinfo_generic;
+
+#if 1
+    /* As currently header_path is always 0, move this
+       to InitOpencl
+      */
+    if (!phru::clinfo_nowusing->get_prog()) {
+      phru::clinfo_nowusing->set_header_include_path(0);
+      std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
+      phru::clinfo_nowusing->create_program(kernel_filen);
+    }
+#endif
 }
 
 void DestroyOpenCL(void) {
@@ -68,11 +79,16 @@ void __PSSetKernel(
     PSAssert(phru::clinfo_generic);
 
     phru::clinfo_nowusing = phru::clinfo_generic;
+#if 0
+    /* As currently header_path is always 0, move this
+       to InitOpencl
+      */
     if (!phru::clinfo_nowusing->get_prog()) {
       phru::clinfo_nowusing->set_header_include_path(header_path);
       std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
       phru::clinfo_nowusing->create_program(kernel_filen);
     }
+#endif
 
     switch(strm_flg) {
       case USE_GENERIC:
