@@ -187,8 +187,11 @@ void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
     { long j = g->pitch; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
     for (dim = 0; dim < 3; dim++) {
       for (fwbw = 0 ; fwbw < 2; fwbw++) {
-        void *buf = g->halo[dim][fwbw]; 
-        __PSSetKernelArgCLMem(argc, (void *)(&buf)); argc++;
+        void *buf = 0;
+        if (g->halo && g->halo[dim])
+          buf = g->halo[dim][fwbw]; 
+        __PSSetKernelArgCLMem(argc, (void *)(&buf));
+        argc++;
       }
     }
     for (dim = 0; dim < 3; dim++) {

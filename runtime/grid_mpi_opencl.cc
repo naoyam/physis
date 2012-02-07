@@ -23,12 +23,14 @@ GridMPIOpenCL3D::GridMPIOpenCL3D(
 {
 
   dev_.p0 = 0;  
-  if (empty_) return;
+  // if (empty_) return;
 
   // These pointers are replaced with buffer substrate in this class
-  delete[]  halo_self_fw_;
+  if (!empty_) {
+    delete[]  halo_self_fw_;
+    delete[] halo_self_bw_;
+  }
   halo_self_fw_ = NULL;
-  delete[] halo_self_bw_;
   halo_self_bw_ = NULL;
 
   clmem_halo_peer_fw_ = new cl_mem[num_dims_];
@@ -43,6 +45,7 @@ GridMPIOpenCL3D::GridMPIOpenCL3D(
   halo_self_mpi_ = new BufferHost*[num_dims_][2];
   halo_peer_opencl_ = new BufferOpenCLHost*[num_dims_][2];
   halo_peer_dev_ = new BufferOpenCLDev*[num_dims_][2];
+
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
 #if 0 //USE_MAPPED      
@@ -76,7 +79,7 @@ GridMPIOpenCL3D *GridMPIOpenCL3D::Create(
 
 
 GridMPIOpenCL3D::~GridMPIOpenCL3D() {
-  if (empty_) return;
+  // if (empty_) return;
   for (int i = 0; i < num_dims_; ++i) {
     for (int j = 0; j < 2; ++j) {
       delete halo_self_opencl_[i][j];
@@ -85,8 +88,10 @@ GridMPIOpenCL3D::~GridMPIOpenCL3D() {
       delete halo_peer_dev_[i][j];
     }
 
-    halo_peer_fw_[i] = NULL;
-    halo_peer_bw_[i] = NULL;    
+    if (!empty_) {
+      halo_peer_fw_[i] = NULL;
+      halo_peer_bw_[i] = NULL;
+    }
   }
   delete[] halo_self_opencl_;
   delete[] halo_self_mpi_;
@@ -101,8 +106,11 @@ GridMPIOpenCL3D::~GridMPIOpenCL3D() {
       if (clmem_halo_peer_bw_[i]) clReleaseMemObject(clmem_halo_peer_bw_[i]);
     }
   }
+
   if (clmem_halo_peer_fw_) delete[] clmem_halo_peer_fw_;
   if (clmem_halo_peer_bw_) delete[] clmem_halo_peer_bw_;
+  clmem_halo_peer_fw_ = 0;
+  clmem_halo_peer_bw_ = 0;
 }
 
 void GridMPIOpenCL3D::InitBuffer() {
@@ -407,6 +415,23 @@ void GridMPIOpenCL3D::FixupBufferPointers() {
       }
       dev_.halo_width[i][1] = halo_fw_width()[i];
       dev_.halo_width[i][0] = halo_bw_width()[i];
+    }
+  } else { // if (data_buffer_[0])
+    dev_.pitch = 0;
+    LOG_DEBUG() << "Pitch: " << dev_.pitch << "\n";
+    for (int i = 0; i < num_dims(); ++i) {
+      dev_.dim[i]  = 0;
+      dev_.local_size[i] = 0;
+      dev_.local_offset[i] = 0;      
+      // halo_peer_dev_ is BufferOpenCLDev
+      clmem_halo_peer_fw_[i] = 0;
+      clmem_halo_peer_bw_[i] = 0;
+
+      for (int j = 0; j < 2; ++j) {
+        dev_.halo[i][j] = 0;
+      }
+      dev_.halo_width[i][1] = 0;
+      dev_.halo_width[i][0] = 0;
     }
   }
 }
