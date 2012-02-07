@@ -394,6 +394,10 @@ typedef struct {
 
 #undef __PS_ST_K
 
+#ifndef PHYSIS_USER
+#define __PSGridDimDev(p, d) ((p)->dim[d])
+#endif
+
 #ifdef __cplusplus
 }
 #endif
