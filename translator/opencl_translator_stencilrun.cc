@@ -70,9 +70,13 @@ SgBasicBlock *OpenCLTranslator::block_setkernelarg(
     // Initialize block
     SgBasicBlock *block_ret = sb::buildBasicBlock();
 
+    SgType *SgCLlongType =
+      sb::buildOpaqueType(
+        "cl_long", global_scope_);
+
     SgType *sgtype_j = sgtype;
     if (!sgtype_j)
-      sgtype_j = sb::buildLongType();
+      sgtype_j = SgCLlongType;
     // TYPE j; (TYPE: default: Long)
     SgVariableDeclaration *j_idx = 
        sb::buildVariableDeclaration("j", sgtype_j, NULL, block_ret);

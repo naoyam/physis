@@ -176,31 +176,46 @@ void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
 
     { void *buf = g->p0 ; __PSSetKernelArgCLMem(argc, (void *)(&buf)); argc++; }
     for (dim = 0; dim < 3; dim++) {
-      long j = g->dim[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+      cl_long j = g->dim[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
     }
     for (dim = 0; dim < 3; dim++) {
-      long j = g->local_size[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+      cl_long j = g->local_size[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
     }
     for (dim = 0; dim < 3; dim++) {
-      long j = g->local_offset[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
+      cl_long j = g->local_offset[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
     }
-    { long j = g->pitch; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
+    { cl_long j = g->pitch; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
+    LOG_DEBUG() << "argc is " << argc << "\n";
     for (dim = 0; dim < 3; dim++) {
       for (fwbw = 0 ; fwbw < 2; fwbw++) {
         void *buf = 0;
         if (g->halo && g->halo[dim])
           buf = g->halo[dim][fwbw]; 
-        __PSSetKernelArgCLMem(argc, (void *)(&buf));
+        if (buf)
+          __PSSetKernelArgCLMem(argc, (void *)(&buf));
+        else {
+          void *buf_tmp = g->p0;
+          // if g->p0 is still NULL, given up
+          if (buf_tmp)
+            __PSSetKernelArgCLMem(argc, (void *)(&buf_tmp));
+        }
         argc++;
-      }
-    }
+        {
+        cl_long j = 1;
+        if (!buf)
+          j = 0;
+        __PSSetKernelArg(argc, sizeof(j), &j);
+        argc++;
+        }
+      } // for (fwbw = 0 ; fwbw < 2; fwbw++)
+    } // for (dim = 0; dim < 3; dim++)
     for (dim = 0; dim < 3; dim++) {
       for (fwbw = 0 ; fwbw < 2; fwbw++) {
-        long j = g->halo_width[dim][fwbw];
+        cl_long j = g->halo_width[dim][fwbw];
         __PSSetKernelArg(argc, sizeof(j), &j); argc++;
       }
     }
-    { long j = g->diag; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
+    { cl_long j = g->diag; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
 
     *p_argc = argc;
 } // __PSSetKernelArg_Grid3DFloat
@@ -210,7 +225,7 @@ void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom) {
     int dim = 0;
 
     for (dim = 0; dim < 3; dim++) {
-      long j;
+      cl_long j;
 
       j= p_dom->local_min[dim];
       __PSSetKernelArg(argc, sizeof(j), &j); argc++;

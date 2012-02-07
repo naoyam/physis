@@ -17,6 +17,7 @@ void OpenCLTranslator::arg_add_dom_type(
 )
 {
   int pos_dim;
+
   for (pos_dim = 0; pos_dim < num_dim; pos_dim++) {
     std::string newargname;
     SgInitializedName *newarg;

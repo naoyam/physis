@@ -6,6 +6,9 @@
 */
 #ifndef PHYSIS_OPENCL_KERNEL_MODE
 #include "physis/physis_common.h"
+#if !defined(PHYSIS_USER)
+#include <CL/cl.h>
+#endif
 #endif /* ifdef PHYSIS_OPENCL_KERNEL_MODE */
 /* 
   The following value must be 0 or 1 according to

@@ -37,7 +37,9 @@ namespace physis {
 #if 0
 #endif
     // For double usage
+#if 0
     ret_str += "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
+#endif
 
       // read header files and source file (kernelfile),
       // add the whole contents ret_str

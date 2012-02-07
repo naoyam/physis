@@ -39,9 +39,12 @@ typedef struct {
   __PS_ ## g ## _local_offset_0, __PS_ ## g ## _local_offset_1, \
       __PS_ ## g ## _local_offset_2, \
   __PS_ ## g ## _pitch, \
-  __PS_ ## g ## _halo_00, __PS_ ## g ## _halo_01, \
-  __PS_ ## g ## _halo_10, __PS_ ## g ## _halo_11, \
-  __PS_ ## g ## _halo_20, __PS_ ## g ## _halo_21, \
+  __PS_ ## g ## _halo_00, __PS_ ## g ## _halo_00_nonnull_p, \
+  __PS_ ## g ## _halo_01, __PS_ ## g ## _halo_01_nonnull_p, \
+  __PS_ ## g ## _halo_10, __PS_ ## g ## _halo_10_nonnull_p, \
+  __PS_ ## g ## _halo_11, __PS_ ## g ## _halo_11_nonnull_p, \
+  __PS_ ## g ## _halo_20, __PS_ ## g ## _halo_20_nonnull_p, \
+  __PS_ ## g ## _halo_21, __PS_ ## g ## _halo_21_nonnull_p, \
   __PS_ ## g ## _halo_width_00, __PS_ ## g ## _halo_width_01, \
   __PS_ ## g ## _halo_width_10, __PS_ ## g ## _halo_width_11, \
   __PS_ ## g ## _halo_width_20, __PS_ ## g ## _halo_width_21, \
@@ -56,9 +59,12 @@ typedef struct {
   long __PS_ ## g ## _local_offset_0, long __PS_ ## g ## _local_offset_1, \
       long __PS_ ## g ## _local_offset_2, \
   long __PS_ ## g ## _pitch, \
-  PS_GLFT_P __PS_ ## g ## _halo_00, PS_GLFT_P __PS_ ## g ## _halo_01, \
-  PS_GLFT_P __PS_ ## g ## _halo_10, PS_GLFT_P __PS_ ## g ## _halo_11, \
-  PS_GLFT_P __PS_ ## g ## _halo_20, PS_GLFT_P __PS_ ## g ## _halo_21, \
+  PS_GLFT_P __PS_ ## g ## _halo_00, long __PS_ ## g ## _halo_00_nonnull_p, \
+  PS_GLFT_P __PS_ ## g ## _halo_01, long __PS_ ## g ## _halo_01_nonnull_p, \
+  PS_GLFT_P __PS_ ## g ## _halo_10, long __PS_ ## g ## _halo_10_nonnull_p, \
+  PS_GLFT_P __PS_ ## g ## _halo_11, long __PS_ ## g ## _halo_11_nonnull_p, \
+  PS_GLFT_P __PS_ ## g ## _halo_20, long __PS_ ## g ## _halo_20_nonnull_p, \
+  PS_GLFT_P __PS_ ## g ## _halo_21, long __PS_ ## g ## _halo_21_nonnull_p, \
   long __PS_ ## g ## _halo_width_00, long __PS_ ## g ## _halo_width_01, \
   long __PS_ ## g ## _halo_width_10, long __PS_ ## g ## _halo_width_11, \
   long __PS_ ## g ## _halo_width_20, long __PS_ ## g ## _halo_width_21, \
@@ -90,6 +96,30 @@ typedef struct {
     var -> elm [2][0] = __PS_ ## var ## _ ## elm ## _20 ;\
     var -> elm [2][1] = __PS_ ## var ## _ ## elm ## _21
 
+#if 0
+#define __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, XX, YY) \
+  do {\
+    if ( __PS_ ## var ## _ ## elm ## _ ## XX ## YY ## _nonnull_p ) \
+      var -> elm [XX][YY] = __PS_ ## var ## _ ## elm ## _ ## XX ## YY ;\
+  } while (0)
+#else
+#define __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, XX, YY) \
+  do {\
+    if ( __PS_ ## var ## _ ## elm ## _ ## XX ## YY ## _nonnull_p ) \
+      var -> elm [XX][YY] = __PS_ ## var ## _ ## elm ## _ ## XX ## YY ;\
+    else \
+      var -> elm [XX][YY] = 0 ; \
+  } while (0)
+#endif
+
+#define __PS_INIT_XYZ_FB_WITH_FLAG(var, elm) \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 0, 0) ; \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 0, 1) ; \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 1, 0) ; \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 1, 1) ; \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 2, 0) ; \
+  __PS_INIT_XYZ_FB_WITH_FLAG_BASE(var, elm, 2, 1)
+    
 
   void
   __PS_CL_construct_PSGrid_from_arg(
@@ -101,7 +131,8 @@ typedef struct {
       __PS_INIT_XYZ(g, local_size);
       __PS_INIT_XYZ(g, local_offset);
       g->pitch = __PS_g_pitch;
-      __PS_INIT_XYZ_FB(g, halo);
+      /*__PS_INIT_XYZ_FB(g, halo);*/
+      __PS_INIT_XYZ_FB_WITH_FLAG(g, halo);
       __PS_INIT_XYZ_FB(g, halo_width);
       g->diag = __PS_g_diag;
       

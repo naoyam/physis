@@ -355,7 +355,7 @@ function compile()
 		return 0
 	    fi
 	    src_file="$src_file_base".c
-	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS &&
+	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include -I${OPENCL_INCLUDE_PATH} $CFLAGS &&
 	    c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base"
 	    ;;
 	mpi-opencl)

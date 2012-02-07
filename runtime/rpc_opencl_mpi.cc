@@ -81,7 +81,10 @@ std::string CLMPIbaseinfo::create_kernel_contents(std::string kernelfile) const 
     ret_str += "#undef PHYSIS_USER\n";
 
     // For double usage
+    // Disabled for AMD for now
+#if 0
     ret_str += "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
+#endif
 
       // read header files and source file (kernelfile),
       // add the whole contents ret_str
