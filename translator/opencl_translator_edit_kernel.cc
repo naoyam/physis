@@ -67,8 +67,52 @@ void OpenCLTranslator::translateKernelDeclaration(
           SgFunctionCallExp *callexp = isSgFunctionCallExp(*it);
           if (!callexp) continue;
 
-          // If it is not a call to device function, continue
           SgFunctionDeclaration *calldec = callexp->getAssociatedFunctionDeclaration();
+
+          // Change the call of PSGridDim to __PS_g_dim?x, for example
+          std::string callname = calldec->get_name().getString();
+          const char *callname_c = callname.c_str();
+          if (!strcmp(callname_c, "PSGridDim")) {
+            LOG_DEBUG() << "PSGridDim called.\n";
+            std::string str_gdim_name = "__PS_";
+
+            SgExpressionPtrList &oldargs = callexp->get_args()->get_expressions();
+            int firstone = 1;
+            FOREACH(it, oldargs.begin(), oldargs.end()) {
+              SgExpression *arg = isSgExpression(*it);
+              // handle grid type
+              if (firstone) {
+                std::string str_gname = arg->unparseToString();
+                str_gdim_name += str_gname;
+                firstone = 0;
+              } else { // if (firstone)
+                std::string str_dim = arg->unparseToString();
+                const char *cstr_dim = str_dim.c_str();
+                int dim_arg = atoi(cstr_dim);
+                switch(dim_arg) {
+                  case 0:
+                      str_gdim_name += "_dim_x";
+                      break;
+                  case 1:
+                      str_gdim_name += "_dim_y";
+                      break;
+                  case 2:
+                      str_gdim_name += "_dim_z";
+                      break;
+                  default:
+                      break;
+                } // switch(dim_arg)
+              } // // if (GridType::isGridType(cur_type))
+            } // FOREACH(it, oldargs.begin(), oldargs.end())
+            LOG_DEBUG() << "Changing the call PSGridDim to variable " << str_gdim_name << "\n";
+            SgVarRefExp *gdim_refexp =
+              sb::buildVarRefExp(str_gdim_name, getContainingScopeStatement(node_pos));
+            si::replaceExpression(callexp, gdim_refexp);
+
+            continue; // end
+          } // (!strcmp(callname_c, "PSGridDim"))
+
+          // If it is not a call to device function, continue
           if (! tx_->isKernel(calldec)) continue;
 
           // Rename caller to __PS_opencl_InDeviceFunc
