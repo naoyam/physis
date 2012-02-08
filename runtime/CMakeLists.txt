@@ -49,3 +49,22 @@ if (MPI_ENABLED AND CUDA_ENABLED)
   target_link_libraries(test_grid_mpi_cuda_3d physis_rt_mpi_cuda
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
 endif()
+
+if (MPI_ENABLED AND MPI_OPENMP_ENABLED)
+  include_directories(${MPI_INCLUDE_PATH})
+  # Pthread is used by OpenMPI.   
+  add_definitions(-pthread)
+  add_library(physis_rt_mpi_openmp
+    ${RUNTIME_COMMON_SRC}
+    #mpi_runtime.cc
+    mpi_openmp_runtime.cc
+    grid.cc
+    grid_mpi.cc
+    grid_mpi_openmp.cc
+    grid_util.cc
+    rpc_mpi.cc
+    rpc_mpi_openmp.cc
+    mpi_wrapper.cc
+  )
+  install(TARGETS physis_rt_mpi_openmp DESTINATION lib)
+endif()

@@ -71,8 +71,10 @@ find_package(MPI)
 if (MPI_FOUND)
   set(MPI_ENABLED TRUE)
   set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
+  set(MPI_OPENMP_ENABLED TRUE)
 else()
   set(MPI_ENABLED FALSE)
+  set(MPI_OPENMP_ENABLED FALSE)
 endif()
 
 # http://www.cmake.org/Wiki/CMake_RPATH_handling
