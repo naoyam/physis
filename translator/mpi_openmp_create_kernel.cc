@@ -206,6 +206,19 @@ SgBasicBlock* MPIOpenMPTranslator::BuildRunKernelBody(
                 )
             );
       si::appendStatement(assignFixDev, FixDiv_innerBlock);
+      {
+        SgStatement *condstmt =
+          sb::buildExprStatement(
+            sb::buildNotOp(
+              sb::buildVarRefExp(WidthdimDecl)
+            ));
+        SgIfStmt *returnnowstmt =
+          sb::buildIfStmt(
+            condstmt,
+            sb::buildReturnStmt(),
+            NULL);
+        si::appendStatement(returnnowstmt, FixDiv_innerBlock);
+      }
 
       SgVariableDeclaration* WidthDivDecl =
           sb::buildVariableDeclaration(
