@@ -185,7 +185,7 @@ void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
       cl_long j = g->local_offset[dim]; __PSSetKernelArg(argc, sizeof(j), &j); argc++;
     }
     { cl_long j = g->pitch; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
-    LOG_DEBUG() << "argc is " << argc << "\n";
+
     for (dim = 0; dim < 3; dim++) {
       for (fwbw = 0 ; fwbw < 2; fwbw++) {
         void *buf = 0;
