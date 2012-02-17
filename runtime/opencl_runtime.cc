@@ -34,6 +34,9 @@ extern "C" {
 
   void PSFinalize(){
     delete physis::runtime::master;
+    // FIXME
+    // Why need this??
+    fflush(stdout);
   } // void PSFinalize()
 
   // TODO: This function must need checking later, however

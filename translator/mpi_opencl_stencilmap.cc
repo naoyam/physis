@@ -568,10 +568,20 @@ void MPIOpenCLTranslator::ProcessStencilMap(
             SgType *type_sizet = sb::buildOpaqueType("size_t", global_scope_);
             SgType *type_sg_gb = sb::buildArrayType(type_sizet);
             SgAggregateInitializer *initval_gb;
+            SgAggregateInitializer *initval_local;
             if (j == 1) {
               initval_gb = sb::buildAggregateInitializer(
                   sb::buildExprListExp(
                     sb::buildIntVal(128),
+                    sb::buildIntVal(overlap_width),
+                    sb::buildIntVal(dimz),
+                    NULL
+                      ),
+                  type_sg_gb
+                  );
+              initval_local = sb::buildAggregateInitializer(
+                  sb::buildExprListExp(
+                    sb::buildIntVal(64),
                     sb::buildIntVal(overlap_width),
                     sb::buildIntVal(dimz),
                     NULL
@@ -588,11 +598,20 @@ void MPIOpenCLTranslator::ProcessStencilMap(
                       ),
                   type_sg_gb
                   );
+              initval_local = sb::buildAggregateInitializer(
+                  sb::buildExprListExp(
+                    sb::buildIntVal(64),
+                    sb::buildIntVal(4),
+                    sb::buildIntVal(1),
+                    NULL
+                      ),
+                  type_sg_gb
+                  );
             }
 
             SgVariableDeclaration *dec_local_size_tmp =
                 sb::buildVariableDeclaration(
-                  "local_size_tmp", type_sg_gb, initval_gb, block_boundary_multi);
+                  "local_size_tmp", type_sg_gb, initval_local, block_boundary_multi);
             SgVariableDeclaration *dec_global_size_tmp =
                 sb::buildVariableDeclaration(
                   "global_size_tmp", type_sg_gb, initval_gb, block_boundary_multi);
