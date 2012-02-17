@@ -42,6 +42,7 @@ PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
 MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
+TIMEOPT=""
 
 EXECUTE_WITH_VALGRIND=0
 
@@ -265,6 +266,10 @@ function generate_translation_configurations_mpi_opencl()
 function generate_translation_configurations()
 {
     target=$1
+    if [  $# -ge 2 -a -n "$2" ] ; then
+      echo $2
+      return
+    fi
     case $target in
 	ref)
 	    generate_translation_configurations_ref
@@ -449,29 +454,31 @@ function execute()
     echo  "[EXECUTE] Executing $exename"
     case $target in
 	ref)
-	    ./$exename > $exename.out
+	    ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	cuda)
-	    ./$exename > $exename.out
+	    ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	mpi)
-	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
+	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	mpi-cuda)
-	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
+	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out	    
 	    ;;
   opencl)
       exename=$(basename $1 .c).$target
-	    ./$exename > $exename.out
+	    ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	mpi-opencl)
       exename=$(basename $1 .c).$target
-	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
+	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
 	    ;;
     esac
+
+
     if [ $? -ne 0 ]; then
 	return 1
     fi
@@ -522,10 +529,13 @@ function print_usage()
     echo -e "\t\tTest only execution and its dependent tasks."
     echo -e "\t-m, --mpirun"
     echo -e "\t\tThe mpirun command for testing MPI-based runs."
+    echo -e "\t--config <file-path>"
+    echo -e "\t\tConfiguration file passed to the translator."
     echo -e "\t--proc-dim <proc-dim-list>"
     echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
     echo -e "\t--machinefile <file-path>"
     echo -e "\t\tThe MPI machinefile."
+    echo -e "\t--trace-time trace time elapsed"
     echo -e "\t--with-valgrind <translate|execute>"
     echo -e "\t\tExecute the given step with Valgrind. Excution with Valgrind\n\t\tis not yet supported."
     echo -e "\t--priority <level>"
@@ -569,8 +579,9 @@ function get_test_cases()
     STAGE="ALL"
 
     TESTS=$(get_test_cases)
+    CONFIGFILE=""
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit,with-valgrind:,priority: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,trace-time,mpirun,machinefile:,config:,proc-dim:,quit,with-valgrind:,priority: -- "$@")
     if [ $? != 0 ]; then
 	print_error "Invalid options: $@"
 	print_usage
@@ -605,6 +616,10 @@ function get_test_cases()
 		MPIRUN=$2
 		shift 2
 		;;
+      --config)
+    CONFIGFILE=$(abs_path $2)
+    shift 2
+    ;;
 	    --proc-dim)
 		MPI_PROC_DIM=$2
 		shift 2
@@ -613,6 +628,10 @@ function get_test_cases()
 		MPI_MACHINEFILE=$(abs_path $2)
 		shift 2
 		;;
+      --trace-time)
+    TIMEOPT=--physis-trace
+    shift
+    ;;
 	    -q|--quit)
 		DIE_IMMEDIATELY=1
 		shift
@@ -656,7 +675,7 @@ function get_test_cases()
 	    SHORTNAME=$(basename $TEST)
 	    DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
 	    DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
-	    for CONFIG in $(generate_translation_configurations $TARGET); do
+	    for CONFIG in $(generate_translation_configurations $TARGET "$CONFIGFILE"); do
 		echo "Testing with $SHORTNAME ($DESC)"
 		echo "Configuration ($CONFIG):"
 		echo "Dimension: $DIM"
@@ -696,7 +715,7 @@ function get_test_cases()
 		    sleep 5
 		fi
 		for np in $np_target; do
-		    if execute $SHORTNAME $TARGET $np $DIM; then
+		    if execute $SHORTNAME $TARGET $np $DIM ; then
 			echo "[EXECUTE] SUCCESS"
 			NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
 		    else
