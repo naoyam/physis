@@ -76,6 +76,12 @@ else()
   set(MPI_ENABLED FALSE)
   set(MPI_OPENMP_ENABLED FALSE)
 endif()
+find_library(NUMA_LIBRARY numa)
+if (NUMA_LIBRARY)
+  set(NUMA_ENABLED TRUE)
+else()
+  set(NUMA_ENABLED FALSE)
+endif()
 
 # http://www.cmake.org/Wiki/CMake_RPATH_handling
 # use, i.e. don't skip the full RPATH for the build tree

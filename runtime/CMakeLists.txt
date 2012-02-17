@@ -56,15 +56,47 @@ if (MPI_ENABLED AND MPI_OPENMP_ENABLED)
   add_definitions(-pthread)
   add_library(physis_rt_mpi_openmp
     ${RUNTIME_COMMON_SRC}
+    buffer_mpi_openmp.cc
+    buffer_mpi_openmp_numa.cc
     #mpi_runtime.cc
     mpi_openmp_runtime.cc
+    mpi_openmp_runtime_numa.cc
     grid.cc
+    grid_util.cc
+    grid_util_mpi_openmp.cc
     grid_mpi.cc
     grid_mpi_openmp.cc
-    grid_util.cc
+    grid_mpi_openmp_misc.cc
     rpc_mpi.cc
     rpc_mpi_openmp.cc
     mpi_wrapper.cc
   )
+  set_target_properties(
+    physis_rt_mpi_openmp PROPERTIES COMPILE_FLAGS "-UUSE_OPENMP_NUMA"
+  )
   install(TARGETS physis_rt_mpi_openmp DESTINATION lib)
+endif()
+
+if (MPI_ENABLED AND MPI_OPENMP_ENABLED AND NUMA_ENABLED)
+  include_directories(${MPI_INCLUDE_PATH})
+  add_library(physis_rt_mpi_openmp_numa
+    ${RUNTIME_COMMON_SRC}
+    buffer_mpi_openmp.cc
+    buffer_mpi_openmp_numa.cc
+    mpi_openmp_runtime.cc
+    mpi_openmp_runtime_numa.cc
+    grid.cc
+    grid_util.cc
+    grid_util_mpi_openmp.cc
+    grid_mpi.cc
+    grid_mpi_openmp.cc
+    grid_mpi_openmp_misc.cc
+    rpc_mpi.cc
+    rpc_mpi_openmp.cc
+    mpi_wrapper.cc
+  )
+  set_target_properties(
+    physis_rt_mpi_openmp_numa PROPERTIES COMPILE_FLAGS "-DUSE_OPENMP_NUMA"
+  )
+  install(TARGETS physis_rt_mpi_openmp_numa DESTINATION lib)
 endif()

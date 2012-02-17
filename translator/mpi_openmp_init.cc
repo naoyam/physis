@@ -57,7 +57,11 @@ void MPIOpenMPTranslator::translateInit(SgFunctionCallExp *node) {
     // See mpi_translator.cc: CheckSizes()
     const DomainSet &ds = tx_->domain_map().begin()->second;
     Domain *d = *(ds.begin());
-    int maxdim = d->num_dims();
+    int maxdim;
+    if (d)
+      maxdim = d->num_dims();
+    else
+      maxdim = 3;
     for (int j = 0; j < maxdim; j++) {
       node->append_arg(sb::buildIntVal(division_[j]));
     }

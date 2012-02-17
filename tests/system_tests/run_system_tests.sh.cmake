@@ -42,6 +42,7 @@ PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
 MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
+TIMEOPT=""
 
 EXECUTE_WITH_VALGRIND=0
 
@@ -204,6 +205,34 @@ function generate_translation_configurations_mpi_cuda()
     echo $new_configs
 }
 
+function generate_translation_configurations_mpi_openmp()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+        configs=$*
+    else
+        configs=config.empty
+        echo -n "" > config.empty
+    fi
+    local dsize="1,1,1 2,2,2"
+    local csize="100,100,100 5,5,5"
+    local new_configs=""
+    local idx=0
+    for j in $dsize; do
+      for jj in $csize ; do
+        for k in $configs; do
+            local c=config.mpi-openmp.$idx
+            idx=$(($idx + 1))
+            cat $k > $c
+            echo "MPI_OPENMP_DIVISION = {$j}" >> $c
+            echo "MPI_OPENMP_CACHESIZE = {$jj}" >> $c
+            new_configs="$new_configs $c"
+        done
+      done
+    done
+    echo $new_configs
+}
+
 function generate_translation_configurations()
 {
     target=$1
@@ -220,6 +249,9 @@ function generate_translation_configurations()
 	mpi-cuda)
 	    generate_translation_configurations_mpi_cuda
 	    ;;
+	mpi-openmp | mpi-openmp-numa )
+	    generate_translation_configurations_mpi_openmp
+	    ;;
 	*)
 	    generate_empty_compile_configuration
 	    ;;
@@ -233,6 +265,7 @@ function compile()
     src_file_base=$(basename $src .c).$target
     if [ "${MPI_ENABLED}" = "TRUE" ]; then
 	MPI_CFLAGS="-pthread"
+  OPENMP_CFLAGS="-fopenmp"
 	for mpiinc in $(echo "${MPI_INCLUDE_PATH}" | sed 's/;/ /g'); do
 	    MPI_CFLAGS+=" -I$mpiinc"
 	done
@@ -284,6 +317,20 @@ function compile()
 	    mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
 		'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 	    ;;
+	mpi-openmp | mpi-openmp-numa )
+	    if [ "${MPI_ENABLED}" != "TRUE" ]; then
+		echo "[COMPILE] Skipping MPI-OPENMP compilation (not supported)"
+		return 0
+	    fi
+	    src_file="$src_file_base".c		
+      LIBRARY=physis_rt_mpi_openmp
+      if [ $target = mpi-openmp-numa ] ; then
+        LIBRARY=physis_rt_mpi_openmp_numa
+        LDFLAGS+=" -lnuma"
+      fi	
+	    cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_CFLAGS $OPENMP_CFLAGS $CFLAGS &&
+	    mpic++ $OPENMP_CFLAGS "$src_file_base".o -l$LIBRARY $LDFLAGS -o "$src_file_base".exe
+	    ;;
 	*)
 	    exit_error "Unsupported target"
 	    ;;
@@ -302,6 +349,9 @@ function get_reference_exe_name()
 	    ;;
 	mpi-cuda)
 	    target=cuda
+	    ;;
+	mpi-openmp | mpi-openmp-numa )
+	    target=ref
 	    ;;
     esac
     local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.$target.exe
@@ -359,16 +409,19 @@ function execute()
     echo  "[EXECUTE] Executing $exename"
     case $target in
 	ref)
-	    ./$exename > $exename.out
+	    ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	cuda)
-	    ./$exename > $exename.out
+	    ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	mpi)
-	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
+	    do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out
 	    ;;
 	mpi-cuda)
-	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
+	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out	    
+	    ;;
+	mpi-openmp | mpi-openmp-numa )
+	    do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename "$TIMEOPT" > $exename.out	    
 	    ;;
 	*)
 	    exit_error "Unsupported target: $2"
@@ -590,12 +643,12 @@ function get_test_cases()
 		fi
 		if [ "$STAGE" = "COMPILE" ]; then continue; fi
 		np_target=1
-		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
+		if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" -o "$TARGET" = "mpi-openmp" -o "$TARGET" = "mpi-openmp-numa" ]; then
 		    np_target=$MPI_PROC_DIM
 		    echo "[EXECUTE] Trying with process configurations: $np_target"
                     # Make sure compiled binaries are synched to other nodes
 		    # This is a temporary workaround for the Raccoon cluster.
-		    sleep 30
+		    sleep 4
 		fi
 		for np in $np_target; do
 		    if execute $SHORTNAME $TARGET $np $DIM; then

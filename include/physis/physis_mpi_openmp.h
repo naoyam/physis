@@ -122,6 +122,9 @@ extern "C" {
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                   __PSGridMPI *g);
 
+  extern void __PSInitLoop_OpenMP(void);
+
+
 #ifdef __cplusplus
 }
 #endif

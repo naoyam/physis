@@ -41,6 +41,7 @@ struct CommandLineOptions {
   bool mpi_trans;
   bool mpi_cuda_trans;
   bool mpi_openmp_trans;
+  bool mpi_openmp_numa_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
                         mpi_trans(false), mpi_cuda_trans(false),
@@ -69,6 +70,7 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   //#endif
   //#ifdef defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
   desc.add_options()("mpi-openmp", "MPI-OPENMP translation");
+  desc.add_options()("mpi-openmp-numa", "MPI-OPENMP translation");
   //#endif
   desc.add_options()("list-targets", "List available targets");
 
@@ -127,8 +129,13 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
 
   //#if defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
   if (vm.count("mpi-openmp")) {
-    LOG_DEBUG() << "MPI-OPENMP translation.\n";
+    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
     opts.mpi_openmp_trans = true;
+    return;
+  }
+  if (vm.count("mpi-openmp-numa")) {
+    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
+    opts.mpi_openmp_numa_trans = true;
     return;
   }
   //#endif
@@ -140,6 +147,7 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     sj << "cuda";
     sj << "mpi-cuda";
     sj << "mpi-openmp";
+    sj << "mpi-openmp-numa";
     std::cout << sj << "\n";
     exit(0);
   }
@@ -223,6 +231,15 @@ int main(int argc, char *argv[]) {
     trans = new pt::MPIOpenMPTranslator(config);
     filename_suffix = "mpi-openmp.c";
     argvec.push_back("-DPHYSIS_MPI_OPENMP");
+    //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(MPI_OPENMP_INCLUDE_DIR));
+  }
+  if (opts.mpi_openmp_numa_trans) {
+    // Use the same MPIOpenMPTranslator
+    trans = new pt::MPIOpenMPTranslator(config);
+    filename_suffix = "mpi-openmp-numa.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENMP");
+    argvec.push_back("-DPHYSIS_MPI_OPENMP_NUMA");
     //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
     //argvec.push_back("-I" + string(MPI_OPENMP_INCLUDE_DIR));
   }

@@ -1,11 +1,3 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
-
 #include "runtime/mpi_openmp_runtime.h"
 
 #include <stdarg.h>
@@ -18,25 +10,33 @@
 #include "physis/physis_util.h"
 #include "runtime/grid_mpi_debug_util.h"
 #include "runtime/mpi_util.h"
+#include "runtime/grid_util_mpi_openmp.h"
 
 using std::map;
 using std::string;
 
 using namespace physis::runtime;
+namespace phrumputil = physis::runtime::mpiopenmputil;
 
 namespace physis {
 namespace runtime {
 
-ProcInfoOpenMP *pinfo;
-MasterOpenMP *master;
-ClientOpenMP *client;
-GridSpaceMPIOpenMP *gs;
+PROCINFO *pinfo;
+MASTER *master;
+CLIENT *client;
+GRIDSPACEMPI *gs;
 
 __PSStencilRunClientFunction *__PS_stencils;
 
 } // namespace runtime
 } // namespace physis
 
+#ifdef USE_OPENMP_NUMA
+static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y,
+                                    ssize_t z, const IntArray &base,
+                                    const IntArray &size)
+    __attribute__ ((unused));
+#endif
 static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y,
                                     ssize_t z, const IntArray &base,
                                     const IntArray &size) {
@@ -65,20 +65,47 @@ static ssize_t __PSGridCalcOffset3D(const IntArray &index,
   return index[0] + index[1] * size[0] + index[2] * size[0] * size[1];
 }
 
-// REFACTORING: This should be a member of GridMPIOpenMP class
+// REFACTORING: This should be a member of GRIDMPI class
 template <class T>
-static T *__PSGridGetAddr(GridMPIOpenMP *gm, IntArray indices) {
+static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
   // Use the remote grid if remote_grid_active is true.
   if (gm->remote_grid_active()) {
 // FIXME
 // FIXME
 // VERY CAREFUL!!
     GridMPI *rmg_orig = gm->remote_grid();
-    GridMPIOpenMP *rmg = dynamic_cast<GridMPIOpenMP *>(rmg_orig);
+    GRIDMPI *rmg = dynamic_cast<GRIDMPI *>(rmg_orig);
     PSAssert(rmg);
     indices -= rmg->local_offset();
+#ifdef USE_OPENMP_NUMA
+#if 0
+    GridMPIOpenMP *rmg_MP = dynamic_cast<GridMPIOpenMP *>(rmg);
+    PSAssert(rmg_MP);
+    BufferHostOpenMP *buf_MP = 
+      dynamic_cast<BufferHostOpenMP *>(rmg_MP->buffer());
+    PSAssert(buf_MP);
+#else
+    GridMPIOpenMP *rmg_MP = static_cast<GridMPIOpenMP *>(rmg);
+    BufferHostOpenMP *buf_MP =
+      static_cast<BufferHostOpenMP *>(rmg_MP->buffer());
+#endif
+    unsigned int cpuid = 0;
+    size_t gridid = 0;
+    size_t width_avail = 0;
+    phrumputil::getMPOffset(
+      buf_MP->num_dims(), indices,
+      buf_MP->size(), buf_MP->MPdivision(),
+      (const size_t **) buf_MP->MPoffset(),
+      (const size_t **) buf_MP->MPwidth(),
+      cpuid, gridid, width_avail
+    );
+    intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
+    pos += gridid * buf_MP->elm_size();
+    return (T *) pos;
+#else
     return ((T*)(rmg->_data())) +
         __PSGridCalcOffset3D(indices, rmg->local_size());
+#endif
   }
   
   indices -= gm->local_offset();
@@ -103,33 +130,109 @@ static T *__PSGridGetAddr(GridMPIOpenMP *gm, IntArray indices) {
     }
   }
 
+#ifdef USE_OPENMP_NUMA
+  {
+#if 0
+    BufferHostOpenMP *buf_MP = 
+      dynamic_cast<BufferHostOpenMP *>(gm->buffer());
+    PSAssert(buf_MP);
+#else
+    BufferHostOpenMP *buf_MP =
+      static_cast<BufferHostOpenMP *>(gm->buffer());
+#endif
+    unsigned int cpuid = 0;
+    size_t gridid = 0;
+    size_t width_avail = 0;
+    phrumputil::getMPOffset(
+      buf_MP->num_dims(), indices,
+      buf_MP->size(), buf_MP->MPdivision(),
+      (const size_t **) buf_MP->MPoffset(),
+      (const size_t **) buf_MP->MPwidth(),
+      cpuid, gridid, width_avail
+    );
+    intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
+    pos += gridid *= buf_MP->elm_size();
+    return (T*) pos;
+  }
+#else
   return ((T*)(gm->_data())) +
       __PSGridCalcOffset3D(indices, gm->local_size());
+#endif
 }
 
 template <class T>
 T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
                          ssize_t z) {
-  GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+  GRIDMPI *gm = (GRIDMPI*)g;
+#ifdef USE_OPENMP_NUMA
+  IntArray indices(x, y, z);
+  indices -= gm->local_offset();
+  {
+    BufferHostOpenMP *buf_MP = 
+      dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
+    PSAssert(buf_MP);
+    //PSAssert(gm->local_size() == buf_MP->size());
+
+    unsigned int cpuid = 0;
+    size_t gridid = 0;
+    size_t width_avail = 0;
+    phrumputil::getMPOffset(
+      buf_MP->num_dims(), indices,
+      buf_MP->size(), buf_MP->MPdivision(),
+      (const size_t **) buf_MP->MPoffset(),
+      (const size_t **) buf_MP->MPwidth(),
+      cpuid, gridid, width_avail
+    );
+    intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
+    pos += gridid *= buf_MP->elm_size();
+    return (T*) pos;
+  }
+#else
   ssize_t off = __PSGridCalcOffset3D(x, y, z,
                                      gm->local_offset(),
                                      gm->local_size());
   return ((T*)(gm->_data_emit())) + off;
+#endif
 }    
 
 template <class T>
 T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, ssize_t x, ssize_t y,
                               ssize_t z) {
-  GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+  GRIDMPI *gm = (GRIDMPI*)g;
+#ifdef USE_OPENMP_NUMA
+  IntArray indices(x, y, z);
+  indices -= gm->local_offset();
+  {
+    BufferHostOpenMP *buf_MP = 
+      dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
+    PSAssert(buf_MP);
+    //PSAssert(gm->local_size() == buf_MP->size());
+
+    unsigned int cpuid = 0;
+    size_t gridid = 0;
+    size_t width_avail = 0;
+    phrumputil::getMPOffset(
+      buf_MP->num_dims(), indices,
+      buf_MP->size(), buf_MP->MPdivision(),
+      (const size_t **) buf_MP->MPoffset(),
+      (const size_t **) buf_MP->MPwidth(),
+      cpuid, gridid, width_avail
+    );
+    intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
+    pos += gridid *= buf_MP->elm_size();
+    return (T*) pos;
+  }
+#else
   ssize_t off = __PSGridCalcOffset3D(x, y, z,
                                      gm->local_offset(),
                                      gm->local_size());
   return ((T*)(gm->_data_emit())) + off;
+#endif
 }    
 
 template <class T>
 T __PSGridGet(__PSGridMPI *g, va_list args) {
-  GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+  GRIDMPI *gm = (GRIDMPI*)g;
   int nd = gm->num_dims();
   IntArray index;
   for (int i = 0; i < nd; ++i) {
@@ -183,7 +286,11 @@ extern "C" {
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    pinfo = new ProcInfoOpenMP(rank, num_procs, division_array);
+#ifdef USE_OPENMP_NUMA
+    pinfo = new PROCINFO(rank, num_procs, division_array);
+#else
+    pinfo = new PROCINFO(rank, num_procs);
+#endif
     LOG_INFO() << *pinfo << "\n";
 
     IntArray proc_size;
@@ -199,7 +306,7 @@ extern "C" {
 
     LOG_INFO() << "Process size: " << proc_size << "\n";
     
-    gs = new GridSpaceMPIOpenMP(grid_num_dims, grid_size,
+    gs = new GRIDSPACEMPI(grid_num_dims, grid_size,
                           proc_num_dims, proc_size, rank);
 
     LOG_INFO() << "Grid space: " << *gs << "\n";
@@ -212,12 +319,12 @@ extern "C" {
            sizeof(__PSStencilRunClientFunction) * num_stencil_run_calls);
     if (rank != 0) {
       LOG_DEBUG() << "I'm a client.\n";
-      client = new ClientOpenMP(*pinfo, gs, MPI_COMM_WORLD);
+      client = new CLIENT(*pinfo, gs, MPI_COMM_WORLD);
       client->Listen();
       master = NULL;
     } else {
       LOG_DEBUG() << "I'm the master.\n";        
-      master = new MasterOpenMP(*pinfo, gs, MPI_COMM_WORLD);
+      master = new MASTER(*pinfo, gs, MPI_COMM_WORLD);
       client = NULL;
     }
     
@@ -319,11 +426,11 @@ extern "C" {
   }
 
   void __PSGridSwap(void *p) {
-    ((GridMPIOpenMP *)p)->Swap();
+    ((GRIDMPI *)p)->Swap();
   }
 
   int __PSGridGetID(__PSGridMPI *g) {
-    return ((GridMPIOpenMP *)g)->id();
+    return ((GRIDMPI *)g)->id();
   }
 
   __PSGridMPI *__PSGetGridByID(int id) {
@@ -347,7 +454,7 @@ extern "C" {
   }
   
   void __PSGridSet(__PSGridMPI *g, void *buf, ...) {
-    GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+    GRIDMPI *gm = (GRIDMPI*)g;
     int nd = gm->num_dims();
     va_list vl;
     va_start(vl, buf);
@@ -365,16 +472,17 @@ extern "C" {
   }
 
   void PSGridFree(void *p) {
-    master->GridDelete((GridMPIOpenMP*)p);
+    master->GridDelete((GRIDMPI*)p);
   }
 
   void PSGridCopyin(void *g, const void *buf) {
-    master->GridCopyin((GridMPIOpenMP*)g, buf);
+    // Actually buf is const, prototype differ
+    master->GridCopyin((GRIDMPI*)g, const_cast<void *>(buf));
     return;
   }
 
   void PSGridCopyout(void *g, void *buf) {
-    master->GridCopyout((GridMPIOpenMP*)g, buf);;
+    master->GridCopyout((GRIDMPI*)g, buf);;
     return;
   }
 
@@ -402,26 +510,26 @@ extern "C" {
   }
 
   float *__PSGridGetAddrFloat1D(__PSGridMPI *g, ssize_t x) {
-    return __PSGridGetAddr<float>((GridMPIOpenMP*)g, IntArray(x));
+    return __PSGridGetAddr<float>((GRIDMPI*)g, IntArray(x));
   }
 
   float *__PSGridGetAddrFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
-    return __PSGridGetAddr<float>((GridMPIOpenMP*)g, IntArray(x, y));
+    return __PSGridGetAddr<float>((GRIDMPI*)g, IntArray(x, y));
   }
   
   float *__PSGridGetAddrFloat3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z) {
-    return __PSGridGetAddr<float>((GridMPIOpenMP*)g, IntArray(x, y, z));
+    return __PSGridGetAddr<float>((GRIDMPI*)g, IntArray(x, y, z));
   }
   double *__PSGridGetAddrDouble1D(__PSGridMPI *g, ssize_t x) {
-    return __PSGridGetAddr<double>((GridMPIOpenMP*)g, IntArray(x));
+    return __PSGridGetAddr<double>((GRIDMPI*)g, IntArray(x));
   }
 
   double *__PSGridGetAddrDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
-    return __PSGridGetAddr<double>((GridMPIOpenMP*)g, IntArray(x, y));
+    return __PSGridGetAddr<double>((GRIDMPI*)g, IntArray(x, y));
   }
   
   double *__PSGridGetAddrDouble3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z) {
-    return __PSGridGetAddr<double>((GridMPIOpenMP*)g, IntArray(x, y, z));
+    return __PSGridGetAddr<double>((GRIDMPI*)g, IntArray(x, y, z));
   }
 
 
@@ -483,7 +591,7 @@ extern "C" {
                         int diagonal, int reuse, int overlap,
                         int periodic) {
     if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
-    GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+    GRIDMPI *gm = (GRIDMPI*)g;
     gs->LoadNeighbor(gm, IntArray(halo_fw_width), IntArray(halo_bw_width),
                      (bool)diagonal, reuse, periodic);
     return;
@@ -506,7 +614,7 @@ extern "C" {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
     int dims[] = {min_dim1, min_dim2};
-    LoadSubgrid((GridMPIOpenMP*)g, gs, dims, IntArray(min_offset1, min_offset2),
+    LoadSubgrid((GRIDMPI*)g, gs, dims, IntArray(min_offset1, min_offset2),
                 IntArray(max_offset1, max_offset2), reuse);
     return;
   }
@@ -523,13 +631,13 @@ extern "C" {
     PSAssert(min_dim2 == max_dim2);
     PSAssert(min_dim3 == max_dim3);
     int dims[] = {min_dim1, min_dim2, min_dim3};
-    LoadSubgrid((GridMPIOpenMP*)g, gs, dims, IntArray(min_offset1, min_offset2, min_offset3),
+    LoadSubgrid((GRIDMPI*)g, gs, dims, IntArray(min_offset1, min_offset2, min_offset3),
                 IntArray(max_offset1, max_offset2, max_offset3), reuse);
     return;
   }
 
   void __PSActivateRemoteGrid(__PSGridMPI *g, int active) {
-    GridMPIOpenMP *gm = (GridMPIOpenMP*)g;
+    GRIDMPI *gm = (GRIDMPI*)g;
     gm->remote_grid_active() = active;
   }
 
@@ -539,12 +647,12 @@ extern "C" {
 
   void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                            __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPIOpenMP*)g);
+    master->GridReduce(buf, op, (GRIDMPI*)g);
   }
   
   void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                             __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPIOpenMP*)g);    
+    master->GridReduce(buf, op, (GRIDMPI*)g);    
   }
   
 

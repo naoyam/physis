@@ -4,13 +4,13 @@
 #include "translator/mpi_translator.h"
 #include "translator/reference_translator.h"
 
-#define MPI_OPENMP_DIVISION_X_DEFAULT (4)
-#define MPI_OPENMP_DIVISION_Y_DEFAULT (4)
-#define MPI_OPENMP_DIVISION_Z_DEFAULT (1)
+#define MPI_OPENMP_DIVISION_X_DEFAULT (1)
+#define MPI_OPENMP_DIVISION_Y_DEFAULT (1)
+#define MPI_OPENMP_DIVISION_Z_DEFAULT (2)
 
-#define MPI_OPENMP_CACHESIZE_X_DEFAULT (5)
-#define MPI_OPENMP_CACHESIZE_Y_DEFAULT (5)
-#define MPI_OPENMP_CACHESIZE_Z_DEFAULT (5)
+#define MPI_OPENMP_CACHESIZE_X_DEFAULT (100)
+#define MPI_OPENMP_CACHESIZE_Y_DEFAULT (100)
+#define MPI_OPENMP_CACHESIZE_Z_DEFAULT (100)
 
 namespace physis {
 namespace translator {
