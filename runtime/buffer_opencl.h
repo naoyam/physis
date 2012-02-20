@@ -131,6 +131,14 @@ class BufferOpenCLDev: public Buffer {
   CLbaseinfo *&stream_clinfo() { return stream_clinfo_; }
   CLbaseinfo *&base_clinfo() { return base_clinfo_; }
 
+ protected:
+  void *tmp_buf_;
+  size_t tmp_buf_size_;
+
+ public:
+  void *&tmpbuf() { return tmp_buf_; }
+  size_t &tmpbuf_size() { return tmp_buf_size_; }
+
 };
 
 #if 0

@@ -90,7 +90,9 @@ void BufferOpenCLHost::MPISend(int dst, MPI_Comm comm,
 BufferOpenCLDev::BufferOpenCLDev(size_t elm_size, CLbaseinfo *clinfo_in)
     : Buffer(elm_size),
       base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/,
-      buf_mem(0)
+      buf_mem(0),
+      tmp_buf_(0),
+      tmp_buf_size_(0)
 {
   pinned_buf_ = new BufferOpenCLHost(elm_size);
   deleter_ = BufferOpenCLDev::DeleteChunk; // But this deleter_ won't be used
@@ -100,7 +102,9 @@ BufferOpenCLDev::BufferOpenCLDev(size_t elm_size, CLbaseinfo *clinfo_in)
 BufferOpenCLDev::BufferOpenCLDev(int num_dims, size_t elm_size, CLbaseinfo *clinfo_in)
     : Buffer(num_dims, elm_size),
       base_clinfo_(clinfo_in), stream_clinfo_(0) /*, strm_(0)*/,
-      buf_mem(0)
+      buf_mem(0),
+      tmp_buf_(0),
+      tmp_buf_size_(0)
 {
   pinned_buf_ = new BufferOpenCLHost(num_dims, elm_size);
   deleter_ = BufferOpenCLDev::DeleteChunk;  // But this deleter_ won't be used
@@ -108,6 +112,9 @@ BufferOpenCLDev::BufferOpenCLDev(int num_dims, size_t elm_size, CLbaseinfo *clin
 }
 
 BufferOpenCLDev::~BufferOpenCLDev() {
+  free(tmp_buf_);
+  tmp_buf_ = 0;
+  tmp_buf_size_ = 0;
   delete pinned_buf_;  
 }
 
@@ -202,6 +209,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
   clFinish(buf_queue_);
 }
 
+#if 0
 void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
                             const IntArray &size, const IntArray &total_size) {
   if ((size[1] == 0) && (size[2] == 0)) {
@@ -246,7 +254,76 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
   // And block
   clFinish(buf_queue_);
 }
+#else
 
+void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
+                            const IntArray &size, const IntArray &total_size) {
+  if ((size[1] == 0) && (size[2] == 0)) {
+    Copyout(buf, offset, size);
+    return;
+  }
+
+  buf.EnsureCapacity(num_dims_, elm_size_, size);
+
+  // CUDA code waits here until stream completes all operations
+  CLbaseinfo *clinfo_use = stream_clinfo();
+  if (!clinfo_use) {
+    LOG_DEBUG() << "Currently stream not set\n";
+    clinfo_use = base_clinfo();
+  }
+  PSAssert(clinfo_use);
+  cl_command_queue buf_queue_ = clinfo_use->get_queue();
+  PSAssert(buf_queue_ != 0);
+
+  int zord = 0;
+  int yord = 0;
+  char *ptr_pos = (char *)(buf.Get());
+
+  // First copyout buffer including offset region
+  size_t offset_begin = 
+    offset[0] + offset[1] * total_size[0]
+    + offset[2] * total_size[0] * total_size[1];
+  size_t offset_end =
+    (offset[0] + size[0] -1) + (offset[1] + size[1] -1) * total_size[0]
+    + (offset[2] + size[2] -1) * total_size[0] * total_size[1]
+    + 1;
+  size_t offset_all_bytes = offset_end - offset_begin;
+  offset_all_bytes *= elm_size_;
+  if (tmpbuf_size() < offset_all_bytes) {
+    free(tmpbuf());
+    tmpbuf() = calloc(1, offset_all_bytes);
+    if (!tmpbuf()) {
+      LOG_ERROR() << "Calloc failed\n";
+      PSAbort(1);
+    }
+    tmpbuf_size() = offset_all_bytes;
+  }
+
+  cl_int status = clEnqueueReadBuffer(
+    buf_queue_, Get_buf_mem(), CL_TRUE, /* block */
+    offset_begin * elm_size_, offset_all_bytes,
+    tmpbuf(),
+    0, NULL, NULL);
+  if (status != CL_SUCCESS) {
+    LOG_ERROR() << "Calling clEnqueueBuffer failed\n";
+  }
+
+  // Now copy to buf
+  size_t size_read_once = size[0] * elm_size_;
+  for (zord = 0; zord < size[2]; zord++){
+    for (yord = 0; yord < size[1]; yord++) {
+
+      size_t offset_pos = yord * total_size[0]
+          + zord * total_size[0] * total_size[1];
+      offset_pos *= elm_size_;
+      intptr_t read_pos = (intptr_t) tmpbuf() + offset_pos;
+      memcpy(ptr_pos, (void *) read_pos, size_read_once);
+      ptr_pos += size_read_once; /* DONT FORGET TO SHIFT BUFFER!! */
+    } // for (yord = offset[1]; yord < offset[1] + size[1]; yord++)
+  } // for (zord = offset[2]; zord < offset[2] + size[2]; zord++)
+
+}
+#endif
   
 void BufferOpenCLDev::MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
                             const IntArray &size) {
