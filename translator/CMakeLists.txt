@@ -105,6 +105,23 @@ install(
   DESTINATION bin)
 #endif ()
 
+#if (MPI_ENABLED AND MPI_OPENMP_ENABLED)
+set(PHYSISC_SRC 
+  ${PHYSISC_SRC}
+  mpi_openmp_init.cc
+  mpi_openmp_create_kernel.cc
+  mpi_openmp_translator.cc
+)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-openmp.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-openmp
+)
+install(PROGRAMS
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-openmp
+  DESTINATION bin
+)
+#endif()
+
 add_executable(physisc ${PHYSISC_SRC})
 target_link_libraries(physisc ${ROSE_LIBRARIES})
 target_link_libraries(physisc ${JAVA_JVM_LIBRARY})

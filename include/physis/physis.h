@@ -21,6 +21,8 @@
 #include "physis/physis_opencl.h"
 #elif defined(PHYSIS_MPI_OPENCL)
 #include "physis/physis_mpi_opencl.h"
+#elif defined(PHYSIS_MPI_OPENMP)
+#include "physis_mpi_openmp.h"
 #endif
 
 #if defined(PHYSIS_USER)

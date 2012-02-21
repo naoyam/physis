@@ -25,6 +25,9 @@
 //#if defined(MPI_ENABLED) && defined(OPENCL_ENABLED)
 #include "translator/mpi_opencl_translator.h"
 //#endif
+//#ifdef defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
+#include "translator/mpi_openmp_translator.h"
+//#endif
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
@@ -45,11 +48,15 @@ struct CommandLineOptions {
   bool mpi_cuda_trans;
   bool opencl_trans;
   bool mpi_opencl_trans;
+  bool mpi_openmp_trans;
+  bool mpi_openmp_numa_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
                         mpi_trans(false), mpi_cuda_trans(false),
                         opencl_trans(false),
                         mpi_opencl_trans(false),
+                        mpi_openmp_trans(false),
+                        mpi_openmp_numa_trans(false),
                         config_file_path(std::make_pair(false, "")) {}
 };
 
@@ -77,6 +84,10 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   //#endif
   //#if defined(MPI_ENABLED) && defined(OPENCL_ENABLED)
   desc.add_options()("mpi-opencl", "MPI-OPENCL translation");
+  //#endif
+  //#ifdef defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
+  desc.add_options()("mpi-openmp", "MPI-OPENMP translation");
+  desc.add_options()("mpi-openmp-numa", "MPI-OPENMP translation");
   //#endif
   desc.add_options()("list-targets", "List available targets");
 
@@ -149,6 +160,19 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   }
   //#endif
 
+  //#if defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
+  if (vm.count("mpi-openmp")) {
+    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
+    opts.mpi_openmp_trans = true;
+    return;
+  }
+  if (vm.count("mpi-openmp-numa")) {
+    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
+    opts.mpi_openmp_numa_trans = true;
+    return;
+  }
+  //#endif
+
   if (vm.count("list-targets")) {
     StringJoin sj(" ");
     sj << "ref";
@@ -157,6 +181,8 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     sj << "mpi-cuda";
     sj << "opencl";
     sj << "mpi-opencl";
+    sj << "mpi-openmp";
+    sj << "mpi-openmp-numa";
     std::cout << sj << "\n";
     exit(0);
   }
@@ -250,6 +276,26 @@ int main(int argc, char *argv[]) {
     filename_suffix = "mpi-opencl.c";
     argvec.push_back("-DPHYSIS_MPI_OPENCL");
     //    argvec.push_back("-I" + string(OPENCL_INCLUDE_DIR));
+  }
+  //#endif
+
+  //#if defined(MPI_ENABLED) && defined(MPI_OPENMP_ENABLED)
+  if (opts.mpi_openmp_trans) {
+    trans = new pt::MPIOpenMPTranslator(config);
+    filename_suffix = "mpi-openmp.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENMP");
+    //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(MPI_OPENMP_INCLUDE_DIR));
+  }
+
+  if (opts.mpi_openmp_numa_trans) {
+    // Use the same MPIOpenMPTranslator
+    trans = new pt::MPIOpenMPTranslator(config);
+    filename_suffix = "mpi-openmp-numa.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENMP");
+    argvec.push_back("-DPHYSIS_MPI_OPENMP_NUMA");
+    //argvec.push_back("-I" + string(MPI_INCLUDE_DIR));
+    //argvec.push_back("-I" + string(MPI_OPENMP_INCLUDE_DIR));
   }
   //#endif
 
