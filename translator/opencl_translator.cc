@@ -71,10 +71,50 @@ void OpenCLTranslator::Finish()
     PreprocessingInfo::after
     );
 
+  add_opencl_extension_pragma();
   check_consistency();
 
 } // run
 
+void OpenCLTranslator::add_opencl_extension_pragma()
+{
+  // Add pragma for double case
+  FOREACH(it, tx_->grid_new_map().begin(), tx_->grid_new_map().end()) {
+    Grid *grid = it->second;
+    GridType *gt = grid->getType();
+    SgType *ty = gt->getElmType();
+    if (! isSgTypeDouble(ty)) continue;
+
+    LOG_INFO() << "Adding cl_khr_fp64 pragma for double support";
+
+    std::string str_insert = "";
+    str_insert = "#endif /* #ifndef ";
+    str_insert += kernel_mode_macro();
+    str_insert += " */\n";
+    str_insert += "#ifdef ";
+    str_insert += kernel_mode_macro();
+    str_insert += "\n";
+    str_insert += "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
+    str_insert += "\n";
+    str_insert += "\n#endif /* #ifdef ";
+    str_insert += kernel_mode_macro();
+    str_insert += " */\n\n";
+    str_insert += "#ifndef ";
+    str_insert += kernel_mode_macro();
+    str_insert += "\n";
+
+    si::attachArbitraryText(
+      src_->get_globalScope(),
+      str_insert,
+      PreprocessingInfo::before
+      );
+
+    break;
+  };
+
+  return;
+
+}
 
 SgExpression *OpenCLTranslator::BuildBlockDimX()
 {

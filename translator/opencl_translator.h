@@ -132,6 +132,9 @@ namespace physis {
       public:
         virtual std::string name_new_kernel(std::string oldname) { return "__PS_opencl_" + oldname; };
 
+      public:
+        virtual void add_opencl_extension_pragma();
+
     }; // class OpenCLTranslator: public ReferenceTranslator 
 
 
