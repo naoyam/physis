@@ -181,6 +181,25 @@ typedef struct {
       
   }
 
+#if defined(PHYSIS_MPI_OPENCL_USE_DOUBLE_STRUCT)
+ void
+  __PS_CL_construct_PSGrid_from_arg_DOUBLE(
+    __PS_ST_K_DB *g,
+    __PS_CL_ARG_EXPAND_ELEMENT_G_WITH_TYPE_DOUBLE(g)
+  ) {
+      g->p0 = __PS_g_p0;
+      __PS_INIT_XYZ(g, dim);
+      __PS_INIT_XYZ(g, local_size);
+      __PS_INIT_XYZ(g, local_offset);
+      g->pitch = __PS_g_pitch;
+      /*__PS_INIT_XYZ_FB(g, halo);*/
+      __PS_INIT_XYZ_FB_WITH_FLAG(g, halo);
+      __PS_INIT_XYZ_FB(g, halo_width);
+      g->diag = __PS_g_diag;
+      
+  }
+#endif
+
 #undef __PS_INIT_XYZ
 #undef __PS_INIT_XYZ_PB
 
