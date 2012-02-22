@@ -244,9 +244,17 @@ void MPIOpenCLTranslator::ProcessStencilMap(
           NULL
           );
 
-      SgFunctionCallExp *call_gridset =
+      SgType *ty = gt->getElmType();
+      std::string callname = "__PSSetKernelArg_Grid3D";
+      if (isSgTypeDouble(ty)) {
+        callname += "Double";
+      } else {
+        callname += "Float";
+      }
+
+      SgFunctionCallExp *call_gridset = 
         sb::buildFunctionCallExp(
-          sb::buildFunctionRefExp("__PSSetKernelArg_Grid3DFloat"), args_gridset);
+          sb::buildFunctionRefExp(callname), args_gridset);
       st_add = sb::buildExprStatement(call_gridset);
       st_add_normal = si::copyStatement(st_add);
       st_add_boundary = si::copyStatement(st_add);

@@ -174,6 +174,8 @@ class MPIOpenCLTranslator: public MPITranslator {
   SgFunctionCallExp *BuildCLThreadSynchronize(void);
   SgExpression *BuildStreamBoundaryKernel(int idx);
 
+ public:
+  virtual void add_opencl_extension_pragma();
 
 };
 

@@ -37,6 +37,8 @@ namespace physis {
 #if 0
 #endif
     // For double usage
+    // NOTE:
+    // The following part is moved to translater side
 #if 0
     ret_str += "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
 #endif

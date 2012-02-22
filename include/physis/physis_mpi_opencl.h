@@ -153,6 +153,7 @@ enum CL_STREAM_FLAG {
   extern void __PSSetKernelArg(unsigned int arg_index, size_t arg_size, const void *arg_val);
   extern void __PSSetKernelArgCLMem(unsigned int arg_index, const void *arg_val);
   extern void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g);
+  extern void __PSSetKernelArg_Grid3DDouble(unsigned int *p_argc, __PSGrid3DDoubleDev *g);
   extern void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom);
   extern void __PSRunKernel(size_t *globalsize, size_t *localsize);
   extern void __PS_CL_ThreadSynchronize(void);
