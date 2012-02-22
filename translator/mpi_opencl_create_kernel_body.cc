@@ -60,9 +60,15 @@ void MPIOpenCLTranslator::Define_and_Construct_griddom_in_device(
 
 
       // __PS_CL_construct_PSGrid_from_arg(&ga,__PS_CL_ARG_EXPAND_ELEMENT_G(ga));
+        std::string callname = "__PS_CL_construct_PSGrid_from_arg";
+        {
+          SgType *ty = gt->getElmType();
+          if (isSgTypeDouble(ty))
+            callname += "_DOUBLE";
+        }
         SgFunctionCallExp *exp_fcall =
           sb::buildFunctionCallExp(
-            sb::buildFunctionRefExp("__PS_CL_construct_PSGrid_from_arg"),
+            sb::buildFunctionRefExp(callname),
             args_st
             );
         si::appendStatement(sb::buildExprStatement(exp_fcall), scope);

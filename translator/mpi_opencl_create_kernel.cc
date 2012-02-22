@@ -69,7 +69,17 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
       // Defined with macro !!
       std::string name_grid = arg->get_name().getString();
       std::string name_macro_grid = 
-          "__PS_CL_ARG_EXPAND_ELEMENT_G_WITH_TYPE(" + name_grid + ")";
+          "__PS_CL_ARG_EXPAND_ELEMENT_G_WITH_TYPE";
+      {
+        GridType *gt = tx_->findGridType(type);
+        SgType *ty = gt->getElmType();
+        if (isSgTypeDouble(ty))
+          name_macro_grid += "_DOUBLE";
+      }
+      name_macro_grid += "(";
+      name_macro_grid += name_grid;
+      name_macro_grid += ")";
+
       // VERY ugly hack 3!!
       SgInitializedName *init_grid = 
         sb::buildInitializedName(name_macro_grid, sg_nulltype);
