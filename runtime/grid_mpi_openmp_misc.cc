@@ -40,14 +40,14 @@ void GridMPIOpenMP::CopyinoutSubgrid(
       bufmp->Get_MP(),
       bufmp->size(),
       bufmp->MPdivision(),
-      (const size_t **) bufmp->MPoffset(),
-      (const size_t **) bufmp->MPwidth(),
+      bufmp->MPoffset(),
+      bufmp->MPwidth(),
       (void **) &buf,
       subgrid_offset_inner,
       subgrid_size_inner,
       subbuf_division,
-      (const size_t **) subbuf_offset,
-      (const size_t **) subbuf_width
+      subbuf_offset,
+      subbuf_width
     );
 
     for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++) {
@@ -95,14 +95,14 @@ void GridMPIOpenMP::CopyinoutSubgrid(
       (void **) &global_buf,
       global_size,
       buf_division,
-      (const size_t **) buf_offset,
-      (const size_t **) buf_width,
+      buf_offset,
+      buf_width,
       subbufmp->Get_MP(),
       subgrid_offset,
       subgrid_size,
       subbufmp->MPdivision(),
-      (const size_t **) subbufmp->MPoffset(),
-      (const size_t **) subbufmp->MPwidth()
+      subbufmp->MPoffset(),
+      subbufmp->MPwidth()
     );
 
     for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++) {

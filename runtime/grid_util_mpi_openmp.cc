@@ -12,8 +12,8 @@ void getMPOffset(
     const IntArray &offset,
     const IntArray &grid_size,
     const IntArray &grid_division,
-    const size_t **grid_mp_offset,
-    const size_t **grid_mp_width,
+    const size_t * const *grid_mp_offset,
+    const size_t * const *grid_mp_width,
     unsigned int &cpuid_OUT,
     size_t &gridid_OUT,
     size_t &width_avail_OUT
@@ -58,14 +58,14 @@ void CopyinoutSubgrid_MP(
     void **grid_mp,
     const IntArray  &grid_size,
     const IntArray &grid_division,
-    const size_t **grid_mp_offset,
-    const size_t **grid_mp_width,
+    const size_t * const *grid_mp_offset,
+    const size_t * const *grid_mp_width,
     void **subgrid_mp,
     const IntArray &subgrid_offset,
     const IntArray &subgrid_size,
     const IntArray &subgrid_division,
-    const size_t **subgrid_mp_offset,
-    const size_t **subgrid_mp_width
+    const size_t * const *subgrid_mp_offset,
+    const size_t * const *subgrid_mp_width
   )
 {
 #if 0
