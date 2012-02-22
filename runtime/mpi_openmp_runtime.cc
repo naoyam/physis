@@ -95,8 +95,8 @@ static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
     phrumputil::getMPOffset(
       buf_MP->num_dims(), indices,
       buf_MP->size(), buf_MP->MPdivision(),
-      (const size_t **) buf_MP->MPoffset(),
-      (const size_t **) buf_MP->MPwidth(),
+      buf_MP->MPoffset(),
+      buf_MP->MPwidth(),
       cpuid, gridid, width_avail
     );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
@@ -146,8 +146,8 @@ static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
     phrumputil::getMPOffset(
       buf_MP->num_dims(), indices,
       buf_MP->size(), buf_MP->MPdivision(),
-      (const size_t **) buf_MP->MPoffset(),
-      (const size_t **) buf_MP->MPwidth(),
+      buf_MP->MPoffset(),
+      buf_MP->MPwidth(),
       cpuid, gridid, width_avail
     );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
@@ -179,8 +179,8 @@ T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
     phrumputil::getMPOffset(
       buf_MP->num_dims(), indices,
       buf_MP->size(), buf_MP->MPdivision(),
-      (const size_t **) buf_MP->MPoffset(),
-      (const size_t **) buf_MP->MPwidth(),
+      buf_MP->MPoffset(),
+      buf_MP->MPwidth(),
       cpuid, gridid, width_avail
     );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
@@ -214,8 +214,8 @@ T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, ssize_t x, ssize_t y,
     phrumputil::getMPOffset(
       buf_MP->num_dims(), indices,
       buf_MP->size(), buf_MP->MPdivision(),
-      (const size_t **) buf_MP->MPoffset(),
-      (const size_t **) buf_MP->MPwidth(),
+      buf_MP->MPoffset(),
+      buf_MP->MPwidth(),
       cpuid, gridid, width_avail
     );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);

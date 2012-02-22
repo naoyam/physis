@@ -38,6 +38,7 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
   LOG_DEBUG() << __FUNCTION__ << ": "
               << "subgrid offset: " << subgrid_offset
               << "subgrid size: " << subgrid_size
+              << "grid size: " << grid_size
               << "\n";
 
   // Collect 1-D continuous regions
@@ -81,6 +82,13 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
                    const void *subgrid,
                    const IntArray &subgrid_offset,
                    const IntArray &subgrid_size) {
+
+  LOG_DEBUG() << __FUNCTION__ << ": "
+              << "subgrid offset: " << subgrid_offset
+              << "subgrid size: " << subgrid_size
+              << "grid size: " << grid_size
+              << "\n";
+
   intptr_t subgrid_original = (intptr_t)subgrid; // just for sanity checking
   std::list<IntArray> *offsets = new std::list<IntArray>;
   std::list<IntArray> *offsets_new = new std::list<IntArray>;
