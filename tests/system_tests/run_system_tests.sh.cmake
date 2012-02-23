@@ -325,6 +325,10 @@ function compile()
 	    src_file="$src_file_base".c		
       LIBRARY=physis_rt_mpi_openmp
       if [ $target = mpi-openmp-numa ] ; then
+	      if [ "${NUMA_ENABLED}" != "TRUE" ]; then
+		      echo "[COMPILE] Skipping MPI-OPENMP-NUMA compilation (not supported)"
+		      return 0
+	      fi
         LIBRARY=physis_rt_mpi_openmp_numa
         LDFLAGS+=" -lnuma"
       fi	
