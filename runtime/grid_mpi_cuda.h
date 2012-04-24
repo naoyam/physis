@@ -29,7 +29,7 @@ class GridMPICUDA3D: public GridMPI {
                 bool double_buffering, const IntArray &global_offset,
                 const IntArray &local_offset, const IntArray &local_size,
                 int attr);
-  __PSGrid3DDev dev_;
+  __PSGridDev3D dev_;
   // the source is address of ordinary memory region
   virtual void Copyin(void *dst, const void *src, size_t size);
   // the dstination is address of ordinary memory region  
@@ -41,9 +41,10 @@ class GridMPICUDA3D: public GridMPI {
       const IntArray &local_offset, const IntArray &local_size,
       int attr);
   virtual ~GridMPICUDA3D();
+  virtual void DeleteBuffers();
   virtual void InitBuffer();
   virtual std::ostream &Print(std::ostream &os) const;
-  __PSGrid3DDev *GetDev() { return &dev_; }
+  __PSGridDev3D *GetDev() { return &dev_; }
   virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
   virtual void CopyoutHalo3D0(unsigned width, bool fw);
   virtual void CopyoutHalo3D1(unsigned width, bool fw);
@@ -54,6 +55,10 @@ class GridMPICUDA3D: public GridMPI {
   void SetCUDAStream(cudaStream_t strm);
   
   virtual int Reduce(PSReduceOp op, void *out);
+
+  virtual void Save();
+  virtual void Restore();
+
   
   // REFACTORING: this is an ugly fix to make things work...
   //protected:
@@ -83,12 +88,12 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                     const IntArray &global_offset,
                                     int attr);
   virtual bool SendBoundaries(GridMPICUDA3D *grid, int dim, unsigned width,
-                              bool forward, bool diagonal,
+                              bool forward, bool diagonal, bool periodic,
                               ssize_t halo_size,
                               performance::DataCopyProfile &prof,
                               MPI_Request &req) const;
   virtual bool RecvBoundaries(GridMPICUDA3D *grid, int dim, unsigned width,
-                              bool forward, bool diagonal,
+                              bool forward, bool diagonal, bool periodic,
                               ssize_t halo_size,
                               performance::DataCopyProfile &prof) const;
   
@@ -96,23 +101,26 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                   int dim,
                                   unsigned halo_fw_width,
                                   unsigned halo_bw_width,
-                                  bool diagonal) const;
+                                  bool diagonal,
+                                  bool periodic) const;
   virtual void ExchangeBoundariesStage1(GridMPI *grid,
                                         int dim,
                                         unsigned halo_fw_width,
                                         unsigned halo_bw_width,
-                                        bool diagonal) const;
+                                        bool diagonal,
+                                        bool periodic) const;
   virtual void ExchangeBoundariesStage2(GridMPI *grid,
                                         int dim,
                                         unsigned halo_fw_width,
                                         unsigned halo_bw_width,
-                                        bool diagonal) const;
-
+                                        bool diagonal,
+                                        bool periodic) const;
   virtual GridMPI *LoadNeighbor(GridMPI *g,
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 cudaStream_t cuda_stream=0);
@@ -120,7 +128,8 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 cudaStream_t cuda_stream=0);
@@ -128,7 +137,8 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                 const IntArray &halo_fw_width,
                                 const IntArray &halo_bw_width,
                                 bool diagonal,
-                                bool reuse=false,
+                                bool reuse,
+                                bool periodic,
                                 const bool *fw_enabled=NULL,
                                 const bool *bw_enabled=NULL,
                                 cudaStream_t cuda_stream=0);

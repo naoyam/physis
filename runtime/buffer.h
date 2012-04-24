@@ -55,9 +55,10 @@ class Buffer {
   virtual void EnsureCapacity(int num_dims, size_t elm_size,
                               const IntArray &size);
   int num_dims() const { return num_dims_; }
-  virtual size_t GetLinearSize(const IntArray &s) {
+  virtual size_t GetLinearSize(const IntArray &s) const {
     return s.accumulate(num_dims_) * elm_size_; }
-  virtual size_t GetLinearSize() { return GetLinearSize(size_); }
+  virtual size_t GetLinearSize() const {
+    return GetLinearSize(size_); }
 
  protected:
   virtual void Shrink(size_t size);

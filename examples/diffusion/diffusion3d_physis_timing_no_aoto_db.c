@@ -138,13 +138,17 @@ int main(int argc, char *argv[]) {
   cn = cs = kappa*dt/(dy*dy);
   ct = cb = kappa*dt/(dz*dz);
   cc = 1.0 - (ce + cw + cn + cs + ct + cb);
+  // Warming up
+  PSStencilRun(PSStencilMap(kernel, d, g1, g2, ce,cw,cn,cs,ct,cb,cc),
+               PSStencilMap(kernel, d, g2, g1, ce,cw,cn,cs,ct,cb,cc));
   //assert(count % 2 == 0);
   gettimeofday(&time_begin, NULL);
   PSStencilRun(PSStencilMap(kernel, d, g1, g2, ce,cw,cn,cs,ct,cb,cc),
                PSStencilMap(kernel, d, g2, g1, ce,cw,cn,cs,ct,cb,cc),
                count/2);
   gettimeofday(&time_end, NULL);
-
+  // For the 2 times in warming up
+  count += 2;
   time += dt * count;
 #if ENABLE_ERROR_CHECKING  
   REAL *answer = (REAL *)malloc(sizeof(REAL) * nx*ny*nz);
@@ -157,15 +161,15 @@ int main(int argc, char *argv[]) {
   
   double elapsed_time = (time_end.tv_sec - time_begin.tv_sec)
                         + (time_end.tv_usec - time_begin.tv_usec)*1.0e-6;
-  REAL mflops = (nx*ny*nz)*13.0*count/elapsed_time * 1.0e-06;
+  REAL gflops = (nx*ny*nz)*13.0*count/elapsed_time * 1.0e-09;
   double thput = (nx * ny * nz) * sizeof(REAL) * 2.0 * count
                  / elapsed_time / (1000 * 1000 * 1000);
 
-  fprintf(stderr, "elapsed time : %.3f (s)\n", elapsed_time);
-  fprintf(stderr, "flops        : %.3f (MFlops)\n", mflops);
-  fprintf(stderr, "throughput   : %.3f (GB/s)\n", thput);
-  fprintf(stderr, "accuracy     : %e\n", err);  
-  fprintf(stderr, "count        : %d\n", count);
+  fprintf(stdout, "elapsed time : %.3f (s)\n", elapsed_time);
+  fprintf(stdout, "flops        : %.3f (GFlops)\n", gflops);
+  fprintf(stdout, "throughput   : %.3f (GB/s)\n", thput);
+  fprintf(stdout, "accuracy     : %e\n", err);  
+  fprintf(stdout, "count        : %d\n", count);
   //free(answer);
   PSGridFree(g1);
   PSGridFree(g2);  

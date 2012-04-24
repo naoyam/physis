@@ -71,6 +71,9 @@ void Kernel::analyzeGridReads(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
       tx.getGridGetCalls(decl->get_definition());
   analyzeGridAccess(decl, tx, calls, rGrids, rGridVars);
+  calls =
+      tx.getGridGetPeriodicCalls(decl->get_definition());
+  analyzeGridAccess(decl, tx, calls, rGrids, rGridVars);
 }
 
 Kernel::Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,

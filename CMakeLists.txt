@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
+
+# CMAKE_BUILD_TYPE must be set before calling project.
+set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
+message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
+
 project(physis)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake"
@@ -8,12 +14,6 @@ include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 # config.h files are geneted into the binary dir
 include_directories(${CMAKE_BINARY_DIR})
-
-if (NOT CMAKE_BUILD_TYPE)
-  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
-endif (NOT CMAKE_BUILD_TYPE)
-message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
 function (add_flag var flag)
   set (${var} "${${var}} ${flag}" PARENT_SCOPE)
@@ -50,6 +50,9 @@ endif ()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+
+# Debug flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
 # Logging configuration
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

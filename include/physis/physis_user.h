@@ -25,6 +25,7 @@ extern "C" {
   struct __PSGrid1D##name {                                             \
       void (*set)(PSIndexType, type);                                   \
       type (*get)(PSIndexType);                                         \
+      type (*get_periodic)(PSIndexType);                                \
       type (*emit)(type);                                               \
       type (*emitDirichlet)(type);                                      \
       type (*emitNeumann)(type, int);                                   \
@@ -37,6 +38,7 @@ extern "C" {
   struct __PSGrid2D##name {                                             \
       void (*set)(PSIndexType, PSIndexType, type);                      \
       type (*get)(PSIndexType, PSIndexType);                            \
+      type (*get_periodic)(PSIndexType, PSIndexType);                   \
       type (*emit)(type);                                               \
       type (*emitDirichlet)(type);                                      \
       type (*emitNeumann)(type, int);                                   \
@@ -49,6 +51,7 @@ extern "C" {
   struct __PSGrid3D##name {                                             \
       void (*set)(PSIndexType, PSIndexType, PSIndexType, type);         \
       type (*get)(PSIndexType, PSIndexType, PSIndexType);               \
+      type (*get_periodic)(PSIndexType, PSIndexType, PSIndexType);      \
       type (*emit)(type);                                               \
       type (*emitDirichlet)(type);                                      \
       type (*emitNeumann)(type, int);                                   \
@@ -69,6 +72,7 @@ extern "C" {
 #undef DeclareGrid3D
   
 #define PSGridGet(g, ...) g->get(__VA_ARGS__)
+#define PSGridGetPeriodic(g, ...) g->get_periodic(__VA_ARGS__)  
 #define PSGridSet(g, ...) g->set(__VA_ARGS__)  
 #define PSGridEmit(g, v) g->emit(v)  
 #define PSGridEmitDirichlet(g, v) g->emitDirichlet(v)  

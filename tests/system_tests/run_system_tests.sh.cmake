@@ -17,6 +17,7 @@ FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
+CFLAGS="${CFLAGS} -g"
 DIE_IMMEDIATELY=0
 ###############################################################
 set -u
@@ -42,6 +43,7 @@ PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
 MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
+PHYSIS_NLP=1
 
 EXECUTE_WITH_VALGRIND=0
 
@@ -385,8 +387,8 @@ function do_mpirun()
     fi
     local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
-    echo "[EXECUTE] Run mpi as \"$MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim\"" >&2
-    $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim
+    echo "[EXECUTE] $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP" >&2
+    $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP
 }
 
 function execute()
@@ -402,18 +404,21 @@ function execute()
 			./$exename > $exename.out
 			;;
 		mpi)
-			do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out
+			do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    
 			;;
 		mpi-cuda)
-			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out	    
+			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    
 			;;
 		*)
 			exit_error "Unsupported target: $2"
 			;;
     esac
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 ] || grep -q "orted was unable to" $exename.err; then
+		cat $exename.err
+		rm $exename.out $exename.err $exename		
 		return 1
     fi
+	rm $exename		
     execute_reference $1 $2
     local ref_output=$(get_reference_exe_name $1 $2).out
     if [ -f "$ref_output" ]; then
@@ -426,6 +431,7 @@ function execute()
 			echo "[EXECUTE] Successfully validated."
 		fi
     fi
+	rm $exename.out $exename.err	
 }
 
 function use_valgrind()
@@ -463,6 +469,8 @@ function print_usage()
     echo -e "\t\tThe mpirun command for testing MPI-based runs."
     echo -e "\t--proc-dim <proc-dim-list>"
     echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
+    echo -e "\t--physis-nlp <number-of-gpus-per-node>"
+    echo -e "\t\tNumber of GPUs per node."
     echo -e "\t--machinefile <file-path>"
     echo -e "\t\tThe MPI machinefile."
     echo -e "\t--with-valgrind <translate|execute>"
@@ -513,7 +521,7 @@ function get_test_cases()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,quit,with-valgrind:,priority:,config: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
 		print_usage
@@ -550,6 +558,10 @@ function get_test_cases()
 				;;
 			--proc-dim)
 				MPI_PROC_DIM=$2
+				shift 2
+				;;
+			--physis-nlp)
+				PHYSIS_NLP=$2
 				shift 2
 				;;
 			--machinefile)

@@ -11,17 +11,15 @@
 #include "physis/physis_util.h"
 #include "runtime/grid_util.h"
 
+#include <iostream>
+#include <fstream>
+
 namespace physis {
 namespace runtime {
 
 Grid::~Grid() {
-  delete data_buffer_[0];
-  if (double_buffering_) delete data_buffer_[1];
-  // below is not strictly necessary
-  data_[0] = NULL;
-  data_[1] = NULL;
+  DeleteBuffers();
 }
-
 
 void Grid::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
@@ -35,6 +33,17 @@ void Grid::InitBuffer() {
   }
   data_[0] = (char*)data_buffer_[0]->Get();
   data_[1] = (char*)data_buffer_[1]->Get();
+}
+
+void Grid::DeleteBuffers() {
+  if (data_[0]) {
+    delete data_buffer_[0];
+    data_[0] = NULL;
+  }
+  if (double_buffering_ && data_[1]) {
+    delete data_buffer_[1];
+    data_[1] = NULL;
+  }
 }
 
 void Grid::Swap() {
@@ -138,6 +147,52 @@ void GridSpace::DeleteGrid(int id) {
   DeleteGrid(g);
 }  
 
+static string GetPath(size_t id) {
+  char *ckpt_dir = getenv("PHYSIS_CHECKPOINT_DIR");
+  return (ckpt_dir? string(ckpt_dir) : ".") + "/" + toString(id);
+}
+
+void Grid::SaveToFile(const void *buf, size_t len) const {
+  string path = GetPath((size_t)this);
+  LOG_DEBUG() << "Saving to file: "
+              << path << "\n";
+  std::ofstream ckpt_file(path.c_str(),
+                          std::ios_base::out | std::ios_base::binary);
+  ckpt_file.write((const char*)buf, len);
+  ckpt_file.close();
+}
+
+void Grid::RestoreFromFile(void *buf, size_t len) {
+  string path = GetPath((size_t)this);
+  LOG_DEBUG() << "Reading from file: " << path << "\n";
+  std::ifstream ckpt_file(path.c_str(),
+                          std::ios_base::in | std::ios_base::binary);
+  ckpt_file.read((char*)buf, len);
+  ckpt_file.close();
+  LOG_DEBUG() << "Reading done\n";
+}
+
+void Grid::Save() {
+  Buffer *buf = data_buffer_[0];
+  SaveToFile(buf->Get(), buf->GetLinearSize());
+}
+
+void Grid::Restore() {
+  Buffer *buf = data_buffer_[0];
+  RestoreFromFile(buf->Get(),  buf->GetLinearSize());
+}
+
+void GridSpace::Save() {
+  FOREACH (it, grids_.begin(), grids_.end()) {
+    it->second->Save();
+  }
+}
+
+void GridSpace::Restore() {
+  FOREACH (it, grids_.begin(), grids_.end()) {
+    it->second->Restore();
+  }
+}
 
 } // runtime
 } // physis

@@ -73,7 +73,8 @@ void test3() {
     }
   }
   PSVectorInt halo = {1, 1};
-  gs->ExchangeBoundaries(g->id(), IntArray(halo), IntArray(halo), false);
+  gs->ExchangeBoundaries(g->id(), IntArray(halo), IntArray(halo),
+                         false, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
   delete gs;

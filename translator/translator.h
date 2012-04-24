@@ -64,28 +64,31 @@ class Translator: public rose_util::RoseASTTraversal {
   string target_specific_macro_;
 
   virtual void buildGridDecl();
-
   virtual void Visit(SgFunctionCallExp *node);
   virtual void Visit(SgFunctionDeclaration *node);
+
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node) {}
   virtual void translateInit(SgFunctionCallExp *node) {}
   virtual void translateNew(SgFunctionCallExp *node,
                             GridType *gt) {}
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel) {}
+                            bool isKernel, bool is_periodic) {}
   // Returns true if translation is done. If this function returns
   // false, translateGet is used.
   virtual bool translateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv) {
     return false;
   }
-  // Returns true if translation is done. If this function returns
-  // false, translateGet is used.  
+  //! Returns true if translation is done.
+  /*!
+    If this function returns false, translateGet is used.
+  */
   virtual bool translateGetKernel(SgFunctionCallExp *node,
-                                  SgInitializedName *gv) {
+                                  SgInitializedName *gv,
+                                  bool is_periodic) {
     return false;
-  } 
+  }
   virtual void translateEmit(SgFunctionCallExp *node,
                              SgInitializedName *gv) {}
   virtual void translateSet(SgFunctionCallExp *node,

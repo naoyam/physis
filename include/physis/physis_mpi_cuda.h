@@ -60,7 +60,7 @@ extern "C" {
     void *halo[3][2];
     int halo_width[3][2];        
     int diag;    
-  } __PSGrid3DDev;
+  } __PSGridDev3D;
 
   typedef struct {
     float *p0;
@@ -74,7 +74,7 @@ extern "C" {
     float *halo[3][2];    
     int halo_width[3][2];    
     int diag;    
-  } __PSGrid3DFloatDev;
+  } __PSGridDev3DFloat;
 
   typedef struct {
     double *p0;
@@ -88,7 +88,7 @@ extern "C" {
     double *halo[3][2];    
     int halo_width[3][2];
     int diag;
-  } __PSGrid3DDoubleDev;
+  } __PSGridDev3DDouble;
 
 #ifdef __CUDACC__
 #define PS_FUNCTION_DEVICE __device__
@@ -102,8 +102,9 @@ extern "C" {
     return x + y * pitch + z * pitch * dimy;
   }
 
-  PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3D(__PSGrid3DFloatDev *g,
-                                                    int x, int y, int z) {
+  PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3D(
+      __PSGridDev3DFloat *g,
+      int x, int y, int z) {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
     z -= g->local_offset[2];
@@ -112,15 +113,16 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3DLocal(
-      __PSGrid3DFloatDev *g,
+      __PSGridDev3DFloat *g,
       int x, int y, int z) {
     return g->p0 + __PSGridCalcOffset3D(
         x, y, z, g->pitch, g->local_size[1]);    
   }
   
 
-  PS_FUNCTION_DEVICE float* __PSGridEmitAddrFloat3D(__PSGrid3DFloatDev *g,
-                                                    int x, int y, int z) {
+  PS_FUNCTION_DEVICE float* __PSGridEmitAddrFloat3D(
+      __PSGridDev3DFloat *g,
+      int x, int y, int z) {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
     z -= g->local_offset[2];
@@ -131,7 +133,7 @@ extern "C" {
 
   // z
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_2_fw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[2] < g->local_size[2]) {
@@ -147,7 +149,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_2_bw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[2] >= 0) {
@@ -164,7 +166,7 @@ extern "C" {
 
   // y
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_1_fw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[1] < g->local_size[1]) {
@@ -188,7 +190,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_1_bw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[1] >= 0) {
@@ -213,7 +215,7 @@ extern "C" {
 
   // x
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_0_fw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[0] < g->local_size[0]) {
@@ -253,10 +255,10 @@ extern "C" {
   
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
   extern float* __PSGridGetAddrFloat3D_0_bw(
-      __PSGrid3DFloatDev *g, int x, int y, int z);
+      __PSGridDev3DFloat *g, int x, int y, int z);
 #else
   __device__ float* __PSGridGetAddrFloat3D_0_bw(
-      __PSGrid3DFloatDev *g, int x, int y, int z) {
+      __PSGridDev3DFloat *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[0] >= 0) { // not in the halo region of this dimension
@@ -294,10 +296,10 @@ extern "C" {
 #endif  
 
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
-  extern float* __PSGridGetAddrFloat3D(__PSGrid3DFloatDev *g,
+  extern float* __PSGridGetAddrFloat3D(__PSGridDev3DFloat *g,
                                        int x, int y, int z);
 #else  
-  __device__ float* __PSGridGetAddrFloat3D(__PSGrid3DFloatDev *g,
+  __device__ float* __PSGridGetAddrFloat3D(__PSGridDev3DFloat *g,
                                            int x, int y, int z) {
     int indices[] = {x - g->local_offset[0],
 		     y - g->local_offset[1],
@@ -338,8 +340,8 @@ extern "C" {
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                                      const PSVectorInt size,
                                      int double_buffering,
-                                     const PSVectorInt global_offset,
-                                     int attr);
+                                     int attr,
+                                     const PSVectorInt global_offset);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);
@@ -357,17 +359,17 @@ extern "C" {
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadNeighborStage1(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadNeighborStage2(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,
                                int diagonal, int reuse,
-                               int overlap);
+                               int overlap, int periodic);
   extern void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
                               int reuse);
   extern void __PSLoadSubgrid2D(__PSGridMPI *g, 
@@ -404,6 +406,19 @@ extern "C" {
                                   __PSGridMPI *g);
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                   __PSGridMPI *g);
+
+  // CUDA Runtime APIs. Have signatures here to verify generated
+  // ASTs.
+#ifdef PHYSIS_USER
+  typedef void* cudaStream_t;
+  typedef int cudaError_t;
+  extern cudaStream_t stream_inner;
+  extern cudaStream_t stream_boundary_kernel;  
+  extern cudaError_t cudaThreadSynchronize(void);
+  extern cudaError_t cudaStreamSynchronize(cudaStream);
+  extern cudaError_t cudaFuncSetCacheConfig(const char* func,
+                                            int);
+#endif
   
 
 #ifdef __cplusplus

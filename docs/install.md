@@ -26,7 +26,7 @@
 1. Change directory to an empty build directory
 2. Set shell environment variable NVSDKCOMPUTE_ROOT as the path to the root SDK directory path.
 3. Run cmkake as follows:
-  'cmake -i PHYSIS_SOURCE_PATH -DCMAKE_INSTALL_PREFIX=PHYSIS_INSTALL_PATH -DCMAKE_PREFIX_PATH=ROSE_INSTALL_PATH'
+  'cmake -i PHYSIS_SOURCE_PATH -DCMAKE_INSTALL_PREFIX=PHYSIS_INSTALL_PATH -DCMAKE_PREFIX_PATH=ROSE_INSTALL_PATH -DBOOST_ROOT=BOOST_INSTALL_PATH' 
   where PHYSIS_SOURCE_PATH is the path to the Physis root directory, PHYSIS_INSTALL_PATH is the path where Physis should be installed, ROSE_INSTALL_PATH is the path where ROSE is installed. 
  On Tsubame, the following CMake variable might need to be defined.
     * JAVA_JVM_LIBRARY_DIRECTORIES=/usr/lib64/jvm/java/jre/bin/classic
