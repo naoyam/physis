@@ -50,8 +50,10 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
   SgExprListExp *args = sb::buildExprListExp(
       grid_var, sb::buildAddressOfOp(sb::buildVarRefExp(decl)));
   for (int i = 0; i < num_dims; ++i) {
-    args->append_expression(sb::buildCastExp(indices[i],
-                                             index_t_));
+    si::appendExpression(args,
+                         sb::buildCastExp(
+                             si::copyExpression(indices[i]),
+                             index_t_));
   }
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
   rose_util::AppendExprStatement(tb, fc);
@@ -69,7 +71,9 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGet(
   SgExprListExp *args = sb::buildExprListExp(
       grid_var);
   FOREACH (it, indices.begin(), indices.end()) {
-    args->append_expression(sb::buildCastExp(*it, index_t_));
+    si::appendExpression(args,
+                         sb::buildCastExp(
+                             si::copyExpression(*it), index_t_));
   }
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
   return fc;

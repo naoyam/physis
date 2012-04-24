@@ -205,6 +205,7 @@ void Master::GridCopyinLocal(GridMPI *g, const void *buf) {
 void Master::GridCopyin(GridMPI *g, const void *buf) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Copyin\n";
 
+
   // copyin to own buffer
   GridCopyinLocal(g, buf);
 
@@ -232,6 +233,7 @@ void Master::GridCopyin(GridMPI *g, const void *buf) {
 
 void Client::GridCopyin(int id) {
   LOG_DEBUG() << "Copyin\n";
+
   GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(id));
   // notify the local offset
   IntArray ia = g->local_offset();

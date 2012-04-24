@@ -21,7 +21,7 @@ extern "C" {
     void *p1;
 #endif    
     int dim[1];
-  } __PSGrid1DDev;
+  } __PSGridDev1D;
 
   typedef struct {
     float *p0;
@@ -29,7 +29,7 @@ extern "C" {
     float *p1;
 #endif    
     int dim[1];    
-  } __PSGrid1DFloatDev;
+  } __PSGridDev1DFloat;
 
   typedef struct {
     double *p0;
@@ -37,7 +37,7 @@ extern "C" {
     double *p1;
 #endif        
     int dim[1];    
-  } __PSGrid1DDoubleDev;
+  } __PSGridDev1DDouble;
 
   // Note: int may not be enough for dim
   typedef struct {
@@ -46,7 +46,7 @@ extern "C" {
     void *p1;
 #endif        
     int dim[2];
-  } __PSGrid2DDev;
+  } __PSGridDev2D;
 
   typedef struct {
     float *p0;
@@ -54,7 +54,7 @@ extern "C" {
     float *p1;
 #endif    
     int dim[2];
-  } __PSGrid2DFloatDev;
+  } __PSGridDev2DFloat;
 
   typedef struct {
     double *p0;
@@ -62,7 +62,7 @@ extern "C" {
     double *p1;
 #endif    
     int dim[2];
-  } __PSGrid2DDoubleDev;
+  } __PSGridDev2DDouble;
 
   typedef struct {
     void *p0;
@@ -70,7 +70,7 @@ extern "C" {
     void *p1;
 #endif    
     int dim[3];
-  } __PSGrid3DDev;
+  } __PSGridDev3D;
 
   typedef struct {
     float *p0;
@@ -78,7 +78,7 @@ extern "C" {
     float *p1;
 #endif    
     int dim[3];
-  } __PSGrid3DFloatDev;
+  } __PSGridDev3DFloat;
 
   typedef struct {
     double *p0;
@@ -86,7 +86,7 @@ extern "C" {
     double *p1;
 #endif    
     int dim[3];
-  } __PSGrid3DDoubleDev;
+  } __PSGridDev3DDouble;
 
   typedef struct {
     void *p0;
@@ -95,7 +95,7 @@ extern "C" {
 #endif    
     int dim[3];
   } __PSGridDev;
-  
+
   typedef struct {
     char *p0;
 #ifdef AUTO_DOUBLE_BUFFERING    
@@ -177,6 +177,16 @@ extern "C" {
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                    __PSGrid *g);
 
+  // CUDA Runtime APIs. Have signatures here to verify generated
+  // ASTs.
+#ifdef PHYSIS_USER
+  typedef void* cudaStream_t;
+  typedef int cudaError_t;
+  extern cudaError_t cudaThreadSynchronize(void);
+  extern cudaError_t cudaStreamSynchronize(cudaStream);
+  extern cudaError_t cudaFuncSetCacheConfig(const char* func,
+                                            int);
+#endif
 
 #ifdef __cplusplus
 }

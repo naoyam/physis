@@ -241,9 +241,11 @@ int main(int argc, char *argv[]) {
     LOG_INFO() << "No input source\n";
     exit(0);
   }
-  
-  // Run internal consistency tests on AST
-  // AstTests::runAllTests(proj);
+
+  // Run internal consistency tests on AST  
+  LOG_INFO() << "Checking AST consistency.\n";
+  AstTests::runAllTests(proj);
+  LOG_INFO() << "AST validated successfully.\n";
 
   pt::TranslationContext tx(proj);
 

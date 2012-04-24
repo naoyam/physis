@@ -207,7 +207,7 @@ int StencilRange::GetMaxWidth() const {
   ssize_t wd = -1;
   for (int i = 0; i < num_dims_; ++i) {
     FOREACH (it, min_indices_[i].begin(), min_indices_[i].end()) {
-      wd = std::max(wd, it->offset);
+      wd = std::max(wd, -it->offset);
     }
     FOREACH (it, max_indices_[i].begin(), max_indices_[i].end()) {
       wd = std::max(wd, it->offset);

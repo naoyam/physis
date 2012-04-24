@@ -17,7 +17,7 @@ void test1() {
   PSVectorInt global_offset = {0, 0};
   PSVectorInt grid_size = {N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
 
@@ -30,7 +30,7 @@ void test1() {
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
   gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false);
+                         IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -49,7 +49,7 @@ void test2() {
   PSVectorInt global_offset = {0, 0};
   PSVectorInt grid_size = {N, N};
   GridMPI *g = (GridMPI *)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                         global_offset, 0);
+                                         0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
 
@@ -62,7 +62,7 @@ void test2() {
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
   gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false);
+                         IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -75,7 +75,7 @@ void test3() {
   PSVectorInt global_offset = {1, 0};
   PSVectorInt grid_size = {N-1, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
 
@@ -88,7 +88,7 @@ void test3() {
   //print_grid<float>(g, gs->my_rank_, std::cerr);
 
   if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), false);
+                                   IntArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -101,7 +101,7 @@ void test4() {
   PSVectorInt global_offset = {0, 0};
   PSVectorInt grid_size = {N, N};
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
   int gid = g->id();
   std::cerr << *g << "\n";
 
@@ -113,7 +113,7 @@ void test4() {
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
-  gs->ExchangeBoundaries(gid, IntArray(halo), IntArray(halo), true);
+  gs->ExchangeBoundaries(gid, IntArray(halo), IntArray(halo), true, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -126,7 +126,7 @@ void test5() {
   PSVectorInt grid_size = {N, N};
   int num_elms = N*N;
   GridMPI *g = (GridMPI*)__PSGridNewMPI(PS_FLOAT, sizeof(float), NDIM, grid_size, 0,
-                                        global_offset, 0);
+                                        0, global_offset);
 
   float *idata = new float[num_elms];
   float *odata = new float[num_elms];

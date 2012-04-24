@@ -36,6 +36,8 @@ __PSStencilRunClientFunction *__PS_stencils;
 
 namespace {
 
+int num_local_processes;
+
 int GetNumberOfLocalProcesses(int *argc, char ***argv) {
   vector<string> opts;
   string option_string = "physis-nlp";
@@ -68,8 +70,24 @@ void InitCUDA(int my_rank, int num_local_processes) {
   for (int i = 0; i < num_stream_boundary_kernel; ++i) {
     CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_kernel[i]));
   }
-
   return;
+}
+
+//! Preliminary checkpoint support
+/*!
+  Not well tested.
+  CUDA context may not be completely deleted just with
+  cudaThreadExit. 
+ */
+void Checkpoint() {
+  gs->Save();
+  CUDA_SAFE_CALL(cudaThreadExit());
+}
+
+//! Preliminary restart support
+void Restart() {
+  InitCUDA(pinfo->rank(), num_local_processes);
+  gs->Restore();
 }
 
 template <class T>
@@ -140,9 +158,9 @@ extern "C" {
 
     LOG_INFO() << "Process size: " << proc_size << "\n";
 
-    int nlp = GetNumberOfLocalProcesses(argc, argv);
-
-    InitCUDA(rank, nlp);
+    num_local_processes = GetNumberOfLocalProcesses(argc, argv);
+    
+    InitCUDA(rank, num_local_processes);
 
     gs = new GridSpaceMPICUDA(grid_num_dims, grid_size,
                               proc_num_dims, proc_size, rank);
@@ -247,8 +265,8 @@ extern "C" {
   __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
                               int double_buffering,
-                              const PSVectorInt global_offset,
-                              int attr) {
+                              int attr,
+                              const PSVectorInt global_offset) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
@@ -261,8 +279,10 @@ extern "C" {
       return NULL;
     }
     
-    return master->GridNew(type, elm_size, dim, gsize,
-                           double_buffering, IntArray(), attr);
+    __PSGridMPI *g = master->GridNew(type, elm_size, dim, gsize,
+                                     double_buffering, IntArray(), attr);
+
+    return g;
   }
 
   // same as mpi_runtime.cc
@@ -352,6 +372,7 @@ extern "C" {
     master->StencilRun(id, iter, num_stencils, stencils, stencil_sizes);
     delete[] stencils;
     delete[] stencil_sizes;
+    // testing checkpointing
     return;
   }
 
@@ -364,7 +385,8 @@ extern "C" {
   void __PSLoadNeighbor(__PSGridMPI *g,
                         const PSVectorInt halo_fw_width,
                         const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                        int diagonal, int reuse, int overlap,
+                        int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
@@ -372,43 +394,44 @@ extern "C" {
     }
     gs->LoadNeighbor(gm, IntArray(halo_fw_width),
                      IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
+                     diagonal, reuse, periodic,
                      NULL, NULL, strm);
     return;
   }
 
   void __PSLoadNeighborStage1(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse,
+                              int overlap, int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
     }
     gs->LoadNeighborStage1(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
 
   void __PSLoadNeighborStage2(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse,
+                              int overlap, int periodic) {
     GridMPI *gm = (GridMPI*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
     }
     gs->LoadNeighborStage2(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
-  
   
 
   // same as mpi_runtime.cc  

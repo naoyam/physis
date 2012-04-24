@@ -52,12 +52,18 @@ class CUDATranslator : public ReferenceTranslator {
   */  
   bool flag_pre_calc_grid_address_;
   
+  virtual void FixAST();
+  virtual void FixGridType();
+  
  public:
   
   //! Generates a CUDA grid declaration for a stencil.
   /*!
     The x and y dimensions are decomposed by the thread block, whereas
     the z dimension is processed entirely by each thread block.
+
+    Each dimension parameter must be a free AST node and not be used
+    other tree locations.
     
     \param name The name of the grid variable.
     \param dom_dim_x
@@ -73,16 +79,10 @@ class CUDATranslator : public ReferenceTranslator {
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) const;
 
-  virtual SgExpression *BuildOffset(SgInitializedName *gv,
-                                    int num_dim,
-                                    SgExprListExp *args,
-                                    bool is_kernel,
-                                    SgScopeStatement *scope);
-
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
-                            bool isKernel);
+                            bool is_kernel, bool is_periodic);
   //virtual void translateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.
@@ -108,12 +108,11 @@ class CUDATranslator : public ReferenceTranslator {
   /*!
     \param stencil_idx The index of the stencil in PSStencilRun.
     \param sm The stencil map object.
-    \param sv A variable referencing the stencil map.
+    \param sv_name Name of the stencil parameter.
     \return The argument list for the call to the stencil map.
    */
-  virtual SgExprListExp *BuildCUDAKernelArgList(int stencil_idx,
-                                                StencilMap *sm,
-                                                SgVarRefExp *sv) const;
+  virtual SgExprListExp *BuildCUDAKernelArgList(
+      int stencil_idx, StencilMap *sm, const string &sv_name) const;
 
   //! Generates a CUDA function declaration that runs a stencil map. 
   /*!
@@ -160,12 +159,12 @@ class CUDATranslator : public ReferenceTranslator {
   //! Generates an IF block to exclude indices outside a domain.
   /*!
     \param indices The indices to check.
-    \param dom_ref The domain.
+    \param dom_arg Name of the domain parameter.
     \return The IF block.
    */
   virtual SgIfStmt *BuildDomainInclusionCheck(
       const vector<SgVariableDeclaration*> &indices,
-      SgExpression *dom_ref) const;
+      SgInitializedName *dom_arg) const;
   //! Generates a device type corresponding to a given grid type.
   /*!
     \param gt The grid type.

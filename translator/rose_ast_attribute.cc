@@ -28,6 +28,10 @@ bool GridCallAttribute::IsGet() {
   return kind_ == GET;
 }
 
+bool GridCallAttribute::IsGetPeriodic() {
+  return kind_ == GET_PERIODIC;
+}
+
 bool GridCallAttribute::IsEmit() {
   return kind_ == EMIT;
 }

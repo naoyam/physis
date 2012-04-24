@@ -154,13 +154,16 @@ void SetFunctionStatic(SgFunctionDeclaration *fdecl) {
   fdecl->get_declarationModifier().get_storageModifier().setStatic();
 }
 
-SgExpression *buildNULL() {
-#if 0  
-  return sb::buildCastExp(sb::buildIntVal(0),
-                          sb::buildPointerType(sb::buildVoidType()));
-#else
-  return sb::buildVarRefExp("NULL");
-#endif
+SgExpression *buildNULL(SgScopeStatement *global_scope) {
+  static SgVariableDeclaration *dummy_null = NULL;
+  if (!dummy_null) {
+    dummy_null =
+        sb::buildVariableDeclaration(
+            "NULL",
+            sb::buildPointerType(sb::buildVoidType()),
+            NULL, global_scope);
+  }
+  return sb::buildVarRefExp(dummy_null);
 }
 
 SgVariableDeclaration *buildVarDecl(const string &name,
@@ -202,7 +205,7 @@ SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
   SgExprListExp *init_expr = sb::buildExprListExp();
   FOREACH (it, vec.begin(), vec.end()) {
     IntVector::value_type v = *it;
-    init_expr->append_expression(BuildIntLikeVal(v));
+    si::appendExpression(init_expr, BuildIntLikeVal(v));
   }
   
   SgAggregateInitializer *init
@@ -216,7 +219,7 @@ SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
 
 void RedirectFunctionCalls(SgNode *node,
                            const std::string &current_func,
-                           SgFunctionRefExp *new_func) {
+                           SgFunctionDeclaration *new_func) {
   Rose_STL_Container<SgNode*> calls =
       NodeQuery::querySubTree(node, V_SgFunctionCallExp);
   SgFunctionSymbol *curfs =
@@ -228,7 +231,11 @@ void RedirectFunctionCalls(SgNode *node,
       continue;
     LOG_DEBUG() << "Redirecting call to " << current_func
                 << " to " << new_func << "\n";
-    fc->set_function(new_func);
+    SgFunctionCallExp *new_call =
+        sb::buildFunctionCallExp(
+            sb::buildFunctionRefExp(new_func),
+            isSgExprListExp(si::copyExpression(fc->get_args())));
+    si::replaceExpression(fc, new_call);
   }
   
 }
@@ -308,6 +315,31 @@ SgExpression *BuildMax(SgExpression *x,
   return sb::buildConditionalExp(
       sb::buildGreaterThanOp(x, y),
       si::copyExpression(x), si::copyExpression(y));
+}
+
+void RedirectFunctionCall(SgFunctionCallExp *call,
+                          SgExpression *new_target) {
+  SgFunctionCallExp *new_call =
+      sb::buildFunctionCallExp(
+          new_target,
+          isSgExprListExp(si::copyExpression(call->get_args())));
+  si::replaceExpression(call, new_call);
+}
+
+void PrependExpression(SgExprListExp *exp_list,
+                       SgExpression *exp) {
+  // Based on SageInterface::appendExpression
+  PSAssert(exp_list);
+  PSAssert(exp);
+  exp_list->prepend_expression(exp);
+  exp->set_parent(exp_list);
+}
+
+void ReplaceFuncBody(SgFunctionDeclaration *func,
+                     SgBasicBlock *new_body) {
+  func = isSgFunctionDeclaration(func->get_definingDeclaration());
+  SgBasicBlock *cur_body = func->get_definition()->get_body();
+  si::replaceStatement(cur_body, new_body);
 }
 
 }  // namespace rose_util

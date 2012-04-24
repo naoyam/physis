@@ -17,6 +17,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <set>
 #include <string.h>
 
 #include "physis/config.h"
@@ -95,7 +96,8 @@ using std::ostringstream;
 using std::vector;
 using std::list;
 using std::map;
-using std::find;    
+using std::find;
+using std::set;
     
 inline string toString(int x) 
 {
@@ -154,6 +156,12 @@ bool isContained(const list<T> &v, const T &x)
 
 template <class T, class S>
 bool isContained(const map<T, S> &v, const T &x) 
+{
+  return v.find(x) != v.end();
+}
+
+template <class T>
+bool isContained(const set<T> &v, const T &x) 
 {
   return v.find(x) != v.end();
 }

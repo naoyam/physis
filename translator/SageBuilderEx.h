@@ -19,13 +19,13 @@ namespace SageBuilderEx {
 
 // --- Extention of SageBuilder ---
 SgEnumVal* buildEnumVal(unsigned int value, SgEnumDeclaration* decl);
-
+/*
 SgMemberFunctionDeclaration *buildMemberFunctionDeclaration(
     const SgName &name,
     SgFunctionType *type,
     SgFunctionDefinition *definition,
     SgClassDeclaration *class_decl);
-
+*/
 SgExpression *buildStencilDimVarExp(StencilMap *stencil,
                                     SgExpression *stencil_var,
                                     int dim);
@@ -51,7 +51,8 @@ enum CudaDimentionIdx {
 
 SgFunctionCallExp *buildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
-    const cudaFuncCache cache_config);
+    const cudaFuncCache cache_config,
+    SgScopeStatement *global_scope);
 
 SgVariableDeclaration *buildDim3Declaration(const SgName &name,
                                             SgExpression *dimx,
