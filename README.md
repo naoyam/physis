@@ -35,6 +35,7 @@ devices and network connections.
 
 ## News & Updates
 
+* 24 Apr 2012 - Version 0.3 available.
 * 1 Jan 2012 - Version 0.2 available.
 * 22 Nov 2011 - Version 0.1 available.
 
@@ -85,6 +86,8 @@ See docs/faq.md.
 The corresponding source of each version is attached with a Git tag
 with the version number.
 
+* Version 0.3 (24 Apr 2012)
+    * ROSE usage changed to imporve robustness of AST translation.
 * Version 0.2 (1 Jan 2012)
     * Optimization passes added.
 * Version 0.1 (22 Nov 2011)
@@ -97,7 +100,7 @@ with the version number.
 
 ## License (BSD License)
 
-Copyright (c) 2011, Naoya Maruyama
+Copyright (c) 2012, Naoya Maruyama
 
 All rights reserved.
 
