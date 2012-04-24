@@ -112,7 +112,7 @@ SgInitializedName *getInitializedName(SgVarRefExp *var);
 string generateUniqueName(SgScopeStatement *scope = NULL,
                           const string &prefix = "__v");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
-SgExpression *buildNULL();
+SgExpression *buildNULL(SgScopeStatement *global_scope);
 SgVariableDeclaration *buildVarDecl(const string &name,
                                     SgType *type,
                                     SgExpression *val,
@@ -131,7 +131,10 @@ SgValueExp *BuildIntLikeVal(long long v);
 
 void RedirectFunctionCalls(SgNode *node,
                            const std::string &current_func,
-                           SgFunctionRefExp *new_func);
+                           SgFunctionDeclaration *new_func);
+
+void RedirectFunctionCall(SgFunctionCallExp *call,
+                          SgExpression *new_target);
 
 
 SgFunctionDeclaration *CloneFunction(SgFunctionDeclaration *decl,
@@ -228,7 +231,11 @@ SgExpression *BuildMin(SgExpression *x, SgExpression *y);
 //! Build a maxb expression.
 SgExpression *BuildMax(SgExpression *x, SgExpression *y);
 
+void PrependExpression(SgExprListExp *exp_list,
+                       SgExpression *exp);
 
+void ReplaceFuncBody(SgFunctionDeclaration *func,
+                     SgBasicBlock *new_body);
 
 }  // namespace rose_util
 }  // namespace translator

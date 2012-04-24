@@ -37,7 +37,8 @@ class Run {
   }
 
   const StencilMapArgVector &stencils() const { return stencils_; }
-  SgExpression *count() const { return count_; }
+  bool HasCount() const;
+  SgExpression *BuildCount() const;
 
   static bool isRun(SgFunctionCallExp *call);
   static SgExpression *findCountArg(SgFunctionCallExp *call);

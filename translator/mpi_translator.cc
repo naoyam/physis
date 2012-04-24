@@ -28,7 +28,7 @@ MPITranslator::MPITranslator(const Configuration &config):
   get_addr_name_ = "__PSGridGetAddr";
   get_addr_no_halo_name_ = "__PSGridGetAddrNoHalo";
   emit_addr_name_ = "__PSGridEmitAddr";
-
+  
   const pu::LuaValue *lv
       = config.Lookup(Configuration::MPI_OVERLAP);
   if (lv) {
@@ -37,6 +37,8 @@ MPITranslator::MPITranslator(const Configuration &config):
   if (flag_mpi_overlap_) {
     LOG_INFO() << "Overlapping enabled\n";
   }
+  
+  validate_ast_ = true;
 }
 
 void MPITranslator::CheckSizes() {
@@ -133,7 +135,8 @@ void MPITranslator::translateInit(SgFunctionCallExp *node) {
 
   // Append the number of run calls
   int num_runs = tx_->run_map().size();
-  node->append_arg(sb::buildIntVal(num_runs));
+  si::appendExpression(node->get_args(),
+                       sb::buildIntVal(num_runs));
 
   // let the runtime know about the stencil client handlers
   SgFunctionParameterTypeList *client_func_params
@@ -166,9 +169,12 @@ void MPITranslator::translateInit(SgFunctionCallExp *node) {
                                      ai, tmp_block);
   PSAssert(clients);
   si::appendStatement(clients, tmp_block);
-  node->append_arg(sb::buildVarRefExp(clients));
+  si::appendExpression(node->get_args(),
+                       sb::buildVarRefExp(clients));
 
-  si::appendStatement(si::copyStatement(getContainingStatement(node)), tmp_block);
+  si::appendStatement(
+      si::copyStatement(getContainingStatement(node)),
+      tmp_block);
   si::replaceStatement(getContainingStatement(node), tmp_block);
   return;
 }
@@ -180,45 +186,49 @@ void MPITranslator::translateRun(SgFunctionCallExp *node,
   
   // redirect the call to __PSStencilRun
   SgFunctionRefExp *ref = sb::buildFunctionRefExp(stencil_run_func_);
-  node->set_function(ref);
+  //node->set_function(ref);
 
   // build argument list
   SgBasicBlock *tmp_block = sb::buildBasicBlock();  
   SgExprListExp *args = sb::buildExprListExp();
+  SgExpressionPtrList &original_args =
+      node->get_args()->get_expressions();
   // runner id
-  args->append_expression(sb::buildIntVal(run->id()));
+  si::appendExpression(args, sb::buildIntVal(run->id()));
   // iteration count
-  if (run->count()) {
-    args->append_expression(run->count());
-  } else {
-    args->append_expression(sb::buildIntVal(1));
+  SgExpression *count_exp = run->BuildCount();
+  if (!count_exp) {
+    count_exp = sb::buildIntVal(1);
   }
+  si::appendExpression(args, count_exp);
   // number of stencils
-  args->append_expression(sb::buildIntVal(run->stencils().size()));
-
+  si::appendExpression(args,
+                       sb::buildIntVal(run->stencils().size()));
+  
   ENUMERATE(i, it, run->stencils().begin(), run->stencils().end()) {
-    SgExpression *stencil_arg = it->first;
+    //SgExpression *stencil_arg = it->first;
+    SgExpression *stencil_arg =
+        si::copyExpression(original_args.at(i));
     StencilMap *stencil = it->second;    
     SgType *stencil_type = stencil->stencil_type();    
     SgVariableDeclaration *sdecl
         = rose_util::buildVarDecl("s" + toString(i), stencil_type,
                                   stencil_arg, tmp_block);
-    args->append_expression(sb::buildSizeOfOp(stencil_type));
-    args->append_expression(sb::buildAddressOfOp(
+    si::appendExpression(args, sb::buildSizeOfOp(stencil_type));
+    si::appendExpression(args, sb::buildAddressOfOp(
         sb::buildVarRefExp(sdecl)));
   }
 
-  // OPTIONAL: Is freeing the old argument list object necessary?
-  node->set_args(args);
+  si::appendStatement(
+      sb::buildExprStatement(sb::buildFunctionCallExp(ref, args)),
+      tmp_block);
 
-  si::appendStatement(si::copyStatement
-                      (getContainingStatement(node)), tmp_block);
   si::replaceStatement(getContainingStatement(node), tmp_block);
 }
 
 void MPITranslator::GenerateLoadRemoteGridRegion(
     StencilMap *smap,
-    SgExpression *stencil_ref,
+    SgVariableDeclaration *stencil_decl,
     Run *run,
     SgScopeStatement *scope,
     SgInitializedNamePtrList &remote_grids,
@@ -226,17 +236,14 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     bool &overlap_eligible,
     int &overlap_width) {
   string loop_var_name = "i";
-  SgVarRefExp *loop_var_ref = sb::buildVarRefExp(loop_var_name);
   overlap_eligible = true;
   overlap_width = 0;
-  SgIntVal *overlap_arg = sb::buildIntVal(0);
+   vector<SgIntVal*> overlap_flags;
   // Ensure remote grid points available locally
   FOREACH (ait, smap->grid_params().begin(), smap->grid_params().end()) {
 
     SgInitializedName *grid_param = *ait;
     LOG_DEBUG() <<  "grid param: " << grid_param->unparseToString() << "\n";
-    SgExpression *gvref = BuildStencilFieldRef(stencil_ref,
-                                               grid_param->get_name());
     Kernel *kernel = tx_->findKernel(smap->getKernel());
     LOG_DEBUG() << "kernel: " << kernel->GetName() << "\n";
     if (!kernel->isGridParamRead(grid_param)) {
@@ -246,9 +253,10 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     bool read_only = !kernel->isGridParamWritten(grid_param);
     // Read-only grids are loaded just once at the beginning of the
     // loop
-    SgExpression *reuse;
+    SgExpression *reuse = NULL;
     if (read_only) {
-      reuse = sb::buildGreaterThanOp(loop_var_ref, sb::buildIntVal(0));
+      reuse = sb::buildGreaterThanOp(sb::buildVarRefExp(loop_var_name),
+                                     sb::buildIntVal(0));
     } else {
       reuse = sb::buildIntVal(0);
     }
@@ -258,6 +266,10 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
 
     bool is_periodic = smap->IsGridPeriodic(grid_param);
     LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
+
+    SgExpression *gvref = BuildStencilFieldRef(
+        sb::buildVarRefExp(stencil_decl),
+        grid_param->get_name());
     
     if (sr.IsNeighborAccess() && sr.num_dims() == smap->getNumDim()) {
       // If both zero, skip
@@ -267,8 +279,9 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
       }
       // Create an inner scope for declaring variables
       SgBasicBlock *bb = sb::buildBasicBlock();
-      //si::appendStatement(bb, scope);
       statements.push_back(bb);
+      SgIntVal *overlap_arg = sb::buildIntVal(0);
+      overlap_flags.push_back(overlap_arg);
       SgFunctionCallExp *load_neighbor_call
           = BuildLoadNeighbor(gvref, sr, bb, reuse, overlap_arg,
                               is_periodic);
@@ -284,14 +297,11 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
       overlap_eligible = false;
       // generate LoadSubgrid call
       if (sr.IsUniqueDim()) {
-        // rose_util::AppendExprStatement(
-        //     scope, BuildCallLoadSubgridUniqueDim(gvref, sr, reuse));
         statements.push_back(
             sb::buildExprStatement(
                 BuildCallLoadSubgridUniqueDim(gvref, sr, reuse)));
       } else {
         SgBasicBlock *tmp_block = sb::buildBasicBlock();
-        //si::appendStatement(tmp_block, scope);
         statements.push_back(tmp_block);
         SgVariableDeclaration *srv = sr.BuildPSGridRange("gr",
                                                          tmp_block);
@@ -302,29 +312,31 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     }
   }
 
-  if (overlap_eligible) {
-    overlap_arg->set_value(1);
+  FOREACH (it, overlap_flags.begin(), overlap_flags.end()) {
+    (*it)->set_value(overlap_eligible ? 1 : 0);
   }
 }
 
-
 void MPITranslator::DeactivateRemoteGrids(
     StencilMap *smap,
-    SgExpression *stencil_ref,
+    SgVariableDeclaration *stencil_decl,
     SgScopeStatement *scope,
     const SgInitializedNamePtrList &remote_grids) {
   //  FOREACH (gai, smap->grid_args().begin(),
   //  smap->grid_args().end()) {
   FOREACH (gai, remote_grids.begin(), remote_grids.end()) {
     SgInitializedName *gv = *gai;
-    SgExpression *gvref = BuildStencilFieldRef(stencil_ref,
-                                               gv->get_name());
-    rose_util::AppendExprStatement(scope, BuildActivateRemoteGrid(gvref, false));
+    SgExpression *gvref = BuildStencilFieldRef(
+        sb::buildVarRefExp(stencil_decl),
+        gv->get_name());
+    rose_util::AppendExprStatement(
+        scope,
+        BuildActivateRemoteGrid(gvref, false));
   }
 }
 
 void MPITranslator::FixGridAddresses(StencilMap *smap,
-                                     SgExpression *stencil_ref,
+                                     SgVariableDeclaration *stencil_decl,
                                      SgScopeStatement *scope) {
   SgClassDefinition *stencilDef = smap->GetStencilTypeDefinition();
   SgDeclarationStatementPtrList &members = stencilDef->get_members();
@@ -332,7 +344,8 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
   // stencil
   SgVariableDeclaration *d = isSgVariableDeclaration(*members.begin());
   SgExpression *dom_var =
-      BuildStencilFieldRef(stencil_ref, sb::buildVarRefExp(d));
+      BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
+                           sb::buildVarRefExp(d));
   rose_util::AppendExprStatement(
       scope, mpi_rt_builder_->BuildDomainSetLocalSize(dom_var));
   
@@ -344,19 +357,21 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
       continue;
     }
     SgExpression *grid_var =
-        sb::buildArrowExp(stencil_ref, sb::buildVarRefExp(d));
+        sb::buildArrowExp(sb::buildVarRefExp(stencil_decl),
+                          sb::buildVarRefExp(d));
     ++it;
     SgVariableDeclaration *grid_id = isSgVariableDeclaration(*it);
     LOG_DEBUG() << "grid var created\n";
     SgFunctionCallExp *grid_real_addr
         = mpi_rt_builder_->BuildGetGridByID(
-            BuildStencilFieldRef(stencil_ref,
+            BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
                                  sb::buildVarRefExp(grid_id)));
-    si::appendStatement(sb::buildAssignStatement(grid_var,
-                                                 grid_real_addr),
-                        scope);
+    si::appendStatement(
+        sb::buildAssignStatement(grid_var, grid_real_addr),
+        scope);
   }
 }
+
 
 void MPITranslator::ProcessStencilMap(StencilMap *smap,
                                       SgVarRefExp *stencils,
@@ -373,7 +388,6 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
   SgVariableDeclaration *sdecl
       = sb::buildVariableDeclaration(stencil_name, stencil_ptr_type,
                                      init, function_body);
-  SgVarRefExp *stencil_var = sb::buildVarRefExp(sdecl);
   si::appendStatement(sdecl, function_body);
 
   // run kernel function
@@ -383,7 +397,7 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  GenerateLoadRemoteGridRegion(smap, stencil_var, run, loop_body,
+  GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
                                remote_grids, load_statements,
                                overlap_eligible, overlap_width);
   FOREACH (sit, load_statements.begin(), load_statements.end()) {
@@ -391,14 +405,15 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
   }
     
   // Call the stencil kernel
-  SgExprListExp *args = sb::buildExprListExp(stencil_var);
+  SgExprListExp *args = sb::buildExprListExp(
+      sb::buildVarRefExp(sdecl));
   SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
   si::appendStatement(sb::buildExprStatement(c), loop_body);
-  appendGridSwap(smap, stencil_var, loop_body);
-  DeactivateRemoteGrids(smap, stencil_var, loop_body,
+  appendGridSwap(smap, stencil_name, true, loop_body);
+  DeactivateRemoteGrids(smap, sdecl, loop_body,
                         remote_grids);
 
-  FixGridAddresses(smap, stencil_var, function_body);
+  FixGridAddresses(smap, sdecl, function_body);
 }
 
 SgBasicBlock *MPITranslator::BuildRunBody(Run *run) {
@@ -435,16 +450,16 @@ SgBasicBlock *MPITranslator::BuildRunBody(Run *run) {
   return block;
 }
 
-
-
 SgFunctionDeclaration *MPITranslator::GenerateRun(Run *run) {
   // setup the parameter list
   SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
-  parlist->append_arg(sb::buildInitializedName("iter",
-                                               sb::buildIntType()));
+  si::appendArg(parlist,
+                sb::buildInitializedName("iter",
+                                         sb::buildIntType()));
   SgType *stype = sb::buildPointerType(
       sb::buildPointerType(sb::buildVoidType()));
-  parlist->append_arg(sb::buildInitializedName("stencils", stype));
+  si::appendArg(parlist,
+                sb::buildInitializedName("stencils", stype));
 
   // Declare and define the function
   SgFunctionDeclaration *runFunc =
@@ -455,7 +470,8 @@ SgFunctionDeclaration *MPITranslator::GenerateRun(Run *run) {
 
   // Function body
   SgFunctionDefinition *fdef = runFunc->get_definition();
-  si::appendStatement(BuildRunBody(run), fdef);
+  si::replaceStatement(fdef->get_body(),
+                       BuildRunBody(run));
   si::attachComment(runFunc, "Generated by GenerateRun");
   return runFunc;
 }
@@ -463,8 +479,15 @@ SgFunctionDeclaration *MPITranslator::GenerateRun(Run *run) {
 SgExprListExp *MPITranslator::generateNewArg(
     GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
   // Prepend the type specifier.
-  SgExprListExp *new_args = ReferenceTranslator::generateNewArg(gt, g, dim_decl);
-  new_args->prepend_expression(gt->BuildElementTypeExpr());
+  SgExprListExp *ref_args =
+      ReferenceTranslator::generateNewArg(gt, g, dim_decl);
+  SgExprListExp *new_args =
+      sb::buildExprListExp(gt->BuildElementTypeExpr());
+  FOREACH (it, ref_args->get_expressions().begin(),
+           ref_args->get_expressions().end()) {
+    si::appendExpression(new_args, si::copyExpression(*it));
+  }
+  si::deleteAST(ref_args);
   return new_args;
 }
 
@@ -473,7 +496,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   // attribute
   si::appendExpression(args, sb::buildIntVal(0));
   // global offset
-  si::appendExpression(args, rose_util::buildNULL());
+  si::appendExpression(args, rose_util::buildNULL(global_scope_));
   return;
 }
 
@@ -493,8 +516,8 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
   SgFunctionCallExp *get_call = ref_rt_builder_->BuildGridGet(
       g, indices, gt->getElmType());
   si::replaceExpression(node, get_call, true);
-  rose_util::CopyASTAttribute<GridGetAttribute>(get_call,
-                                                node, false);  
+  rose_util::CopyASTAttribute<GridGetAttribute>(
+      get_call, node, false);  
   return true;
 }
 
@@ -516,7 +539,6 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
   LOG_DEBUG() << "Stencil index: " << *sil;
   if (StencilIndexSelf(*sil, nd)) {
     get_address = sb::buildFunctionRefExp(get_address_no_halo_name,
-
                                           global_scope_);
   } else {
     get_address = sb::buildFunctionRefExp(get_address_name,
@@ -525,7 +547,7 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
   SgExprListExp *args = sb::buildExprListExp(g);
   FOREACH (it, node->get_args()->get_expressions().begin(),
            node->get_args()->get_expressions().end()) {
-    args->append_expression(si::copyExpression(*it));
+    si::appendExpression(args, si::copyExpression(*it));
   }
 
   SgFunctionCallExp *get_address_exp
@@ -560,7 +582,10 @@ void MPITranslator::translateEmit(SgFunctionCallExp *node,
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
   FOREACH(it, params.begin(), params.begin() + nd) {
     SgInitializedName *p = *it;
-    args->append_expression(sb::buildVarRefExp(p, getContainingScopeStatement(node)));
+    si::appendExpression(
+        args,
+        sb::buildVarRefExp(p,
+                           getContainingScopeStatement(node)));
   }
 
   SgFunctionCallExp *get_address_exp
@@ -573,6 +598,12 @@ void MPITranslator::translateEmit(SgFunctionCallExp *node,
 
   SgExpression *emit = sb::buildAssignOp(lhs, rhs);
   si::replaceExpression(node, emit);
+}
+
+void MPITranslator::FixAST() {
+  if (validate_ast_) {
+    si::fixVariableReferences(project_);
+  }
 }
 
 } // namespace translator

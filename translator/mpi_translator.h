@@ -40,7 +40,8 @@ class MPITranslator: public ReferenceTranslator {
                                 SgInitializedName *gv);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
   virtual void GenerateLoadRemoteGridRegion(
-      StencilMap *smap, SgExpression *stencil_ref,
+      StencilMap *smap,
+      SgVariableDeclaration *stencil_decl,
       Run *run, SgScopeStatement *scope,
       SgInitializedNamePtrList &remote_grids,
       SgStatementPtrList &statements,
@@ -52,12 +53,11 @@ class MPITranslator: public ReferenceTranslator {
                                  SgScopeStatement *loop_body);
   virtual void DeactivateRemoteGrids(
       StencilMap *smap,
-      SgExpression *stencil_ref,
-      
+      SgVariableDeclaration *stencil_decl,      
       SgScopeStatement *scope,
       const SgInitializedNamePtrList &remote_grids);
   virtual void FixGridAddresses(StencilMap *smap,
-                                SgExpression *stencil_ref,
+                                SgVariableDeclaration *stencil_decl,
                                 SgScopeStatement *scope);
   virtual void CheckSizes();
 
@@ -67,6 +67,8 @@ class MPITranslator: public ReferenceTranslator {
   string get_addr_name_;
   string get_addr_no_halo_name_;
   string emit_addr_name_;
+
+  virtual void FixAST();
 };
 
 } // namespace translator
