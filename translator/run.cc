@@ -10,6 +10,9 @@
 #include "translator/rose_util.h"
 #include "translator/translation_context.h"
 
+namespace si = SageInterface;
+namespace sb = SageBuilder;
+
 namespace physis {
 namespace translator {
 
@@ -90,6 +93,14 @@ bool Run::IsModifiedAny(GridSet *gs, TranslationContext *tx) {
     if (kernel->isModifiedAny(gs)) return true;
   }
   return false;
+}
+
+bool Run::HasCount() const {
+  return count_ != NULL;
+}
+
+SgExpression *Run::BuildCount() const {
+  return (count_) ? si::copyExpression(count_) : NULL;
 }
 
 } // namespace translator

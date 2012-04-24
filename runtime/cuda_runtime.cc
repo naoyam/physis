@@ -70,31 +70,31 @@ extern "C" {
     // CUDA global functions.
     switch (g->num_dims) {
       case 1:
-        g->dev = malloc(sizeof(__PSGrid1DDev));
-        ((__PSGrid1DDev*)g->dev)->p0 = g->p0;
+        g->dev = malloc(sizeof(__PSGridDev1D));
+        ((__PSGridDev1D*)g->dev)->p0 = g->p0;
 #ifdef AUTO_DOUBLE_BUFFERING        
-        ((__PSGrid1DDev*)g->dev)->p1 = g->p1;
+        ((__PSGridDev1D*)g->dev)->p1 = g->p1;
 #endif        
-        ((__PSGrid2DDev*)g->dev)->dim[0] = g->dim[0];
+        ((__PSGridDev2D*)g->dev)->dim[0] = g->dim[0];
         break;
       case 2:
-        g->dev = malloc(sizeof(__PSGrid2DDev));
-        ((__PSGrid2DDev*)g->dev)->p0 = g->p0;
+        g->dev = malloc(sizeof(__PSGridDev2D));
+        ((__PSGridDev2D*)g->dev)->p0 = g->p0;
 #ifdef AUTO_DOUBLE_BUFFERING        
-        ((__PSGrid1DDev*)g->dev)->p1 = g->p1;
+        ((__PSGridDev1D*)g->dev)->p1 = g->p1;
 #endif        
-        ((__PSGrid2DDev*)g->dev)->dim[0] = g->dim[0];
-        ((__PSGrid2DDev*)g->dev)->dim[1] = g->dim[1];        
+        ((__PSGridDev2D*)g->dev)->dim[0] = g->dim[0];
+        ((__PSGridDev2D*)g->dev)->dim[1] = g->dim[1];        
         break;
       case 3:
-        g->dev = malloc(sizeof(__PSGrid3DDev));
-        ((__PSGrid3DDev*)g->dev)->p0 = g->p0;
+        g->dev = malloc(sizeof(__PSGridDev3D));
+        ((__PSGridDev3D*)g->dev)->p0 = g->p0;
 #ifdef AUTO_DOUBLE_BUFFERING        
-        ((__PSGrid1DDev*)g->dev)->p1 = g->p1;
+        ((__PSGridDev1D*)g->dev)->p1 = g->p1;
 #endif        
-        ((__PSGrid3DDev*)g->dev)->dim[0] = g->dim[0];
-        ((__PSGrid3DDev*)g->dev)->dim[1] = g->dim[1];
-        ((__PSGrid3DDev*)g->dev)->dim[2] = g->dim[2];        
+        ((__PSGridDev3D*)g->dev)->dim[0] = g->dim[0];
+        ((__PSGridDev3D*)g->dev)->dim[1] = g->dim[1];
+        ((__PSGridDev3D*)g->dev)->dim[2] = g->dim[2];        
         break;
       default:
         LOG_ERROR() << "Unsupported dimension: " << g->num_dims << "\n";
@@ -134,8 +134,8 @@ extern "C" {
   void __PSGridSwap(__PSGrid *g) {
 #if defined(AUTO_DOUBLE_BUFFERING)
     std::swap(g->p0, g->p1);
-    std::swap(((__PSGrid1DDev*)g->dev)->p0,
-              ((__PSGrid1DDev*)g->dev)->p1);
+    std::swap(((__PSGridDev1D*)g->dev)->p0,
+              ((__PSGridDev1D*)g->dev)->p1);
 #endif    
   }
 

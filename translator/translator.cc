@@ -113,7 +113,8 @@ void Translator::buildGridDecl() {
   grid_ptr_type_ = sb::buildPointerType(grid_type_);
   SgClassType *anont = isSgClassType(grid_type_->get_base_type());
   if (anont) {
-    grid_decl_ = isSgClassDeclaration(anont->get_declaration());
+    grid_decl_ = isSgClassDeclaration(
+        anont->get_declaration()->get_definingDeclaration());
   } else {
     grid_decl_ = NULL;
   }
