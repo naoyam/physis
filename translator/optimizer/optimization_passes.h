@@ -22,6 +22,17 @@ inline void pre_process(
   LOG_INFO() << "OPT: " << pass_name << "\n";
 }
 
+inline void post_process(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    const char *pass_name) {
+  // Validate AST
+  if (!getenv("NOASTCHECK")) {
+    LOG_DEBUG() << "Validating AST\n";    
+    AstTests::runAllTests(proj);
+  }
+}
+
 
 //! Do-nothing optimization pass.
 /*!

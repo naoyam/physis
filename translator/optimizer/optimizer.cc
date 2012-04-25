@@ -40,11 +40,6 @@ void Optimizer::PreProcess() {
 }
 
 void Optimizer::PostProcess() {
-  // Validate AST
-  if (!getenv("NOASTCHECK")) {
-    LOG_DEBUG() << "Validating AST\n";    
-    AstTests::runAllTests(proj_);
-  }
 }
 
 

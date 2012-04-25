@@ -63,7 +63,7 @@ class RuntimeBuilder {
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
     TranslationContext *tx, bool is_kernel,
-
+    bool is_periodic) = 0;
   
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);

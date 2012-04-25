@@ -356,6 +356,7 @@ void unconditional_get(
       ProcessConditionalExp(exp, isSgConditionalExp(cond));
     }
   }
+  post_process(proj, tx, __FUNCTION__);  
 }
 
 } // namespace pass
