@@ -124,12 +124,14 @@ SgExpression *ReferenceRuntimeBuilder::BuildOffset(
     int num_dim,
     SgExprListExp *offset_exprs,
     bool is_kernel,
+    bool is_periodic,
     SgScopeStatement *scope) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  std::string func_name =
-      "__PSGridGetOffset" + toString(num_dim) + "D";
+  std::string func_name = "__PSGridGetOffset";
+  if (is_periodic) func_name += "Periodic";
+  func_name += toString(num_dim) + "D";
   SgExprListExp *func_args = isSgExprListExp(
       si::deepCopyNode(offset_exprs));
   func_args->prepend_expression(
@@ -151,11 +153,12 @@ SgExpression *ReferenceRuntimeBuilder::BuildGet(
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
-    TranslationContext *tx, bool is_kernel) {
+    TranslationContext *tx, bool is_kernel,
+    bool is_periodic) {
   GridType *gt = tx->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgExpression *offset = BuildOffset(
-      gv, nd, offset_exprs, is_kernel, scope);
+      gv, nd, offset_exprs, is_kernel, is_periodic, scope);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgClassDeclaration *grid_decl = GetGridDecl();
   SgExpression *buf =

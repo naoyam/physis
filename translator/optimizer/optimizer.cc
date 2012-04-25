@@ -13,13 +13,40 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void Optimizer::Stage1() {
+void Optimizer::DoStage1() {
   pass::null_optimization(proj_, tx_, builder_);
 }
 
-void Optimizer::Stage2() {
+void Optimizer::DoStage2() {
   pass::null_optimization(proj_, tx_, builder_);
 }
+void Optimizer::Stage1() {
+  PreProcess();
+  LOG_DEBUG() << "Applying Stage 1 optimization passes\n";  
+  DoStage1();
+  LOG_DEBUG() << "Stage 1 optimization done\n";  
+  PostProcess();
+}
+
+void Optimizer::Stage2() {
+  PreProcess();
+  LOG_DEBUG() << "Applying Stage 2 optimization passes\n";
+  DoStage2();
+  LOG_DEBUG() << "Stage 2 optimization done\n";
+  PostProcess();  
+}
+
+void Optimizer::PreProcess() {
+}
+
+void Optimizer::PostProcess() {
+  // Validate AST
+  if (!getenv("NOASTCHECK")) {
+    LOG_DEBUG() << "Validating AST\n";    
+    AstTests::runAllTests(proj_);
+  }
+}
+
 
 } // namespace optimizer
 } // namespace translator

@@ -37,6 +37,29 @@ SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
   return NULL;
 }
 
+SgExpression *CUDARuntimeBuilder::BuildOffset(
+    SgInitializedName *gv,
+    int num_dim,
+    SgExprListExp *offset_exprs,
+    bool is_kernel,
+    bool is_periodic,
+    SgScopeStatement *scope) {
+  /*
+    __PSGridGetOffsetND(g, i)
+  */
+  std::string func_name = "__PSGridGetOffset";
+  if (is_periodic) func_name += "Periodic";
+  func_name += toString(num_dim) + "D";
+  if (is_kernel) func_name += "Dev";
+  SgExprListExp *func_args = isSgExprListExp(
+      si::deepCopyNode(offset_exprs));
+  func_args->prepend_expression(
+      sb::buildVarRefExp(gv->get_name(), scope));
+  return sb::buildFunctionCallExp(func_name, GetIndexType(),
+                                  func_args);
+}
+
+
 } // namespace translator
 } // namespace physis
 

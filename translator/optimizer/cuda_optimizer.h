@@ -23,8 +23,9 @@ class CUDAOptimizer: public Optimizer {
                 physis::translator::Configuration *config)
       : Optimizer(proj, tx, builder, config) {}
   virtual ~CUDAOptimizer() {}
-  virtual void Stage1();
-  virtual void Stage2();
+ protected:
+  virtual void DoStage1();
+  virtual void DoStage2();  
 };
 
 } // namespace optimizer

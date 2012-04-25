@@ -13,10 +13,10 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void MPICUDAOptimizer::Stage1() {
+void MPICUDAOptimizer::DoStage1() {
 }
 
-void MPICUDAOptimizer::Stage2() {
+void MPICUDAOptimizer::DoStage2() {
   // TODO: support this optimization
 #if 0  
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {

@@ -35,6 +35,10 @@ class Optimizer {
   physis::translator::TranslationContext *tx_;
   physis::translator::RuntimeBuilder *builder_;
   physis::translator::Configuration *config_;
+  virtual void DoStage1();
+  virtual void DoStage2();  
+  virtual void PreProcess();
+  virtual void PostProcess();
 };
 
 } // namespace optimizer

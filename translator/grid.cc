@@ -222,6 +222,7 @@ SgExpression *Grid::BuildAttributeExpr() {
   return si::copyExpression(attribute_);
 }
 
+const std::string GridOffsetAttribute::name = "PSGridOffset";
 const std::string GridGetAttribute::name = "PSGridGet";
 const std::string GridEmitAttr::name = "PSGridEmit";
 
