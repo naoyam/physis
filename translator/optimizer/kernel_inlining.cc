@@ -96,10 +96,13 @@ void kernel_inlining(
   // Remove unused lables created by doInline.
   //RemoveUnusedLabel(proj);
   si::removeUnusedLabels(proj);
+
+  // Remove original kernels
+  // NOTE: Does not work (segmentation fault) even if AST consistency is
+  // kept. 
+  // cleanupInlinedCode(proj);
   
-  // TODO: Does not work probably because the AST node linkage is
-  //partially broken. 
-  //cleanupInlinedCode(proj);
+  post_process(proj, tx, __FUNCTION__);  
 }
 
 } // namespace pass
