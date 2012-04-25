@@ -241,7 +241,8 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     if (rose_util::GetASTAttribute<GridGetAttribute>(get_call) == NULL) {
       rose_util::AddASTAttribute(
           get_call,
-          new GridGetAttribute(gv, tx.isKernel(kernel), stencil_indices));
+          new GridGetAttribute(gv, nd, tx.isKernel(kernel),
+                               stencil_indices));
     }
     if (tx.getGridFuncName(get_call) == GridType::get_periodic_name) {
       sm.SetGridPeriodic(gv);

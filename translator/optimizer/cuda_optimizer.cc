@@ -13,10 +13,10 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void CUDAOptimizer::Stage1() {
+void CUDAOptimizer::DoStage1() {
 }
 
-void CUDAOptimizer::Stage2() {
+void CUDAOptimizer::DoStage2() {
   if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
       config_->LookupFlag("OPT_LOOP_PEELING") ||
       config_->LookupFlag("OPT_REGISTER_BLOCKING")) {

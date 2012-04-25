@@ -169,16 +169,47 @@ class Grid {
 
 typedef std::set<Grid*> GridSet;
 
+class GridOffsetAttribute: public AstAttribute {
+ public:
+  GridOffsetAttribute(int num_dim,
+                      const vector<SgExpression *> &indices):
+      num_dim_(num_dim), indices_(indices) {
+  }
+  GridOffsetAttribute(int num_dim):
+      num_dim_(num_dim) {
+  }
+  virtual ~GridOffsetAttribute() {}
+  AstAttribute *copy() {
+    GridOffsetAttribute *a= new GridOffsetAttribute(num_dim_, indices_);
+    return a;
+  }
+  void AppendIndex(SgExpression *index) {
+    indices_.push_back(index);
+  }
+  static const std::string name;
+  SgExpression *GetIndexAt(int dim) { return indices_.at(dim-1); }
+  
+ protected:
+  int num_dim_;
+  vector<SgExpression *> indices_;
+};
+
+
 class GridGetAttribute: public AstAttribute {
  public:
   GridGetAttribute(SgInitializedName *gv,
+                   int num_dim,
                    bool in_kernel,
-                   const StencilIndexList &sil):
-      gv_(gv), in_kernel_(in_kernel), sil_(sil) {
+                   const StencilIndexList &sil,
+                   SgExpression *offset=NULL):
+      gv_(gv), num_dim_(num_dim), in_kernel_(in_kernel), sil_(sil),
+      offset_(offset) {
   }
   virtual ~GridGetAttribute() {}
   AstAttribute *copy() {
-    GridGetAttribute *a= new GridGetAttribute(gv_, in_kernel_, sil_);
+    GridGetAttribute *a= new GridGetAttribute(gv_, num_dim_,
+                                              in_kernel_, sil_,
+                                              offset_);
     return a;
   }
   static const std::string name;
@@ -189,11 +220,17 @@ class GridGetAttribute: public AstAttribute {
     sil_ = sil;
   }
   const StencilIndexList &GetStencilIndexList() { return sil_; }
+  int num_dim() const { return num_dim_; }
+  void SetOffset(SgExpression *offset) { offset_ = offset; }
+  SgExpression *offset() const { return offset_; }
   
  protected:
-  SgInitializedName *gv_;  
+  SgInitializedName *gv_;
+  int num_dim_;  
   bool in_kernel_;
   StencilIndexList sil_;
+  SgExpression *offset_;
+
 };
 
 class GridEmitAttr: public AstAttribute {

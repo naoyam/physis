@@ -13,10 +13,10 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void MPIOptimizer::Stage1() {
+void MPIOptimizer::DoStage1() {
 }
 
-void MPIOptimizer::Stage2() {
+void MPIOptimizer::DoStage2() {
   if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
     pass::kernel_inlining(proj_, tx_, builder_);
   }

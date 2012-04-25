@@ -52,12 +52,19 @@ class RuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
+
+  virtual SgExpression *BuildOffset(
+      SgInitializedName *gv, int num_dim,
+      SgExprListExp *offset_exprs, bool is_kernel,
+      bool is_periodic, SgScopeStatement *scope) = 0;
   
   virtual SgExpression *BuildGet(  
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
-    TranslationContext *tx, bool is_kernel) = 0;
+    TranslationContext *tx, bool is_kernel,
+
+  
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
   }

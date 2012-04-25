@@ -236,9 +236,11 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
     __PSGridGetOffsetND(g, i)
   */
   SgExpression *offset = NULL;
+  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim);
   for (int i = 1; i <= num_dim; i++) {
     SgExpression *dim_offset = si::copyExpression(
         args->get_expressions()[i-1]);
+    goa->AppendIndex(dim_offset);
     if (is_periodic) {
       const StencilIndex &si = sil->at(i-1);
       // si.dim is assumed to be equal to i, i.e., the i'th index
@@ -269,6 +271,7 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
       offset = dim_offset;
     }
   }
+  rose_util::AddASTAttribute<GridOffsetAttribute>(offset, goa);
   return offset;
 }
 
@@ -294,6 +297,8 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
+  GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(p0);
+  gga->SetOffset(offset);
   si::replaceExpression(node, p0);
 }
 

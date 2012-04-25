@@ -13,10 +13,10 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void ReferenceOptimizer::Stage1() {
+void ReferenceOptimizer::DoStage1() {
 }
 
-void ReferenceOptimizer::Stage2() {
+void ReferenceOptimizer::DoStage2() {
   if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
       config_->LookupFlag("OPT_LOOP_PEELING") ||
       config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
