@@ -184,6 +184,32 @@ extern "C" {
         + i3 * PSGridDim((__PSGridDev*)g, 0)
         * PSGridDim((__PSGridDev*)g, 1);
   }
+
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffsetPeriodic1DDev(const void *g,
+                                                    PSIndexType i1) {
+    return (i1 + PSGridDim((__PSGridDev*)g, 0)) % PSGridDim((__PSGridDev*)g, 0);    
+  }
+  
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffsetPeriodic2DDev(const void *g,
+                                                    PSIndexType i1,
+                                                    PSIndexType i2) {
+    return __PSGridGetOffsetPeriodic1DDev(g, i1) +
+        (i2 + PSGridDim((__PSGridDev*)g, 1)) % PSGridDim((__PSGridDev*)g, 1)
+        * PSGridDim((__PSGridDev*)g, 0);
+  }
+
+  CUDA_DEVICE
+  inline PSIndexType __PSGridGetOffsetPeriodic3DDev(const void *g,
+                                                    PSIndexType i1,
+                                                    PSIndexType i2,
+                                                    PSIndexType i3) {
+    return __PSGridGetOffsetPeriodic2DDev(g, i1, i2) +
+        (i3 + PSGridDim((__PSGridDev*)g, 2)) % PSGridDim((__PSGridDev*)g, 2)
+        * PSGridDim((__PSGridDev*)g, 0) * PSGridDim((__PSGridDev*)g, 1);
+  }
+  
   
   extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                                   __PSGrid *g);
