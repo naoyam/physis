@@ -59,6 +59,12 @@ CUDATranslator::CUDATranslator(const Configuration &config):
   }
 }
 
+void CUDATranslator::SetUp(SgProject *project,
+                           TranslationContext *context) {
+  ReferenceTranslator::SetUp(project, context);
+  rt_builder_ = new CUDARuntimeBuilder(global_scope_);
+}
+
 void CUDATranslator::translateKernelDeclaration(
     SgFunctionDeclaration *node) {
   SgFunctionModifier &modifier = node->get_functionModifier();
@@ -143,7 +149,7 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                   sb::buildPointerType(grid_type->getElmType())),
               BuildOffset(grid_arg,
                           num_dim,
-                          func_call_exp->get_args(),
+                          si::copyExpression(func_call_exp->get_args()),
                           is_kernel,
                           is_periodic,
                           tx_->findStencilIndex(func_call_exp),                          

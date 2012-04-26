@@ -29,7 +29,9 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   stencil_analysis.cc stencil_range.cc translation_util.cc
   reference_runtime_builder.cc runtime_builder.cc
   rose_ast_attribute.cc reduce.cc
-  optimizer/optimizer.cc optimizer/reference_optimizer.cc
+  optimizer/optimizer.cc
+  optimizer/optimization_common.cc
+  optimizer/reference_optimizer.cc
   optimizer/optimization_passes.cc
   optimizer/unconditional_get.cc
   optimizer/kernel_inlining.cc

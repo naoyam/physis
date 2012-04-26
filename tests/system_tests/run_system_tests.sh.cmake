@@ -398,10 +398,10 @@ function execute()
     echo  "[EXECUTE] Executing $exename"
     case $target in
 		ref)
-			./$exename > $exename.out
+			./$exename > $exename.out 2> $exename.err
 			;;
 		cuda)
-			./$exename > $exename.out
+			./$exename > $exename.out 2> $exename.err    
 			;;
 		mpi)
 			do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    

@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/translation_util.h"
@@ -90,6 +91,8 @@ void kernel_inlining(
                     << call_exp->unparseToString() << "\n";
         PSAbort(1);
       }
+      // Fix the grid attributes
+      FixGridAttributes(proj, tx);
     }
   }
 

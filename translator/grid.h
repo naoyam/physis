@@ -188,10 +188,11 @@ class GridOffsetAttribute: public AstAttribute {
   }
   static const std::string name;
   SgExpression *GetIndexAt(int dim) { return indices_.at(dim-1); }
+  SgExpressionVector &indices() { return indices_; }
   
  protected:
   int num_dim_;
-  vector<SgExpression *> indices_;
+  SgExpressionVector indices_;
 };
 
 
@@ -216,6 +217,7 @@ class GridGetAttribute: public AstAttribute {
   bool in_kernel() const { return in_kernel_; }
   void SetInKernel(bool t) { in_kernel_ = t; };
   SgInitializedName *gv() const { return gv_; }
+  SgInitializedName *&gv() { return gv_; }
   void SetStencilIndexList(const StencilIndexList &sil) {
     sil_ = sil;
   }
@@ -223,6 +225,7 @@ class GridGetAttribute: public AstAttribute {
   int num_dim() const { return num_dim_; }
   void SetOffset(SgExpression *offset) { offset_ = offset; }
   SgExpression *offset() const { return offset_; }
+  SgExpression *&offset() { return offset_; }
   
  protected:
   SgInitializedName *gv_;

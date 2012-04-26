@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/translation_util.h"
@@ -99,8 +100,8 @@ static SgExpression *BuildGetOffsetCenter(
     center_index = si::copyExpression(ExtractVarRef(center_index));
     si::appendExpression(center_exp, center_index);
   }
-  return builder->BuildOffset(GetGridFromGet(get_exp), nd,
-                              center_exp, true, false, scope);
+  return builder->BuildGridOffset(GetGridFromGet(get_exp), nd,
+                                  center_exp, true, false, scope);
 }
 
 static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
@@ -183,6 +184,9 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
   
   // Declare the index variable
   SgVariableDeclaration *index_var = NULL;
+  SgExpression *offset_exp =
+      si::copyExpression(get_exp->get_rhs_operand());
+  FixGridOffsetAttribute(offset_exp);  
   // If the access is to the center point, no guard by condition is
   // necessary and just assign the offset
   if (paired_get_exp == NULL &&
@@ -190,8 +194,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
     index_var = sb::buildVariableDeclaration(
         rose_util::generateUniqueName(outer_scope),
         physis::translator::BuildIndexType2(outer_scope),
-        sb::buildAssignInitializer(
-            si::copyExpression(get_exp->get_rhs_operand())),
+        sb::buildAssignInitializer(offset_exp),
         outer_scope);
     si::insertStatementBefore(if_stmt, index_var);    
   } else {
@@ -206,15 +209,18 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
         sb::buildBasicBlock(
             sb::buildAssignStatement(
                 sb::buildVarRefExp(index_var),
-                si::copyExpression(get_exp->get_rhs_operand())));
+                offset_exp));
     SgBasicBlock *paired_get_exp_index_assign = NULL;
     if (paired_get_exp) {
+      SgExpression *paired_offset_exp =
+          si::copyExpression(
+              paired_get_exp->get_rhs_operand());
+      FixGridOffsetAttribute(paired_offset_exp);
       paired_get_exp_index_assign =
           sb::buildBasicBlock(
               sb::buildAssignStatement(
                   sb::buildVarRefExp(index_var),
-                  si::copyExpression(
-                      paired_get_exp->get_rhs_operand())));
+                  paired_offset_exp));
     } else {
       // GetOffset of the center point, i.e., GetOffset(g, x, y, z)
       paired_get_exp_index_assign =
@@ -237,6 +243,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
 
   si::replaceExpression(get_exp->get_rhs_operand(),
                         sb::buildVarRefExp(index_var));
+  FixGridGetAttribute(get_exp);
 
   // Declare a new variable of the same type as grid.
   SgVariableDeclaration *v

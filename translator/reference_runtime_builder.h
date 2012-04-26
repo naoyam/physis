@@ -35,17 +35,19 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   //!
   /*!
    */
-  virtual SgExpression *BuildOffset(
+  virtual SgExpression *BuildGridOffset(
       SgInitializedName *gv, int num_dim,
       SgExprListExp *offset_exprs, bool is_kernel,
       bool is_periodic,  SgScopeStatement *scope);
 
+  /*
   virtual SgExpression *BuildGet(  
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
     TranslationContext *tx, bool is_kernel,
     bool is_periodic);
+  */
   
   
  protected:

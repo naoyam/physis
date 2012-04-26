@@ -513,7 +513,7 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
     indices.push_back(*it);
   }
 
-  SgFunctionCallExp *get_call = ref_rt_builder_->BuildGridGet(
+  SgFunctionCallExp *get_call = rt_builder_->BuildGridGet(
       g, indices, gt->getElmType());
   si::replaceExpression(node, get_call, true);
   rose_util::CopyASTAttribute<GridGetAttribute>(

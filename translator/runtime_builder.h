@@ -53,17 +53,41 @@ class RuntimeBuilder {
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
 
-  virtual SgExpression *BuildOffset(
+  //!
+  /*!
+    \param offset_exprs Free AST node of offset expressions
+    
+    Parameter offset_exprs will be used in the returned offset
+    expression without cloning.
+   */
+  virtual SgExpression *BuildGridOffset(
       SgInitializedName *gv, int num_dim,
       SgExprListExp *offset_exprs, bool is_kernel,
       bool is_periodic, SgScopeStatement *scope) = 0;
-  
+  //!
+#if 0  
+  /*!
+    \param offset_exprs Free AST node of offset expressions
+    
+    Parameter offset_exprs will be used in the returned offset
+    expression without cloning.
+   */
   virtual SgExpression *BuildGet(  
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
     TranslationContext *tx, bool is_kernel,
     bool is_periodic) = 0;
+#endif
+
+  virtual SgFunctionCallExp *BuildGridGet(
+      SgExpression *grid_var, 
+      const SgExpressionPtrList &indices, SgType *elm_type) = 0;
+  virtual SgBasicBlock *BuildGridSet(
+      SgExpression *grid_var, int num_dims,
+      const SgExpressionPtrList &indices, SgExpression *val) = 0;
+
+  virtual SgFunctionCallExp *BuildGridGetID(SgExpression *grid_var) = 0;
   
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);

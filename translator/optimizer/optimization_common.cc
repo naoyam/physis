@@ -1,0 +1,116 @@
+// Copyright 2011, Tokyo Institute of Technology.
+// All rights reserved.
+//
+// This file is distributed under the license described in
+// LICENSE.txt.
+//
+// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+
+#include "translator/optimizer/optimization_common.h"
+
+namespace si = SageInterface;
+namespace sb = SageBuilder;
+
+namespace physis {
+namespace translator {
+namespace optimizer {
+
+static void FixGridOffsetAttributeFuncCall(SgFunctionCallExp *offset_exp,
+                                           GridOffsetAttribute *goa) {
+  SgExpressionVector &indices = goa->indices();
+  SgExpressionPtrList &args = offset_exp->get_args()->get_expressions();
+  indices.clear();
+  FOREACH (it, ++args.begin(), args.end()) {
+    indices.push_back(*it);
+  }
+}
+
+static void FixGridOffsetAttributeInlined(SgBinaryOp *offset_exp,
+                                          GridOffsetAttribute *goa) {
+  // This turnes out to be rather difficult. It would be rather
+  // simpler to change the code generation method to use the function
+  // call format.
+  LOG_ERROR() << "Unsupported: "
+              << offset_exp->unparseToString()
+              << "\n";
+  PSAbort(1);
+  return;
+}
+
+void FixGridOffsetAttribute(SgExpression *offset_exp) {
+  GridOffsetAttribute *goa =
+      rose_util::GetASTAttribute<GridOffsetAttribute>(offset_exp);
+  if (!goa) {
+    LOG_ERROR() << "No GridOffsetAttribute found: "
+                << offset_exp->unparseToString()
+                << "\n";
+    PSAssert(0);
+  }
+
+  offset_exp = rose_util::removeCasts(offset_exp);
+  if (isSgFunctionCallExp(offset_exp)) {
+    FixGridOffsetAttributeFuncCall(isSgFunctionCallExp(offset_exp), goa);
+  } else if (isSgBinaryOp(offset_exp)) {
+    FixGridOffsetAttributeInlined(isSgBinaryOp(offset_exp), goa);
+  } else {
+    LOG_ERROR() << "Unsupported offset expression: "
+                << offset_exp->unparseToString() << "\n";
+    PSAbort(1);
+  }
+}
+
+void FixGridGetAttribute(SgExpression *get_exp) {
+  GridGetAttribute *gga =
+      rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
+  
+  // Extract the correct offset expression
+  SgExpression *new_offset = NULL;
+  SgVarRefExp *new_grid = NULL;
+  get_exp = rose_util::removeCasts(get_exp);
+  if (isSgBinaryOp(get_exp)) {
+    new_offset = isSgBinaryOp(get_exp)->get_rhs_operand();
+    new_grid = isSgVarRefExp(isSgBinaryOp(
+        rose_util::removeCasts(isSgBinaryOp(get_exp)->get_lhs_operand()))
+                             ->get_lhs_operand());
+  } else {
+    LOG_ERROR() << "Unsupported grid get: "
+                << get_exp->unparseToString() << "\n";
+    PSAbort(1);
+  }
+
+  gga->offset() = new_offset;
+  gga->gv() = new_grid->get_symbol()->get_declaration();
+  
+  // NOTE: new_offset does not have offset attribute if it is, for
+  // example, a reference to a variable.
+  if (rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
+    FixGridOffsetAttribute(new_offset);
+  }
+  //LOG_DEBUG() << "Fixed GridGetAttribute\n";
+  return;
+}
+
+void FixGridAttributes(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx) {
+  Rose_STL_Container<SgNode *> exps =
+      NodeQuery::querySubTree(proj, V_SgExpression);
+  FOREACH(it, exps.begin(), exps.end()) {
+    SgExpression *exp = isSgExpression(*it);
+    PSAssert(exp);
+    
+    // Traverse only GridGet
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(exp);
+    if (!gga) continue;
+    FixGridGetAttribute(exp);
+  }
+ 
+  return;
+}
+
+
+
+} // namespace optimizer
+} // namespace translator
+} // namespace physis
