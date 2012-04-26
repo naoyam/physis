@@ -137,25 +137,26 @@ function generate_translation_configurations_ref()
     fi
     local new_configs=""
     local idx=0
-    local c=config.cuda.$idx
+    local c=config.ref.$idx
 	idx=$(($idx + 1))
     echo "OPT_KERNEL_INLINING = false" >> $c
     echo "OPT_LOOP_PEELING = false" >> $c
     new_configs="$new_configs $c"
 
-    c=config.cuda.$idx
+    c=config.ref.$idx
 	idx=$(($idx + 1))
     echo "OPT_KERNEL_INLINING = true" >> $c
     echo "OPT_LOOP_PEELING = false" >> $c
     new_configs="$new_configs $c"
 
-    c=config.cuda.$idx
+    c=config.ref.$idx
 	idx=$(($idx + 1))
     echo "OPT_LOOP_PEELING = true" >> $c
     new_configs="$new_configs $c"
 
     echo $new_configs
 }
+
 function generate_translation_configurations_cuda()
 {
     local configs=""    
