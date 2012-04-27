@@ -91,10 +91,9 @@ void FixGridGetAttribute(SgExpression *get_exp) {
 }
 
 void FixGridAttributes(
-    SgProject *proj,
-    physis::translator::TranslationContext *tx) {
+    SgNode *node) {
   Rose_STL_Container<SgNode *> exps =
-      NodeQuery::querySubTree(proj, V_SgExpression);
+      NodeQuery::querySubTree(node, V_SgExpression);
   FOREACH(it, exps.begin(), exps.end()) {
     SgExpression *exp = isSgExpression(*it);
     PSAssert(exp);

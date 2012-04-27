@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/translation_util.h"
@@ -139,6 +140,7 @@ static void PeelFirstIterations(SgForStatement *loop,
   LOG_DEBUG() << "Copying of original loop done.\n";  
   RenameLastStatementLabel(peeled_iterations);
   LOG_DEBUG() << "Label renaming done\n";
+  FixGridAttributes(peeled_iterations);
   
   // Modify the termination condition to i < peel_size
   SgStatement *original_cond = peeled_iterations->get_test();
@@ -189,6 +191,13 @@ static void PeelFirstIterations(SgForStatement *loop,
   return;  
 }
 
+static SgExpression *FindGridRefInLoop(SgInitializedName *grid) {
+  SgAssignInitializer *init = isSgAssignInitializer(grid->get_initptr());
+  PSAssert(init);
+  SgExpression *gr = init->get_operand();
+  LOG_DEBUG() << "Grid var init: " << gr->unparseToString() << "\n";  
+  return gr;
+}
 
 static void PeelLastIterations(SgForStatement *loop,
                                int peel_size,
@@ -203,24 +212,25 @@ static void PeelLastIterations(SgForStatement *loop,
   PSAssert(loop_var);
   SgForStatement *peeled_iterations =
       isSgForStatement(si::copyStatement(loop));
-  LOG_DEBUG() << "Copying of original loop done.\n";    
+  LOG_DEBUG() << "Copying of original loop done.\n";
   RunKernelLoopAttribute *peel_iter_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(
           peeled_iterations);
 
-  RenameLastStatementLabel(peeled_iterations);  
+  RenameLastStatementLabel(peeled_iterations);
+
+  FixGridAttributes(peeled_iterations);
   
   // Modify the termination condition of the original loop
   SgStatement *original_cond = loop->get_test();
   // loop_end is min(original_end, g->dim - peel_size)
   SgExpression *original_loop_end = loop_attr->end();
+  SgExpression *grid_ref_in_loop =
+      si::copyExpression(FindGridRefInLoop(peel_grid));
   SgExpression *grid_end_offset =
       sb::buildSubtractOp(
-          builder->BuildGridDim(
-              builder->BuildGridRefInRunKernel(
-                  peel_grid,
-                  si::getEnclosingFunctionDeclaration(loop)),
-              loop_attr->dim()),
+          builder->BuildGridDim(grid_ref_in_loop,
+                                loop_attr->dim()),
           sb::buildIntVal(peel_size));
   SgExpression *loop_end = rose_util::BuildMin(
       si::copyExpression(original_loop_end), grid_end_offset);
@@ -323,6 +333,7 @@ void loop_peeling(
     PeelLoop(isSgFunctionDeclaration(*it), loop, builder);
   }
   
+  post_process(proj, tx, __FUNCTION__);
 }
 
 

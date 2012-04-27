@@ -22,8 +22,8 @@ extern void FixGridGetAttribute(SgExpression *get_exp);
 
 //! Fix references to the offset expression.
 extern void FixGridAttributes(
-    SgProject *proj,
-    physis::translator::TranslationContext *tx);
+    SgNode *node);
+
 
 } // namespace optimizer
 } // namespace translator

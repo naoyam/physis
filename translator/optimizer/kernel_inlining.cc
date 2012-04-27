@@ -92,7 +92,7 @@ void kernel_inlining(
         PSAbort(1);
       }
       // Fix the grid attributes
-      FixGridAttributes(proj, tx);
+      FixGridAttributes(proj);
     }
   }
 

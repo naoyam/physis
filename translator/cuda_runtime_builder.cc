@@ -33,7 +33,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
     }
   }
   LOG_ERROR() << "No grid parameter found.\n";
-  PSAbort(1);
+  PSAssert(0);
   return NULL;
 }
 
