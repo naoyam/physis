@@ -43,11 +43,16 @@ static void QueryGetInKernel(
   return;
 }
 
-static SgInitializedName *GetGridFromGet(SgExpression *get) {
-  GridGetAttribute *gga =
-      rose_util::GetASTAttribute<GridGetAttribute>(get);
-  PSAssert(gga);
-  return gga->gv();
+static SgExpression *GetGridFromGet(SgExpression *get) {
+  if (isSgBinaryOp(get)) {
+    return isSgBinaryOp(get)->get_lhs_operand();
+  } else {
+    LOG_ERROR() << "Unsupported grid get: "
+                << get->unparseToString() << "\n";
+    PSAbort(1);
+  }
+
+  return NULL;
 }
 
 static bool IsInTrueBlock(SgIfStmt *if_stmt,
@@ -94,14 +99,14 @@ static SgExpression *BuildGetOffsetCenter(
   GridOffsetAttribute *grid_offset_attr =
       rose_util::GetASTAttribute<GridOffsetAttribute>(grid_get_attr->offset());
   int nd = grid_get_attr->num_dim();
-  SgExprListExp *center_exp = sb::buildExprListExp();
+  SgExpressionPtrList center_exp;
   for (int i = 1; i <= nd; ++i) {
     SgExpression *center_index = grid_offset_attr->GetIndexAt(i);
     center_index = si::copyExpression(ExtractVarRef(center_index));
-    si::appendExpression(center_exp, center_index);
+    center_exp.push_back(center_index);
   }
-  return builder->BuildGridOffset(GetGridFromGet(get_exp), nd,
-                                  center_exp, true, false, scope);
+  return builder->BuildGridOffset(si::copyExpression(GetGridFromGet(get_exp)),
+                                  nd, &center_exp, true, false);
 }
 
 static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
@@ -129,7 +134,8 @@ static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
       continue;
     }
     // They must point to the same grid
-    SgInitializedName *gv_peer = GetGridFromGet(*it);
+    SgInitializedName *gv_peer =
+        rose_util::GetASTAttribute<GridGetAttribute>(*it)->gv();
     if (gv != gv_peer) continue;
     paired_get_exp = *it;
   }

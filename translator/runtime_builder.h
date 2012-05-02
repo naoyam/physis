@@ -61,9 +61,9 @@ class RuntimeBuilder {
     expression without cloning.
    */
   virtual SgExpression *BuildGridOffset(
-      SgInitializedName *gv, int num_dim,
-      SgExprListExp *offset_exprs, bool is_kernel,
-      bool is_periodic, SgScopeStatement *scope) = 0;
+      SgExpression *gvref, int num_dim,
+      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      bool is_periodic) = 0;
   //!
 #if 0  
   /*!
@@ -80,9 +80,13 @@ class RuntimeBuilder {
     bool is_periodic) = 0;
 #endif
 
-  virtual SgFunctionCallExp *BuildGridGet(
-      SgExpression *grid_var, 
-      const SgExpressionPtrList &indices, SgType *elm_type) = 0;
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      SgExpressionPtrList *offset_exprs,
+      bool is_kernel,
+      bool is_periodic) = 0;
+
   virtual SgBasicBlock *BuildGridSet(
       SgExpression *grid_var, int num_dims,
       const SgExpressionPtrList &indices, SgExpression *val) = 0;

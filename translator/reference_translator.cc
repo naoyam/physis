@@ -273,16 +273,16 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
   }
 #else
   // Use the getoffset function
-  SgExprListExp *offset_args = sb::buildExprListExp();
+  SgExpressionPtrList offset_args;
   for (int i = 1; i <= num_dim; i++) {
     SgExpression *dim_offset = si::copyExpression(
         args->get_expressions()[i-1]);
-    si::appendExpression(offset_args, dim_offset);    
+    offset_args.push_back(dim_offset);    
   }
-  offset = rt_builder_->BuildGridOffset(gv, num_dim,
-                                        offset_args,
-                                        is_kernel, is_periodic,
-                                        scope);
+  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);  
+  offset = rt_builder_->BuildGridOffset(g, num_dim,
+                                        &offset_args,
+                                        is_kernel, is_periodic);
 #endif
   return offset;
 }
