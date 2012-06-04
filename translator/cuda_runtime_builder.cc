@@ -43,6 +43,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
     SgExpressionPtrList *offset_exprs,
     bool is_kernel,
     bool is_periodic) {
+  LOG_DEBUG() << "build offset: " << gvref->unparseToString() << "\n";
   /*
     __PSGridGetOffsetND(g, i)
   */
