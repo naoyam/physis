@@ -24,21 +24,26 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgBasicBlock *BuildGridSet(
       SgExpression *grid_var, int num_dims,
       const SgExpressionPtrList &indices, SgExpression *val);
-  virtual SgFunctionCallExp *BuildGridGet(
-      SgExpression *grid_var, 
-      const SgExpressionPtrList &indices, SgType *elm_type);
   virtual SgFunctionCallExp *BuildGridDim(SgExpression *grid_ref,
                                           int dim);
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridType *gt,      
+      SgExpressionPtrList *offset_exprs,
+      bool is_kernel,
+      bool is_periodic);
+  
   //!
   /*!
    */
   virtual SgExpression *BuildGridOffset(
-      SgInitializedName *gv, int num_dim,
-      SgExprListExp *offset_exprs, bool is_kernel,
-      bool is_periodic,  SgScopeStatement *scope);
+      SgExpression *gvref, int num_dim,
+      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      bool is_periodic);
 
   /*
   virtual SgExpression *BuildGet(  

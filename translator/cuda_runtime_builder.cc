@@ -38,25 +38,22 @@ SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
 }
 
 SgExpression *CUDARuntimeBuilder::BuildGridOffset(
-    SgInitializedName *gv,
+    SgExpression *gvref,
     int num_dim,
-    SgExprListExp *offset_exprs,
+    SgExpressionPtrList *offset_exprs,
     bool is_kernel,
-    bool is_periodic,
-    SgScopeStatement *scope) {
+    bool is_periodic) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim);  
+  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim, is_periodic);  
   std::string func_name = "__PSGridGetOffset";
   if (is_periodic) func_name += "Periodic";
   func_name += toString(num_dim) + "D";
   if (is_kernel) func_name += "Dev";
-  SgExprListExp *offset_params =
-      sb::buildExprListExp(
-          sb::buildVarRefExp(gv->get_name(), scope));
-  FOREACH (it, offset_exprs->get_expressions().begin(),
-           offset_exprs->get_expressions().end()) {
+  SgExprListExp *offset_params = sb::buildExprListExp(gvref);
+  FOREACH (it, offset_exprs->begin(),
+           offset_exprs->end()) {
     si::appendExpression(offset_params,
                          *it);
     goa->AppendIndex(*it);

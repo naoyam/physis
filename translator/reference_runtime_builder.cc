@@ -60,23 +60,26 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
   return tb;
 }
 
-SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGet(
-    SgExpression *grid_var, const SgExpressionPtrList &indices,
-    SgType *elm_type) {
-  
-  SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes(
-          "__PSGridGet" + GetTypeName(elm_type));
-  PSAssert(fs);
-  SgExprListExp *args = sb::buildExprListExp(
-      grid_var);
-  FOREACH (it, indices.begin(), indices.end()) {
-    si::appendExpression(args,
-                         sb::buildCastExp(
-                             si::copyExpression(*it), index_t_));
-  }
-  SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
-  return fc;
+SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,
+    GridType *gt,
+    SgExpressionPtrList *offset_exprs,
+    bool is_kernel,
+    bool is_periodic) {
+  SgExpression *offset =
+      BuildGridOffset(gvref, gt->num_dim(), offset_exprs, is_kernel, is_periodic);
+  SgExpression *p0 = sb::buildArrowExp(
+      si::copyExpression(gvref), sb::buildVarRefExp("p0"));
+  si::fixVariableReferences(p0);
+  //GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->elm_type()));
+  p0 = sb::buildPntrArrRefExp(p0, offset);
+  // NOTE: sil is not set. 
+  StencilIndexList sil;
+  GridGetAttribute *gga = new GridGetAttribute(NULL, gt->num_dim(), is_kernel,
+                                               sil, offset);
+  rose_util::AddASTAttribute<GridGetAttribute>(p0, gga);
+  return p0;
 }
 
 SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
@@ -120,24 +123,21 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
 }
 
 SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
-    SgInitializedName *gv,
+    SgExpression *gvref,
     int num_dim,
-    SgExprListExp *offset_exprs,
+    SgExpressionPtrList *offset_exprs,
     bool is_kernel,
-    bool is_periodic,
-    SgScopeStatement *scope) {
+    bool is_periodic) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim);
+  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim, is_periodic);
   std::string func_name = "__PSGridGetOffset";
   if (is_periodic) func_name += "Periodic";
   func_name += toString(num_dim) + "D";
-  SgExprListExp *offset_params =
-      sb::buildExprListExp(
-          sb::buildVarRefExp(gv->get_name(), scope));
-  FOREACH (it, offset_exprs->get_expressions().begin(),
-           offset_exprs->get_expressions().end()) {
+  SgExprListExp *offset_params = sb::buildExprListExp(gvref);
+  FOREACH (it, offset_exprs->begin(),
+           offset_exprs->end()) {
     si::appendExpression(offset_params,
                          *it);
     goa->AppendIndex(*it);

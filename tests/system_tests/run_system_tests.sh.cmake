@@ -12,7 +12,7 @@
 #
 
 ###############################################################
-WD=$PWD/test_output
+WD_BASE=$PWD/test_output
 FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
@@ -24,7 +24,7 @@ set -u
 #set -e
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
 LOGFILE=$PWD/$(basename $0 .sh).log.$TIMESTAMP
-WD=$WD/$TIMESTAMP
+WD=$WD_BASE/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
 ORIGINAL_WD=$(pwd)
@@ -75,7 +75,14 @@ function fail()
     fi
 }
 
-function finish()
+function print_results_short()
+{
+    echo  -n "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS"
+    echo  -n ", [COMPILE] #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE"
+    echo  ", [EXECUTE] #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+}
+
+function print_results()
 {
     echo  "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
     echo  "[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
@@ -84,6 +91,11 @@ function finish()
     if [ $NUM_WARNING -gt 0 ]; then
 		echo "$NUM_WARNING warning(s)"
     fi
+}
+
+function finish()
+{
+	print_results
     cd $ORIGINAL_DIRECTORY
     if [ $FLAG_KEEP_OUTPUT -eq 0 ]; then
 		rm -rf $WD
@@ -111,6 +123,12 @@ function exit_error()
     finish
 }
 
+function clear_output()
+{
+	rm -f $ORIGINAL_WD/$(basename $0 .sh).log.*
+	rm -rf $WD_BASE
+}
+
 function abs_path()
 {
     local path=$1
@@ -129,31 +147,28 @@ function generate_empty_translation_configuration()
 
 function generate_translation_configurations_ref()
 {
-    local configs=""    
-    if [ $# -gt 0 ]; then
-		configs=$*
-    else
-		configs=$(generate_empty_translation_configuration)
-    fi
     local new_configs=""
     local idx=0
     local c=config.ref.$idx
-	idx=$(($idx + 1))
-    echo "OPT_KERNEL_INLINING = false" >> $c
-    echo "OPT_LOOP_PEELING = false" >> $c
+	touch $c
     new_configs="$new_configs $c"
+	idx=$(($idx + 1))
 
     c=config.ref.$idx
-	idx=$(($idx + 1))
-    echo "OPT_KERNEL_INLINING = true" >> $c
-    echo "OPT_LOOP_PEELING = false" >> $c
+    echo "OPT_KERNEL_INLINING = true" > $c
     new_configs="$new_configs $c"
+	idx=$(($idx + 1))
 
     c=config.ref.$idx
-	idx=$(($idx + 1))
-    echo "OPT_LOOP_PEELING = true" >> $c
+    echo "OPT_LOOP_PEELING = true" > $c
     new_configs="$new_configs $c"
+	idx=$(($idx + 1))
 
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+	
     echo $new_configs
 }
 
@@ -182,19 +197,24 @@ function generate_translation_configurations_cuda()
 		done
     done
     for config in $new_configs; do
+		# OPT_KERNEL_INLINING
         local c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_KERNEL_INLINING = true" >> $c
-        echo "OPT_LOOP_PEELING = false" >> $c
         new_configs="$new_configs $c"
+		# OPT_LOOP_PEELING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_LOOP_PEELING = true" >> $c
         new_configs="$new_configs $c"
-        echo "OPT_KERNEL_INLINING = false" >> $config
-        echo "OPT_LOOP_PEELING = false" >> $config
+		# OPT_REGISTER_BLOCKING
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        new_configs="$new_configs $c"
      done	     
     echo $new_configs
 }
@@ -482,6 +502,8 @@ function print_usage()
 	echo -e "\t\tRead configuration option from the file."
 	echo -e "\t-q, --quit"
 	echo -e "\t\tQuit immediately upon error."
+	echo -e "\t--clear"
+	echo -e "\t\tClear output files."
 }
 
 function filter_test_case_by_priority()
@@ -522,7 +544,7 @@ function get_test_cases()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
 		print_usage
@@ -587,6 +609,11 @@ function get_test_cases()
 				;;
 			-h|--help)
 				print_usage
+				exit 0
+				shift
+				;;
+			--clear)
+				clear_output
 				exit 0
 				shift
 				;;
@@ -666,6 +693,7 @@ function get_test_cases()
 						continue
 					fi
 				done
+				print_results_short			
 			done
 		done
     done

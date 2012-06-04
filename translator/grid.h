@@ -46,12 +46,15 @@ class GridType: public AstAttribute {
   unsigned getNumDim() const {
     return num_dim_;
   }
+  unsigned num_dim() const { return num_dim_; }
   const string& getName() const {
     return name_;
   }
   SgType *getElmType() const {
     return elm_type_;
   }
+  SgType *elm_type() const { return elm_type_; }
+  
   string getRealFuncName(const string &funcName) const;
   
   string getRealFuncName(const string &funcName,
@@ -171,16 +174,17 @@ typedef std::set<Grid*> GridSet;
 
 class GridOffsetAttribute: public AstAttribute {
  public:
-  GridOffsetAttribute(int num_dim,
+  GridOffsetAttribute(int num_dim, bool periodic,
                       const vector<SgExpression *> &indices):
-      num_dim_(num_dim), indices_(indices) {
+      num_dim_(num_dim), periodic_(periodic), indices_(indices) {
   }
-  GridOffsetAttribute(int num_dim):
-      num_dim_(num_dim) {
+  GridOffsetAttribute(int num_dim, bool periodic):
+      num_dim_(num_dim), periodic_(periodic) {
   }
   virtual ~GridOffsetAttribute() {}
   AstAttribute *copy() {
-    GridOffsetAttribute *a= new GridOffsetAttribute(num_dim_, indices_);
+    GridOffsetAttribute *a= new GridOffsetAttribute(num_dim_, periodic_,
+                                                    indices_);
     return a;
   }
   void AppendIndex(SgExpression *index) {
@@ -189,9 +193,11 @@ class GridOffsetAttribute: public AstAttribute {
   static const std::string name;
   SgExpression *GetIndexAt(int dim) { return indices_.at(dim-1); }
   SgExpressionVector &indices() { return indices_; }
+  bool periodic() const { return periodic_; }
   
  protected:
   int num_dim_;
+  bool periodic_;  
   SgExpressionVector indices_;
 };
 
