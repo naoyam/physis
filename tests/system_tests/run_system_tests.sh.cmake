@@ -215,7 +215,20 @@ function generate_translation_configurations_cuda()
         cat $config > $c
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         new_configs="$new_configs $c"
-     done	     
+		# OPT_UNCONDITIONAL_GET
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        new_configs="$new_configs $c"
+		# OPT_REGISTER_BLOCKING with UNCONDITIONAL_GET
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        new_configs="$new_configs $c"
+    done
     echo $new_configs
 }
 

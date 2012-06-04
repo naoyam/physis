@@ -43,9 +43,13 @@ static void QueryGetInKernel(
   return;
 }
 
+// This ad-hoc code traversal heavily depends on how the previous
+// translation passes are implemented. Should be made more robust. 
 static SgExpression *GetGridFromGet(SgExpression *get) {
   if (isSgBinaryOp(get)) {
-    return isSgBinaryOp(get)->get_lhs_operand();
+    //return isSgBinaryOp(get)->get_lhs_operand();
+    return isSgBinaryOp(rose_util::removeCasts(isSgBinaryOp(get)->get_lhs_operand()))
+        ->get_lhs_operand();
   } else {
     LOG_ERROR() << "Unsupported grid get: "
                 << get->unparseToString() << "\n";
