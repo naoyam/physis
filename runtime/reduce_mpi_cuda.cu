@@ -161,7 +161,7 @@ int ReduceGridMPICUDA(GridMPICUDA3D *g, PSReduceOp op, T *out) {
     physis::runtime::ReduceGridCUDA<T>(out, op,
                                        g->_data(), nelms);
   } else {
-    IntArray ls = g->local_size();
+    IndexArray ls = g->local_size();
     ls[0] = pitch;
     reduction_mpi_cuda::ReduceGridCUDAPitch<T>(
         out, op, g->_data(), ls.accumulate(g->num_dims()),

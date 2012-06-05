@@ -10,7 +10,7 @@
 
 #define PHYSIS_TRANSLATOR
 
-#define PS_INDEX_TYPE_NAME "PSIndexType"
+#define PS_INDEX_TYPE_NAME "PSIndex"
 
 #include <set>
 #include <list>
@@ -38,8 +38,10 @@ typedef std::set<SgInitializedName*> SgInitializedNamePtrSet;
 typedef std::vector<SgFunctionDeclaration*> SgFunctionDeclarationPtrVector;
 typedef std::vector<SgExpression*> SgExpressionVector;
 
-using physis::util::IntArray;
-using physis::util::IntVector;
+//using physis::util::IndexArray;
+//using physis::util::IntVector;
+//using physis::util::IntArray;
+//using physis::util::SizeArray;
 
 } // namespace translator
 } // namespace physis

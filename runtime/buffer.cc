@@ -12,12 +12,12 @@ namespace physis {
 namespace runtime {
 
 Buffer::Buffer(size_t elm_size):
-    num_dims_(1), elm_size_(elm_size), size_((index_t)0), buf_(NULL),
+    num_dims_(1), elm_size_(elm_size), size_(), buf_(NULL),
     deleter_(NULL) {
 }
 
 Buffer::Buffer(int num_dims, size_t elm_size):
-    num_dims_(num_dims), elm_size_(elm_size), size_((index_t)0), buf_(NULL),
+    num_dims_(num_dims), elm_size_(elm_size), size_(), buf_(NULL),
     deleter_(NULL) {
 }
 
@@ -25,31 +25,32 @@ Buffer::~Buffer() {
   Delete();
 }
 
-void Buffer::Copyin(const void *buf, size_t size) {
-  IntArray s;
-  s.assign(1);
+void Buffer::Copyin(const void *buf, PSIndex size) {
+  IndexArray s;
+  s.Set(1);
   s[0] = size;
-  IntArray offset((index_t)0);
-  Copyin(buf, offset, s);
+  //SizeArray offset;
+  Copyin(buf, IndexArray(), s);
 }
 
 void *Buffer::Copyout() {
   size_t s = GetLinearSize();
   void *buf = malloc(s);
-  Copyout(buf, IntArray((index_t)0), size_);
+  PSAssert(buf);
+  Copyout(buf, IndexArray(), size_);
   return buf;
 }
 
-void Buffer::EnsureCapacity(size_t elm_size, size_t size) {
-  EnsureCapacity(1, elm_size, IntArray(size));
+void Buffer::EnsureCapacity(size_t elm_size, PSIndex size) {
+  EnsureCapacity(1, elm_size, IndexArray(size));
 }
 
 void Buffer::EnsureCapacity(int num_dims, size_t elm_size,
-                            const IntArray &size) {
+                            const IndexArray &size) {
   size_t cur_size = GetLinearSize();
   size_t target_size = Buffer::GetLinearSize(num_dims, elm_size, size);
   LOG_VERBOSE() << "Current size: " << cur_size << "; requested size: " <<
-    target_size << "\n";
+      target_size << "\n";
   if (!(cur_size >= target_size)) {
     LOG_INFO() << "Expanding capacity from " << size_
                   << " to " << size << "\n";
@@ -57,11 +58,11 @@ void Buffer::EnsureCapacity(int num_dims, size_t elm_size,
   }
 }
 
-void Buffer::Shrink(size_t size) {
-  Shrink(IntArray(size));
+void Buffer::Shrink(PSIndex size) {
+  Shrink(IndexArray(size));
 }
 
-void Buffer::Shrink(const IntArray &size) {  
+void Buffer::Shrink(const IndexArray &size) {
   if (!(size <= size_)) {
     LOG_VERBOSE() << "Shrinking buffer from " << size_
                   << " bytes to " << size << "bytes.\n";
@@ -74,10 +75,10 @@ void Buffer::Delete() {
     DeleteChunk(buf_);
   }
   buf_ = NULL;
-  size_.assign(0);
+  size_.Set(0);
 }
 
-void Buffer::Allocate(int num_dims, size_t elm_size, const IntArray &size) {
+void Buffer::Allocate(int num_dims, size_t elm_size, const IndexArray &size) {
   Delete();
   if (size.accumulate(num_dims)) {
     num_dims_ = num_dims;
@@ -91,12 +92,7 @@ void Buffer::Allocate(int num_dims, size_t elm_size, const IntArray &size) {
   size_ = size;
 }
 
-void Buffer::Allocate(const IntArray &size) {
-  Allocate(num_dims_, elm_size_, size);
-}
-
-
-void *Buffer::GetChunk(const IntArray &size) {
+void *Buffer::GetChunk(const IndexArray &size) {
   LOG_ERROR() << "This is a dummy implementation, and should be overridden by child classes.\n";
   PSAbort(1);
   return NULL;
@@ -123,24 +119,24 @@ BufferHost::BufferHost(int num_dims,  size_t elm_size):
 BufferHost::~BufferHost() {
 }
 
-void BufferHost::Copyin(const void *buf, const IntArray &offset,
-                        const IntArray &size) {
+void BufferHost::Copyin(const void *buf, const IndexArray &offset,
+                        const IndexArray &size) {
   EnsureCapacity(offset + size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
   memcpy(Get(), buf, GetLinearSize(size));
 }
 
-void BufferHost::Copyout(void *buf, const IntArray &offset,
-                         const IntArray &s) {
+void BufferHost::Copyout(void *buf, const IndexArray &offset,
+                         const IndexArray &s) {
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
   memcpy(buf, Get(), GetLinearSize(s));
 }
 
-void BufferHost::MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                         const IntArray &size) {
+void BufferHost::MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
+                         const IndexArray &size) {
   EnsureCapacity(offset + size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -152,7 +148,7 @@ void BufferHost::MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
 }
 
 void BufferHost::MPIIrecv(int src, MPI_Comm comm, MPI_Request *req,
-                          const IntArray &offset, const IntArray &size) {
+                          const IndexArray &offset, const IndexArray &size) {
   EnsureCapacity(offset + size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -165,8 +161,8 @@ void BufferHost::MPIIrecv(int src, MPI_Comm comm, MPI_Request *req,
   
 }
 
-void BufferHost::MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                         const IntArray &s) {
+void BufferHost::MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
+                         const IndexArray &s) {
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -174,7 +170,7 @@ void BufferHost::MPISend(int dst, MPI_Comm comm, const IntArray &offset,
 }
 
 void BufferHost::MPIIsend(int dst, MPI_Comm comm, MPI_Request *req,
-                          const IntArray &offset, const IntArray &s) {
+                          const IndexArray &offset, const IndexArray &s) {
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -182,24 +178,26 @@ void BufferHost::MPIIsend(int dst, MPI_Comm comm, MPI_Request *req,
 }
 
   
-void *BufferHost::GetChunk(const IntArray &size) {
+void *BufferHost::GetChunk(const IndexArray &size) {
   size_t s = size.accumulate(num_dims_);
   if (s == 0) return NULL;
-  return calloc(elm_size_, s);
+  void *p = calloc(elm_size_, s);
+  PSAssert(p);
+  return p;
 }
 
 // void BufferHost::DeleteChunk(void *p) {
 //   free(p);
 // }
 
-void BufferHost::Copyin(const BufferHost &buf, const IntArray &offset,
-                        const IntArray &size) {
+void BufferHost::Copyin(const BufferHost &buf, const IndexArray &offset,
+                        const IndexArray &size) {
   PSAssert(buf.num_dims() == 1);
   Copyin(buf.Get(), offset, size);
 }
 
-void BufferHost::Copyout(BufferHost &buf,  const IntArray &offset,
-                         const IntArray &size) {
+void BufferHost::Copyout(BufferHost &buf,  const IndexArray &offset,
+                         const IndexArray &size) {
   PSAssert(buf.num_dims() == 1);
   Copyout(buf.Get(), offset, size);
 }

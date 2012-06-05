@@ -24,9 +24,9 @@ namespace runtime {
 // Grid
 //
 GridMPICUDA3D::GridMPICUDA3D(
-    PSType type, int elm_size, int num_dims, const IntArray &size,
-    bool double_buffering, const IntArray &global_offset,
-    const IntArray &local_offset, const IntArray &local_size,
+    PSType type, int elm_size, int num_dims, const IndexArray &size,
+    bool double_buffering, const IndexArray &global_offset,
+    const IndexArray &local_offset, const IndexArray &local_size,
     int attr):
     GridMPI(type, elm_size, num_dims, size, double_buffering, global_offset,
             local_offset, local_size, attr) {
@@ -43,9 +43,9 @@ GridMPICUDA3D::GridMPICUDA3D(
 }
 
 GridMPICUDA3D *GridMPICUDA3D::Create(
-    PSType type, int elm_size, int num_dims, const IntArray &size,
-    bool double_buffering, const IntArray &global_offset,
-    const IntArray &local_offset, const IntArray &local_size,
+    PSType type, int elm_size, int num_dims, const IndexArray &size,
+    bool double_buffering, const IndexArray &global_offset,
+    const IndexArray &local_offset, const IndexArray &local_size,
     int attr) {
   GridMPICUDA3D *gmc = new GridMPICUDA3D(type, elm_size, num_dims, size,
                                          double_buffering, global_offset,
@@ -173,9 +173,9 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, bool fw,
 
   int fw_idx = (fw) ? 1: 0;
 
-  IntArray halo_offset;
+  IndexArray halo_offset;
   if (!fw) halo_offset[dim] = local_size_[dim] - width;
-  IntArray halo_size = local_size_;
+  IndexArray halo_size = local_size_;
   halo_size[dim] = width;
   size_t linear_size = halo_size.accumulate(num_dims());
 
@@ -226,10 +226,10 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, bool fw) {
   int fw_idx = fw ? 1 : 0;
   // copy diag
   char *buf = (char*)halo_self_mpi_[1][fw_idx]->Get();
-  IntArray sg_offset;
+  IndexArray sg_offset;
   if (!fw) sg_offset[1] = local_size_[1] - width;
-  IntArray sg_size(local_size_[0], width, halo_bw_width_[2]);
-  IntArray halo_size(local_size_[0], local_size_[1],
+  IndexArray sg_size(local_size_[0], width, halo_bw_width_[2]);
+  IndexArray halo_size(local_size_[0], local_size_[1],
                      halo_bw_width_[2]);
   // different  
   CopyoutSubgrid(elm_size_, num_dims_, halo_peer_cuda_[2][0]->Get(),
@@ -262,10 +262,11 @@ void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, bool fw) {
   char *halo_fw_2 = (char*)halo_peer_cuda_[2][1]->Get() + xoffset * elm_size_;
   //char *halo_0 = data_[0] + xoffset * elm_size_;
   char *halo_0 = (char*)halo_self_cuda_[0][fw_idx]->Get();
-  for (int k = 0; k < halo_bw_width_[2]+local_size_[2]+halo_fw_width_[2]; ++k) {
+  for (PSIndex k = 0; k < (PSIndex)halo_bw_width_[2]+
+           local_size_[2]+(PSIndex)halo_fw_width_[2]; ++k) {
     // copy from the 2nd-dim backward halo 
     char *t = halo_bw_1;
-    for (int j = 0; j < halo_bw_width_[1]; j++) {
+    for (unsigned j = 0; j < halo_bw_width_[1]; j++) {
       memcpy(buf, t, line_size);
       buf += line_size;      
       t += local_size_[0] * elm_size_;
@@ -275,10 +276,10 @@ void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, bool fw) {
     char **h;
     size_t halo_x_size;
     // select halo source
-    if (k < halo_bw_width_[2]) {
+    if (k < (PSIndex)halo_bw_width_[2]) {
       h = &halo_bw_2;
       halo_x_size = local_size_[0] * elm_size_;
-    } else if (k < halo_bw_width_[2] + local_size_[2]) {
+    } else if (k < (PSIndex)halo_bw_width_[2] + local_size_[2]) {
       h = &halo_0;
       halo_x_size = elm_size_ * width;
     } else {
@@ -286,7 +287,7 @@ void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, bool fw) {
       halo_x_size = local_size_[0] * elm_size_;
     }
     t = *h;
-    for (int j = 0; j < local_size_[1]; ++j) {
+    for (PSIndex j = 0; j < local_size_[1]; ++j) {
       memcpy(buf, t, line_size);
       buf += line_size;
       t += halo_x_size;
@@ -295,7 +296,7 @@ void GridMPICUDA3D::CopyoutHalo3D0(unsigned width, bool fw) {
 
     // copy from the 2nd-dim forward halo 
     t = halo_fw_1;
-    for (int j = 0; j < halo_fw_width_[1]; j++) {
+    for (unsigned j = 0; j < halo_fw_width_[1]; j++) {
       memcpy(buf, t, line_size);
       buf += line_size;      
       t += local_size_[0] * elm_size_;
@@ -345,8 +346,8 @@ void GridMPICUDA3D::FixupBufferPointers() {
   }
 }
 
-void GridMPICUDA3D::EnsureRemoteGrid(const IntArray &local_offset,
-                                     const IntArray &local_size) {
+void GridMPICUDA3D::EnsureRemoteGrid(const IndexArray &local_offset,
+                                     const IndexArray &local_size) {
   if (remote_grid_ == NULL) {
     remote_grid_ = GridMPICUDA3D::Create(type_, elm_size_, num_dims_,
                                          size_, false, global_offset_,
@@ -379,7 +380,7 @@ void GridMPICUDA3D::Restore() {
   void *data = malloc(buf->GetLinearSize());
   RestoreFromFile(data, buf->GetLinearSize());
   // Copyin
-  buf->Copyin(data, IntArray((index_t)0), buf->size());
+  buf->Copyin(data, IndexArray((PSIndex)0), buf->size());
 }
 
 //
@@ -387,7 +388,7 @@ void GridMPICUDA3D::Restore() {
 //
 
 GridSpaceMPICUDA::GridSpaceMPICUDA(
-    int num_dims, const IntArray &global_size,
+    int num_dims, const IndexArray &global_size,
     int proc_num_dims, const IntArray &proc_size, int my_rank):
     GridSpaceMPI(num_dims, global_size, proc_num_dims,
                  proc_size, my_rank) {
@@ -402,11 +403,11 @@ GridSpaceMPICUDA::~GridSpaceMPICUDA() {
 }
 
 GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
-    PSType type, int elm_size, int num_dims, const IntArray &size,
-    bool double_buffering, const IntArray &global_offset,
+    PSType type, int elm_size, int num_dims, const IndexArray &size,
+    bool double_buffering, const IndexArray &global_offset,
     int attr) {
-  IntArray grid_size = size;
-  IntArray grid_global_offset = global_offset;
+  IndexArray grid_size = size;
+  IndexArray grid_global_offset = global_offset;
   if (num_dims_ < num_dims) {
     // The grid space has smaller dimension.
     LOG_ERROR() << "Cannot create " << num_dims << "-d grid in "
@@ -421,7 +422,7 @@ GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
     num_dims = num_dims_;
   }
 
-  IntArray local_offset, local_size;  
+  IndexArray local_offset, local_size;  
   PartitionGrid(num_dims, grid_size, grid_global_offset,
                 local_offset, local_size);
 
@@ -438,7 +439,7 @@ GridMPICUDA3D *GridSpaceMPICUDA::CreateGrid(
   return g;
 }
 
-// Jut copy out halo from GPU memory
+// Just copy out halo from GPU memory
 void GridSpaceMPICUDA::ExchangeBoundariesStage1(
     GridMPI *g, int dim, unsigned halo_fw_width,
     unsigned halo_bw_width, bool diagonal,
@@ -514,7 +515,7 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
        grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
     st.Start();
     grid->halo_self_mpi_[dim][0]->MPIIsend(fw_peer, comm_, &req_bw,
-                                           IntArray(), IntArray(bw_size));
+                                           IndexArray(), IndexArray(bw_size));
     prof_upw.cpu_out += st.Stop();
     req_bw_active = true;
   }
@@ -524,7 +525,7 @@ void GridSpaceMPICUDA::ExchangeBoundariesStage2(
       (periodic || grid->local_offset_[dim] > 0)) {
     st.Start();        
     grid->halo_self_mpi_[dim][1]->MPIIsend(bw_peer, comm_, &req_fw,
-                                           IntArray(), IntArray(fw_size));
+                                           IndexArray(), IndexArray(fw_size));
     prof_dwn.cpu_out += st.Stop();
     req_fw_active = true;
   }
@@ -585,8 +586,8 @@ bool GridSpaceMPICUDA::SendBoundaries(GridMPICUDA3D *grid, int dim,
 
   st.Start();
   grid->halo_self_mpi_[dim][dir_idx]->MPIIsend(peer, comm_, &req,
-                                               IntArray(),
-                                               IntArray(halo_size));
+                                               IndexArray(),
+                                               IndexArray(halo_size));
   prof.cpu_out += st.Stop();
   return true;
 }
@@ -609,10 +610,10 @@ bool GridSpaceMPICUDA::RecvBoundaries(GridMPICUDA3D *grid, int dim,
                         (!forward && is_first_process)))) {
     if (forward) {
       grid->halo_fw_width_[dim] = 0;
-      grid->halo_fw_size_[dim].assign(0);
+      grid->halo_fw_size_[dim].Set(0);
     } else {
       grid->halo_bw_width_[dim] = 0;
-      grid->halo_bw_size_[dim].assign(0);
+      grid->halo_bw_size_[dim].Set(0);
     }
     return false;
   }
@@ -620,8 +621,7 @@ bool GridSpaceMPICUDA::RecvBoundaries(GridMPICUDA3D *grid, int dim,
 #if defined(PS_DEBUG)
   if (!periodic) {
     if( (forward && grid->local_offset_[dim] +
-        grid->local_size_[dim] + width
-         > grid->size_[dim]) ||
+         grid->local_size_[dim] + (PSIndex)width > grid->size_[dim]) ||
         (!forward && grid->local_offset_[dim] - width < 0)
         ) {
       LOG_ERROR() << "Off limit accesses: "
@@ -650,12 +650,12 @@ bool GridSpaceMPICUDA::RecvBoundaries(GridMPICUDA3D *grid, int dim,
   grid->SetHaloSize(dim, forward, width, diagonal);
   st.Start();
   grid->halo_peer_cuda_[dim][dir_idx]->
-      Buffer::MPIRecv(peer, comm_, IntArray(halo_size));
+      Buffer::MPIRecv(peer, comm_, IndexArray(halo_size));
   prof.cpu_in += st.Stop();
   st.Start(); 
   grid->halo_peer_dev_[dim][dir_idx]->
-      Copyin(*grid->halo_peer_cuda_[dim][dir_idx], IntArray(),
-             IntArray(halo_size));
+      Copyin(*grid->halo_peer_cuda_[dim][dir_idx], IndexArray(),
+             IndexArray(halo_size));
   prof.cpu_to_gpu += st.Stop();
   return true;
 }
@@ -718,7 +718,7 @@ void GridSpaceMPICUDA::HandleFetchRequest(GridRequest &req, GridMPI *g) {
       *buf, finfo.peer_offset - g->local_offset(), finfo.peer_size);
   SendGridRequest(my_rank_, req.my_rank, comm_, FETCH_REPLY);
   MPI_Request mr;
-  buf->MPIIsend(req.my_rank, comm_, &mr, IntArray(), IntArray(bytes));
+  buf->MPIIsend(req.my_rank, comm_, &mr, IndexArray(), IndexArray(bytes));
   //CHECK_MPI(PS_MPI_Isend(buf, bytes, MPI_BYTE, req.my_rank, 0, comm_, &mr));
 }
 
@@ -732,7 +732,7 @@ void GridSpaceMPICUDA::HandleFetchReply(GridRequest &req, GridMPI *g,
   size_t bytes = finfo.peer_size.accumulate(num_dims_) * g->elm_size();
   LOG_DEBUG() << "Fetch reply data size: " << bytes << "\n";
   buf->EnsureCapacity(bytes);
-  buf->Buffer::MPIRecv(req.my_rank, comm_, IntArray(bytes));
+  buf->Buffer::MPIRecv(req.my_rank, comm_, IndexArray(bytes));
   LOG_DEBUG() << "Fetch reply received\n";
   static_cast<BufferCUDADev3D*>(sgm->buffer())->Copyin(
       *buf, finfo.peer_offset - sg->local_offset(),
@@ -741,26 +741,26 @@ void GridSpaceMPICUDA::HandleFetchReply(GridRequest &req, GridMPI *g,
   return;
 }
 
-inline index_t GridCalcOffset3D(const IntArray &index,
-                                const IntArray &size,
+inline PSIndex GridCalcOffset3D(const IndexArray &index,
+                                const IndexArray &size,
                                 size_t pitch) {
   return index[0] + index[1] * pitch + index[2] * pitch * size[1];
 }
 
-void *GridMPICUDA3D::GetAddress(const IntArray &indices_param) {
+void *GridMPICUDA3D::GetAddress(const IndexArray &indices_param) {
   // Use the remote grid if remote_grid_active is true.
   if (remote_grid_active()) {
     PSAbort(1);
   }
   
-  IntArray indices = indices_param -local_offset();
+  IndexArray indices = indices_param -local_offset();
   bool diag = halo_has_diagonal();
   for (int i = 0; i < num_dims(); ++i) {
     if (indices[i] < 0 || indices[i] >= local_size()[i]) {
       for (int j = i+1; j < PS_MAX_DIM; ++j) {
         if (diag) indices[i] += halo_bw_width()[i];
       }
-      index_t offset;
+      PSIndex offset;
       char *buf;
       if (indices[i] < 0) {
         indices[i] += halo_bw_width()[i];
@@ -786,43 +786,43 @@ void *GridMPICUDA3D::GetAddress(const IntArray &indices_param) {
 
 GridMPI *GridSpaceMPICUDA::LoadNeighbor(
     GridMPI *g,
-    const IntArray &halo_fw_width,
-    const IntArray &halo_bw_width,
+    const IndexArray &offset_min,
+    const IndexArray &offset_max,
     bool diagonal,  bool reuse, bool periodic,
-    const bool *fw_enabled,  const bool *bw_enabled,
     cudaStream_t cuda_stream) {
   
   // set the stream of buffer by the stream parameter
   GridMPICUDA3D *gmc = static_cast<GridMPICUDA3D*>(g);
   gmc->SetCUDAStream(cuda_stream);
-  GridMPI *rg = GridSpaceMPI::LoadNeighbor(g, halo_fw_width, halo_bw_width,
-                                           diagonal, reuse, periodic,
-                                           fw_enabled, bw_enabled);
+  GridMPI *rg = GridSpaceMPI::LoadNeighbor(g, offset_min, offset_max,
+                                           diagonal, reuse, periodic);
+
   gmc->SetCUDAStream(0);
   return rg;
 }
 
 GridMPI *GridSpaceMPICUDA::LoadNeighborStage1(
     GridMPI *g,
-    const IntArray &halo_fw_width,
-    const IntArray &halo_bw_width,
+    const IndexArray &offset_min,
+    const IndexArray &offset_max,
     bool diagonal,  bool reuse, bool periodic,
-    const bool *fw_enabled,  const bool *bw_enabled,
     cudaStream_t cuda_stream) {
   
   // set the stream of buffer by the stream parameter
   GridMPICUDA3D *gmc = static_cast<GridMPICUDA3D*>(g);
   gmc->SetCUDAStream(cuda_stream);
-  IntArray halo_fw_width_tmp(halo_fw_width);
-  halo_fw_width_tmp.SetNoLessThan(0);
-  IntArray halo_bw_width_tmp(halo_bw_width);
-  halo_bw_width_tmp.SetNoLessThan(0);
+
+  IndexArray halo_fw_width(offset_max);
+  halo_fw_width.SetNoLessThan(0);  
+  IndexArray halo_bw_width(offset_min);
+  halo_bw_width *= -1;
+  halo_bw_width.SetNoLessThan(0);
+  
   //for (int i = g->num_dims_ - 1; i >= 0; --i) {
   for (int i = g->num_dims_ - 2; i >= 0; --i) {  
     LOG_VERBOSE() << "Exchanging dimension " << i << " data\n";
-    ExchangeBoundariesStage1(g, i, halo_fw_width[i],
-                             halo_bw_width[i], diagonal,
-                             periodic);
+    ExchangeBoundariesStage1(g, i, halo_fw_width[i], halo_bw_width[i],
+                             diagonal, periodic);
   }
   gmc->SetCUDAStream(0);
   return NULL;
@@ -830,19 +830,20 @@ GridMPI *GridSpaceMPICUDA::LoadNeighborStage1(
 
 GridMPI *GridSpaceMPICUDA::LoadNeighborStage2(
     GridMPI *g,
-    const IntArray &halo_fw_width,
-    const IntArray &halo_bw_width,
+    const IndexArray &offset_min,
+    const IndexArray &offset_max,
     bool diagonal,  bool reuse, bool periodic,
-    const bool *fw_enabled,  const bool *bw_enabled,
     cudaStream_t cuda_stream) {
   
   // set the stream of buffer by the stream parameter
   GridMPICUDA3D *gmc = static_cast<GridMPICUDA3D*>(g);
   gmc->SetCUDAStream(cuda_stream);
-  IntArray halo_fw_width_tmp(halo_fw_width);
-  halo_fw_width_tmp.SetNoLessThan(0);
-  IntArray halo_bw_width_tmp(halo_bw_width);
-  halo_bw_width_tmp.SetNoLessThan(0);
+
+  IndexArray halo_fw_width(offset_max);
+  halo_fw_width.SetNoLessThan(0);  
+  IndexArray halo_bw_width(offset_min);
+  halo_bw_width *= -1;
+  halo_bw_width.SetNoLessThan(0);
 
   // Does not perform staging for the continuous dimension. 
   int i = g->num_dims_ - 1;

@@ -26,88 +26,88 @@ class GridMPI: public Grid {
   friend class GridSpaceMPI;
  protected:
   GridMPI(PSType type, int elm_size, int num_dims,
-          const IntArray &size,
-          bool double_buffering, const IntArray &global_offset,
-          const IntArray &local_offset, const IntArray &local_size,
-          int attr);
+          const IndexArray &size, bool double_buffering,
+          const IndexArray &global_offset, const IndexArray &local_offset,
+          const IndexArray &local_size, int attr);
  public:
   static GridMPI *Create(PSType type, int elm_size,
-                         int num_dims, const IntArray &size,
+                         int num_dims, const IndexArray &size,
                          bool double_buffering,
-                         const IntArray &global_offset,
-                         const IntArray &local_offset,
-                         const IntArray &local_size,
+                         const IndexArray &global_offset,
+                         const IndexArray &local_offset,
+                         const IndexArray &local_size,
                          int attr);
   virtual ~GridMPI();
-  
-  virtual void CopyoutHalo2D0(unsigned width, bool fw, char *buf);
-  virtual void CopyoutHalo3D0(unsigned width, bool fw, char *buf);
-  virtual void CopyoutHalo3D1(unsigned width, bool fw, char *buf);
+
+  char *GetHaloBuf(int dim, unsigned width, bool fw, bool diagonal);
+  virtual void CopyoutHalo2D0(unsigned width, bool fw);
+  virtual void CopyoutHalo3D0(unsigned width, bool fw);
+  virtual void CopyoutHalo3D1(unsigned width, bool fw);
   virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
-  size_t CalcHaloSize(int dim, int width, bool diagonal);
+  size_t CalcHaloSize(int dim, unsigned width, bool diagonal);
   virtual std::ostream &Print(std::ostream &os) const;
-  const IntArray& local_size() const { return local_size_; }
-  const IntArray& local_offset() const { return local_offset_; }
+  const IndexArray& local_size() const { return local_size_; }
+  const IndexArray& local_offset() const { return local_offset_; }
   bool halo_has_diagonal() const { return halo_has_diagonal_; }
-  const IntArray& halo_fw_width() const { return halo_fw_width_; }
-  const IntArray& halo_bw_width() const { return halo_bw_width_; }
-  const IntArray& halo_fw_max_width() const { return halo_fw_max_width_; }
-  const IntArray& halo_bw_max_width() const { return halo_bw_max_width_; }
+  const UnsignedArray& halo_fw_width() const { return halo_fw_width_; }
+  const UnsignedArray& halo_bw_width() const { return halo_bw_width_; }
+  const UnsignedArray& halo_fw_max_width() const { return halo_fw_max_width_; }
+  const UnsignedArray& halo_bw_max_width() const { return halo_bw_max_width_; }
   char **_halo_self_fw() { return halo_self_fw_; }
   char **_halo_self_bw() { return halo_self_bw_; }  
   char **_halo_peer_fw() { return halo_peer_fw_; }
   char **_halo_peer_bw() { return halo_peer_bw_; }
   bool empty() const { return empty_; }
-  const IntArray& halo_self_fw_buf_size() const {
+  const SizeArray& halo_self_fw_buf_size() const {
     return halo_self_fw_buf_size_;
   }
-  const IntArray& halo_self_bw_buf_size() const {
+  const SizeArray& halo_self_bw_buf_size() const {
     return halo_self_bw_buf_size_;
   }  
-  const IntArray& halo_peer_fw_buf_size() const {
+  const SizeArray& halo_peer_fw_buf_size() const {
     return halo_peer_fw_buf_size_;
   }
-  const IntArray& halo_peer_bw_buf_size() const {
+  const SizeArray& halo_peer_bw_buf_size() const {
     return halo_peer_bw_buf_size_;
   }
-  IntArray* halo_fw_size() {
+  IndexArray* halo_fw_size() {
     return halo_fw_size_;
   }
-  IntArray* halo_bw_size() {
+  IndexArray* halo_bw_size() {
     return halo_bw_size_;
   }
-  void SetHaloSize(int dim, bool fw, size_t width, bool diagonal);
-  virtual void EnsureRemoteGrid(const IntArray &loal_offset,
-                                const IntArray &local_size);
+  void SetHaloSize(int dim, bool fw, unsigned width, bool diagonal);
+  virtual void EnsureRemoteGrid(const IndexArray &loal_offset,
+                                const IndexArray &local_size);
   GridMPI *remote_grid() { return remote_grid_; }
   bool &remote_grid_active() { return remote_grid_active_; }
-  virtual void *GetAddress(const IntArray &indices);
+  virtual void *GetAddress(const IndexArray &indices);
 
-  virtual void Resize(const IntArray &local_offset,
-                      const IntArray &local_size);
+  virtual void Resize(const IndexArray &local_offset,
+                      const IndexArray &local_size);
   
   virtual int Reduce(PSReduceOp op, void *out);
 
  protected:
   bool empty_;
-  IntArray global_offset_;
-  IntArray local_offset_;
-  IntArray local_size_;
+  IndexArray global_offset_;
+  IndexArray local_offset_;
+  IndexArray local_size_;
   bool halo_has_diagonal_;
-  IntArray halo_fw_width_;
-  IntArray halo_bw_width_;
-  IntArray halo_fw_max_width_;
-  IntArray halo_bw_max_width_;
+  UnsignedArray halo_fw_width_;
+  UnsignedArray halo_bw_width_;
+  UnsignedArray halo_fw_max_width_;
+  UnsignedArray halo_bw_max_width_;
   char **halo_self_fw_; // send buffer for forward halo accesses
   char **halo_self_bw_; // send buffer for backward halo accesses
   char **halo_peer_fw_; // recv buffer for forward halo accesses
   char **halo_peer_bw_; // recv buffer for backward halo accesses
-  IntArray halo_self_fw_buf_size_;
-  IntArray halo_self_bw_buf_size_;
-  IntArray halo_peer_fw_buf_size_;
-  IntArray halo_peer_bw_buf_size_;
-  IntArray halo_fw_size_[PS_MAX_DIM];
-  IntArray halo_bw_size_[PS_MAX_DIM];
+  SizeArray halo_self_fw_buf_size_;
+  SizeArray halo_self_bw_buf_size_;
+  SizeArray halo_peer_fw_buf_size_;
+  SizeArray halo_peer_bw_buf_size_;
+  IndexArray halo_fw_size_[PS_MAX_DIM];
+  IndexArray halo_bw_size_[PS_MAX_DIM];
   GridMPI *remote_grid_;
   // Indicates whether the remote grid is used instead of this
   // grid. This variable is set true when LoadSubgrid decides to use
@@ -124,8 +124,8 @@ class GridMPI: public Grid {
 
 struct FetchInfo {
   IntArray peer_index;
-  IntArray peer_offset;  
-  IntArray peer_size;
+  IndexArray peer_offset;  
+  IndexArray peer_size;
 };
 
 enum GRID_REQUEST_KIND {INVALID, DONE, FETCH_REQUEST, FETCH_REPLY};
@@ -144,19 +144,19 @@ GridRequest RecvGridRequest(MPI_Comm comm);
 
 class GridSpaceMPI: public GridSpace {
  public:
-  GridSpaceMPI(int num_dims, const IntArray &global_size,
+  GridSpaceMPI(int num_dims, const IndexArray &global_size,
                int proc_num_dims, const IntArray &proc_size,
                int my_rank);
   
   virtual ~GridSpaceMPI();
 
-  virtual void PartitionGrid(int num_dims, const IntArray &size,
-                             const IntArray &global_offset,
-                             IntArray &local_offset, IntArray &local_size);
+  virtual void PartitionGrid(int num_dims, const IndexArray &size,
+                             const IndexArray &global_offset,
+                             IndexArray &local_offset, IndexArray &local_size);
   
   virtual GridMPI *CreateGrid(PSType type, int elm_size, int num_dims,
-                              const IntArray &size, bool double_buffering,
-                              const IntArray &global_offset,
+                              const IndexArray &size, bool double_buffering,
+                              const IndexArray &global_offset,
                               int attr);
 
   // These two functions perform the same thing except for requiring
@@ -178,46 +178,44 @@ class GridSpaceMPI: public GridSpace {
 
 #if 0
   void ExchangeBoundariesAsync(int grid_id,
-                               const IntArray &halo_fw_width,
-                               const IntArray &halo_bw_width,
+                               const UnsignedArray &halo_fw_width,
+                               const UnsignedArray &halo_bw_width,
                                bool diagonal,
                                std::vector<MPI_Request> &requests) const;
 #endif  
 
   virtual void ExchangeBoundaries(int grid_id,
-                                  const IntArray &halo_fw_width,
-                                  const IntArray &halo_bw_width,
+                                  const UnsignedArray &halo_fw_width,
+                                  const UnsignedArray &halo_bw_width,
                                   bool diagonal,
                                   bool periodic,
                                   bool reuse=false) const;
 
 
-  virtual GridMPI *LoadSubgrid(GridMPI *grid, const IntArray &grid_offset,
-                               const IntArray &grid_size, bool reuse=false);
-  
+  virtual GridMPI *LoadSubgrid(GridMPI *grid, const IndexArray &grid_offset,
+                               const IndexArray &grid_size, bool reuse=false);
+
   virtual GridMPI *LoadNeighbor(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
+                                const IndexArray &offset_min,
+                                const IndexArray &offset_max,
                                 bool diagonal,
                                 bool reuse,
-                                bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL);
+                                bool periodic);
 
-  virtual int FindOwnerProcess(GridMPI *g, const IntArray &index);
+  virtual int FindOwnerProcess(GridMPI *g, const IndexArray &index);
   
   virtual std::ostream &Print(std::ostream &os) const;
 
   int num_dims() const { return num_dims_; }
-  const IntArray &global_size() const { return global_size_; }
+  const IndexArray &global_size() const { return global_size_; }
   const IntArray &proc_size() const { return proc_size_; }
   int num_procs() const { return num_procs_; }
   const IntArray &my_idx() const { return my_idx_; }
-  index_t **partitions() const { return partitions_; }
-  index_t **offsets() const { return offsets_; }
+  PSIndex **partitions() const { return partitions_; }
+  PSIndex **offsets() const { return offsets_; }
   int my_rank() const { return my_rank_; }
-  const IntArray &my_size() { return my_size_; }
-  const IntArray &my_offset() { return my_offset_; }  
+  const IndexArray &my_size() { return my_size_; }
+  const IndexArray &my_offset() { return my_offset_; }  
   const std::vector<IntArray> &proc_indices() const { return proc_indices_; }
   MPI_Comm comm() const { return comm_; };
   int GetProcessRank(const IntArray &proc_index) const;
@@ -235,25 +233,25 @@ class GridSpaceMPI: public GridSpace {
 
  protected:
   int num_dims_;
-  IntArray global_size_;
+  IndexArray global_size_;
   int proc_num_dims_;
   IntArray proc_size_;
   int my_rank_;
   int num_procs_;
-  IntArray my_size_;  
-  IntArray my_offset_;
-  index_t **partitions_;  
-  index_t **offsets_;
-  IntArray min_partition_;
-  IntArray my_idx_;
+  IndexArray my_size_;  
+  IndexArray my_offset_;
+  PSIndex **partitions_;  
+  PSIndex **offsets_;
+  IndexArray min_partition_;
+  IntArray my_idx_; //! Process index
   IntArray fw_neighbors_;
   IntArray bw_neighbors_;
-  // indices for all processes; proc_indices_[my_rank] == my_idx_
+  //! Indices for all processes; proc_indices_[my_rank] == my_idx_
   std::vector<IntArray> proc_indices_;
   MPI_Comm comm_;
   virtual void CollectPerProcSubgridInfo(const GridMPI *g,
-                                         const IntArray &grid_offset,
-                                         const IntArray &grid_size,
+                                         const IndexArray &grid_offset,
+                                         const IndexArray &grid_size,
                                          std::vector<FetchInfo> &finfo_holder) const;
   virtual bool SendFetchRequest(FetchInfo &finfo) const;
   virtual void HandleFetchRequest(GridRequest &req, GridMPI *g);
@@ -265,8 +263,8 @@ class GridSpaceMPI: public GridSpace {
 
 
 void LoadSubgrid(GridMPI *g, GridSpaceMPI *gs,
-                 int *dims, const IntArray &min_offsets,
-                 const IntArray &max_offsets,
+                 int *dims, const IndexArray &min_offsets,
+                 const IndexArray &max_offsets,
                  bool reuse);
 
 

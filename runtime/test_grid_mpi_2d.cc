@@ -15,7 +15,7 @@ int my_rank;
 
 void test1() {
   LOG_DEBUG() << "[" << my_rank << "] Test 1: Grid space creation and deletion\n";
-  IntArray global_size;
+  IndexArray global_size;
   global_size[0] = N;  global_size[1] = N;
   IntArray proc_size;
   proc_size[0] = 2;  proc_size[1] = 2;
@@ -26,12 +26,12 @@ void test1() {
 
 void test2() {
   LOG_DEBUG() << "[" << my_rank << "] Test 2: Grid creation and deletion\n";
-  IntArray global_size;
+  IndexArray global_size;
   global_size[0] = N;  global_size[1] = N;
   IntArray proc_size;
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size, false,
                               global_offset, 0);
   int idx = 0;
@@ -53,12 +53,12 @@ void test2() {
 
 void test3() {
   LOG_DEBUG() << "[" << my_rank << "] Test 3: Grid creation and deletion\n";
-  IntArray global_size;
+  IndexArray global_size;
   global_size[0] = N;  global_size[1] = N;
   IntArray proc_size;
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
@@ -72,9 +72,8 @@ void test3() {
       ++idx;
     }
   }
-  PSVectorInt halo = {1, 1};
-  gs->ExchangeBoundaries(g->id(), IntArray(halo), IntArray(halo),
-                         false, false);
+  UnsignedArray halo(1, 1);
+  gs->ExchangeBoundaries(g->id(), halo, halo, false, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
   delete gs;
@@ -83,12 +82,12 @@ void test3() {
 
 void test4() {
   LOG_DEBUG() << "[" << my_rank << "] Test 4: Load subgrid\n";
-  IntArray global_size;
+  IndexArray global_size;
   global_size[0] = N;  global_size[1] = N;
   IntArray proc_size;
   proc_size[0] = 2;  proc_size[1] = 2;
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
@@ -119,10 +118,10 @@ void test4() {
 
 void test5() {
   LOG_DEBUG() << "[" << my_rank << "] Test 5: Load subgrid\n";
-  IntArray global_size(N, N);
+  IndexArray global_size(N, N);
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
@@ -136,8 +135,8 @@ void test5() {
     }
   }
   
-  IntArray goffset = g->local_offset() - IntArray(1, 1);
-  IntArray gsize = g->local_size() + IntArray(2, 2);
+  IndexArray goffset = g->local_offset() - IndexArray(1, 1);
+  IndexArray gsize = g->local_size() + IndexArray(2, 2);
 
   GridMPI *g2 = gs->LoadSubgrid(g, goffset, gsize);
   PSAssert(g2 == NULL);
@@ -150,10 +149,10 @@ void test5() {
 
 void test6() {
   LOG_DEBUG() << "[" << my_rank << "] Test 6: Fetch subgrid\n";
-  IntArray global_size(N, N);
+  IndexArray global_size(N, N);
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
@@ -167,12 +166,12 @@ void test6() {
     }
   }
 
-  IntArray goffset = g->local_offset();
+  IndexArray goffset = g->local_offset();
   for (int i = 0; i < NDIM; ++i) {
     goffset [i] = (goffset[i] + N/2) % N;
   }
   LOG_DEBUG() << "[" << my_rank << "] offset: " << goffset << "\n";
-  IntArray gsize = g->local_size();
+  IndexArray gsize = g->local_size();
   GridMPI *g2 = gs->LoadSubgrid(g, goffset, gsize);
   PSAssert(g2);
   LOG_DEBUG() << "Fetch performed\n";
@@ -185,10 +184,10 @@ void test6() {
 
 void test7() {
   LOG_DEBUG() << "[" << my_rank << "] Test 7: Fetch subgrid\n";
-  IntArray global_size(N, N);
+  IndexArray global_size(N, N);
   IntArray proc_size(2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   int idx = 0;
@@ -202,7 +201,7 @@ void test7() {
     }
   }
 
-  IntArray goffset = g->local_offset();
+  IndexArray goffset = g->local_offset();
   for (int i = 0; i < NDIM; ++i) {
     goffset [i] = (goffset[i] + N/2) % N;
   }
@@ -212,7 +211,7 @@ void test7() {
     goffset[0]= (goffset[0] + N/4);
   }
   LOG_DEBUG() << "[" << my_rank << "] offset: " << goffset << "\n";
-  IntArray gsize = g->local_size();
+  IndexArray gsize = g->local_size();
   GridMPI *g2 = gs->LoadSubgrid(g, goffset, gsize);
   PSAssert(g2);
   LOG_DEBUG() << "Fetch performed\n";

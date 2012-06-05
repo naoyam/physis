@@ -25,9 +25,9 @@ class GridSpaceMPICUDA;
 class GridMPICUDA3D: public GridMPI {
   friend class GridSpaceMPICUDA;
  protected:  
-  GridMPICUDA3D(PSType type, int elm_size, int num_dims, const IntArray &size,
-                bool double_buffering, const IntArray &global_offset,
-                const IntArray &local_offset, const IntArray &local_size,
+  GridMPICUDA3D(PSType type, int elm_size, int num_dims, const IndexArray &size,
+                bool double_buffering, const IndexArray &global_offset,
+                const IndexArray &local_offset, const IndexArray &local_size,
                 int attr);
   __PSGridDev3D dev_;
   // the source is address of ordinary memory region
@@ -36,9 +36,9 @@ class GridMPICUDA3D: public GridMPI {
   virtual void Copyout(void *dst, const void *src, size_t size); 
  public:
   static GridMPICUDA3D *Create(
-      PSType type, int elm_size, int num_dims,  const IntArray &size,
-      bool double_buffering, const IntArray &global_offset,
-      const IntArray &local_offset, const IntArray &local_size,
+      PSType type, int elm_size, int num_dims,  const IndexArray &size,
+      bool double_buffering, const IndexArray &global_offset,
+      const IndexArray &local_offset, const IndexArray &local_size,
       int attr);
   virtual ~GridMPICUDA3D();
   virtual void DeleteBuffers();
@@ -48,9 +48,9 @@ class GridMPICUDA3D: public GridMPI {
   virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
   virtual void CopyoutHalo3D0(unsigned width, bool fw);
   virtual void CopyoutHalo3D1(unsigned width, bool fw);
-  virtual void *GetAddress(const IntArray &indices);  
-  virtual void EnsureRemoteGrid(const IntArray &loal_offset,
-                                const IntArray &local_size);
+  virtual void *GetAddress(const IndexArray &indices);  
+  virtual void EnsureRemoteGrid(const IndexArray &loal_offset,
+                                const IndexArray &local_size);
 
   void SetCUDAStream(cudaStream_t strm);
   
@@ -77,15 +77,15 @@ class GridMPICUDA3D: public GridMPI {
 class GridSpaceMPICUDA: public GridSpaceMPI {
  public:
   using GridSpaceMPI::ExchangeBoundaries;  
-  GridSpaceMPICUDA(int num_dims, const IntArray &global_size,
+  GridSpaceMPICUDA(int num_dims, const IndexArray &global_size,
                    int proc_num_dims, const IntArray &proc_size,
                    int my_rank);
   virtual ~GridSpaceMPICUDA();
 
   virtual GridMPICUDA3D *CreateGrid(PSType type, int elm_size, int num_dims,
-                                    const IntArray &size,
+                                    const IndexArray &size,
                                     bool double_buffering,
-                                    const IntArray &global_offset,
+                                    const IndexArray &global_offset,
                                     int attr);
   virtual bool SendBoundaries(GridMPICUDA3D *grid, int dim, unsigned width,
                               bool forward, bool diagonal, bool periodic,
@@ -115,33 +115,28 @@ class GridSpaceMPICUDA: public GridSpaceMPI {
                                         unsigned halo_bw_width,
                                         bool diagonal,
                                         bool periodic) const;
+  using GridSpaceMPI::LoadNeighbor;
   virtual GridMPI *LoadNeighbor(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
+                                const IndexArray &offset_min,
+                                const IndexArray &offset_max,
                                 bool diagonal,
                                 bool reuse,
                                 bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL,
-                                cudaStream_t cuda_stream=0);
+                                cudaStream_t cuda_stream);
   virtual GridMPI *LoadNeighborStage1(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
-                                bool diagonal,
-                                bool reuse,
-                                bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL,
-                                cudaStream_t cuda_stream=0);
+                                      const IndexArray &offset_min,
+                                      const IndexArray &offset_max,
+                                      bool diagonal,
+                                      bool reuse,
+                                      bool periodic,
+                                      cudaStream_t cuda_stream);
   virtual GridMPI *LoadNeighborStage2(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
-                                bool diagonal,
-                                bool reuse,
-                                bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL,
-                                cudaStream_t cuda_stream=0);
+                                      const IndexArray &offset_min,
+                                      const IndexArray &offset_max,
+                                      bool diagonal,
+                                      bool reuse,
+                                      bool periodic,
+                                      cudaStream_t cuda_stream);
   
 
   virtual void HandleFetchRequest(GridRequest &req, GridMPI *g);

@@ -141,13 +141,12 @@ void StencilRange::merge(const StencilRange &sr) {
   diagonal_ |= sr.diagonal_;
 }
 
-// NOTE: backward will be convereted to positive values if accessing backward
-bool StencilRange::GetNeighborAccess(IntVector &forward, IntVector &backward) {
+bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) {
   if (!IsNeighborAccess()) return false;
 
   for (int i = 0; i < num_dims_; ++i) {
-    backward.push_back(min_indices_[i].begin()->offset * -1);
-    forward.push_back(max_indices_[i].begin()->offset);    
+    offset_min.push_back(min_indices_[i].begin()->offset);
+    offset_max.push_back(max_indices_[i].begin()->offset);    
   }
   return true;
 }
