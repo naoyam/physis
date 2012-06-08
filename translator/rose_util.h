@@ -66,7 +66,7 @@ bool copyConstantFuncArgs(SgFunctionCallExp *call,
 template <class T>
 int copyConstantFuncArgs(SgExpressionPtrList::const_iterator it,
                          SgExpressionPtrList::const_iterator end,
-                          vector<T> &constantHolder) {
+                         vector<T> &constantHolder) {
   int num_constants = 0;
   while (it != end) {
     SgExpression *arg = *it;
@@ -121,7 +121,7 @@ void AppendExprStatement(SgScopeStatement *scope,
                          SgExpression *exp);
 
 SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
-                                          const physis::util::IntVector &vec,
+                                          const IntVector &vec,
                                           SgScopeStatement *block);
 
 

@@ -421,6 +421,9 @@ function do_mpirun()
     fi
     local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
+	# make sure the binary is availale on each node; without this mpirun often fails
+	# if mpi-cuda is used
+    $MPIRUN -np $np $mfile_option --output-filename executable-copy $1
     echo "[EXECUTE] $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP" >&2
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP
 }
@@ -449,7 +452,6 @@ function execute()
     esac
     if [ $? -ne 0 ] || grep -q "orted was unable to" $exename.err; then
 		cat $exename.err
-		rm $exename.out $exename.err $exename		
 		return 1
     fi
 	rm $exename		

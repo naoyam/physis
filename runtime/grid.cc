@@ -51,7 +51,7 @@ void Grid::Swap() {
   std::swap(data_buffer_[0], data_buffer_[1]);
 }
 
-void *Grid::GetAddress(const IntArray &indices) {
+void *Grid::GetAddress(const IndexArray &indices) {
 #ifdef PS_DEBUG
   PSAssert(_data() == buffer()->Get());
 #endif
@@ -68,11 +68,11 @@ void Grid::Copyout(void *dst, const void *src, size_t size) {
   memcpy(dst, src, size);
 }
 
-void Grid::Set(const IntArray &indices, const void *buf) {
+void Grid::Set(const IndexArray &indices, const void *buf) {
   Copyin(GetAddress(indices), buf, elm_size());
 }
 
-void Grid::Get(const IntArray &indices, void *buf) {
+void Grid::Get(const IndexArray &indices, void *buf) {
   Copyout(buf, GetAddress(indices), elm_size());
 }
 

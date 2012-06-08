@@ -71,19 +71,19 @@ class Master {
   virtual void Barrier();
   virtual GridMPI *GridNew(PSType type, int elm_size,
                            int num_dims,
-                           const IntArray &size,
+                           const IndexArray &size,
                            bool double_buffering,
-                           const IntArray &global_offset,
+                           const IndexArray &global_offset,
                            int attr);
   virtual void GridDelete(GridMPI *g);
   virtual void GridCopyin(GridMPI *g, const void *buf);
   virtual void GridCopyinLocal(GridMPI *g, const void *buf);  
   virtual void GridCopyout(GridMPI *g, void *buf);
   virtual void GridCopyoutLocal(GridMPI *g, void *buf);  
-  virtual void GridSet(GridMPI *g, const void *buf, const IntArray &index);
-  virtual void GridGet(GridMPI *g, void *buf, const IntArray &index);  
+  virtual void GridSet(GridMPI *g, const void *buf, const IndexArray &index);
+  virtual void GridGet(GridMPI *g, void *buf, const IndexArray &index);  
   virtual void StencilRun(int id, int iter, int num_stencils,
-                  void **stencils, int *stencil_sizes);
+                          void **stencils, unsigned *stencil_sizes);
   virtual void GridReduce(void *buf, PSReduceOp op, GridMPI *g);
 };
 

@@ -19,7 +19,7 @@ namespace translator {
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
     SgScopeStatement *global_scope):
     RuntimeBuilder(global_scope) {
-  PSAssert(index_t_ = si::lookupNamedTypeInParentScopes("index_t", gs_));
+  PSAssert(index_t_ = si::lookupNamedTypeInParentScopes(PS_INDEX_TYPE_NAME, gs_));
 }
 
 const std::string

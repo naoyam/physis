@@ -38,7 +38,7 @@ Domain* Domain::GetDomain(SgFunctionCallExp *exp) {
   int numDim = getNumDimOfDomain(t);
   assert(numDim > 0);
 
-  vector<size_t> v;
+  SizeVector v;
   if (rose_util::copyConstantFuncArgs<size_t>(exp, v)) {
     LOG_DEBUG() << "Constant domain detected\n";
     RegularDomain r(numDim);

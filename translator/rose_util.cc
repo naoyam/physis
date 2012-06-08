@@ -11,9 +11,6 @@
 namespace sb = SageBuilder;
 namespace si = SageInterface;
 
-using namespace physis;
-using namespace physis::util;
-
 namespace physis {
 namespace translator {
 namespace rose_util {

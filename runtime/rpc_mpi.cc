@@ -26,9 +26,9 @@ struct RequestNEW {
   PSType type;
   int elm_size;
   int num_dims;
-  IntArray size;
+  IndexArray size;
   bool double_buffering;
-  IntArray global_offset;
+  IndexArray global_offset;
   int attr;
 };
 
@@ -153,9 +153,9 @@ void Client::Barrier() {
 
 // Create
 GridMPI *Master::GridNew(PSType type, int elm_size,
-                         int num_dims, const IntArray &size,
+                         int num_dims, const IndexArray &size,
                          bool double_buffering,
-                         const IntArray &global_offset,
+                         const IndexArray &global_offset,
                          int attr) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
   NotifyCall(FUNC_NEW);
@@ -213,11 +213,11 @@ void Master::GridCopyin(GridMPI *g, const void *buf) {
   NotifyCall(FUNC_COPYIN, g->id());  
   BufferHost sbuf(g->num_dims(), g->elm_size());
   for (int i = 1; i < gs_->num_procs(); ++i) {
-    IntArray subgrid_size, subgrid_offset;
-    PS_MPI_Recv(&subgrid_offset, sizeof(IntArray), MPI_BYTE, i,
+    IndexArray subgrid_size, subgrid_offset;
+    PS_MPI_Recv(&subgrid_offset, sizeof(IndexArray), MPI_BYTE, i,
                 0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE_MPI() << "sg offset: " << subgrid_offset << "\n";    
-    PS_MPI_Recv(&subgrid_size, sizeof(IntArray), MPI_BYTE, i,
+    PS_MPI_Recv(&subgrid_size, sizeof(IndexArray), MPI_BYTE, i,
                 0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE_MPI() << "sg size: " << subgrid_size << "\n";        
     size_t gsize = sbuf.GetLinearSize(subgrid_size);
@@ -236,18 +236,18 @@ void Client::GridCopyin(int id) {
 
   GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(id));
   // notify the local offset
-  IntArray ia = g->local_offset();
-  PS_MPI_Send(&ia, sizeof(IntArray), MPI_BYTE, 0, 0, comm_);
+  IndexArray ia = g->local_offset();
+  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
   // notify the local size
   ia = g->local_size();
-  PS_MPI_Send(&ia, sizeof(IntArray), MPI_BYTE, 0, 0, comm_);
+  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
   if (g->empty()) {
     LOG_DEBUG() << "No copy needed because this grid is empty.\n";
     return;
   }
   // receive the subregion for this process
   void *cur_buf_ptr = g->buffer()->Get();
-  g->buffer()->MPIRecv(0, comm_, IntArray((index_t)0), g->local_size());
+  g->buffer()->MPIRecv(0, comm_, IndexArray(), g->local_size());
   PSAssert(g->buffer()->Get() == cur_buf_ptr);
   //print_grid<float>(g, gs_->my_rank(), std::cerr);
   return;
@@ -273,16 +273,16 @@ void Master::GridCopyout(GridMPI *g, void *buf) {
   NotifyCall(FUNC_COPYOUT, g->id());
   BufferHost sbuf(g->num_dims(), g->elm_size());
   for (int i = 1; i < gs_->num_procs(); ++i) {
-    IntArray subgrid_size, subgrid_offset;
-    PS_MPI_Recv(&subgrid_offset, sizeof(IntArray), MPI_BYTE, i,
+    IndexArray subgrid_size, subgrid_offset;
+    PS_MPI_Recv(&subgrid_offset, sizeof(IndexArray), MPI_BYTE, i,
                 0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE() << "sg offset: " << subgrid_offset << "\n";
-    PS_MPI_Recv(&subgrid_size, sizeof(IntArray), MPI_BYTE, i,
+    PS_MPI_Recv(&subgrid_size, sizeof(IndexArray), MPI_BYTE, i,
                 0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE() << "sg size: " << subgrid_size << "\n";
     size_t gsize = sbuf.GetLinearSize(subgrid_size);
     if (gsize == 0) continue;
-    sbuf.MPIRecv(i, comm_, IntArray((index_t)0), subgrid_size);
+    sbuf.MPIRecv(i, comm_, IndexArray(), subgrid_size);
     CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
                   g->size(), sbuf.Get(), subgrid_offset,
                   subgrid_size);
@@ -293,29 +293,29 @@ void Client::GridCopyout(int id) {
   LOG_DEBUG() << "Copyout\n";
   GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(id));
   // notify the local offset
-  IntArray ia = g->local_offset();
-  PS_MPI_Send(&ia, sizeof(IntArray), MPI_BYTE, 0, 0, comm_);
+  IndexArray ia = g->local_offset();
+  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
   // notify the local size
   ia = g->local_size();
-  PS_MPI_Send(&ia, sizeof(IntArray), MPI_BYTE, 0, 0, comm_);
+  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
   if (g->empty()) {
     LOG_DEBUG() << "No copy needed because this grid is empty.\n";
     return;
   }
-  g->buffer()->MPISend(0, comm_, IntArray((index_t)0), g->local_size());
+  g->buffer()->MPISend(0, comm_, IndexArray(), g->local_size());
   return;
 }
 
 void Master::StencilRun(int id, int iter, int num_stencils,
                         void **stencils,
-                        int *stencil_sizes) {
+                        unsigned *stencil_sizes) {
   LOG_DEBUG() << "Master StencilRun(" << id << ")\n";
   
   NotifyCall(FUNC_RUN, id);
   // Send the number of iterations
   PS_MPI_Bcast(&iter, 1, MPI_INT, 0, comm_);
   PS_MPI_Bcast(&num_stencils, 1, MPI_INT, 0, comm_);
-  PS_MPI_Bcast(stencil_sizes, num_stencils, MPI_INT, 0, comm_);
+  PS_MPI_Bcast(stencil_sizes, num_stencils, MPI_UNSIGNED, 0, comm_);
   for (int i = 0; i < num_stencils; ++i) {
     PS_MPI_Bcast(stencils[i], stencil_sizes[i], MPI_BYTE, 0, comm_);
   }
@@ -333,9 +333,9 @@ void Client::StencilRun(int id) {
   PS_MPI_Bcast(&iter, 1, MPI_INT, 0, comm_);
   int num_stencils;
   PS_MPI_Bcast(&num_stencils, 1, MPI_INT, 0, comm_);
-  int *stencil_sizes = new int[num_stencils];
+  unsigned *stencil_sizes = new unsigned[num_stencils];
   // Send the stencil object size
-  PS_MPI_Bcast(stencil_sizes, num_stencils, MPI_INT, 0, comm_);
+  PS_MPI_Bcast(stencil_sizes, num_stencils, MPI_UNSIGNED, 0, comm_);
   void **stencils = new void*[num_stencils];
   for (int i = 0; i < num_stencils; ++i) {
     void *sbuf = malloc(stencil_sizes[i]);
@@ -352,21 +352,21 @@ void Client::StencilRun(int id) {
 void Client::GridGet(int id) {
   LOG_DEBUG() << "Client GridGet(" << id << ")\n";
   GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(id));
-  IntArray zero_offset;
-  IntArray zero_size;
+  IndexArray zero_offset;
+  IndexArray zero_size;
   // just to handle a request from the root
   gs_->LoadSubgrid(g, zero_offset, zero_size, false);
   LOG_DEBUG() << "Client GridGet done\n";
   return;
 }
 
-void Master::GridGet(GridMPI *g, void *buf, const IntArray &index) {
+void Master::GridGet(GridMPI *g, void *buf, const IndexArray &index) {
   LOG_DEBUG() << "Master GridGet\n";
 
   // Notify
   NotifyCall(FUNC_GET, g->id());
-  IntArray size;
-  size.assign(1);
+  IndexArray size;
+  size.Set(1);
   gs_->LoadSubgrid(g, index, size, false);
   //memcpy(buf, g->GetAddress(index), g->elm_size());
   g->Get(index, buf);
@@ -385,8 +385,8 @@ void Client::GridSet(int id) {
   int gid;
   PS_MPI_Recv(&gid, 1, MPI_INT, 0, 0, comm_, MPI_STATUS_IGNORE);
   GridMPI *g = static_cast<GridMPI*>(gs_->FindGrid(gid));
-  IntArray index;
-  PS_MPI_Recv(&index, sizeof(IntArray), MPI_BYTE, 0, 0,
+  IndexArray index;
+  PS_MPI_Recv(&index, sizeof(IndexArray), MPI_BYTE, 0, 0,
               comm_, MPI_STATUS_IGNORE);
   LOG_DEBUG() << "Set index: " << index << "\n";
   void *buf = malloc(g->elm_size());
@@ -398,7 +398,7 @@ void Client::GridSet(int id) {
   return;
 }
 
-void Master::GridSet(GridMPI *g, const void *buf, const IntArray &index) {
+void Master::GridSet(GridMPI *g, const void *buf, const IndexArray &index) {
   LOG_DEBUG() << "Master GridGet\n";
 
   int peer_rank = gs_->FindOwnerProcess(g, index);
@@ -411,8 +411,8 @@ void Master::GridSet(GridMPI *g, const void *buf, const IntArray &index) {
     int gid = g->id();
     PS_MPI_Send(&gid, 1, MPI_INT, peer_rank, 0, comm_);
     // MPI_Send does not accept const buffer pointer    
-    IntArray t = index;    
-    PS_MPI_Send(&t, sizeof(IntArray), MPI_BYTE, peer_rank, 0, comm_);
+    IndexArray t = index;    
+    PS_MPI_Send(&t, sizeof(IndexArray), MPI_BYTE, peer_rank, 0, comm_);
     PS_MPI_Send((void*)buf, g->elm_size(), MPI_BYTE, peer_rank, 0, comm_);
   } else {
     //memcpy(g->GetAddress(index), buf, g->elm_size());

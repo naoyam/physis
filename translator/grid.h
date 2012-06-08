@@ -89,8 +89,7 @@ class Grid {
   GridType *gt;
   SgFunctionCallExp *newCall;
   //StencilRange sr;
-  //vector<unsigned int> sizes;
-  IntVector static_size_;
+  SizeVector static_size_;
   bool has_static_size_;
   void identifySize(SgExpressionPtrList::const_iterator size_begin,
                     SgExpressionPtrList::const_iterator size_end);
@@ -130,7 +129,7 @@ class Grid {
   bool has_static_size() const {
     return has_static_size_;
   }
-  const IntVector &static_size() const {
+  const SizeVector &static_size() const {
     assert(has_static_size());
     return static_size_;
   }
@@ -139,7 +138,7 @@ class Grid {
   string getStaticGlobalOffset(I offsets) const {
     // For some reason, index expression with z offset
     // appearing first results in faster CUDA code
-    vector<unsigned int>::const_iterator sizes = static_size().begin();
+    SizeArray::const_iterator sizes = static_size().begin();
     StringJoin sj("+");
     StringJoin sizeStr("*");
     list<string> t;

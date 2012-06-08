@@ -155,7 +155,7 @@ class StencilRange {
   StencilIndexList* min_indices() { return min_indices_; }
   StencilIndexList* max_indices() { return max_indices_; }  
   bool IsNeighborAccess() const;
-  bool GetNeighborAccess(IntVector &forward, IntVector &backward);
+  bool GetNeighborAccess(IntVector &offset_min, IntVector &offset_max);
   bool IsNeighborAccessDiagonalAccessed() const;
   bool IsZero() const;
   // Returns true if indices with a unique dimension is given for each

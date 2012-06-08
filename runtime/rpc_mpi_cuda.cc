@@ -58,7 +58,7 @@ void MasterMPICUDA::GridCopyinLocal(GridMPI *g, const void *buf) {
                  g->local_offset(), g->local_size());
   // send it out to device memory
   static_cast<BufferCUDADev*>(g->buffer())->Copyin(
-      *pinned_buf_, IntArray((index_t)0), g->local_size());
+      *pinned_buf_, IndexArray(), g->local_size());
 }
 
 void MasterMPICUDA::GridCopyoutLocal(GridMPI *g, void *buf) {
@@ -66,7 +66,7 @@ void MasterMPICUDA::GridCopyoutLocal(GridMPI *g, void *buf) {
   size_t size = g->local_size().accumulate(g->num_dims()) *
                 g->elm_size();
   PSAssert(dev_buf->GetLinearSize() == size);
-  dev_buf->Copyout(*pinned_buf_, IntArray((index_t)0), g->local_size());
+  dev_buf->Copyout(*pinned_buf_, IndexArray(), g->local_size());
   CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
                 g->size(), pinned_buf_->Get(), g->local_offset(),
                 g->local_size());

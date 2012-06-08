@@ -50,7 +50,7 @@ static void init_grid(GridMPI *g) {
 
 void test1() {
   LOG_DEBUG_MPI() << "Test 1: Grid space creation and deletion\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
   delete gs;
@@ -59,10 +59,10 @@ void test1() {
 
 void test2() {
   LOG_DEBUG_MPI() << "[" << my_rank << "] Test 2: Grid creation and deletion\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
@@ -74,14 +74,14 @@ void test2() {
 
 void test3() {
   LOG_DEBUG_MPI() << "[" << my_rank << "] Test 3: ExchangeBoundaries\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
-  IntArray halo(1, 1, 1);
+  UnsignedArray halo(1, 1, 1);
   gs->ExchangeBoundaries(g->id(), halo, halo, false, false);
   print_grid<float>(g, my_rank, cerr);
   delete g;
@@ -91,10 +91,10 @@ void test3() {
 
 void test4() {
   LOG_DEBUG_MPI() << "[" << my_rank << "] Test 4: Load subgrid self\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
@@ -111,17 +111,17 @@ void test4() {
 
 void test5() {
   LOG_DEBUG_MPI() << "Test 5: Overlapping LoadSubgrid\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
   
-  IntArray goffset = g->local_offset() - 1;
+  IndexArray goffset = g->local_offset() - 1;
   goffset.SetNoLessThan(0L);
-  IntArray gy = g->local_offset() + g->local_size() + 1;
+  IndexArray gy = g->local_offset() + g->local_size() + 1;
   gy.SetNoMoreThan(g->size());
   GridMPI *g2 = gs->LoadSubgrid(g, goffset, gy - goffset);
   PSAssert(g2);
@@ -134,15 +134,15 @@ void test5() {
 
 void test6() {
   LOG_DEBUG_MPI() << "Test 6: LoadNeighbor no diagonal points\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), false, false, false);
+  GridMPI *g2 = gs->LoadNeighbor(g, IndexArray(1, 1, 1), IndexArray(1, 1, 1), false, false, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);
@@ -156,15 +156,15 @@ void test6() {
 
 void test7() {
   LOG_DEBUG_MPI() << "LoadNeighbor with diagonal points\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
 
-  GridMPI *g2 = gs->LoadNeighbor(g, IntArray(1, 1, 1), IntArray(1, 1, 1), true, false, false);
+  GridMPI *g2 = gs->LoadNeighbor(g, IndexArray(1, 1, 1), IndexArray(1, 1, 1), true, false, false);
   if (g2) {
     LOG_ERROR_MPI() << "Neighbor exchange not used\n";
     PSAbort(1);
@@ -178,16 +178,16 @@ void test7() {
 
 void test8() {
   LOG_DEBUG_MPI() << "Fetch same subgrid\n";
-  IntArray global_size(N, N, N);
+  IndexArray global_size(N, N, N);
   IntArray proc_size(2, 2, 2);
   GridSpaceMPI *gs = new GridSpaceMPI(NDIM, global_size, NDIM, proc_size, my_rank);
-  IntArray global_offset;
+  IndexArray global_offset;
   GridMPI *g = gs->CreateGrid(PS_FLOAT, sizeof(float), NDIM, global_size,
                               false, global_offset, 0);
   init_grid(g);
-  IntArray goffset;
+  IndexArray goffset;
   LOG_DEBUG_MPI() << "offset: " << goffset << "\n";
-  IntArray gsize(2, 2, 2);
+  IndexArray gsize(2, 2, 2);
   GridMPI *g2 = gs->LoadSubgrid(g, goffset, gsize);
   if (my_rank == 0) {
     PSAssert(g2 == NULL);

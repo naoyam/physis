@@ -24,31 +24,31 @@ class BufferCUDAHost: public Buffer {
   BufferCUDAHost(int num_dims, size_t elm_size);  
   virtual ~BufferCUDAHost();
   
-  virtual void Copyin(const void *buf, const IntArray &offset,
-                      const IntArray &size);
-  virtual void Copyin(const void *buf, const IntArray &size) {
-    Copyin(buf, IntArray((index_t)0), size);
+  virtual void Copyin(const void *buf, const IndexArray &offset,
+                      const IndexArray &size);
+  virtual void Copyin(const void *buf, const IndexArray &size) {
+    Copyin(buf, IndexArray(), size);
   }
   // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IntArray &offset,
-                      const IntArray &size);                       
+  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                       
  
-  virtual void Copyout(void *buf, const IntArray &offset,
-                       const IntArray &size);
-  virtual void Copyout(void *buf,  const IntArray &size) {
-    Copyout(buf, IntArray((index_t)0), size);
+  virtual void Copyout(void *buf, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void Copyout(void *buf,  const IndexArray &size) {
+    Copyout(buf, IndexArray(), size);
   }
-  virtual void Copyout(BufferHost &buf, const IntArray &offset,
-                       const IntArray &size);                       
-  virtual void Copyout(BufferHost &buf,  const IntArray &size) {
-    Copyout(buf, IntArray(), size);
+  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
+                       const IndexArray &size);                       
+  virtual void Copyout(BufferHost &buf,  const IndexArray &size) {
+    Copyout(buf, IndexArray(), size);
   }
   
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
 
-  virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
 
   template <class T>
   std::ostream& print(std::ostream &os) const {
@@ -68,7 +68,7 @@ class BufferCUDAHost: public Buffer {
   }
 
  protected:
-  virtual void *GetChunk(const IntArray &size);
+  virtual void *GetChunk(const IndexArray &size);
 
   BufferHost *mpi_buf_;
  public:
@@ -81,35 +81,35 @@ class BufferCUDAHostMapped: public Buffer {
   BufferCUDAHostMapped(int num_dims, size_t elm_size);  
   virtual ~BufferCUDAHostMapped();
   
-  virtual void Copyin(const void *buf, const IntArray &offset,
-                      const IntArray &size);
-  virtual void Copyin(const void *buf, const IntArray &size) {
-    Copyin(buf, IntArray((index_t)0), size);
+  virtual void Copyin(const void *buf, const IndexArray &offset,
+                      const IndexArray &size);
+  virtual void Copyin(const void *buf, const IndexArray &size) {
+    Copyin(buf, IndexArray(), size);
   }
   // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IntArray &offset,
-                      const IntArray &size);                       
+  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                       
  
-  virtual void Copyout(void *buf, const IntArray &offset,
-                       const IntArray &size);
-  virtual void Copyout(void *buf,  const IntArray &size) {
-    Copyout(buf, IntArray((index_t)0), size);
+  virtual void Copyout(void *buf, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void Copyout(void *buf,  const IndexArray &size) {
+    Copyout(buf, IndexArray(), size);
   }
-  virtual void Copyout(BufferHost &buf, const IntArray &offset,
-                       const IntArray &size);                       
-  virtual void Copyout(BufferHost &buf,  const IntArray &size) {
-    Copyout(buf, IntArray(), size);
+  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
+                       const IndexArray &size);                       
+  virtual void Copyout(BufferHost &buf,  const IndexArray &size) {
+    Copyout(buf, IndexArray(), size);
   }
   
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
   
-  virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
   virtual void Allocate(int num_dims, size_t elm_size,
-                        const IntArray &size);
+                        const IndexArray &size);
  protected:
-  virtual void *GetChunk(const IntArray &size);
+  virtual void *GetChunk(const IndexArray &size);
 
   BufferHost *mpi_buf_;
   void *dev_ptr_;
@@ -125,27 +125,27 @@ class BufferCUDADev: public Buffer {
   BufferCUDADev(int num_dims, size_t elm_size);  
   virtual ~BufferCUDADev();
   
-  virtual void Copyin(const void *buf, const IntArray &offset,
-                      const IntArray &size);
+  virtual void Copyin(const void *buf, const IndexArray &offset,
+                      const IndexArray &size);
   // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IntArray &offset,
-                      const IntArray &size);                      
-  virtual void Copyin(const BufferCUDAHost &buf, const IntArray &offset,
-                      const IntArray &size);                      
-  virtual void Copyout(void *buf, const IntArray &offset,
-                       const IntArray &size);
-  virtual void Copyout(BufferHost &buf, const IntArray &offset,
-                       const IntArray &size);                       
-  virtual void Copyout(BufferCUDAHost &buf, const IntArray &offset,
-                       const IntArray &size);                       
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
-  virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                      
+  virtual void Copyin(const BufferCUDAHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                      
+  virtual void Copyout(void *buf, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
+                       const IndexArray &size);                       
+  virtual void Copyout(BufferCUDAHost &buf, const IndexArray &offset,
+                       const IndexArray &size);                       
+  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
   cudaStream_t &strm() { return strm_; }
 
  protected:
-  virtual void *GetChunk(const IntArray &size);
+  virtual void *GetChunk(const IndexArray &size);
   BufferCUDAHost *pinned_buf_;
   cudaStream_t strm_;  
  public:
@@ -157,39 +157,39 @@ class BufferCUDADev3D: public Buffer {
   BufferCUDADev3D(int num_dims, size_t elm_size);  
   virtual ~BufferCUDADev3D();
 
-  virtual void Copyin(const void *buf, const IntArray &offset,
-                      const IntArray &size);
+  virtual void Copyin(const void *buf, const IndexArray &offset,
+                      const IndexArray &size);
   // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IntArray &offset,
-                      const IntArray &size);                      
-  virtual void Copyin(const BufferCUDAHost &buf, const IntArray &offset,
-                      const IntArray &size);                      
-  virtual void Copyout(void *buf, const IntArray &offset,
-                       const IntArray &size);
-  virtual void Copyout(BufferHost &buf, const IntArray &offset,
-                       const IntArray &size);                       
-  virtual void Copyout(BufferCUDAHost &buf, const IntArray &offset,
-                       const IntArray &size);
+  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                      
+  virtual void Copyin(const BufferCUDAHost &buf, const IndexArray &offset,
+                      const IndexArray &size);                      
+  virtual void Copyout(void *buf, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
+                       const IndexArray &size);                       
+  virtual void Copyout(BufferCUDAHost &buf, const IndexArray &offset,
+                       const IndexArray &size);
   virtual void Copyout(BufferCUDAHostMapped &buf,
-                       const IntArray &offset,
-                       const IntArray &size);
+                       const IndexArray &offset,
+                       const IndexArray &size);
   virtual void Copyout_Opt(BufferCUDAHostMapped &buf,
-                           const IntArray &offset,
-                           const IntArray &size);                       
+                           const IndexArray &offset,
+                           const IndexArray &size);                       
   
   
-  virtual void MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
-  virtual void MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                       const IntArray &size);
+  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
+                       const IndexArray &size);
   size_t GetPitch() const {
     return pp_.pitch;
   }
   cudaStream_t &strm() { return strm_; }
  protected:
-  virtual cudaPitchedPtr GetChunk3D(const IntArray &size);
-  //virtual void Allocate(const IntArray &size);
-  virtual void Allocate(int num_dims, size_t elm_size, const IntArray &size);  
+  virtual cudaPitchedPtr GetChunk3D(const IndexArray &size);
+  //virtual void Allocate(const IndexArray &size);
+  virtual void Allocate(int num_dims, size_t elm_size, const IndexArray &size);  
   BufferCUDAHost *pinned_buf_;
   BufferCUDAHostMapped *mapped_buf_;
   cudaPitchedPtr pp_;

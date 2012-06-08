@@ -27,10 +27,10 @@ namespace runtime {
  */
 void CopyoutSubgrid(size_t elm_size, int num_dims,
                     const void *grid,
-                    const physis::util::IntArray  &grid_size,
+                    const IndexArray  &grid_size,
                     void *subgrid,
-                    const physis::util::IntArray &subgrid_offset,
-                    const physis::util::IntArray &subgrid_size);
+                    const IndexArray &subgrid_offset,
+                    const IndexArray &subgrid_size);
 
 //! Copy a continuous buffer into a multi-dimensional sub grid.
 /*
@@ -43,24 +43,24 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
   \param subgrid_size The offset of the sub grid to copy.
  */
 void CopyinSubgrid(size_t elm_size, int num_dims,
-                   void *grid, const physis::util::IntArray &grid_size,
+                   void *grid, const IndexArray &grid_size,
                    const void *subgrid,
-                   const physis::util::IntArray &subgrid_offset,
-                   const physis::util::IntArray &subgrid_size);
+                   const IndexArray &subgrid_offset,
+                   const IndexArray &subgrid_size);
 
 
-inline index_t GridCalcOffset3D(index_t x, index_t y, index_t z, 
-                                const IntArray &size) {
+inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                const IndexArray &size) {
   return x + y * size[0] + z * size[0] * size[1];
 }  
 
-inline index_t GridCalcOffset3D(index_t x, index_t y, index_t z, 
-                                index_t xsize, index_t ysize) {
+inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                PSIndex xsize, PSIndex ysize) {
   return x + y * xsize + z * xsize * ysize;
 }  
 
-inline index_t GridCalcOffset3D(const IntArray &index,
-                                const IntArray &size) {
+inline PSIndex GridCalcOffset3D(const IndexArray &index,
+                                const IndexArray &size) {
   return index[0] + index[1] * size[0] + index[2] * size[0] * size[1];
 }
 

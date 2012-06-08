@@ -25,7 +25,7 @@ std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
   T **halo_self_bw = (T**)g->_halo_self_bw();
   T **halo_peer_fw = (T**)g->_halo_peer_fw();
   T **halo_peer_bw = (T**)g->_halo_peer_bw();
-  IntArray lsize = g->local_size();
+  IndexArray lsize = g->local_size();
   std::stringstream ss;
   ss << "[rank:" << my_rank << "] ";
 

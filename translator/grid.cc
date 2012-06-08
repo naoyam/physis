@@ -60,7 +60,7 @@ bool GridType::isGridType(const string &t) {
 void Grid::identifySize(SgExpressionPtrList::const_iterator size_begin,
                         SgExpressionPtrList::const_iterator size_end) {
   int num_dim = gt->getNumDim();
-  if (rose_util::copyConstantFuncArgs<index_t>(
+  if (rose_util::copyConstantFuncArgs<size_t>(
           size_begin, size_end, static_size_) == num_dim) {
     has_static_size_ = true;
   } else {
