@@ -97,6 +97,7 @@ class StencilRegularIndexList {
   }
   ssize_t GetIndex(int dim) const;
   void SetIndex(int dim, ssize_t index);
+  int GetNumDims() const { return indices_.size(); }
   virtual ~StencilRegularIndexList() {}
   std::map<int, ssize_t> indices() { return indices_; }
   bool operator<(const StencilRegularIndexList &x) const {

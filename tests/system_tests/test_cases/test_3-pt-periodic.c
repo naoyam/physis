@@ -1,5 +1,5 @@
 /*
- * TEST: 7-point periodic-boundary stencil
+ * TEST: 3-point periodic-boundary stencil
  * DIM: 3
  * PRIORITY: 1 
  */

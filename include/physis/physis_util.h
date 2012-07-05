@@ -66,7 +66,7 @@
    << "#"  << __LINE__ << "] ")
 
 #if defined(__unix__) || defined(__unix) || defined(__APPLE__)
-#define LOG_NULL() (std::ofstream("/dev/nulL"))
+#define LOG_NULL() (std::ofstream("/dev/null"))
 #elif defined(_WIN32)
 #define LOG_NULL() (std::ofstream("nul"))
 #else

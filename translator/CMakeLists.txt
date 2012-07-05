@@ -36,7 +36,8 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   optimizer/unconditional_get.cc
   optimizer/kernel_inlining.cc
   optimizer/loop_peeling.cc
-  optimizer/register_blocking.cc)
+  optimizer/register_blocking.cc
+  optimizer/offset_cse.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   mpi_translator.cc mpi_runtime_builder.cc

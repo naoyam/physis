@@ -34,6 +34,9 @@ void ReferenceOptimizer::DoStage2() {
     pass::unconditional_get(proj_, tx_, builder_);
   }
 #endif
+  if (config_->LookupFlag("OPT_OFFSET_CSE")) {
+    pass::offset_cse(proj_, tx_, builder_);
+  }
 }
 
 } // namespace optimizer

@@ -138,6 +138,15 @@ extern void unconditional_get(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
+
+//! Apply CSE to offset calculation.
+/*!
+ */
+extern void offset_cse(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
 } // namespace pass
 } // namespace optimizer
 } // namespace translator

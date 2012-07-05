@@ -24,14 +24,6 @@ void null_optimization(
   pre_process(proj, tx, __FUNCTION__);
 }
 
-void offset_cse(
-    SgProject *proj,
-    physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
-  pre_process(proj, tx, __FUNCTION__);
-  // TODO
-}
-
 } // namespace pass
 } // namespace optimizer
 } // namespace translator
