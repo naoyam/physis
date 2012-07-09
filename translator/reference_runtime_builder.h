@@ -34,6 +34,7 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       SgExpression *gvref,
       GridType *gt,      
       SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,      
       bool is_kernel,
       bool is_periodic);
   
@@ -43,7 +44,7 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
       SgExpressionPtrList *offset_exprs, bool is_kernel,
-      bool is_periodic);
+      bool is_periodic, const StencilIndexList *sil);
 
   /*
   virtual SgExpression *BuildGet(  

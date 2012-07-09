@@ -64,20 +64,20 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
     SgExpression *gvref,
     GridType *gt,
     SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,    
     bool is_kernel,
     bool is_periodic) {
   SgExpression *offset =
-      BuildGridOffset(gvref, gt->num_dim(), offset_exprs, is_kernel, is_periodic);
+      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+                      is_kernel, is_periodic, sil);
   SgExpression *p0 = sb::buildArrowExp(
       si::copyExpression(gvref), sb::buildVarRefExp("p0"));
   si::fixVariableReferences(p0);
   //GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->elm_type()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
-  // NOTE: sil is not set. 
-  StencilIndexList sil;
   GridGetAttribute *gga = new GridGetAttribute(NULL, gt->num_dim(), is_kernel,
-                                               sil, offset);
+                                               sil);
   rose_util::AddASTAttribute<GridGetAttribute>(p0, gga);
   return p0;
 }
@@ -127,11 +127,13 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
     int num_dim,
     SgExpressionPtrList *offset_exprs,
     bool is_kernel,
-    bool is_periodic) {
+    bool is_periodic,
+    const StencilIndexList *sil) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim, is_periodic);
+  GridOffsetAttribute *goa = new GridOffsetAttribute(
+      num_dim, is_periodic, sil, gvref);
   std::string func_name = "__PSGridGetOffset";
   if (is_periodic) func_name += "Periodic";
   func_name += toString(num_dim) + "D";

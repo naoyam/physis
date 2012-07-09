@@ -282,7 +282,7 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);  
   offset = rt_builder_->BuildGridOffset(g, num_dim,
                                         &offset_args,
-                                        is_kernel, is_periodic);
+                                        is_kernel, is_periodic, sil);
 #endif
   return offset;
 }
@@ -296,21 +296,20 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   */
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
-  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);              
-  SgExpression *offset = BuildOffset(gv, nd,
-                                     node->get_args(),
-                                     is_kernel,
-                                     is_periodic,
-                                     tx_->findStencilIndex(node), 
-                                     scope);
+  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
+  
+  SgExpression *offset = BuildOffset(
+      gv, nd, node->get_args(),
+      is_kernel, is_periodic,
+      rose_util::GetASTAttribute<GridGetAttribute>(node)->GetStencilIndexList(),
+      scope);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpression *p0 = sb::buildArrowExp(
       g, sb::buildVarRefExp("p0", grid_decl_->get_definition()));
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
-  GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(p0);
-  gga->offset() = offset;
+  rose_util::GetASTAttribute<GridGetAttribute>(p0)->offset() = offset;
   si::replaceExpression(node, p0);
 }
 
@@ -331,7 +330,9 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
         sb::buildVarRefExp(p, getContainingScopeStatement(node)));
   }
 
-  SgExpression *offset = BuildOffset(gv, nd, args, true, false, NULL,
+  StencilIndexList sil;
+  StencilIndexListInitSelf(sil, nd);
+  SgExpression *offset = BuildOffset(gv, nd, args, true, false, &sil,
                                      getContainingScopeStatement(node));
   SgVarRefExp *g =
       sb::buildVarRefExp(gv->get_name(),

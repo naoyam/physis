@@ -515,7 +515,7 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
 
   SgExpression *get = rt_builder_->BuildGridGet(
       g, rose_util::GetASTAttribute<GridType>(g),
-      &indices, false, false);
+      &indices, NULL, false, false);
   si::replaceExpression(node, get, true);
   rose_util::CopyASTAttribute<GridGetAttribute>(
       get, node, false);  

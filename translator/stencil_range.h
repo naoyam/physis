@@ -20,6 +20,7 @@ struct StencilIndex {
   int dim;
   ssize_t offset;
   StencilIndex(): dim(0), offset(0) {}
+  StencilIndex(int dim, ssize_t offset): dim(dim), offset(offset) {}  
   StencilIndex(const StencilIndex &si): dim(si.dim), offset(si.offset) {}  
   std::ostream &print(std::ostream &os) const {
     os << "(" << dim << ", " << offset << ")";
@@ -62,6 +63,7 @@ struct StencilIndex {
 
 typedef std::vector<StencilIndex> StencilIndexList;
 
+void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dim);
 
 class StencilIndexAttribute: public AstAttribute {
  public:

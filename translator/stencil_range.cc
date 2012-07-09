@@ -16,6 +16,12 @@ namespace translator {
 
 const std::string StencilIndexAttribute::name = "StencilIndexList";
 
+void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dims) {
+  for (unsigned i = 1; i < num_dims; ++i) {
+    sil.push_back(StencilIndex(i, 0));
+  }
+}
+
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims) {
   if (sil.size() != num_dims) return false;
   ENUMERATE (i, it, sil.begin(), sil.end()) {

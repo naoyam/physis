@@ -42,12 +42,15 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
     int num_dim,
     SgExpressionPtrList *offset_exprs,
     bool is_kernel,
-    bool is_periodic) {
+    bool is_periodic,
+    const StencilIndexList *sil) {
   LOG_DEBUG() << "build offset: " << gvref->unparseToString() << "\n";
   /*
     __PSGridGetOffsetND(g, i)
   */
-  GridOffsetAttribute *goa = new GridOffsetAttribute(num_dim, is_periodic);  
+  GridOffsetAttribute *goa = new GridOffsetAttribute(
+      num_dim, is_periodic,
+      sil, gvref);  
   std::string func_name = "__PSGridGetOffset";
   if (is_periodic) func_name += "Periodic";
   func_name += toString(num_dim) + "D";

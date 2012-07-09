@@ -28,7 +28,8 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       int num_dim,
       SgExpressionPtrList *offset_exprs,
       bool is_kernel,
-      bool is_periodic);
+      bool is_periodic,
+      const StencilIndexList *sil);
 
   
 };

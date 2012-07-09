@@ -168,6 +168,17 @@ function generate_translation_configurations_ref()
     echo "OPT_REGISTER_BLOCKING = true" > $c
 	new_configs="$new_configs $c"
 	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_OFFSET_CSE = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+    echo "OPT_OFFSET_CSE = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
 	
     echo $new_configs
 }
@@ -227,6 +238,19 @@ function generate_translation_configurations_cuda()
         cat $config > $c
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        new_configs="$new_configs $c"
+		# OPT_OFFSET_SE
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_OFFSET_CSE = true" >> $c
+        new_configs="$new_configs $c"
+		# OPT_OFFSET_SE and OPT_REGISTER_BLOCKING
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        echo "OPT_OFFSET_CSE = true" >> $c
         new_configs="$new_configs $c"
     done
     echo $new_configs

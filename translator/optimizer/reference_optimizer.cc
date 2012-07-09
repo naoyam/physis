@@ -19,7 +19,8 @@ void ReferenceOptimizer::DoStage1() {
 void ReferenceOptimizer::DoStage2() {
   if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
       config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+      config_->LookupFlag("OPT_REGISTER_BLOCKING") ||
+      config_->LookupFlag("OPT_OFFSET_CSE")) {
     pass::kernel_inlining(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_LOOP_PEELING") ||

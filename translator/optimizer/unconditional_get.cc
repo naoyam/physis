@@ -109,8 +109,10 @@ static SgExpression *BuildGetOffsetCenter(
     center_index = si::copyExpression(ExtractVarRef(center_index));
     center_exp.push_back(center_index);
   }
+  StencilIndexList sil;
+  StencilIndexListInitSelf(sil, nd);
   return builder->BuildGridOffset(si::copyExpression(GetGridFromGet(get_exp)),
-                                  nd, &center_exp, true, false);
+                                  nd, &center_exp, true, false, &sil);
 }
 
 static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
@@ -190,7 +192,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
   const StencilIndexList &sil =
-      grid_get_attr->GetStencilIndexList();
+      *grid_get_attr->GetStencilIndexList();
   
   // Declare the index variable
   SgVariableDeclaration *index_var = NULL;

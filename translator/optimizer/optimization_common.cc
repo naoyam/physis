@@ -23,6 +23,10 @@ static void FixGridOffsetAttributeFuncCall(SgFunctionCallExp *offset_exp,
   FOREACH (it, ++args.begin(), args.end()) {
     indices.push_back(*it);
   }
+  SgVarRefExp *grid_ref =
+      isSgVarRefExp(offset_exp->get_args()->get_expressions()[0]);
+  PSAssert(grid_ref);
+  goa->gvexpr() = grid_ref;
 }
 
 static void FixGridOffsetAttributeInlined(SgBinaryOp *offset_exp,

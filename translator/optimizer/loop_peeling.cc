@@ -272,7 +272,7 @@ static void PeelLoop(
     GridGetAttribute *grid_get_attr =
         rose_util::GetASTAttribute<GridGetAttribute>(grid_get);
     const StencilIndexList &sil =
-        grid_get_attr->GetStencilIndexList();
+        *grid_get_attr->GetStencilIndexList();
     int peel_size = FindProfitablePeelSize(grid_get, sil, dim,
                                            loop_body);
     if (peel_size == 0) continue;

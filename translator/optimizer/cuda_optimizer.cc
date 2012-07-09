@@ -19,7 +19,8 @@ void CUDAOptimizer::DoStage1() {
 void CUDAOptimizer::DoStage2() {
   if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
       config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+      config_->LookupFlag("OPT_REGISTER_BLOCKING") ||
+      config_->LookupFlag("OPT_OFFSET_CSE")) {
     pass::kernel_inlining(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_LOOP_PEELING") ||
@@ -31,6 +32,9 @@ void CUDAOptimizer::DoStage2() {
   }
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
     pass::unconditional_get(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_OFFSET_CSE")) {
+    pass::offset_cse(proj_, tx_, builder_);
   }
 }
 

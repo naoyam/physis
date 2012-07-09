@@ -152,6 +152,7 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
                 << arg->class_name() << ")\n";
   return false;
 }
+
 #if 0
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   SgFunctionDeclaration *kernel = sm.getKernel();
@@ -242,7 +243,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       rose_util::AddASTAttribute(
           get_call,
           new GridGetAttribute(gv, nd, tx.isKernel(kernel),
-                               stencil_indices));
+                               &stencil_indices));
     }
     if (tx.getGridFuncName(get_call) == GridType::get_periodic_name) {
       sm.SetGridPeriodic(gv);

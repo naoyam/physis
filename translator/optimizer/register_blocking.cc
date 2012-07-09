@@ -164,7 +164,7 @@ static SgExpression *FindGetAtIndex(SgForStatement *loop,
     PSAssert(get);
     GridGetAttribute *get_attr =
         rose_util::GetASTAttribute<GridGetAttribute>(get);
-    if (*index_list == get_attr->GetStencilIndexList())
+    if (*index_list == *get_attr->GetStencilIndexList())
       return get;
   }
   return NULL;
@@ -182,7 +182,7 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
     PSAssert(get);
     GridGetAttribute *get_attr =
         rose_util::GetASTAttribute<GridGetAttribute>(get);
-    if (*index_list != get_attr->GetStencilIndexList())
+    if (*index_list != *get_attr->GetStencilIndexList())
       continue;
     // TODO: gv needs to be replaced with GridObject
     if (!IsSameGrid(gv->get_name(), get_attr->gv())) continue;
@@ -337,6 +337,13 @@ static bool ShouldGetPeriodic(SgForStatement *loop,
   return false;
 }
 
+static void SetStencilIndexList(StencilIndexList &sil,
+                                const StencilRegularIndexList &sril) {
+  for (int i = 1; i <= sril.GetNumDims(); ++i) {
+    sil.push_back(StencilIndex(i, sril.GetIndex(i)));
+  }
+}
+
 static void DoRegisterBlockingOneLine(
     TranslationContext *tx, RuntimeBuilder *builder,    
     SgInitializedName *gv, SgFunctionDeclaration *run_kernel_func,
@@ -380,6 +387,8 @@ static void DoRegisterBlockingOneLine(
     } else {
       is_periodic = ShouldGetPeriodic(loop, bil, dim, il.GetIndex(dim));
     }
+    StencilIndexList sil;
+    SetStencilIndexList(sil, il);
     // Initial load from memory to registers
     if (i < (int)bil.size() - 1) {
       SgExpressionPtrList init_indices =
@@ -389,7 +398,7 @@ static void DoRegisterBlockingOneLine(
       OffsetIndices(init_indices, il);
       SgExpression *init_get = builder->BuildGridGet(
           builder->BuildGridRefInRunKernel(gv, run_kernel_func),
-          gt, &init_indices,
+          gt, &init_indices, &sil,
           true, is_periodic);
       registers[i+1]->reset_initializer(
           sb::buildAssignInitializer(init_get));
@@ -409,7 +418,7 @@ static void DoRegisterBlockingOneLine(
       OffsetIndices(indices_next, il);
       SgExpression *get_next = builder->BuildGridGet(
           builder->BuildGridRefInRunKernel(gv, run_kernel_func),
-          gt, &indices_next,
+          gt, &indices_next, &sil,
           true, is_periodic);
       SgExprStatement *asn_stmt =
           sb::buildAssignStatement(sb::buildVarRefExp(reg1),
