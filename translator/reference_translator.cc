@@ -929,23 +929,24 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
     SgExpression *stencil_ref, string name) const {
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  SgClassType *stencil_type = NULL;
+  SgType *stencil_type = NULL;
   if (si::isPointerType(ty)) {
-    stencil_type =
-        isSgClassType(isSgModifierType(
-            si::getElementType(stencil_ref->get_type()))->get_base_type());
+    stencil_type = si::getElementType(stencil_ref->get_type());
   } else {
-    stencil_type =
-        isSgClassType(isSgModifierType(stencil_ref->get_type())->get_base_type());
+    stencil_type = stencil_ref->get_type();
   }
+  if (isSgModifierType(stencil_type)) {
+    stencil_type = isSgModifierType(stencil_type)->get_base_type();
+  }
+  SgClassType *stencil_class_type = isSgClassType(stencil_type);
   // If the type is resolved to the actual class type, locate the
   // actual definition of field. Otherwise, temporary create an
   // unbound reference to the name.
   SgVarRefExp *field = NULL;
-  if (stencil_type) {
+  if (stencil_class_type) {
     SgClassDefinition *stencil_def =
         isSgClassDeclaration(
-          stencil_type->get_declaration()->get_definingDeclaration())->
+            stencil_class_type->get_declaration()->get_definingDeclaration())->
         get_definition();
     field = sb::buildVarRefExp(name, stencil_def);
   } else {

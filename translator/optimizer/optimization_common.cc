@@ -70,13 +70,26 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   // Extract the correct offset expression
   SgExpression *new_offset = NULL;
   SgVarRefExp *new_grid = NULL;
+  if (isSgPointerDerefExp(get_exp)) {
+    get_exp = isSgPointerDerefExp(get_exp)->get_operand();
+  }
   get_exp = rose_util::removeCasts(get_exp);
   if (isSgBinaryOp(get_exp)) {
     new_offset = isSgBinaryOp(get_exp)->get_rhs_operand();
     new_grid = isSgVarRefExp(isSgBinaryOp(
         rose_util::removeCasts(isSgBinaryOp(get_exp)->get_lhs_operand()))
                              ->get_lhs_operand());
+    PSAssert(new_offset);    
+    PSAssert(new_grid);
+  } else if (isSgFunctionCallExp(get_exp)) {
+    // TODO: offset is not a single expression in mpi and mpi-cuda
+    // yet.
+    new_offset = NULL;
+    new_grid = isSgVarRefExp(
+        isSgFunctionCallExp(get_exp)->get_args()->get_expressions()[0]);
+    PSAssert(new_grid);
   } else {
+    
     LOG_ERROR() << "Unsupported grid get: "
                 << get_exp->unparseToString() << "\n";
     PSAbort(1);
@@ -87,7 +100,8 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   
   // NOTE: new_offset does not have offset attribute if it is, for
   // example, a reference to a variable.
-  if (rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
+  if (new_offset != NULL &&
+      rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
     FixGridOffsetAttribute(new_offset);
   }
   //LOG_DEBUG() << "Fixed GridGetAttribute\n";

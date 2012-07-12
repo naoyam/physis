@@ -17,7 +17,7 @@ FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
-CFLAGS="${CFLAGS} -g"
+CFLAGS="${CFLAGS} -g -Wno-unuused-variable"
 DIE_IMMEDIATELY=0
 ###############################################################
 set -u
@@ -179,6 +179,17 @@ function generate_translation_configurations_ref()
     echo "OPT_OFFSET_CSE = true" >> $c	
 	new_configs="$new_configs $c"
 	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_OFFSET_SPATIAL_CSE = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
 	
     echo $new_configs
 }
@@ -239,18 +250,31 @@ function generate_translation_configurations_cuda()
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         echo "OPT_UNCONDITIONAL_GET = true" >> $c
         new_configs="$new_configs $c"
-		# OPT_OFFSET_SE
+		# OPT_OFFSET_CSE
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_OFFSET_CSE = true" >> $c
         new_configs="$new_configs $c"
-		# OPT_OFFSET_SE and OPT_REGISTER_BLOCKING
+		# OPT_OFFSET_CSE and OPT_REGISTER_BLOCKING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         echo "OPT_OFFSET_CSE = true" >> $c
+        new_configs="$new_configs $c"
+		# OPT_OFFSET_SPATIAL_CSE
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_OFFSET_SPATIAL_CSE = true" >> $c
+        new_configs="$new_configs $c"
+		# OPT_REGISTER_BLOCKING and OPT_OFFSET_COMP
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
         new_configs="$new_configs $c"
     done
     echo $new_configs
@@ -349,7 +373,7 @@ function compile()
 				return 0
 			fi
 			src_file="$src_file_base".cu
-			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
+			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS -Xcompiler $(echo $CFLAGS|sed 's/ /,/g') &&
 			nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
 				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 			;;
