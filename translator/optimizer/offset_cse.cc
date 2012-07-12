@@ -80,12 +80,11 @@ static void insert_base_offset(SgBasicBlock *loop_body,
     PSAssert(d);
     if (IsASTNodeDescendant(loop_body, d)) {
       decls.push_back(d);
-      LOG_DEBUG() << "DDD: " << d->unparseToString() << "\n";
     }
   }
   
   // Advance all variables are found
-  SgStatement *loop_body_stmt = si::getFirstStatement(loop_body);
+  SgStatement *loop_body_stmt = loop_body->get_statements()[0];
   LOG_DEBUG() << "loop_body_stmt: " << loop_body_stmt->unparseToString() << "\n";
   std::stack<SgStatement*> stack;
   while (decls.size() > 0) {
@@ -241,13 +240,15 @@ static void do_offset_cse(RuntimeBuilder *builder,
       attr->num_dim(), &base_offset_list,
       true, false, &sil);
   LOG_DEBUG() << "base_offset: " << base_offset->unparseToString() << "\n";
+  SgScopeStatement *func_scope =
+      si::getEnclosingFunctionDefinition(loop);
   SgVariableDeclaration *base_offset_var
       = sb::buildVariableDeclaration(
-          rose_util::generateUniqueName(NULL),
-          BuildIndexType2(loop_body),
+          rose_util::generateUniqueName(func_scope),
+          BuildIndexType2(rose_util::GetGlobalScope()),
           sb::buildAssignInitializer(
-              base_offset, BuildIndexType2(loop_body)),
-          loop);
+              base_offset, BuildIndexType2(rose_util::GetGlobalScope())),
+          func_scope);
   LOG_DEBUG() << "base_offset_var: "
               << base_offset_var->unparseToString() << "\n";
 

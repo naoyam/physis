@@ -118,7 +118,7 @@ SgFunctionCallExp *MPIRuntimeBuilder::BuildDomainSetLocalSize(
     SgExpression *dom) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSDomainSetLocalSize");
-  if (!isSgPointerType(dom->get_type())) {
+  if (!si::isPointerType(dom->get_type())) {
     dom = sb::buildAddressOfOp(dom);
   }
   SgExprListExp *args = sb::buildExprListExp(dom);

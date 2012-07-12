@@ -658,7 +658,10 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
 
 SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
   SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
-  SgType *stencil_type = sb::buildPointerType(s->stencil_type());
+  SgType *stencil_type =
+      sb::buildConstType(sb::buildPointerType(
+          sb::buildConstType(s->stencil_type())));
+  //SgType *stencil_type = sb::buildPointerType(s->stencil_type());
   SgInitializedName *stencil_param =
       sb::buildInitializedName(getStencilArgName(),
                                stencil_type);
@@ -837,7 +840,7 @@ SgExpression *ReferenceTranslator::BuildDomMaxRef(SgExpression *domain)
   SgExpression *field = sb::buildVarRefExp("local_max",
                                            dom_decl->get_definition());
   //SgExpression *field = sb::buildVarRefExp("local_max");
-  if (isSgPointerType(domain->get_type())) {
+  if (si::isPointerType(domain->get_type())) {
     return sb::buildArrowExp(domain, field);
   } else {
     return sb::buildDotExp(domain, field);
@@ -851,11 +854,12 @@ SgExpression *ReferenceTranslator::BuildDomMinRef(SgExpression *domain)
       isSgClassDeclaration(
           isSgClassType(dom_type_->get_base_type())->get_declaration()->
           get_definingDeclaration());
+  LOG_DEBUG() << "domain: " << domain->unparseToString() << "\n";
   SgExpression *field = sb::buildVarRefExp("local_min",
                                            dom_decl->get_definition());
   SgType *ty = domain->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  if (isSgPointerType(ty)) {
+  if (si::isPointerType(ty)) {
     return sb::buildArrowExp(domain, field);
   } else {
     return sb::buildDotExp(domain, field);
@@ -914,7 +918,7 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
     SgExpression *stencil_ref, SgExpression *field) const {
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  if (isSgPointerType(ty)) {
+  if (si::isPointerType(ty)) {
     return sb::buildArrowExp(stencil_ref, field);
   } else {
     return sb::buildDotExp(stencil_ref, field);
@@ -926,13 +930,13 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
   SgClassType *stencil_type = NULL;
-  if (isSgPointerType(ty)) {
+  if (si::isPointerType(ty)) {
     stencil_type =
-        isSgClassType(isSgPointerType(
-            stencil_ref->get_type())->get_base_type());
+        isSgClassType(isSgModifierType(
+            si::getElementType(stencil_ref->get_type()))->get_base_type());
   } else {
     stencil_type =
-        isSgClassType(stencil_ref->get_type());
+        isSgClassType(isSgModifierType(stencil_ref->get_type())->get_base_type());
   }
   // If the type is resolved to the actual class type, locate the
   // actual definition of field. Otherwise, temporary create an

@@ -24,6 +24,8 @@ extern void FixGridGetAttribute(SgExpression *get_exp);
 extern void FixGridAttributes(
     SgNode *node);
 
+extern SgForStatement *FindInnermostLoop(SgNode *proj);
+
 
 } // namespace optimizer
 } // namespace translator

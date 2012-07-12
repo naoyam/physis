@@ -237,6 +237,10 @@ void PrependExpression(SgExprListExp *exp_list,
 void ReplaceFuncBody(SgFunctionDeclaration *func,
                      SgBasicBlock *new_body);
 
+SgGlobal *GetGlobalScope();
+
+SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

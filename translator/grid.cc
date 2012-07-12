@@ -37,15 +37,14 @@ unsigned GridType::getNumDimFromTypeName(const string &tname) {
   }
 }
 
-bool GridType::isGridType(const SgType *ty) {
-  const SgTypedefType *tt = isSgTypedefType(ty);
+bool GridType::isGridType(SgType *ty) {
+  SgTypedefType *tt = isSgTypedefType(ty);
   // handle typedef'ed alias type too
   if (tt) {
     ty = tt->get_base_type();
   }
-  if (isSgPointerType(ty)) {
-    const SgPointerType *pt = isSgPointerType(ty);
-    ty = pt->get_base_type();
+  if (si::isPointerType(ty)) {
+    ty = si::getElementType(ty);
   }
   if (!isSgNamedType(ty)) return false;
   const string tn = isSgNamedType(ty)->get_name().getString();
@@ -122,8 +121,7 @@ void GridType::findElementType() {
       continue;
     }
     // OG_DEBUG() << "class: " << v->get_type()->class_name() << "\n";
-    SgPointerType *t =
-        isSgPointerType(v->get_type());
+    SgPointerType *t = isSgPointerType(v->get_type());
     assert(t);
     SgFunctionType *emit_func_type
         = isSgFunctionType(t->get_base_type());

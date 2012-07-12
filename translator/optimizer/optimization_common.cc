@@ -112,7 +112,25 @@ void FixGridAttributes(
   return;
 }
 
+SgForStatement *FindInnermostLoop(SgNode *proj) {
+  std::vector<SgNode*> run_kernel_loops =
+      rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(proj);
+  SgForStatement *target_loop = NULL;
+  FOREACH (run_kernel_loops_it, run_kernel_loops.rbegin(),
+           run_kernel_loops.rend()) {
+    target_loop = isSgForStatement(*run_kernel_loops_it);    
+    RunKernelLoopAttribute *loop_attr =
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
+    if (!loop_attr) continue;
+    if (!loop_attr->IsMain()) continue;
+    break;
+  }
+  if (!target_loop) {
+    LOG_DEBUG() << "No target loop for offset spatial CSE found\n";
+  }
 
+  return target_loop;
+}
 
 } // namespace optimizer
 } // namespace translator

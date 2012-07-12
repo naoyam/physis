@@ -193,6 +193,15 @@ std::string GetTypeDimName(GridType *gt) {
       + toString(gt->getNumDim()) + "D";
 }
 
+SgType *GetBaseType(SgType *ty) {
+  if (si::isPointerType(ty)) {
+    ty = si::getElementType(ty);
+  }
+  if (isSgModifierType(ty)) {
+    ty = isSgModifierType(ty)->get_base_type();
+  }
+  return ty;
+}
 
 
 } // namespace translator

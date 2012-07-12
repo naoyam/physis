@@ -69,7 +69,7 @@ class GridType: public AstAttribute {
 
   static string getTypeNameFromFuncName(const string &funcName);
   static unsigned getNumDimFromTypeName(const string &tname);
-  static bool isGridType(const SgType *ty);
+  static bool isGridType(SgType *ty);
   static bool isGridType(const string &t);
   static bool isGridTypeSpecificCall(SgFunctionCallExp *ce);
   static SgInitializedName*
