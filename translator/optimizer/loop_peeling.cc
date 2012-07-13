@@ -318,20 +318,18 @@ void loop_peeling(
     physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
-  std::vector<SgNode*> run_kernels =
-      rose_util::QuerySubTreeAttribute<RunKernelAttribute>(proj);
-  FOREACH (it, run_kernels.begin(), run_kernels.end()) {
-    std::vector<SgNode*> run_kernel_loops =
-        rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(*it);
-    if (run_kernel_loops.size() == 0) continue;
-    SgForStatement *loop =
-        isSgForStatement(run_kernel_loops.back());
-    PSAssert(loop);
+  vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
+  
+  FOREACH (it, target_loops.begin(), target_loops.end()) {
+    SgForStatement *target_loop = *it;
     RunKernelLoopAttribute *loop_attr =
-        rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
     LOG_DEBUG() << "Loop dimension: " << loop_attr->dim() << "\n";
-    PeelLoop(isSgFunctionDeclaration(*it), loop, builder);
+    SgFunctionDeclaration *run_kernel_func =
+        si::getEnclosingFunctionDeclaration(target_loop);
+    PeelLoop(run_kernel_func, target_loop, builder);    
   }
+  
   
   post_process(proj, tx, __FUNCTION__);
 }

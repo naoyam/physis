@@ -256,7 +256,9 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
   si::replaceExpression(get_exp->get_rhs_operand(),
                         sb::buildVarRefExp(index_var));
   FixGridGetAttribute(get_exp);
-
+  rose_util::GetASTAttribute<GridGetAttribute>(
+      get_exp)->SetStencilIndexList(NULL);
+      
   // Declare a new variable of the same type as grid.
   SgVariableDeclaration *v
       = sb::buildVariableDeclaration(
@@ -273,7 +275,6 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
                           sb::buildVarRefExp(v), true);
   si::insertStatementBefore(if_stmt, v);
 }
-
 
 static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
                           SgIfStmt *if_stmt,
@@ -334,7 +335,6 @@ static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
   // Step 2
   ProcessIfStmtStage2(get_exp, if_stmt, builder, paired_get_exp,
                       cond_var);
-  
 }
 
 static void ProcessConditionalExp(SgPntrArrRefExp *get_exp,
@@ -342,7 +342,6 @@ static void ProcessConditionalExp(SgPntrArrRefExp *get_exp,
   LOG_WARNING() << "Select not supported.\n";
   return;
 }
-
 
 void unconditional_get(
     SgProject *proj,

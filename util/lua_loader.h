@@ -131,6 +131,9 @@ class LuaTable: public LuaValue {
   virtual bool get(std::string &v) const { return false; }
   virtual bool get(double &v) const { return false; }
   virtual bool get(std::vector<double> &v) const;
+  void Insert(const std::string &key, const LuaValue *v) {
+    tbl_.insert(make_pair(key, v->clone()));
+  }
 };
 
 

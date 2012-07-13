@@ -38,7 +38,8 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   optimizer/loop_peeling.cc
   optimizer/register_blocking.cc
   optimizer/offset_cse.cc
-  optimizer/offset_spatial_cse.cc)
+  optimizer/offset_spatial_cse.cc
+  optimizer/loop_opt.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   mpi_translator.cc mpi_runtime_builder.cc

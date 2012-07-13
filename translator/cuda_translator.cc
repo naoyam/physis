@@ -400,7 +400,8 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   si::appendStatement(func_body, run_func->get_definition());
   // Mark this function as RunKernel
   rose_util::AddASTAttribute(run_func,
-                             new RunKernelAttribute(stencil));  
+                             new RunKernelAttribute(stencil));
+  si::fixVariableReferences(run_func);
   return run_func;
 }
 
@@ -420,10 +421,12 @@ SgExprListExp *CUDATranslator::BuildKernelCallArgList(
   FOREACH(it, ++(members.begin()), members.end()) {
     SgVariableDeclaration *var_decl = isSgVariableDeclaration(*it);
     PSAssert(var_decl);
-    SgExpression *exp = sb::buildVarRefExp(var_decl);
     SgVariableDefinition *var_def = var_decl->get_definition();
     PSAssert(var_def);
-    SgTypedefType *var_type = isSgTypedefType(var_def->get_type());
+    SgTypedefType *var_type = isSgTypedefType(var_def->get_type());    
+    //SgExpression *exp = sb::buildVarRefExp(var_decl);
+    SgExpression *exp = sb::buildVarRefExp(
+        var_decl->get_variables()[0]->get_name());
     if (GridType::isGridType(var_type)) {
       exp = sb::buildAddressOfOp(exp);
       // skip the grid index field

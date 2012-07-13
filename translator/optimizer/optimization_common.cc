@@ -126,24 +126,33 @@ void FixGridAttributes(
   return;
 }
 
-SgForStatement *FindInnermostLoop(SgNode *proj) {
+vector<SgForStatement*> FindInnermostLoops(SgNode *proj) {
   std::vector<SgNode*> run_kernel_loops =
       rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(proj);
-  SgForStatement *target_loop = NULL;
-  FOREACH (run_kernel_loops_it, run_kernel_loops.rbegin(),
-           run_kernel_loops.rend()) {
-    target_loop = isSgForStatement(*run_kernel_loops_it);    
-    RunKernelLoopAttribute *loop_attr =
-        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
-    if (!loop_attr) continue;
-    if (!loop_attr->IsMain()) continue;
-    break;
+  vector<SgForStatement*> target_loops;
+  FOREACH (run_kernel_loops_it, run_kernel_loops.begin(),
+           run_kernel_loops.end()) {
+    SgForStatement *loop = isSgForStatement(*run_kernel_loops_it);
+    PSAssert(loop);
+    std::vector<SgNode*> nested_loops =
+        rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(loop);
+    bool has_nested_loop = false;
+    FOREACH (it, nested_loops.begin(), nested_loops.end()) {
+      if (loop != *it) {
+        has_nested_loop = true;
+        break;
+      }
+    }
+    // This is not an innermost loop    
+    if (has_nested_loop) continue;
+
+    target_loops.push_back(loop);
   }
-  if (!target_loop) {
-    LOG_DEBUG() << "No target loop for offset spatial CSE found\n";
+  if (target_loops.size() == 0) {
+    LOG_DEBUG() << "No target loop found\n";
   }
 
-  return target_loop;
+  return target_loops;
 }
 
 } // namespace optimizer

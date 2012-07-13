@@ -24,7 +24,8 @@ extern void FixGridGetAttribute(SgExpression *get_exp);
 extern void FixGridAttributes(
     SgNode *node);
 
-extern SgForStatement *FindInnermostLoop(SgNode *proj);
+//! Find innermost kernel loops
+extern vector<SgForStatement*> FindInnermostLoops(SgNode *proj);
 
 
 } // namespace optimizer

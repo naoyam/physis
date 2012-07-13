@@ -197,7 +197,7 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
   const StencilIndexList *sil = offset_attr->GetStencilIndexList();
   PSAssert(sil);
   // if the access is periodic, the offset is:
-  // (i + 1) % n - i
+  // (i + 1 + n) % n - ((i + n)% n)
   if (offset_attr->periodic()) {
     LOG_DEBUG() << "Periodic access\n";
     SgVariableDeclaration *loop_var_decl =
@@ -209,9 +209,21 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
         (SgExpression*)sb::buildVarRefExp(loop_var_decl);
     SgExpression *e =
         sb::buildModOp(
-            sb::buildAddOp(offset_expr, sb::buildIntVal(1)),
-            builder->BuildGridDim(si::copyExpression(grid_ref), loop_attr->dim()));
-    e = sb::buildSubtractOp(e, si::copyExpression(offset_expr));
+            sb::buildAddOp(
+                sb::buildAddOp(offset_expr, sb::buildIntVal(1)),
+                builder->BuildGridDim(
+                    si::copyExpression(grid_ref), loop_attr->dim())),
+            builder->BuildGridDim(
+                si::copyExpression(grid_ref), loop_attr->dim()));
+    e = sb::buildSubtractOp(
+        e,
+        sb::buildModOp(
+            sb::buildAddOp(
+                si::copyExpression(offset_expr),
+                builder->BuildGridDim(
+                    si::copyExpression(grid_ref), loop_attr->dim())),
+            builder->BuildGridDim(
+                si::copyExpression(grid_ref), loop_attr->dim())));
     increment = increment? sb::buildMultiplyOp(increment, e) : e;
   }
   if (!increment) increment = sb::buildIntVal(1);  
@@ -314,15 +326,21 @@ void offset_spatial_cse(
     physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
-  SgForStatement *target_loop = FindInnermostLoop(proj);
+  vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
 
-  std::vector<SgNode*> offset_exprs =
-      rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
-          target_loop);
-  FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
-    SgExpression *offset_expr = isSgExpression(*it);
-    PSAssert(offset_expr);
-    do_offset_spatial_cse(offset_expr, target_loop, builder);
+  FOREACH (it, target_loops.begin(), target_loops.end()) {
+    SgForStatement *target_loop = *it;
+    RunKernelLoopAttribute *attr =
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
+    if (!attr->IsMain()) continue;
+    std::vector<SgNode*> offset_exprs =
+        rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
+            target_loop);
+    FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
+      SgExpression *offset_expr = isSgExpression(*it);
+      PSAssert(offset_expr);
+      do_offset_spatial_cse(offset_expr, target_loop, builder);
+    }
   }
 
   post_process(proj, tx, __FUNCTION__);  

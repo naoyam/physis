@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/translation_util.h"
@@ -164,7 +165,8 @@ static SgExpression *FindGetAtIndex(SgForStatement *loop,
     PSAssert(get);
     GridGetAttribute *get_attr =
         rose_util::GetASTAttribute<GridGetAttribute>(get);
-    if (*index_list == *get_attr->GetStencilIndexList())
+    if (get_attr->GetStencilIndexList() &&
+        *index_list == *get_attr->GetStencilIndexList())
       return get;
   }
   return NULL;
@@ -182,6 +184,7 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
     PSAssert(get);
     GridGetAttribute *get_attr =
         rose_util::GetASTAttribute<GridGetAttribute>(get);
+    if (get_attr->GetStencilIndexList() == NULL) continue;
     if (*index_list != *get_attr->GetStencilIndexList())
       continue;
     // TODO: gv needs to be replaced with GridObject
@@ -476,34 +479,20 @@ void register_blocking(
     RuntimeBuilder *builder) {    
   pre_process(proj, tx, __FUNCTION__);
 
-  std::vector<SgNode*> run_kernels =
-      rose_util::QuerySubTreeAttribute<RunKernelAttribute>(proj);
-  FOREACH (it, run_kernels.begin(), run_kernels.end()) {
-    std::vector<SgNode*> run_kernel_loops =
-        rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(*it);
-    size_t loop_number = run_kernel_loops.size();
-    if (loop_number == 0) continue;
-    SgForStatement *target_loop = NULL;
-    FOREACH (run_kernel_loops_it, run_kernel_loops.rbegin(),
-             run_kernel_loops.rend()) {
-      SgForStatement *candidate_loop =
-          isSgForStatement(*run_kernel_loops_it);
-      RunKernelLoopAttribute *attr =
-          rose_util::GetASTAttribute<RunKernelLoopAttribute>(
-              candidate_loop);
-      if (attr->IsMain()) {
-        target_loop = candidate_loop;
-        break;
-      }
-    }
-    
-    PSAssert(target_loop);
+  vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
+
+  FOREACH (it, target_loops.begin(), target_loops.end()) {
+    SgForStatement *target_loop = *it;
     RunKernelLoopAttribute *loop_attr =
         rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
+    if (!loop_attr->IsMain()) continue;
     LOG_DEBUG() << "Loop dimension: " << loop_attr->dim() << "\n";
-    DoRegisterBlocking(proj, tx, builder, isSgFunctionDeclaration(*it),
+    SgFunctionDeclaration *run_kernel_func =
+        si::getEnclosingFunctionDeclaration(target_loop);
+    DoRegisterBlocking(proj, tx, builder, run_kernel_func,
                        target_loop);
   }
+
   post_process(proj, tx, __FUNCTION__);
 }
 

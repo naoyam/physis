@@ -319,29 +319,18 @@ void offset_cse(
     physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
-  std::vector<SgNode*> run_kernel_loops =
-      rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(proj);
-  SgForStatement *target_loop = NULL;
-  FOREACH (run_kernel_loops_it, run_kernel_loops.rbegin(),
-           run_kernel_loops.rend()) {
-    target_loop = isSgForStatement(*run_kernel_loops_it);    
-    RunKernelLoopAttribute *loop_attr =
-        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
-    if (!loop_attr) continue;
-    if (!loop_attr->IsMain()) continue;
-    break;
-  }
+  vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
 
-  if (!target_loop) {
-    LOG_DEBUG() << "No target loop for index CSE found\n";
-    post_process(proj, tx, __FUNCTION__);
-    return;
-  }
-  
-  GridOffsetMap ggm = find_candidates(target_loop);
-  FOREACH (it, ggm.begin(), ggm.end()) {
-    SgExpressionVector &offset_exprs = it->second;
-    do_offset_cse(builder, target_loop, offset_exprs);
+  FOREACH (it, target_loops.begin(), target_loops.end()) {
+    SgForStatement *target_loop = *it;
+    RunKernelLoopAttribute *attr =
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
+    if (!attr->IsMain()) continue;
+    GridOffsetMap ggm = find_candidates(target_loop);
+    FOREACH (it, ggm.begin(), ggm.end()) {
+      SgExpressionVector &offset_exprs = it->second;
+      do_offset_cse(builder, target_loop, offset_exprs);
+    }
   }
   
   post_process(proj, tx, __FUNCTION__);  

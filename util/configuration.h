@@ -41,6 +41,11 @@ class Configuration {
     if (!Lookup<bool>(key_name, f)) return false;
     return f;
   }
+  void SetFlag(const std::string &key_name, bool f) {
+    LuaBoolean b(f);
+    tbl_.Insert(key_name, &b);
+    return;
+  }
   
  protected:
   typedef std::string KeyDesc;

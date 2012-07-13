@@ -17,31 +17,27 @@ void ReferenceOptimizer::DoStage1() {
 }
 
 void ReferenceOptimizer::DoStage2() {
-  if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
-      config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING") ||
-      config_->LookupFlag("OPT_OFFSET_CSE")) {
+  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
     pass::kernel_inlining(proj_, tx_, builder_);
   }
-  if (config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+  if (config_->LookupFlag("OPT_LOOP_PEELING")) {
     pass::loop_peeling(proj_, tx_, builder_);
+  }
+  // Unconditional get should be placed before register blocking
+  if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
+    pass::unconditional_get(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
     pass::register_blocking(proj_, tx_, builder_);
   }
-#if 0  
-  if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
-    pass::unconditional_get(proj_, tx_, builder_);
-  }
-#endif
-  if (config_->LookupFlag("OPT_OFFSET_CSE") ||
-      config_->LookupFlag("OPT_OFFSET_COMP")) {
+  if (config_->LookupFlag("OPT_OFFSET_CSE")) {
     pass::offset_cse(proj_, tx_, builder_);
   }
-  if (config_->LookupFlag("OPT_OFFSET_SPATIAL_CSE") ||
-      config_->LookupFlag("OPT_OFFSET_COMP")) {
+  if (config_->LookupFlag("OPT_OFFSET_SPATIAL_CSE")) {
     pass::offset_spatial_cse(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_LOOP_OPT")) {
+    pass::loop_opt(proj_, tx_, builder_);
   }
 }
 

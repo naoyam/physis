@@ -24,7 +24,26 @@ class Optimizer {
             physis::translator::TranslationContext *tx,
             physis::translator::RuntimeBuilder *builder,
             physis::translator::Configuration *config)
-      : proj_(proj), tx_(tx), builder_(builder), config_(config) {}
+      : proj_(proj), tx_(tx), builder_(builder), config_(config) {
+    if (config_->LookupFlag("OPT_OFFSET_COMP")) {
+      config_->SetFlag("OPT_OFFSET_CSE", true);
+      config_->SetFlag("OPT_OFFSET_SPATIAL_CSE", true);
+    }
+    if (config_->LookupFlag("OPT_LOOP_PEELING") ||
+        config_->LookupFlag("OPT_REGISTER_BLOCKING") ||
+        config_->LookupFlag("OPT_OFFSET_CSE") ||
+        config_->LookupFlag("OPT_OFFSET_SPATIAL_CSE") ||        
+        config_->LookupFlag("OPT_LOOP_OPT")) {
+      config_->SetFlag("OPT_KERNEL_INLINING", true);
+    }
+    if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+      config_->SetFlag("OPT_LOOP_PEELING", true);
+    }
+    if (config_->LookupFlag("OPT_LOOP_OPT")) {
+      config_->SetFlag("OPT_OFFSET_CSE", true);
+      config_->SetFlag("OPT_OFFSET_SPATIAL_CSE", true);
+    }
+  }
   virtual ~Optimizer() {}
   //! Pre-translation optimizations
   virtual void Stage1();

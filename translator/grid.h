@@ -257,11 +257,17 @@ class GridGetAttribute: public AstAttribute {
   SgInitializedName *gv() const { return gv_; }
   SgInitializedName *&gv() { return gv_; }
   void SetStencilIndexList(const StencilIndexList *sil) {
-    PSAssert(sil);
-    if (sil_ == NULL) {
-      sil_ = new StencilIndexList();
+    if (sil) {
+      if (sil_ == NULL) {
+        sil_ = new StencilIndexList();
+      }
+      *sil_ = *sil;
+    } else {
+      if (sil_) {
+        delete sil_;
+        sil_ = NULL;
+      }
     }
-    *sil_ = *sil;
   }
   const StencilIndexList *GetStencilIndexList() { return sil_; }
   int num_dim() const { return num_dim_; }

@@ -155,6 +155,14 @@ extern void offset_spatial_cse(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
+//! Miscellaneous loop optimizations
+/*!
+ */
+extern void loop_opt(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
 } // namespace pass
 } // namespace optimizer
 } // namespace translator

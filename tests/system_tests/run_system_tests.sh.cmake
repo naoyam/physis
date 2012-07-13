@@ -48,7 +48,7 @@ PHYSIS_NLP=1
 EXECUTE_WITH_VALGRIND=0
 
 PRIORITY=1
-CONFIG=""
+CONFIG_ARG=""
 
 function print_error()
 {
@@ -181,13 +181,31 @@ function generate_translation_configurations_ref()
 	idx=$(($idx + 1))
 
 	c=config.ref.$idx
-    echo "OPT_OFFSET_SPATIAL_CSE = true" >> $c	
+    echo "OPT_OFFSET_SPATIAL_CSE = true" > $c	
 	new_configs="$new_configs $c"
 	idx=$(($idx + 1))
 
 	c=config.ref.$idx
     echo "OPT_REGISTER_BLOCKING = true" > $c
     echo "OPT_OFFSET_COMP = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c
+    echo "OPT_LOOP_OPT = true" >> $c		
 	new_configs="$new_configs $c"
 	idx=$(($idx + 1))
 	
@@ -225,24 +243,28 @@ function generate_translation_configurations_cuda()
         cat $config > $c
         echo "OPT_KERNEL_INLINING = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_LOOP_PEELING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_LOOP_PEELING = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_REGISTER_BLOCKING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_UNCONDITIONAL_GET
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_UNCONDITIONAL_GET = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_REGISTER_BLOCKING with UNCONDITIONAL_GET
         c=config.cuda.$idx
 		idx=$(($idx + 1))
@@ -250,12 +272,14 @@ function generate_translation_configurations_cuda()
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         echo "OPT_UNCONDITIONAL_GET = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_OFFSET_CSE
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_OFFSET_CSE = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_OFFSET_CSE and OPT_REGISTER_BLOCKING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
@@ -263,12 +287,14 @@ function generate_translation_configurations_cuda()
         echo "OPT_REGISTER_BLOCKING = true" >> $c
         echo "OPT_OFFSET_CSE = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_OFFSET_SPATIAL_CSE
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_OFFSET_SPATIAL_CSE = true" >> $c
         new_configs="$new_configs $c"
+
 		# OPT_REGISTER_BLOCKING and OPT_OFFSET_COMP
         c=config.cuda.$idx
 		idx=$(($idx + 1))
@@ -276,6 +302,24 @@ function generate_translation_configurations_cuda()
         echo "OPT_REGISTER_BLOCKING = true" >> $c		
         echo "OPT_OFFSET_COMP = true" >> $c
         new_configs="$new_configs $c"
+
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c		
+        new_configs="$new_configs $c"
+
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        echo "OPT_LOOP_OPT = true" >> $c
+        new_configs="$new_configs $c"
+		
     done
     echo $new_configs
 }
@@ -667,7 +711,7 @@ function get_test_cases()
 				shift 2
 				;;
 			--config)
-				CONFIG=$(abs_path $2)
+				CONFIG_ARG=$(abs_path $2)
 				shift 2
 				;;
 			-h|--help)
@@ -706,8 +750,10 @@ function get_test_cases()
 			SHORTNAME=$(basename $TEST)
 			DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
-			if [ "x$CONFIG" = "x" ]; then
+			if [ "x$CONFIG_ARG" = "x" ]; then
 				CONFIG=$(generate_translation_configurations $TARGET)
+			else
+				CONFIG=$CONFIG_ARG
 			fi
 			for cfg in $CONFIG; do
 				echo "Testing with $SHORTNAME ($DESC)"
