@@ -147,6 +147,14 @@ extern void offset_cse(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
+//! Apply CSE to offset calculation across loop iterations.
+/*!
+ */
+extern void offset_spatial_cse(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
 } // namespace pass
 } // namespace optimizer
 } // namespace translator

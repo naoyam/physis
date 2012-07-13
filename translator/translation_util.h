@@ -38,7 +38,8 @@ SgExpression *BuildFunctionCall(const std::string &name,
 std::string GetTypeName(SgType *ty);
 std::string GetTypeDimName(GridType *gt);
   
-
+SgType *GetBaseType(SgType *ty);
+  
 } // namespace translator
 } // namespace physis
 

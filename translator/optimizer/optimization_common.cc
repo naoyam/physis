@@ -70,13 +70,26 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   // Extract the correct offset expression
   SgExpression *new_offset = NULL;
   SgVarRefExp *new_grid = NULL;
+  if (isSgPointerDerefExp(get_exp)) {
+    get_exp = isSgPointerDerefExp(get_exp)->get_operand();
+  }
   get_exp = rose_util::removeCasts(get_exp);
   if (isSgBinaryOp(get_exp)) {
     new_offset = isSgBinaryOp(get_exp)->get_rhs_operand();
     new_grid = isSgVarRefExp(isSgBinaryOp(
         rose_util::removeCasts(isSgBinaryOp(get_exp)->get_lhs_operand()))
                              ->get_lhs_operand());
+    PSAssert(new_offset);    
+    PSAssert(new_grid);
+  } else if (isSgFunctionCallExp(get_exp)) {
+    // TODO: offset is not a single expression in mpi and mpi-cuda
+    // yet.
+    new_offset = NULL;
+    new_grid = isSgVarRefExp(
+        isSgFunctionCallExp(get_exp)->get_args()->get_expressions()[0]);
+    PSAssert(new_grid);
   } else {
+    
     LOG_ERROR() << "Unsupported grid get: "
                 << get_exp->unparseToString() << "\n";
     PSAbort(1);
@@ -87,7 +100,8 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   
   // NOTE: new_offset does not have offset attribute if it is, for
   // example, a reference to a variable.
-  if (rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
+  if (new_offset != NULL &&
+      rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
     FixGridOffsetAttribute(new_offset);
   }
   //LOG_DEBUG() << "Fixed GridGetAttribute\n";
@@ -112,7 +126,25 @@ void FixGridAttributes(
   return;
 }
 
+SgForStatement *FindInnermostLoop(SgNode *proj) {
+  std::vector<SgNode*> run_kernel_loops =
+      rose_util::QuerySubTreeAttribute<RunKernelLoopAttribute>(proj);
+  SgForStatement *target_loop = NULL;
+  FOREACH (run_kernel_loops_it, run_kernel_loops.rbegin(),
+           run_kernel_loops.rend()) {
+    target_loop = isSgForStatement(*run_kernel_loops_it);    
+    RunKernelLoopAttribute *loop_attr =
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
+    if (!loop_attr) continue;
+    if (!loop_attr->IsMain()) continue;
+    break;
+  }
+  if (!target_loop) {
+    LOG_DEBUG() << "No target loop for offset spatial CSE found\n";
+  }
 
+  return target_loop;
+}
 
 } // namespace optimizer
 } // namespace translator

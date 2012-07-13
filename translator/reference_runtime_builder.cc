@@ -102,7 +102,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
     SgFunctionDeclaration *run_kernel) {
   SgInitializedName *stencil_param = run_kernel->get_args()[0];
   SgNamedType *type = isSgNamedType(
-      isSgPointerType(stencil_param->get_type())->get_base_type());
+      GetBaseType(stencil_param->get_type()));
   PSAssert(type);
   SgClassDeclaration *stencil_class_decl
       = isSgClassDeclaration(type->get_declaration());

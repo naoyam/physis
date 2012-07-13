@@ -134,7 +134,8 @@ SgInitializedName *getInitializedName(SgVarRefExp *var) {
 
 string generateUniqueName(SgScopeStatement *scope, const string &prefix) {
   if (scope == NULL) {
-    scope = SageBuilder::topScopeStack();
+    //scope = SageBuilder::topScopeStack();
+    scope = si::getFirstGlobalScope(si::getProject());
   }
   ROSE_ASSERT(scope);
   SgSymbolTable *symbol_table = scope->get_symbol_table();
@@ -293,7 +294,7 @@ SgNode *FindCommonParent(SgNode *n1, SgNode *n2) {
 
 SgExpression *BuildFieldRef(
     SgExpression *struct_var, SgExpression *field) {
-  if (isSgPointerType(struct_var->get_type())) {
+  if (si::isPointerType(struct_var->get_type())) {
     return sb::buildArrowExp(struct_var, field);
   } else {
     return sb::buildDotExp(struct_var, field);
@@ -337,6 +338,22 @@ void ReplaceFuncBody(SgFunctionDeclaration *func,
   func = isSgFunctionDeclaration(func->get_definingDeclaration());
   SgBasicBlock *cur_body = func->get_definition()->get_body();
   si::replaceStatement(cur_body, new_body);
+}
+
+SgGlobal *GetGlobalScope() {
+  SgGlobal *g = si::getFirstGlobalScope(si::getProject());
+  PSAssert(g);
+  return g;
+}
+
+SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl) {
+  SgAssignInitializer *asinit =
+      isSgAssignInitializer(
+          vdecl->get_definition()->get_vardefn()->get_initializer());
+  PSAssert(asinit);
+  SgExpression *rhs =  asinit->get_operand();
+  PSAssert(rhs);
+  return rhs;
 }
 
 }  // namespace rose_util

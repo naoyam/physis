@@ -356,7 +356,7 @@ static void DoRegisterBlockingOneLine(
   // Declare local variables for register blocking
   for (int i = 0; i < (int)bil.size(); ++i) {
     SgVariableDeclaration *reg = BuildNewLocalVar(
-        gt, tx, si::getScope(loop->get_parent()));
+        gt, tx, si::getEnclosingFunctionDefinition(loop));
     registers.push_back(reg);
     si::insertStatementBefore(loop, reg);
   }
