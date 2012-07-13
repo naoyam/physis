@@ -131,6 +131,10 @@ static void replace_arg_defined_in_loop(SgExpression *offset_expr,
   if (isSgVarRefExp(args[0])) {
     replace_var_ref(isSgVarRefExp(args[0]), loop_body);
   }
+  // This is done right after kernel inlining. The grid is not
+  // processed because some optimization passes assume it is expressed
+  // by a variable not expression like s->g.
+#if 0  
   FOREACH (argit, args.begin()+1, args.end()) {
     SgExpression *arg = *argit;
     Rose_STL_Container<SgNode*> vref_list =
@@ -139,6 +143,7 @@ static void replace_arg_defined_in_loop(SgExpression *offset_expr,
     PSAssert(vref_list.size() == 1);
     replace_var_ref(isSgVarRefExp(vref_list[0]), loop_body);
   }
+#endif  
   LOG_DEBUG() << "Replaced: " << offset_expr->unparseToString() << "\n";
   return;
 }
@@ -319,7 +324,7 @@ void offset_spatial_cse(
     PSAssert(offset_expr);
     do_offset_spatial_cse(offset_expr, target_loop, builder);
   }
-  
+
   post_process(proj, tx, __FUNCTION__);  
 }
 

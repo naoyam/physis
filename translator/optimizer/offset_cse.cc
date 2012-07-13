@@ -211,6 +211,7 @@ static void replace_offset(SgVariableDeclaration *base_offset,
           dim_offset,
           builder->BuildGridDim(si::copyExpression(gvexpr), i));
     }
+    si::constantFolding(new_offset_expr);
     LOG_DEBUG() << "new offset expression: "
                 << new_offset_expr->unparseToString() << "\n";
     si::replaceExpression(original_offset_expr, new_offset_expr);

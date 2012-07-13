@@ -47,6 +47,91 @@ static void RemoveUnusedLabel(SgProject *proj) {
 }
 #endif
 
+/*! Replace a variable reference in an offset expression.
+
+  \param vref Variable reference
+  \param loop_body Target loop 
+ */
+static void replace_var_ref(SgVarRefExp *vref, SgBasicBlock *loop_body) {
+  SgVariableDeclaration *vdecl = isSgVariableDeclaration(
+      vref->get_symbol()->get_declaration()->get_declaration());
+  vector<SgVariableDeclaration*> decls =
+      si::querySubTree<SgVariableDeclaration>(loop_body, V_SgVariableDeclaration);
+  if (!isContained(decls, vdecl)) return;
+  if (!vdecl) return;
+  SgAssignInitializer *init =
+      isSgAssignInitializer(
+          vdecl->get_definition()->get_vardefn()->get_initializer());
+  if (!init) return;
+  SgExpression *rhs = init->get_operand();
+  LOG_DEBUG() << "RHS: " << rhs->unparseToString() << "\n";
+  std::vector<SgVarRefExp*> vref_exprs =
+      si::querySubTree<SgVarRefExp>(loop_body, V_SgVarRefExp);
+  FOREACH (it, vref_exprs.begin(), vref_exprs.end()) {
+    if (vdecl == isSgVariableDeclaration(
+            (*it)->get_symbol()->get_declaration()->get_declaration())) {
+      si::replaceExpression(*it, si::copyExpression(rhs));
+    }
+  }
+  si::removeStatement(vdecl);
+  return;
+}
+
+/*! Fix variable references in offset expression.
+
+  Offset expressions may use a variable reference to grids and loop
+  indices that are defined inside the target loop. They need to be
+  replaced with their original value when moved out of the loop.
+
+  \param offset_expr Offset expression
+  \param loop_body Target loop body
+*/
+static void replace_arg_defined_in_loop(SgExpression *offset_expr,
+                                        SgBasicBlock *loop_body) {
+  LOG_DEBUG() << "Replacing undef var in "
+              << offset_expr->unparseToString() << "\n";
+  PSAssert(offset_expr != NULL && loop_body != NULL);
+  SgFunctionCallExp *offset_call = isSgFunctionCallExp(offset_expr);
+  PSAssert(offset_call);
+  SgExpressionPtrList &args = offset_call->get_args()->get_expressions();
+  //if (isSgVarRefExp(args[0])) {
+  //replace_var_ref(isSgVarRefExp(args[0]), loop_body);
+  //}
+  FOREACH (argit, args.begin()+1, args.end()) {
+    SgExpression *arg = *argit;
+    Rose_STL_Container<SgNode*> vref_list =
+        NodeQuery::querySubTree(arg, V_SgVarRefExp);
+    if (vref_list.size() == 0) continue;
+    PSAssert(vref_list.size() == 1);
+    replace_var_ref(isSgVarRefExp(vref_list[0]), loop_body);
+  }
+  LOG_DEBUG() << "Replaced: " << offset_expr->unparseToString() << "\n";
+  return;
+}
+
+static SgForStatement *FindInnermostMapLoop(SgFunctionCallExp *kernel_call) {
+  for (SgNode *node = kernel_call->get_parent(); node != NULL;
+       node = node->get_parent()) {
+    RunKernelLoopAttribute *loop_attr
+        = rose_util::GetASTAttribute<RunKernelLoopAttribute>(node);
+    if (loop_attr) return isSgForStatement(node);
+  }
+  return NULL;
+}
+
+static void cleanup(SgFunctionCallExp *call_exp,
+                    SgFunctionRefExp *callee_ref,
+                    SgForStatement *loop) {
+  std::vector<SgNode*> offset_exprs =
+      rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
+          loop);
+  FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
+    SgExpression *offset_expr = isSgExpression(*it);
+    replace_arg_defined_in_loop(offset_expr,
+                                isSgBasicBlock(loop->get_loop_body()));
+  }
+}
+
 void kernel_inlining(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
@@ -76,9 +161,10 @@ void kernel_inlining(
           = rose_util::getFuncDeclFromFuncRef(callee_ref);
       if (!callee_decl) continue;
       if (!tx->isKernel(callee_decl)) continue;
-      // Kernel call found
       LOG_DEBUG() << "Inline a call to kernel found: "
                   << call_exp->unparseToString() << "\n";
+      // Kernel call found
+      SgForStatement *map_loop = FindInnermostMapLoop(call_exp);
       //SgNode *t = call_exp->get_parent();
       // while (t) {
       //   LOG_DEBUG() << "parent: ";
@@ -93,6 +179,7 @@ void kernel_inlining(
       }
       // Fix the grid attributes
       FixGridAttributes(proj);
+      cleanup(call_exp, callee_ref, map_loop);
     }
   }
 

@@ -27,11 +27,11 @@ void CUDAOptimizer::DoStage2() {
       config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
     pass::loop_peeling(proj_, tx_, builder_);
   }
-  if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
-    pass::register_blocking(proj_, tx_, builder_);
-  }
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
     pass::unconditional_get(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+    pass::register_blocking(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_OFFSET_CSE") ||
       config_->LookupFlag("OPT_OFFSET_COMP")) {
