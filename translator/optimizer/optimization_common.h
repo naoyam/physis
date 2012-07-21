@@ -27,6 +27,12 @@ extern void FixGridAttributes(
 //! Find innermost kernel loops
 extern vector<SgForStatement*> FindInnermostLoops(SgNode *proj);
 
+//! Find expressions that are assigned to variable v
+extern void GetVariableSrc(SgInitializedName *v,
+                           vector<SgExpression*> &src_exprs);
+
+//! Simple dead code elimination
+extern bool EliminateDeadCode(SgStatement *stmt);
 
 } // namespace optimizer
 } // namespace translator

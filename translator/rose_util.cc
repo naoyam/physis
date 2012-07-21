@@ -132,19 +132,27 @@ SgInitializedName *getInitializedName(SgVarRefExp *var) {
   return refDecl;
 }
 
+static int unique_name_var_index = 0;
 string generateUniqueName(SgScopeStatement *scope, const string &prefix) {
   if (scope == NULL) {
     //scope = SageBuilder::topScopeStack();
     scope = si::getFirstGlobalScope(si::getProject());
   }
   ROSE_ASSERT(scope);
+  string name;  
+#if 0  
   SgSymbolTable *symbol_table = scope->get_symbol_table();
-  string name;
   int post_fix = symbol_table->size();
   do {
     name = prefix + toString(post_fix);
     post_fix++;
   } while (symbol_table->exists(name));
+#else
+  do {
+    int index = unique_name_var_index++;
+    name = prefix + toString(index);
+  } while (si::lookupVariableSymbolInParentScopes(name, scope));
+#endif
   return name;
 }
 

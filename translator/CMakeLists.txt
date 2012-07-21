@@ -33,6 +33,7 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   optimizer/optimization_common.cc
   optimizer/reference_optimizer.cc
   optimizer/optimization_passes.cc
+  optimizer/premitive_optimization.cc
   optimizer/unconditional_get.cc
   optimizer/kernel_inlining.cc
   optimizer/loop_peeling.cc

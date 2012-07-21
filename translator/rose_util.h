@@ -110,7 +110,7 @@ SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name);
 bool isFuncParam(SgInitializedName *in);
 SgInitializedName *getInitializedName(SgVarRefExp *var);
 string generateUniqueName(SgScopeStatement *scope = NULL,
-                          const string &prefix = "__v");
+                          const string &prefix = "__ps_");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
 SgExpression *buildNULL(SgScopeStatement *global_scope);
 SgVariableDeclaration *buildVarDecl(const string &name,

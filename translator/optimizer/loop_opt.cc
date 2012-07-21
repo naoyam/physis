@@ -11,7 +11,6 @@
 #include "translator/translation_util.h"
 
 #include <algorithm>
-#include <stack>
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -20,14 +19,6 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 namespace pass {
-
-static bool IsEnclosed(SgNode *node, SgScopeStatement *scope) {
-  while (node) {
-    if (scope == node) return true;
-    node = node->get_parent();
-  }
-  return false;
-}
 
 static SgVariableDeclaration *GetVariableDeclaration(SgVarRefExp *e) {
   return isSgVariableDeclaration(
@@ -38,11 +29,15 @@ static SgInitializedName *GetVariable(SgVarRefExp *e) {
   return e->get_symbol()->get_declaration();
 }
 
-//typedef std::list<SgVariableDeclaration*> VarStack;
 typedef std::list<SgInitializedName*> VarStack;
 
 static bool IsLoopInvariant(SgExpression *e, SgForStatement *loop,
                             VarStack &stack);
+
+static SgExpression *GetLoopInvariantExpression(SgForStatement *loop,
+                                                SgExpression *exp);
+
+static bool IsAccessToStencilParam(SgExpression *exp);
 
 static bool IsAddressTaken(SgInitializedName *vs) {
   vector<SgAddressOfOp*> addrof_exprs =
@@ -60,6 +55,7 @@ static bool IsAddressTaken(SgInitializedName *vs) {
   return false;
 }
 
+
 static bool IsLoopInvariant(SgInitializedName *v,
                             SgForStatement *loop,
                             VarStack &stack) {
@@ -72,65 +68,21 @@ static bool IsLoopInvariant(SgInitializedName *v,
                   << v->unparseToString() << ", is invariant?: 0\n";
     return false;
   }
-  
-  SgNode *v_scope = si::getScope(v);
-  // Assignments are allowed only outside the loop
-  vector<SgNode*> assign_exprs =
-      NodeQuery::querySubTree(v_scope, V_SgAssignOp);
-  // Assignments are allowed only outside the loop
-  vector<SgNode*> tmp_exprs =
-      NodeQuery::querySubTree(v_scope,  V_SgCompoundAssignOp);
-  assign_exprs.insert(assign_exprs.end(), tmp_exprs.begin(),
-                      tmp_exprs.end());
-  tmp_exprs = NodeQuery::querySubTree(v_scope, V_SgPlusPlusOp);
-  assign_exprs.insert(assign_exprs.end(), tmp_exprs.begin(),
-                      tmp_exprs.end());
-  tmp_exprs = NodeQuery::querySubTree(v_scope, V_SgMinusMinusOp);
-  assign_exprs.insert(assign_exprs.end(), tmp_exprs.begin(),
-                      tmp_exprs.end());
-  tmp_exprs = NodeQuery::querySubTree(v_scope, V_SgVariableDeclaration);
-  assign_exprs.insert(assign_exprs.end(), tmp_exprs.begin(),
-                      tmp_exprs.end());
-  tmp_exprs = NodeQuery::querySubTree(v_scope, V_SgParameterStatement);
-  assign_exprs.insert(assign_exprs.end(), tmp_exprs.begin(),
-                      tmp_exprs.end());
 
+  vector<SgExpression*> assign_exprs;
+  GetVariableSrc(v, assign_exprs);
+  
   bool assigned = false;
   bool invariant = true;
 
   if (isSgFunctionParameterList(v->get_declaration())) {
     assigned = true;
   }
+  
   FOREACH (it, assign_exprs.begin(), assign_exprs.end()) {
-    SgNode *node = *it;
-    if (!IsEnclosed(node, loop)) continue;
-    SgExpression *operand_expr = NULL;
-    if (isSgExpression(node)) {
-      SgExpression *modified_expr = NULL;
-      if (isSgBinaryOp(node)) {
-        modified_expr = isSgBinaryOp(node)->get_lhs_operand();
-        operand_expr = isSgBinaryOp(node)->get_rhs_operand();
-      } else if (isSgUnaryOp(node)) {
-        modified_expr = isSgUnaryOp(node)->get_operand();
-        operand_expr = isSgUnaryOp(node)->get_operand();
-      }
-      PSAssert(modified_expr);
-      if (!(isSgVarRefExp(modified_expr) &&
-            (v == GetVariable(isSgVarRefExp(modified_expr))))) {
-        continue;
-      }
-    } else if (isSgVariableDeclaration(node)) {
-      SgVariableDeclaration *decl = isSgVariableDeclaration(node);
-      if (v->get_declaration() != decl) continue;
-      SgVariableDefinition *vdef = decl->get_definition();
-      if (!vdef) continue;
-      SgAssignInitializer *init =
-          isSgAssignInitializer(vdef->get_vardefn()->get_initializer());
-      if (!init) continue;
-      operand_expr = init->get_operand();
-    }
-    PSAssert(operand_expr);
-    if (!IsEnclosed(node, loop)) {
+    SgExpression *operand_expr = *it;
+
+    if (!si::isAncestor(loop, operand_expr)) {
       assigned = true;
       continue;
     }
@@ -176,6 +128,8 @@ static bool IsLoopInvariant(SgExpression *e, SgForStatement *loop,
               << e->unparseToString() << "\n";
   bool invariant = false;
   if (isSgValueExp(e)) {
+    invariant = true;
+  } else if (IsAccessToStencilParam(e)) {
     invariant = true;
   } else if (isSgUnaryOp(e)) {
     invariant = IsLoopInvariant(isSgUnaryOp(e)->get_operand(), loop,
@@ -235,7 +189,64 @@ static bool IsEquivalent(SgExpression *e1, SgExpression *e2) {
       IS_EQUIVALENT_VALUE(e1, e2, SgUnsignedLongLongIntVal);
 }
 
-static bool ProcessAssignment(SgIfStmt *if_stmt,
+static bool MoveRemainingAssignmentOutOfLoop(
+    SgForStatement *loop,
+    SgIfStmt *if_stmt,
+    SgExpression *t_exp,
+    SgExpression *f_exp,
+    SgVariableDeclaration*& new_var_decl,
+    SgIfStmt*& new_if_stmt) {
+
+  LOG_DEBUG() << "Moving remaining assignment expressions in: "
+              << if_stmt->unparseToString() << "\n";
+
+  if (t_exp == NULL && f_exp == NULL) {
+    LOG_DEBUG() << "No remainig expression\n";
+    return false;
+  }
+  
+  VarStack stack1, stack2;
+  if ((t_exp != NULL && !IsLoopInvariant(t_exp, loop, stack1)) ||
+      (f_exp != NULL && !IsLoopInvariant(f_exp, loop, stack2))) {
+    LOG_DEBUG() << "Not valid to move\n";
+    return false;
+  }
+
+  SgExpression *non_null_exp = t_exp ? t_exp : f_exp;
+
+  // Move the remaining expressions
+  SgVariableDeclaration *vdecl =
+      sb::buildVariableDeclaration(
+          rose_util::generateUniqueName(si::getScope(loop->get_parent())),
+          non_null_exp->get_type(),
+          NULL, si::getScope(loop->get_parent()));
+  si::insertStatementBefore(loop, vdecl);
+  new_var_decl = vdecl;
+
+  PSAssert(isSgExprStatement(if_stmt->get_conditional()));
+  SgExpression *cond_expr = GetLoopInvariantExpression(
+      loop, isSgExprStatement(if_stmt->get_conditional())->get_expression());
+  SgExpression *moved_cond = si::copyExpression(cond_expr);
+  SgStatement *moved_true = sb::buildExprStatement(
+      sb::buildAssignOp(
+          sb::buildVarRefExp(vdecl),
+          t_exp ? si::copyExpression(GetLoopInvariantExpression(loop, t_exp)) :
+          sb::buildIntVal(0)));
+  SgStatement *moved_false = sb::buildExprStatement(
+      sb::buildAssignOp(
+          sb::buildVarRefExp(vdecl),
+          f_exp ? si::copyExpression(GetLoopInvariantExpression(loop, f_exp)) :
+          sb::buildIntVal(0)));
+  SgIfStmt *moved_if =
+      sb::buildIfStmt(moved_cond, moved_true, moved_false);
+  si::insertStatementBefore(loop, moved_if);
+  new_if_stmt = moved_if;
+  
+  return true;
+}
+
+static bool ProcessAssignment(SgForStatement *loop,
+                              SgIfStmt *if_stmt,
                               SgStatement *true_body,
                               SgStatement *false_body,
                               SgExprStatement *true_assign,
@@ -317,6 +328,21 @@ static bool ProcessAssignment(SgIfStmt *if_stmt,
   LOG_DEBUG() << "Inserting common expression statement: "
               << common_expr_stmt->unparseToString() << "\n";
 
+  SgVariableDeclaration *vdecl_moved_out = NULL;
+  SgIfStmt *if_stmt_moved_out = NULL;
+  if (MoveRemainingAssignmentOutOfLoop(loop,
+                                       if_stmt,
+                                       t_rhs_reduced,
+                                       f_rhs_reduced,
+                                       vdecl_moved_out,
+                                       if_stmt_moved_out)) {
+    t_rhs_reduced = NULL;
+    f_rhs_reduced = NULL;
+    si::replaceExpression(common_expr,
+                          sb::buildAddOp(si::copyExpression(common_expr),
+                                         sb::buildVarRefExp(vdecl_moved_out)));
+  }
+
   if (t_rhs_reduced) {
     si::replaceExpression(
         t_rhs,
@@ -343,7 +369,8 @@ static bool ProcessAssignment(SgIfStmt *if_stmt,
   return true;
 }
 
-static void MoveInvariantOutOfBranch(SgIfStmt *if_stmt) {
+static void MoveInvariantOutOfBranch(SgForStatement *loop,
+                                     SgIfStmt *if_stmt) {
   SgStatement *true_body = if_stmt->get_true_body();
   SgStatement *false_body = if_stmt->get_false_body();
   
@@ -357,8 +384,48 @@ static void MoveInvariantOutOfBranch(SgIfStmt *if_stmt) {
         si::querySubTree<SgExprStatement>(false_body);
     FOREACH (f_it, f_assignments.begin(), f_assignments.end()) {
       if (!isSgAssignOp((*f_it)->get_expression())) continue;
-      ProcessAssignment(if_stmt, true_body, false_body,
+      ProcessAssignment(loop, if_stmt, true_body, false_body,
                         *t_it, *f_it);
+    }
+  }
+}
+
+static bool RemoveEmptyBody(SgBasicBlock *block) {
+  SgStatementPtrList &stmts = block->get_statements();
+  if (stmts.size() == 0 ||
+      (stmts.size() == 1 && isSgNullStatement(stmts[0]))) {
+    LOG_DEBUG() << "Removing empty block: " << block->unparseToString() << "\n";
+    si::removeStatement(block);
+    return true;
+  }
+  return false;
+}
+
+static bool RemoveEmptyBody(SgStatement *stmt) {
+  if (isSgBasicBlock(stmt)) {
+    return RemoveEmptyBody(isSgBasicBlock(stmt));
+  } else if (isSgNullStatement(stmt)) {
+    si::removeStatement(stmt);
+    return true;
+  }
+  return false;
+}
+
+static void RemoveEmptyConditional(SgForStatement *loop) {
+  SgBasicBlock *body = isSgBasicBlock(loop->get_loop_body());
+  std::vector<SgIfStmt*> if_stmts = si::querySubTree<SgIfStmt>(body);
+  FOREACH (it, if_stmts.begin(), if_stmts.end()) {
+    SgIfStmt *if_stmt = *it;
+    SgExpression *cond =
+        isSgExprStatement(if_stmt->get_conditional())->get_expression();
+    VarStack stack;    
+    if (!(isSgVarRefExp(cond) && IsLoopInvariant(cond, loop, stack)))
+      continue;
+    if (RemoveEmptyBody(if_stmt->get_true_body()) &&
+        RemoveEmptyBody(if_stmt->get_false_body())) {
+      LOG_DEBUG() << "Removing empty if statement: "
+                  << if_stmt->unparseToString() << "\n";
+      si::removeStatement(if_stmt);
     }
   }
 }
@@ -370,15 +437,123 @@ static void ProcessLoopBody(SgForStatement *loop) {
     SgIfStmt *if_stmt = *it;
     SgStatement *cond = if_stmt->get_conditional();
     VarStack stack;
+    // TODO: Need to make sure cond has no side effects
     if (isSgExprStatement(cond) &&
         IsLoopInvariant(
             isSgExprStatement(cond)->get_expression(),
             loop, stack)) {
-      MoveInvariantOutOfBranch(if_stmt);
+      MoveInvariantOutOfBranch(loop, if_stmt);
     }
   }
   
   return;
+}
+
+static SgExpression *FindEnclosedExpression(vector<SgExpression*> &exprs,
+                                            SgScopeStatement *scope) {
+  FOREACH (it, exprs.begin(), exprs.end()) {
+    if (si::isAncestor(scope, *it)) {
+      return *it;
+    }
+  }
+  return NULL;
+}
+
+static bool IsAccessToStencilParam(SgExpression *exp) {
+  if (!(isSgDotExp(exp) || isSgArrowExp(exp) || isSgArrowStarOp(exp))) {
+    return false;
+  }
+  SgVarRefExp *vref = isSgVarRefExp(isSgBinaryOp(exp)->get_lhs_operand());
+  if (!vref) return false;
+  SgInitializedName *var  = vref->get_symbol()->get_declaration();
+  LOG_DEBUG() << "Referenced var: " << var->unparseToString() << "\n";
+  SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(exp);
+  RunKernelAttribute *attr = rose_util::GetASTAttribute<RunKernelAttribute>(func);
+  if (!attr) return false;
+  SgInitializedName *stencil_param = attr->stencil_param();
+  if (var == stencil_param) {
+    LOG_DEBUG() << "Access to stencil param: "
+                << exp->unparseToString() << " -> "
+                << var->unparseToString() << "\n";
+    return true;
+  }
+  return false;
+}
+
+static SgExpression *GetLoopInvariantExpression(SgForStatement *loop,
+                                                SgExpression *exp) {
+  // This function is very similar to IsLoopInvaraint. Would be better
+  // to merge them.
+  if (isSgValueExp(exp)) {
+    return exp;
+  } else if (IsAccessToStencilParam(exp)) {
+    return exp;
+  } else if (isSgVarRefExp(exp)) {
+    SgVarRefExp *vref = isSgVarRefExp(exp);
+    SgVariableSymbol *vs = vref->get_symbol();
+    SgInitializedName *vdecl = vs->get_declaration();
+
+    vector<SgExpression*> src_exprs;
+    GetVariableSrc(vdecl, src_exprs);
+
+    if (src_exprs.size() == 0) {
+      // this variable should be a function parameter
+      if (isSgFunctionParameterList(vdecl->get_declaration())) {
+        // The expression is loop invariant
+        return exp;
+      } else {
+        // If not a parameter, give up analysis
+        return NULL;
+      }
+    } else {
+      SgExpression *intra_loop_src = FindEnclosedExpression(src_exprs, loop);
+      // If no assignment inside loop, exp is safe to move outside loop
+      if (!intra_loop_src) {
+        return exp;
+      } else {
+        // Since exp is assumed to be loop invariant, it only has one source
+        return GetLoopInvariantExpression(loop, intra_loop_src);
+      }
+    }
+  } else if (isSgBinaryOp(exp)) {
+    SgBinaryOp *bop = isSgBinaryOp(si::copyExpression(exp));    
+    SgExpression *lhs =
+        GetLoopInvariantExpression(
+            loop, isSgBinaryOp(exp)->get_lhs_operand());
+    SgExpression *rhs =
+        GetLoopInvariantExpression(
+            loop, isSgBinaryOp(exp)->get_rhs_operand());
+    if (lhs == NULL || rhs == NULL) return NULL;
+    si::replaceExpression(bop->get_lhs_operand(),
+                          si::copyExpression(lhs));
+    si::replaceExpression(bop->get_rhs_operand(),
+                          si::copyExpression(rhs));
+    return bop;
+  } else if (isSgUnaryOp(exp)) {
+    SgExpression *operand =
+        GetLoopInvariantExpression(
+            loop, isSgUnaryOp(exp)->get_operand());
+    if (operand == NULL) return NULL;
+    SgUnaryOp *op = isSgUnaryOp(si::copyExpression(exp));
+    si::replaceExpression(op->get_operand(),
+                          si::copyExpression(operand));
+    return op;
+  } else if (isSgFunctionCallExp(exp)) {
+    SgFunctionCallExp *call = isSgFunctionCallExp(exp);
+    std::string func_name = rose_util::getFuncName(call);
+    if (func_name == "PSGridDim") {
+      SgFunctionCallExp *call = isSgFunctionCallExp(si::copyExpression(exp));
+      SgExpressionPtrList &args = call->get_args()->get_expressions();
+      FOREACH (it, args.begin(), args.end()) {
+        SgExpression *arg_expr = GetLoopInvariantExpression(loop, *it);
+        if (!arg_expr) return NULL;
+        si::replaceExpression(*it, si::copyExpression(arg_expr));
+      }
+      return call;
+    }
+    return NULL;
+  }
+  return NULL;
 }
 
 void loop_opt(
@@ -386,7 +561,6 @@ void loop_opt(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
-
   
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
   FOREACH (it, target_loops.begin(), target_loops.end()) {
@@ -397,6 +571,7 @@ void loop_opt(
     LOG_DEBUG() << "Optimizing "
                 << loop->unparseToString() << "\n";
     ProcessLoopBody(loop);
+    RemoveEmptyConditional(loop);
   }
   
   post_process(proj, tx, __FUNCTION__);  

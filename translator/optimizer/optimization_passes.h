@@ -44,6 +44,16 @@ extern void null_optimization(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
+//! Apply premitive optimizations
+/*!
+  @proj The whole AST.
+  @param tx The translation context built for the AST.
+ */
+extern void premitive_optimization(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
 //! Inline stencil kernels.
 /*!
   This optimization itself may have no performance improvement, but

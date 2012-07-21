@@ -220,7 +220,7 @@ function generate_translation_configurations_cuda()
     else
 		configs=$(generate_empty_translation_configuration)
     fi
-    local pre_calc='true false'
+    local pre_calc='false'
     local bsize="64,4,1 32,8,1"
     local new_configs=""
     local idx=0
