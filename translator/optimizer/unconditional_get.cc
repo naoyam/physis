@@ -22,6 +22,7 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
+#if 0
 static void QueryGetInKernel(
     SgNode *top,
     Rose_STL_Container<SgPntrArrRefExp*> &gets) {
@@ -42,6 +43,27 @@ static void QueryGetInKernel(
   }
   return;
 }
+#else
+static void QueryGetInKernel(
+    SgNode *top,
+    vector<SgExpression*> &gets) {
+  vector<SgNode*> exps =
+      rose_util::QuerySubTreeAttribute<GridGetAttribute>(top);
+  FOREACH(it, exps.begin(), exps.end()) {
+    SgExpression *exp = isSgExpression(*it);
+    PSAssert(exp);
+    // Traverse only GridGet
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(exp);
+    PSAssert(gga);
+
+    // Optimization applied only to in-kernel get
+    if (!gga->in_kernel()) continue;
+    gets.push_back(exp);
+  }
+  return;
+}
+#endif
 
 // This ad-hoc code traversal heavily depends on how the previous
 // translation passes are implemented. Should be made more robust. 
@@ -115,17 +137,17 @@ static SgExpression *BuildGetOffsetCenter(
                                   nd, &center_exp, true, false, &sil);
 }
 
-static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
+static void ProcessIfStmtStage1(SgExpression *get_exp,
                                 SgIfStmt *if_stmt,
                                 RuntimeBuilder *builder,
-                                SgPntrArrRefExp *&paired_get_exp,
+                                SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
   SgInitializedName *gv = grid_get_attr->gv();
   
   // Find a get_exp that can be paired with this.
-  Rose_STL_Container<SgPntrArrRefExp *> gets;
+  vector<SgExpression *> gets;
   QueryGetInKernel(if_stmt, gets);
   paired_get_exp = NULL;
   FOREACH (it, gets.begin(), gets.end()) {
@@ -161,10 +183,8 @@ static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
   // indicates it is always SgExprStatement, so we assume it is always
   // the case.
   if (!isSgExprStatement(cond)) {
-    LOG_ERROR() << "Unexpected condition type: "
-                << cond->class_name()
-                << ": " << cond->unparseToString()
-                << "\n";
+    LOG_ERROR() << "Unexpected condition type: " << cond->class_name()
+                << ": " << cond->unparseToString() << "\n";
     PSAbort(1);
   }
   SgScopeStatement *outer_scope
@@ -182,10 +202,18 @@ static void ProcessIfStmtStage1(SgPntrArrRefExp *get_exp,
                        sb::buildExprStatement(sb::buildVarRefExp(cond_var)));
 }
 
-static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
+static SgExpression* GetOffsetExpression(SgExpression *get_exp) {
+  //return get_exp->get_rhs_operand();
+  GridGetAttribute *gga =
+      rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
+  PSAssert(gga);
+  return gga->offset();
+}
+
+static void ProcessIfStmtStage2(SgExpression *get_exp,
                                 SgIfStmt *if_stmt,
                                 RuntimeBuilder *builder,
-                                SgPntrArrRefExp *&paired_get_exp,
+                                SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
   SgScopeStatement *outer_scope
       = si::getScope(if_stmt->get_parent());
@@ -197,7 +225,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
   // Declare the index variable
   SgVariableDeclaration *index_var = NULL;
   SgExpression *offset_exp =
-      si::copyExpression(get_exp->get_rhs_operand());
+      si::copyExpression(GetOffsetExpression(get_exp));
   FixGridOffsetAttribute(offset_exp);  
   // If the access is to the center point, no guard by condition is
   // necessary and just assign the offset
@@ -226,7 +254,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
     if (paired_get_exp) {
       SgExpression *paired_offset_exp =
           si::copyExpression(
-              paired_get_exp->get_rhs_operand());
+              GetOffsetExpression(paired_get_exp));
       FixGridOffsetAttribute(paired_offset_exp);
       paired_get_exp_index_assign =
           sb::buildBasicBlock(
@@ -253,7 +281,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
     si::insertStatementBefore(if_stmt, index_assign_block);
   }
 
-  si::replaceExpression(get_exp->get_rhs_operand(),
+  si::replaceExpression(GetOffsetExpression(get_exp),
                         sb::buildVarRefExp(index_var));
   FixGridGetAttribute(get_exp);
   rose_util::GetASTAttribute<GridGetAttribute>(
@@ -276,7 +304,7 @@ static void ProcessIfStmtStage2(SgPntrArrRefExp *get_exp,
   si::insertStatementBefore(if_stmt, v);
 }
 
-static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
+static void ProcessIfStmt(SgExpression *get_exp,
                           SgIfStmt *if_stmt,
                           RuntimeBuilder *builder) {
   /*
@@ -325,7 +353,7 @@ static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
     // No change hereafter
   */
 
-  SgPntrArrRefExp *paired_get_exp;
+  SgExpression *paired_get_exp;
   SgVariableDeclaration *cond_var;
   
   // Step 1
@@ -337,7 +365,7 @@ static void ProcessIfStmt(SgPntrArrRefExp *get_exp,
                       cond_var);
 }
 
-static void ProcessConditionalExp(SgPntrArrRefExp *get_exp,
+static void ProcessConditionalExp(SgExpression *get_exp,
                                   const SgConditionalExp *cond_exp) {
   LOG_WARNING() << "Select not supported.\n";
   return;
@@ -350,10 +378,10 @@ void unconditional_get(
   pre_process(proj, tx, __FUNCTION__);
 
   // Traverse grid gets in stencil kernels
-  Rose_STL_Container<SgPntrArrRefExp *> gets;
+  vector<SgExpression*> gets;
   QueryGetInKernel(proj, gets);
   FOREACH(it, gets.begin(), gets.end()) {
-    SgPntrArrRefExp *exp = *it;
+    SgExpression *exp = *it;
     LOG_DEBUG() << "Get: "
                 << exp->unparseToString() << "\n";
     SgNode *cond = rose_util::IsConditional(exp);
@@ -361,9 +389,10 @@ void unconditional_get(
       LOG_DEBUG() << "Not conditional\n";
       continue;
     }
-    if (!rose_util::GetASTAttribute<GridGetAttribute>(
-            exp)->in_kernel()) {
-      LOG_DEBUG() << "Not called from a kernel\n";
+    if (isSgVarRefExp(exp)) {
+      // This means this get is replaced with register access. This
+      // can be paired with other real grid access, but cannot be a
+      // base get expression for this optimization.
       continue;
     }
     LOG_DEBUG() << "Conditional get to optimize: "
