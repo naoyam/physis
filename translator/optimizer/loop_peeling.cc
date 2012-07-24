@@ -24,6 +24,10 @@ namespace optimizer {
 namespace pass {
 
 
+static void RemoveDeadConditional(SgForStatement *loop,
+                                  int dim, int peel_size_first,
+                                  int peel_size_last,
+                                  RunKernelLoopAttribute::Kind type);
 
 //! Return true if a given get MAY be guarded by a conditional node.
 /*!
@@ -128,8 +132,8 @@ static void RenameLastStatementLabel(SgForStatement *loop) {
   }
 }
 
-static void PeelFirstIterations(SgForStatement *loop,
-                                int peel_size) {
+static SgForStatement* PeelFirstIterations(SgForStatement *loop,
+                                           int peel_size) {
   LOG_DEBUG() << "Peeling the first " << peel_size << " iteration(s)\n";
   PSAssert(peel_size > 0);
   SgInitializedName *loop_var = 
@@ -188,7 +192,7 @@ static void PeelFirstIterations(SgForStatement *loop,
   LOG_DEBUG() << "Peeling of the first iterations done.\n";
   // Only copies of loop_end is used, so the original is not needed.
   si::deleteAST(loop_end);
-  return;  
+  return peeled_iterations;
 }
 
 static SgExpression *FindGridRefInLoop(SgInitializedName *grid) {
@@ -199,10 +203,10 @@ static SgExpression *FindGridRefInLoop(SgInitializedName *grid) {
   return gr;
 }
 
-static void PeelLastIterations(SgForStatement *loop,
-                               int peel_size,
-                               SgInitializedName *peel_grid,
-                               RuntimeBuilder *builder) {
+static SgForStatement* PeelLastIterations(SgForStatement *loop,
+                                          int peel_size,
+                                          SgInitializedName *peel_grid,
+                                          RuntimeBuilder *builder) {
   LOG_DEBUG() << "Peeling the last " << peel_size
               << " iteration(s)\n";  
   PSAssert(peel_size > 0);
@@ -252,6 +256,7 @@ static void PeelLastIterations(SgForStatement *loop,
   // corrected.
   peel_iter_attr->begin() = si::copyExpression(loop_end);
   peel_iter_attr->SetLast();
+  return peeled_iterations;
 }
 
 static void PeelLoop(
@@ -300,15 +305,252 @@ static void PeelLoop(
     }
   }
   if (peel_size_first > 0) {
-    PeelFirstIterations(loop, peel_size_first);
+    SgForStatement *peeled_loop = PeelFirstIterations(loop, peel_size_first);
+    RemoveDeadConditional(
+        peeled_loop,
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop)->dim(),
+        peel_size_first, peel_size_last, RunKernelLoopAttribute::FIRST);
   } else {
     LOG_DEBUG() << "No profitable iteration found at the loop beginning.\n";
   }
   if (peel_size_last > 0) {
-    PeelLastIterations(loop, peel_size_last,
-                       peel_last_grid, builder);
+    SgForStatement *peeled_loop = PeelLastIterations(loop, peel_size_last,
+                                                     peel_last_grid, builder);
+    RemoveDeadConditional(
+        peeled_loop,
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop)->dim(),
+        peel_size_first, peel_size_last, RunKernelLoopAttribute::LAST);
+    
   } else {
     LOG_DEBUG() << "No profitable iteration found at the loop end.\n";
+  }
+
+  if (peel_size_first > 0 || peel_size_last > 0) {
+    RemoveDeadConditional(
+        loop,
+        rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop)->dim(),
+        peel_size_first, peel_size_last, RunKernelLoopAttribute::MAIN);
+  }
+  
+}
+
+// Return 0 on success
+static int FindExresssionReferencingLoopVar(SgBinaryOp *bop,
+                                            SgInitializedName *loop_var,
+                                            SgExpression *&v_expr,
+                                            SgExpression *&c_expr) {
+  SgExpression *lhs = bop->get_lhs_operand();
+  SgExpression *rhs = bop->get_rhs_operand();  
+  vector<SgVarRefExp*> vrefs = si::querySubTree<SgVarRefExp>(lhs);
+  bool ref = false;
+  FOREACH (it, vrefs.begin(), vrefs.end()) {
+    if ((*it)->get_symbol()->get_declaration() == loop_var) {
+      v_expr = lhs;
+      c_expr = rhs;
+      return 0;
+    }
+  }
+  vrefs = si::querySubTree<SgVarRefExp>(rhs);
+  ref = false;
+  FOREACH (it, vrefs.begin(), vrefs.end()) {
+    if ((*it)->get_symbol()->get_declaration() == loop_var) {
+      v_expr = rhs;
+      c_expr = lhs;
+      return 0;
+    }
+  }
+
+  LOG_DEBUG() << "No reference to " << loop_var->unparseToString() <<
+      " found in " << bop->unparseToString() << "\n";
+  return -1;
+}
+
+static bool IsRefToVar(SgVarRefExp *vref, SgInitializedName *var) {
+  return vref->get_symbol()->get_declaration() == var;
+}
+
+static SgBinaryOp *FlipComparatorOp(SgBinaryOp *bop) {
+  SgBinaryOp *flipped_op = NULL;
+  SgExpression *lhs = si::copyExpression(bop->get_lhs_operand());
+  SgExpression *rhs = si::copyExpression(bop->get_rhs_operand());
+  if (isSgGreaterThanOp(bop)) {
+    flipped_op = sb::buildLessOrEqualOp(lhs, rhs);
+  } else if (isSgGreaterOrEqualOp(bop)) {
+    flipped_op = sb::buildLessThanOp(lhs, rhs);
+  } else if (isSgLessThanOp(bop)) {
+    flipped_op = sb::buildGreaterOrEqualOp(lhs, rhs);
+  } else if (isSgLessOrEqualOp(bop)) {
+    flipped_op = sb::buildGreaterThanOp(lhs, rhs);
+  }
+  LOG_DEBUG() << bop->unparseToString() << " flipped to "
+              << flipped_op->unparseToString() << "\n";
+  return flipped_op;
+}
+
+static SgExpression *BuildTrue() {
+  return sb::buildIntVal(1);
+}
+
+static SgExpression *BuildFalse() {
+  return sb::buildIntVal(0);
+}
+
+static int Evaluate(SgBinaryOp *op,
+                    SgExpression *rhs,
+                    int peel_size_first, int peel_size_last,
+                    RunKernelLoopAttribute::Kind kind) {
+  int val = si::getIntegerConstantValue(isSgValueExp(rhs));
+  if (isSgEqualityOp(op)) {
+    switch (kind) {
+      case RunKernelLoopAttribute::FIRST:
+        if (val < peel_size_first) {
+          return 1;
+        } else {
+          return 0;
+        }
+      case RunKernelLoopAttribute::MAIN:
+        if (val < peel_size_first) {
+          return 0;
+        }
+        return -1;
+      case RunKernelLoopAttribute::LAST:
+        return -1;
+    }
+  }
+  PSAssert(0);
+  return -1;
+}
+
+static SgIfStmt *IsIfConditional(SgExpression *expr) {
+  SgExprStatement *cond = isSgExprStatement(expr->get_parent());
+  if (!cond) return false;
+  SgIfStmt *if_stmt = isSgIfStmt(cond->get_parent());
+  if (!if_stmt) return false;
+  if (if_stmt->get_conditional() == cond) {
+    return if_stmt;
+  } else {
+    return NULL;
+  }
+}
+
+static void RemoveDeadConditional(SgForStatement *loop,
+                                  int dim,
+                                  int peel_size_first,
+                                  int peel_size_last,
+                                  RunKernelLoopAttribute::Kind kind) {
+  vector<SgBinaryOp*> bin_ops = si::querySubTree<SgBinaryOp>(loop);
+  RunKernelLoopAttribute *loop_attr =
+      rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
+  SgInitializedName *loop_var = loop_attr->var();
+  FOREACH (it, bin_ops.begin(), bin_ops.end()) {
+    SgBinaryOp *bin_op = *it;
+    if (!(isSgEqualityOp(bin_op))) continue;
+    LOG_DEBUG() << "Optimizing " << bin_op->unparseToString() << "?\n";    
+    vector<SgExpression*> nested_exprs = si::querySubTree<SgExpression>(bin_op);
+    SgVarRefExp *loop_var_ref = NULL;
+    bool safe_to_opt = true;
+    FOREACH (nested_exprs_it, nested_exprs.begin(), nested_exprs.end()) {
+      SgExpression *nested_expr = *nested_exprs_it;
+      if (nested_expr == bin_op) continue;
+      if (isSgVarRefExp(nested_expr)) {
+        if (loop_var_ref) {
+          // multiple references to loop var found; not assumed;
+          LOG_DEBUG() << "multiple var ref found\n";
+          safe_to_opt = false;
+          break;
+        }
+        if (!IsRefToVar(isSgVarRefExp(nested_expr), loop_var)) {
+          // non loop var ref found; assumes non safe conditional
+          LOG_DEBUG() << "No var except for loop var allowed\n";
+          safe_to_opt = false;
+          break;
+        }
+        loop_var_ref = isSgVarRefExp(nested_expr);
+      } else if (isSgValueExp(nested_expr) ||
+                 isSgAddOp(nested_expr) || isSgSubtractOp(nested_expr) ||
+                 isSgUnaryAddOp(nested_expr)) {
+        LOG_DEBUG() << "Valid expression: " <<
+            nested_expr->unparseToString() << "\n";
+        continue;
+      } else {
+        // not assumed expression
+        LOG_DEBUG() << "Having " << nested_expr->unparseToString()
+                    << " not assumed.\n";
+        break;
+      }
+    }
+    if (!safe_to_opt) {
+      LOG_DEBUG() << "Not possible to optimize\n";
+      continue;
+    }
+    // If no ref found, removing not possible
+    if (!loop_var_ref) {
+      LOG_DEBUG() << "No ref to loop var found; not possible to optimize\n";
+      continue;
+    }
+    SgExpression *v_expr = NULL, *c_expr = NULL;
+    PSAssert(FindExresssionReferencingLoopVar(bin_op, loop_var,
+                                              v_expr, c_expr) == 0);
+    LOG_DEBUG() << "v_expr: " << v_expr->unparseToString()
+                << ", c_expr: " << c_expr->unparseToString() << "\n";
+
+    v_expr = si::copyExpression(v_expr);
+    c_expr = si::copyExpression(c_expr);
+    SgBinaryOp *top_expr = bin_op;
+    while (true) {
+      if (isSgVarRefExp(v_expr) && IsRefToVar(isSgVarRefExp(v_expr), loop_var)) {
+        break;
+      } else if (isSgBinaryOp(v_expr)) {
+        SgExpression *v_expr_child = NULL;
+        SgExpression *c_expr_child = NULL;
+        PSAssert(FindExresssionReferencingLoopVar(isSgBinaryOp(v_expr), loop_var,
+                                                  v_expr_child, c_expr_child) == 0);
+        if (isSgAddOp(v_expr)) {
+          c_expr = sb::buildSubtractOp(c_expr, si::copyExpression(c_expr_child));
+        } else {
+          // subtract
+          if (v_expr_child == isSgSubtractOp(v_expr)->get_lhs_operand()) {
+            c_expr = sb::buildAddOp(c_expr, si::copyExpression(c_expr_child));
+          } else {
+            c_expr = sb::buildSubtractOp(c_expr, si::copyExpression(c_expr_child));
+            top_expr = FlipComparatorOp(top_expr);
+          }
+        }
+        v_expr = v_expr_child;
+      } else if (isSgUnaryAddOp(v_expr)) {
+        LOG_DEBUG() << "UnaryAdd: " << v_expr->unparseToString() << "\n";
+        v_expr = isSgUnaryAddOp(v_expr)->get_operand();
+        continue;
+      } else {
+        LOG_ERROR() << "Invalid AST node: " << v_expr->unparseToString() << "\n";
+        PSAbort(1);
+      }
+    }
+    si::constantFolding(c_expr);
+    LOG_DEBUG() << "RHS: " << c_expr->unparseToString() << "\n";
+    LOG_DEBUG() << "OPERATOR: " << top_expr->unparseToString() << "\n";
+    int evaluated_result = Evaluate(top_expr, c_expr,
+                                    peel_size_first, peel_size_last,
+                                    kind);
+    if (evaluated_result >= 0) {
+      LOG_DEBUG() << "Static evaluation done: " << evaluated_result << "\n";
+      LOG_DEBUG() << "Replacing " << bin_op->unparseToString()
+                  << " with " << evaluated_result << "\n";
+      SgIfStmt *if_stmt = IsIfConditional(bin_op);
+      if (if_stmt) {
+        if (evaluated_result) {
+          si::replaceStatement(if_stmt,
+                               si::copyStatement(if_stmt->get_true_body()));
+        } else {
+          si::replaceStatement(if_stmt,
+                               si::copyStatement(if_stmt->get_false_body()));
+        }
+      } else {
+        si::replaceExpression(bin_op, evaluated_result? BuildTrue() : BuildFalse());
+      }
+    } else {
+      LOG_DEBUG() << "Static evaluation not possible\n";
+    }
   }
 }
 
