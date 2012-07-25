@@ -342,6 +342,19 @@ bool EliminateDeadCode(SgStatement *stmt) {
   return changed_once;
 }
 
+SgExpression *GetDeterministicDefinition(SgInitializedName *var) {
+  vector<SgExpression*> var_srcs;
+  GetVariableSrc(var, var_srcs);
+  if (var_srcs.size() == 1) {
+    LOG_DEBUG() << "Var, " << var->unparseToString()
+                << " has a deterministic source, "
+                << var_srcs[0]->unparseToString() << "\n";
+    return var_srcs[0];
+  } else {
+    return NULL;
+  }
+}
+
 } // namespace optimizer
 } // namespace translator
 } // namespace physis

@@ -34,6 +34,9 @@ extern void GetVariableSrc(SgInitializedName *v,
 //! Simple dead code elimination
 extern bool EliminateDeadCode(SgStatement *stmt);
 
+//! Returns a single source expression for a variable if statically determined
+SgExpression *GetDeterministicDefinition(SgInitializedName *var);
+
 } // namespace optimizer
 } // namespace translator
 } // namespace physis
