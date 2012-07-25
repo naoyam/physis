@@ -139,6 +139,7 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
   SgInitializedName *loop_var = 
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop)->var();
   PSAssert(loop_var);
+  LOG_INFO() << "Copying original loop (Warnings on AST copy may be issued. Seems safe to ignore.)\n";
   SgForStatement *peeled_iterations =
       isSgForStatement(si::copyStatement(loop));
   LOG_DEBUG() << "Copying of original loop done.\n";  
@@ -214,6 +215,7 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
   SgInitializedName *loop_var = loop_attr->var();
   PSAssert(loop_var);
+  LOG_INFO() << "Copying original loop (Warnings on AST copy may be issued. Seems safe to ignore.)\n";  
   SgForStatement *peeled_iterations =
       isSgForStatement(si::copyStatement(loop));
   LOG_DEBUG() << "Copying of original loop done.\n";
