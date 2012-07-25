@@ -42,15 +42,15 @@ class Domain;
 class RegularDomain {
   friend class Domain;
   int num_dims_;
-  physis::util::IntVector min_point_;
-  physis::util::IntVector max_point_;
+  SizeVector min_point_;
+  SizeVector max_point_;
  public:  
   RegularDomain(int num_dims): num_dims_(num_dims) {}
   RegularDomain(const RegularDomain &r):
       num_dims_(r.num_dims_), min_point_(r.min_point_),
       max_point_(r.max_point_) {}
-  const IntVector &min_point() const { return min_point_; }
-  const IntVector &max_point() const { return max_point_; }
+  const SizeVector &min_point() const { return min_point_; }
+  const SizeVector &max_point() const { return max_point_; }
   int num_dims() const { return num_dims_; }
 };
 

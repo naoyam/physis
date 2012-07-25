@@ -1,6 +1,7 @@
 #ifndef PHYSIS_PHYSIS_COMMON_H_
 #define PHYSIS_PHYSIS_COMMON_H_
 
+#define __STDC_LIMIT_MACROS
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -30,9 +31,10 @@
 #define PSDOMAIN2D_TYPE_NAME "PSDomain2D"
 #define PSDOMAIN3D_TYPE_NAME "PSDomain3D"
 
-// Index type is 64-bit int by default
-#if ! defined(PHYSIS_INDEX_INT32)
-#define PHYSIS_INDEX_INT64
+//#define PHYSIS_INDEX_INT64
+// Index type is 32-bit int by default
+#if ! defined(PHYSIS_INDEX_INT64)
+#define PHYSIS_INDEX_INT32
 #endif
 
 #define PSAssert(e) assert(e)
@@ -41,14 +43,16 @@
 extern "C" {
 #endif
 
-  // TODO: index type is internal to Physis, so it should be prefixed
-  // with __PS. Replace index_t with __PSIndexType.
 #if defined(PHYSIS_INDEX_INT32)
-  typedef int32_t index_t;
-  typedef int32_t PSIndexType;
+  //typedef int32_t index_t;
+  typedef int32_t PSIndex;
+#define PSINDEX_MAX INT32_MAX
+#define PSINDEX_MIN INT32_MIN
 #elif defined(PHYSIS_INDEX_INT64)
-  typedef int64_t index_t;
-  typedef int64_t PSIndexType;  
+  //typedef int64_t index_t;
+  typedef int64_t PSIndex;
+#define PSINDEX_MAX INT64_MAX
+#define PSINDEX_MIN INT64_MIN
 #endif
   
   enum physis_error_code {
@@ -56,7 +60,7 @@ extern "C" {
   };
 
   typedef int PSVectorInt[PS_MAX_DIM];
-  typedef index_t PSIndexVector[PS_MAX_DIM];  
+  //typedef PSIndex PSIndexVector[PS_MAX_DIM];  
   typedef PSVectorInt PSPoint;
 
   static inline void PSVectorIntInit(PSVectorInt vec, int x) {
@@ -84,21 +88,21 @@ extern "C" {
   extern void PSGridFree(void *p);  
 
   typedef struct {
-    index_t min[PS_MAX_DIM];
-    index_t max[PS_MAX_DIM];
-    index_t local_min[PS_MAX_DIM];
-    index_t local_max[PS_MAX_DIM];
+    PSIndex min[PS_MAX_DIM];
+    PSIndex max[PS_MAX_DIM];
+    PSIndex local_min[PS_MAX_DIM];
+    PSIndex local_max[PS_MAX_DIM];
   } __PSDomain;
   typedef __PSDomain PSDomain1D;
   typedef __PSDomain PSDomain2D;
   typedef __PSDomain PSDomain3D;
 
-  extern PSDomain1D PSDomain1DNew(index_t minx, index_t maxx);
-  extern PSDomain2D PSDomain2DNew(index_t minx, index_t maxx,
-                                  index_t miny, index_t maxy);
-  extern PSDomain3D PSDomain3DNew(index_t minx, index_t maxx,
-                                  index_t miny, index_t maxy,
-                                  index_t minz, index_t maxz);
+  extern PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx);
+  extern PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                                  PSIndex miny, PSIndex maxy);
+  extern PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                                  PSIndex miny, PSIndex maxy,
+                                  PSIndex minz, PSIndex maxz);
 
   static inline __PSDomain __PSDomainGetBoundary(
       __PSDomain *d, int dim, int right, int width, 
@@ -117,9 +121,9 @@ extern "C" {
     }
     if (factor > 1) {
       int dividing_dim = 2;
-      index_t diff = d->local_max[dividing_dim] - d->local_min[dividing_dim];
-      index_t chunk = diff / factor;
-      index_t rem = diff % factor;
+      PSIndex diff = d->local_max[dividing_dim] - d->local_min[dividing_dim];
+      PSIndex chunk = diff / factor;
+      PSIndex rem = diff % factor;
       bd.local_min[dividing_dim] = bd.local_min[dividing_dim] + chunk * offset
 	+ ((offset < rem)? offset : rem);
       bd.local_max[dividing_dim] =
@@ -130,7 +134,7 @@ extern "C" {
 
   typedef struct {
     int num;
-    index_t offsets[(PS_MAX_DIM * 2 + 1) * PS_MAX_DIM * 2];
+    PSIndex offsets[(PS_MAX_DIM * 2 + 1) * PS_MAX_DIM * 2];
   } __PSOffsets;
 
   typedef struct {

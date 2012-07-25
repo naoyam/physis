@@ -66,7 +66,7 @@
    << "#"  << __LINE__ << "] ")
 
 #if defined(__unix__) || defined(__unix) || defined(__APPLE__)
-#define LOG_NULL() (std::ofstream("/dev/nulL"))
+#define LOG_NULL() (std::ofstream("/dev/null"))
 #elif defined(_WIN32)
 #define LOG_NULL() (std::ofstream("nul"))
 #else
@@ -185,6 +185,27 @@ inline unsigned toUnsignedInteger(const string &s)
   is >> i;
   return i;
 }
+
+inline size_t toSizeT(const string &s)
+{
+  istringstream is(s);
+  is.exceptions(istringstream::failbit |
+                istringstream::badbit);
+  size_t i;
+  is >> i;
+  return i;
+}
+
+inline ssize_t toSSizeT(const string &s)
+{
+  istringstream is(s);
+  is.exceptions(istringstream::failbit |
+                istringstream::badbit);
+  ssize_t i;
+  is >> i;
+  return i;
+}
+
     
 template<class T1, class T2>
 inline T2 find(const std::map<T1, T2> &m, const T1 &k, const T2 &v) 

@@ -9,10 +9,14 @@
 #include "runtime/grid_util.h"
 
 using namespace physis::runtime;
-using namespace physis::util;
+using physis::IntArray;
+using physis::IndexArray;
 
-static size_t get1DOffset(const IntArray &md_offset,
-                          const IntArray &size,
+namespace physis {
+namespace runtime {
+
+static size_t get1DOffset(const IndexArray &md_offset,
+                          const IndexArray &size,
                           int num_dims) {
   size_t offset_1d = 0;
   size_t ref_offset = 1;
@@ -23,17 +27,14 @@ static size_t get1DOffset(const IntArray &md_offset,
   return offset_1d;
 }
 
-namespace physis {
-namespace runtime {
-
 void CopyoutSubgrid(size_t elm_size, int num_dims,
-                    const void *grid, const IntArray &grid_size,
+                    const void *grid, const IndexArray &grid_size,
                     void *subgrid,
-                    const IntArray &subgrid_offset,
-                    const IntArray &subgrid_size) {
+                    const IndexArray &subgrid_offset,
+                    const IndexArray &subgrid_size) {
   intptr_t subgrid_original = (intptr_t)subgrid; // just for sanity checking
-  std::list<IntArray> *offsets = new std::list<IntArray>;
-  std::list<IntArray> *offsets_new = new std::list<IntArray>;
+  std::list<IndexArray> *offsets = new std::list<IndexArray>;
+  std::list<IndexArray> *offsets_new = new std::list<IndexArray>;
   
   LOG_DEBUG() << __FUNCTION__ << ": "
               << "subgrid offset: " << subgrid_offset
@@ -44,9 +45,9 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
   offsets->push_back(subgrid_offset);
   for (int i = num_dims - 1; i >= 1; --i) {
     FOREACH (oit, offsets->begin(), offsets->end()) {
-      const IntArray &cur_offset = *oit;
-      for (int j = 0; j < subgrid_size[i]; ++j) {
-        IntArray new_offset = cur_offset;
+      const IndexArray &cur_offset = *oit;
+      for (PSIndex j = 0; j < subgrid_size[i]; ++j) {
+        IndexArray new_offset = cur_offset;
         new_offset[i] += j;
         offsets_new->push_back(new_offset);
       }
@@ -58,7 +59,7 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
   // Copy the collected 1-D continuous regions
   size_t line_size = subgrid_size[0] * elm_size;
   FOREACH (oit, offsets->begin(), offsets->end()) {
-    const IntArray &offset = *oit;
+    const IndexArray &offset = *oit;
     const void *src =
         (const void *)((intptr_t)grid +
                        get1DOffset(offset, grid_size, num_dims) * elm_size);
@@ -77,19 +78,19 @@ void CopyoutSubgrid(size_t elm_size, int num_dims,
 }
 
 void CopyinSubgrid(size_t elm_size, int num_dims,
-                   void *grid, const IntArray &grid_size,
+                   void *grid, const IndexArray &grid_size,
                    const void *subgrid,
-                   const IntArray &subgrid_offset,
-                   const IntArray &subgrid_size) {
+                   const IndexArray &subgrid_offset,
+                   const IndexArray &subgrid_size) {
   intptr_t subgrid_original = (intptr_t)subgrid; // just for sanity checking
-  std::list<IntArray> *offsets = new std::list<IntArray>;
-  std::list<IntArray> *offsets_new = new std::list<IntArray>;
+  std::list<IndexArray> *offsets = new std::list<IndexArray>;
+  std::list<IndexArray> *offsets_new = new std::list<IndexArray>;
   offsets->push_back(subgrid_offset);
   for (int i = num_dims - 1; i >= 1; --i) {
     FOREACH (oit, offsets->begin(), offsets->end()) {
-      const IntArray &cur_offset = *oit;
-      for (int j = 0; j < subgrid_size[i]; ++j) {
-        IntArray new_offset = cur_offset;
+      const IndexArray &cur_offset = *oit;
+      for (PSIndex j = 0; j < subgrid_size[i]; ++j) {
+        IndexArray new_offset = cur_offset;
         new_offset[i] += j;
         offsets_new->push_back(new_offset);
       }
@@ -100,7 +101,7 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
 
   size_t line_size = subgrid_size[0] * elm_size;
   FOREACH (oit, offsets->begin(), offsets->end()) {
-    const IntArray &offset = *oit;
+    const IndexArray &offset = *oit;
     void *src = (void *)((intptr_t)grid +
                          get1DOffset(offset, grid_size, num_dims) * elm_size);
     memcpy(src, subgrid, line_size);

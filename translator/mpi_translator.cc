@@ -44,7 +44,7 @@ MPITranslator::MPITranslator(const Configuration &config):
 void MPITranslator::CheckSizes() {
   // Check the grid sizes and dimensions
   global_num_dims_ = 0;
-  IntArray grid_max_size;
+  SizeArray grid_max_size;
   FOREACH (it, tx_->grid_new_map().begin(), tx_->grid_new_map().end()) {
     Grid *grid = it->second;
     // all grids must have static size
@@ -54,7 +54,7 @@ void MPITranslator::CheckSizes() {
       PSAbort(1);
     }
     global_num_dims_ = std::max(global_num_dims_, grid->getNumDim());
-    const IntVector& gsize = grid->static_size();
+    const SizeVector& gsize = grid->static_size();
     for (unsigned i = 0; i < gsize.size(); ++i) {
       grid_max_size[i] = std::max(grid_max_size[i], gsize[i]);
     }
@@ -63,7 +63,7 @@ void MPITranslator::CheckSizes() {
   LOG_DEBUG() << "Grid max size: " << grid_max_size << "\n";  
 
   // Check the domain sizes
-  IntVector domain_max_point;
+  SizeVector domain_max_point;
   for (int i = 0; i < PS_MAX_DIM; ++i) {
     domain_max_point.push_back(0);
   }
@@ -77,8 +77,8 @@ void MPITranslator::CheckSizes() {
         LOG_ERROR() << d->toString() << "\n";
         PSAbort(1);
       }
-      const IntVector &minp = d->regular_domain().min_point();
-      const IntVector &maxp = d->regular_domain().max_point();
+      const SizeVector &minp = d->regular_domain().min_point();
+      const SizeVector &maxp = d->regular_domain().max_point();
       for (int i = 0; i < d->num_dims(); ++i) {
         PSAssert(minp[i] >= 0);
         domain_max_point[i] = std::max(domain_max_point[i], maxp[i]);
@@ -513,11 +513,12 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
     indices.push_back(*it);
   }
 
-  SgFunctionCallExp *get_call = ref_rt_builder_->BuildGridGet(
-      g, indices, gt->getElmType());
-  si::replaceExpression(node, get_call, true);
+  SgExpression *get = rt_builder_->BuildGridGet(
+      g, rose_util::GetASTAttribute<GridType>(g),
+      &indices, NULL, false, false);
+  si::replaceExpression(node, get, true);
   rose_util::CopyASTAttribute<GridGetAttribute>(
-      get_call, node, false);  
+      get, node, false);  
   return true;
 }
 

@@ -25,11 +25,8 @@
 #include "physis/internal_common.h"
 #include "common/config.h"
 
-
 namespace physis {
 namespace runtime {
-
-using physis::util::IntArray;
 
 // Internal method to initialize common runtime components. This is
 // only called by the user-visible runtime initialize, i.e., PSInit.
@@ -41,7 +38,6 @@ int GetProcessDim(int *argc, char ***argv, IntArray &proc_size);
 
 bool ParseOption(int *argc, char ***argv, const string &opt_name,
                  int num_additional_args, vector<string> &opts);
-
 
 } // namespace runtime
 } // namespace physis

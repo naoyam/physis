@@ -46,16 +46,30 @@ extern "C" {
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   extern void __PSGridGet(__PSGrid *g, void *buf, ...);
 
-  inline PSIndexType __PSGridGetOffset1D(__PSGrid *g, PSIndexType i1) {
+  inline PSIndex __PSGridGetOffset1D(__PSGrid *g, PSIndex i1) {
     return i1;
   }
-  inline PSIndexType __PSGridGetOffset2D(__PSGrid *g, PSIndexType i1,
-                                         PSIndexType i2) {
+  inline PSIndex __PSGridGetOffset2D(__PSGrid *g, PSIndex i1,
+                                     PSIndex i2) {
     return i1 + i2 * PSGridDim(g, 0);
   }
-  inline PSIndexType __PSGridGetOffset3D(__PSGrid *g, PSIndexType i1,
-                                         PSIndexType i2, PSIndexType i3) {
+  inline PSIndex __PSGridGetOffset3D(__PSGrid *g, PSIndex i1,
+                                     PSIndex i2, PSIndex i3) {
     return i1 + i2 * PSGridDim(g, 0) + i3 * PSGridDim(g, 0) * PSGridDim(g, 1);
+  }
+
+  inline PSIndex __PSGridGetOffsetPeriodic1D(__PSGrid *g, PSIndex i1) {
+    return (i1 + PSGridDim(g, 0)) % PSGridDim(g, 0);
+  }
+  inline PSIndex __PSGridGetOffsetPeriodic2D(__PSGrid *g, PSIndex i1,
+                                                 PSIndex i2) {
+    return __PSGridGetOffsetPeriodic1D(g, i1) +
+        (i2 + PSGridDim(g, 1)) % PSGridDim(g, 1) * PSGridDim(g, 0);
+  }
+  inline PSIndex __PSGridGetOffsetPeriodic3D(__PSGrid *g, PSIndex i1,
+                                                 PSIndex i2, PSIndex i3) {
+    return __PSGridGetOffsetPeriodic2D(g, i1, i2) +
+        (i3 + PSGridDim(g, 2)) % PSGridDim(g, 2) * PSGridDim(g, 0) * PSGridDim(g, 1);
   }
 
   typedef void (*ReducerFunc)();

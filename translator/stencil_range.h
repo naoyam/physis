@@ -20,6 +20,7 @@ struct StencilIndex {
   int dim;
   ssize_t offset;
   StencilIndex(): dim(0), offset(0) {}
+  StencilIndex(int dim, ssize_t offset): dim(dim), offset(offset) {}  
   StencilIndex(const StencilIndex &si): dim(si.dim), offset(si.offset) {}  
   std::ostream &print(std::ostream &os) const {
     os << "(" << dim << ", " << offset << ")";
@@ -62,6 +63,7 @@ struct StencilIndex {
 
 typedef std::vector<StencilIndex> StencilIndexList;
 
+void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dim);
 
 class StencilIndexAttribute: public AstAttribute {
  public:
@@ -97,6 +99,7 @@ class StencilRegularIndexList {
   }
   ssize_t GetIndex(int dim) const;
   void SetIndex(int dim, ssize_t index);
+  int GetNumDims() const { return indices_.size(); }
   virtual ~StencilRegularIndexList() {}
   std::map<int, ssize_t> indices() { return indices_; }
   bool operator<(const StencilRegularIndexList &x) const {
@@ -155,7 +158,7 @@ class StencilRange {
   StencilIndexList* min_indices() { return min_indices_; }
   StencilIndexList* max_indices() { return max_indices_; }  
   bool IsNeighborAccess() const;
-  bool GetNeighborAccess(IntVector &forward, IntVector &backward);
+  bool GetNeighborAccess(IntVector &offset_min, IntVector &offset_max);
   bool IsNeighborAccessDiagonalAccessed() const;
   bool IsZero() const;
   // Returns true if indices with a unique dimension is given for each

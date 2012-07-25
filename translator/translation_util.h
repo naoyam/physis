@@ -20,7 +20,7 @@ SgType *BuildInt64Type(SgScopeStatement *scope=NULL);
 SgType *BuildIndexType(SgScopeStatement *scope=NULL);
 SgType *BuildIndexType2(SgScopeStatement *scope=NULL);
 
-SgExpression *BuildIndexVal(index_t v);
+SgExpression *BuildIndexVal(PSIndex v);
 
 SgType *BuildPSOffsetsType();
 SgVariableDeclaration *BuildPSOffsets(std::string name,
@@ -38,7 +38,8 @@ SgExpression *BuildFunctionCall(const std::string &name,
 std::string GetTypeName(SgType *ty);
 std::string GetTypeDimName(GridType *gt);
   
-
+SgType *GetBaseType(SgType *ty);
+  
 } // namespace translator
 } // namespace physis
 

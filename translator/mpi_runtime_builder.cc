@@ -70,17 +70,17 @@ SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
                                      bool is_periodic) {
   SgFunctionSymbol *load_neighbor_func
       = si::lookupFunctionSymbolInParentScopes("__PSLoadNeighbor");
-  IntVector fw, bw;
-  PSAssert(sr.GetNeighborAccess(fw, bw));
-  SgVariableDeclaration *fw_decl =
-      rose_util::DeclarePSVectorInt("fw_width", fw, scope);
-  SgVariableDeclaration *bw_decl =
-      rose_util::DeclarePSVectorInt("bw_width", bw, scope);
+  IntVector offset_min, offset_max;
+  PSAssert(sr.GetNeighborAccess(offset_min, offset_max));
+  SgVariableDeclaration *offset_min_decl =
+      rose_util::DeclarePSVectorInt("offset_min", offset_min, scope);
+  SgVariableDeclaration *offset_max_decl =
+      rose_util::DeclarePSVectorInt("offset_max", offset_max, scope);
   bool diag_needed = sr.IsNeighborAccessDiagonalAccessed();
   SgExprListExp *load_neighbor_args =
       sb::buildExprListExp(grid_var,
-                           sb::buildVarRefExp(fw_decl),
-                           sb::buildVarRefExp(bw_decl),
+                           sb::buildVarRefExp(offset_min_decl),                           
+                           sb::buildVarRefExp(offset_max_decl),
                            sb::buildIntVal(diag_needed),
                            reuse, overlap,
                            sb::buildIntVal(is_periodic));
@@ -118,7 +118,7 @@ SgFunctionCallExp *MPIRuntimeBuilder::BuildDomainSetLocalSize(
     SgExpression *dom) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSDomainSetLocalSize");
-  if (!isSgPointerType(dom->get_type())) {
+  if (!si::isPointerType(dom->get_type())) {
     dom = sb::buildAddressOfOp(dom);
   }
   SgExprListExp *args = sb::buildExprListExp(dom);

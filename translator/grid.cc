@@ -37,15 +37,14 @@ unsigned GridType::getNumDimFromTypeName(const string &tname) {
   }
 }
 
-bool GridType::isGridType(const SgType *ty) {
-  const SgTypedefType *tt = isSgTypedefType(ty);
+bool GridType::isGridType(SgType *ty) {
+  SgTypedefType *tt = isSgTypedefType(ty);
   // handle typedef'ed alias type too
   if (tt) {
     ty = tt->get_base_type();
   }
-  if (isSgPointerType(ty)) {
-    const SgPointerType *pt = isSgPointerType(ty);
-    ty = pt->get_base_type();
+  if (si::isPointerType(ty)) {
+    ty = si::getElementType(ty);
   }
   if (!isSgNamedType(ty)) return false;
   const string tn = isSgNamedType(ty)->get_name().getString();
@@ -60,7 +59,7 @@ bool GridType::isGridType(const string &t) {
 void Grid::identifySize(SgExpressionPtrList::const_iterator size_begin,
                         SgExpressionPtrList::const_iterator size_end) {
   int num_dim = gt->getNumDim();
-  if (rose_util::copyConstantFuncArgs<index_t>(
+  if (rose_util::copyConstantFuncArgs<size_t>(
           size_begin, size_end, static_size_) == num_dim) {
     has_static_size_ = true;
   } else {
@@ -122,8 +121,7 @@ void GridType::findElementType() {
       continue;
     }
     // OG_DEBUG() << "class: " << v->get_type()->class_name() << "\n";
-    SgPointerType *t =
-        isSgPointerType(v->get_type());
+    SgPointerType *t = isSgPointerType(v->get_type());
     assert(t);
     SgFunctionType *emit_func_type
         = isSgFunctionType(t->get_base_type());
@@ -222,6 +220,7 @@ SgExpression *Grid::BuildAttributeExpr() {
   return si::copyExpression(attribute_);
 }
 
+const std::string GridOffsetAttribute::name = "PSGridOffset";
 const std::string GridGetAttribute::name = "PSGridGet";
 const std::string GridEmitAttr::name = "PSGridEmit";
 

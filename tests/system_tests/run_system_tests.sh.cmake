@@ -12,19 +12,19 @@
 #
 
 ###############################################################
-WD=$PWD/test_output
+WD_BASE=$PWD/test_output
 FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
-CFLAGS="${CFLAGS} -g"
+CFLAGS="${CFLAGS} -g -Wno-unuused-variable"
 DIE_IMMEDIATELY=0
 ###############################################################
 set -u
 #set -e
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
 LOGFILE=$PWD/$(basename $0 .sh).log.$TIMESTAMP
-WD=$WD/$TIMESTAMP
+WD=$WD_BASE/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
 ORIGINAL_WD=$(pwd)
@@ -48,7 +48,7 @@ PHYSIS_NLP=1
 EXECUTE_WITH_VALGRIND=0
 
 PRIORITY=1
-CONFIG=""
+CONFIG_ARG=""
 
 function print_error()
 {
@@ -75,7 +75,14 @@ function fail()
     fi
 }
 
-function finish()
+function print_results_short()
+{
+    echo  -n "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS"
+    echo  -n ", [COMPILE] #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE"
+    echo  ", [EXECUTE] #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+}
+
+function print_results()
 {
     echo  "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
     echo  "[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
@@ -84,6 +91,11 @@ function finish()
     if [ $NUM_WARNING -gt 0 ]; then
 		echo "$NUM_WARNING warning(s)"
     fi
+}
+
+function finish()
+{
+	print_results
     cd $ORIGINAL_DIRECTORY
     if [ $FLAG_KEEP_OUTPUT -eq 0 ]; then
 		rm -rf $WD
@@ -111,6 +123,12 @@ function exit_error()
     finish
 }
 
+function clear_output()
+{
+	rm -f $ORIGINAL_WD/$(basename $0 .sh).log.*
+	rm -rf $WD_BASE
+}
+
 function abs_path()
 {
     local path=$1
@@ -129,33 +147,71 @@ function generate_empty_translation_configuration()
 
 function generate_translation_configurations_ref()
 {
-    local configs=""    
-    if [ $# -gt 0 ]; then
-		configs=$*
-    else
-		configs=$(generate_empty_translation_configuration)
-    fi
     local new_configs=""
     local idx=0
-    local c=config.cuda.$idx
-	idx=$(($idx + 1))
-    echo "OPT_KERNEL_INLINING = false" >> $c
-    echo "OPT_LOOP_PEELING = false" >> $c
+    local c=config.ref.$idx
+	touch $c
     new_configs="$new_configs $c"
-
-    c=config.cuda.$idx
 	idx=$(($idx + 1))
-    echo "OPT_KERNEL_INLINING = true" >> $c
-    echo "OPT_LOOP_PEELING = false" >> $c
-    new_configs="$new_configs $c"
 
-    c=config.cuda.$idx
+    c=config.ref.$idx
+    echo "OPT_KERNEL_INLINING = true" > $c
+    new_configs="$new_configs $c"
 	idx=$(($idx + 1))
-    echo "OPT_LOOP_PEELING = true" >> $c
-    new_configs="$new_configs $c"
 
+    c=config.ref.$idx
+    echo "OPT_LOOP_PEELING = true" > $c
+    new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_OFFSET_CSE = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+    echo "OPT_OFFSET_CSE = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_OFFSET_SPATIAL_CSE = true" > $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_REGISTER_BLOCKING = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c	
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+
+	c=config.ref.$idx
+    echo "OPT_UNCONDITIONAL_GET = true" > $c
+    echo "OPT_OFFSET_COMP = true" >> $c
+    echo "OPT_LOOP_OPT = true" >> $c		
+	new_configs="$new_configs $c"
+	idx=$(($idx + 1))
+	
     echo $new_configs
 }
+
 function generate_translation_configurations_cuda()
 {
     local configs=""    
@@ -164,7 +220,7 @@ function generate_translation_configurations_cuda()
     else
 		configs=$(generate_empty_translation_configuration)
     fi
-    local pre_calc='true false'
+    local pre_calc='false'
     local bsize="64,4,1 32,8,1"
     local new_configs=""
     local idx=0
@@ -181,20 +237,90 @@ function generate_translation_configurations_cuda()
 		done
     done
     for config in $new_configs; do
+		# OPT_KERNEL_INLINING
         local c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_KERNEL_INLINING = true" >> $c
-        echo "OPT_LOOP_PEELING = false" >> $c
         new_configs="$new_configs $c"
+
+		# OPT_LOOP_PEELING
         c=config.cuda.$idx
 		idx=$(($idx + 1))
         cat $config > $c
         echo "OPT_LOOP_PEELING = true" >> $c
         new_configs="$new_configs $c"
-        echo "OPT_KERNEL_INLINING = false" >> $config
-        echo "OPT_LOOP_PEELING = false" >> $config
-     done	     
+
+		# OPT_REGISTER_BLOCKING
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_UNCONDITIONAL_GET
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_REGISTER_BLOCKING with UNCONDITIONAL_GET
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_OFFSET_CSE
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_OFFSET_CSE = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_OFFSET_CSE and OPT_REGISTER_BLOCKING
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c
+        echo "OPT_OFFSET_CSE = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_OFFSET_SPATIAL_CSE
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_OFFSET_SPATIAL_CSE = true" >> $c
+        new_configs="$new_configs $c"
+
+		# OPT_REGISTER_BLOCKING and OPT_OFFSET_COMP
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
+        new_configs="$new_configs $c"
+
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c		
+        new_configs="$new_configs $c"
+
+        c=config.cuda.$idx
+		idx=$(($idx + 1))
+        cat $config > $c
+        echo "OPT_REGISTER_BLOCKING = true" >> $c		
+        echo "OPT_OFFSET_COMP = true" >> $c
+        echo "OPT_UNCONDITIONAL_GET = true" >> $c
+        echo "OPT_LOOP_OPT = true" >> $c
+        new_configs="$new_configs $c"
+		
+    done
     echo $new_configs
 }
 
@@ -291,7 +417,7 @@ function compile()
 				return 0
 			fi
 			src_file="$src_file_base".cu
-			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS $CFLAGS &&
+			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS -Xcompiler $(echo $CFLAGS|sed 's/ /,/g') &&
 			nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
 				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
 			;;
@@ -387,6 +513,9 @@ function do_mpirun()
     fi
     local proc_dim=$(echo $proc_dim_list | cut -d, -f$dim)
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
+	# make sure the binary is availale on each node; without this mpirun often fails
+	# if mpi-cuda is used
+    $MPIRUN -np $np $mfile_option --output-filename executable-copy $1
     echo "[EXECUTE] $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP" >&2
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP
 }
@@ -398,10 +527,10 @@ function execute()
     echo  "[EXECUTE] Executing $exename"
     case $target in
 		ref)
-			./$exename > $exename.out
+			./$exename > $exename.out 2> $exename.err
 			;;
 		cuda)
-			./$exename > $exename.out
+			./$exename > $exename.out 2> $exename.err    
 			;;
 		mpi)
 			do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    
@@ -415,7 +544,6 @@ function execute()
     esac
     if [ $? -ne 0 ] || grep -q "orted was unable to" $exename.err; then
 		cat $exename.err
-		rm $exename.out $exename.err $exename		
 		return 1
     fi
 	rm $exename		
@@ -481,6 +609,8 @@ function print_usage()
 	echo -e "\t\tRead configuration option from the file."
 	echo -e "\t-q, --quit"
 	echo -e "\t\tQuit immediately upon error."
+	echo -e "\t--clear"
+	echo -e "\t\tClear output files."
 }
 
 function filter_test_case_by_priority()
@@ -521,7 +651,7 @@ function get_test_cases()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
 		print_usage
@@ -581,11 +711,16 @@ function get_test_cases()
 				shift 2
 				;;
 			--config)
-				CONFIG=$(abs_path $2)
+				CONFIG_ARG=$(abs_path $2)
 				shift 2
 				;;
 			-h|--help)
 				print_usage
+				exit 0
+				shift
+				;;
+			--clear)
+				clear_output
 				exit 0
 				shift
 				;;
@@ -615,8 +750,10 @@ function get_test_cases()
 			SHORTNAME=$(basename $TEST)
 			DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
-			if [ "x$CONFIG" = "x" ]; then
+			if [ "x$CONFIG_ARG" = "x" ]; then
 				CONFIG=$(generate_translation_configurations $TARGET)
+			else
+				CONFIG=$CONFIG_ARG
 			fi
 			for cfg in $CONFIG; do
 				echo "Testing with $SHORTNAME ($DESC)"
@@ -665,6 +802,7 @@ function get_test_cases()
 						continue
 					fi
 				done
+				print_results_short			
 			done
 		done
     done

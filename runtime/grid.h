@@ -18,12 +18,10 @@
 namespace physis {
 namespace runtime {
 
-using physis::util::IntArray;
-
 class Grid {
  protected:
   Grid(PSType type, int elm_size, int num_dims,
-       const IntArray &size,
+       const IndexArray &size,
        bool double_buffering, int attr):
       type_(type), elm_size_(elm_size), num_dims_(num_dims),
       size_(size),
@@ -39,7 +37,7 @@ class Grid {
   virtual ~Grid();
 
   static Grid* Create(PSType type, int elm_size, int num_dims,
-                      const IntArray &size,
+                      const IndexArray &size,
                       bool double_buffering, int attr) {
     Grid *g = new Grid(type, elm_size, num_dims, size,
                        double_buffering, attr);
@@ -59,15 +57,15 @@ class Grid {
   int num_dims() const { return num_dims_; }
   size_t num_elms_;
   virtual size_t num_elms() {return num_elms_; }
-  IntArray size_;
-  const IntArray &size() const { return size_; }
+  IndexArray size_;
+  const IndexArray &size() const { return size_; }
   bool double_buffering_;
   char *_data() { return data_[0]; }
   char *_data_emit() { return data_[1]; }  
   Buffer *buffer() { return data_buffer_[0]; }
-  virtual void *GetAddress(const IntArray &indices);    
-  virtual void Set(const IntArray &indices, const void *buf);
-  virtual void Get(const IntArray &indices, void *buf); 
+  virtual void *GetAddress(const IndexArray &indices);    
+  virtual void Set(const IndexArray &indices, const void *buf);
+  virtual void Get(const IndexArray &indices, void *buf); 
   bool AttributeSet(enum PS_GRID_ATTRIBUTE);
 
   //! Reduce the grid with operator op.

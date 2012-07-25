@@ -1,11 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
-
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "runtime/runtime_common.h"
 #include "runtime/runtime_common_cuda.h"
@@ -139,21 +136,21 @@ extern "C" {
 #endif    
   }
 
-  PSDomain1D PSDomain1DNew(index_t minx, index_t maxx) {
+  PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
     PSDomain1D d = {{minx}, {maxx}, {minx}, {maxx}};
     return d;
   }
   
-  PSDomain2D PSDomain2DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy) {
+  PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy) {
     PSDomain2D d = {{minx, miny}, {maxx, maxy},
                     {minx, miny}, {maxx, maxy}};
     return d;
   }
 
-  PSDomain3D PSDomain3DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy,
-                           index_t minz, index_t maxz) {
+  PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy,
+                           PSIndex minz, PSIndex maxz) {
     PSDomain3D d = {{minx, miny, minz}, {maxx, maxy, maxz},
                     {minx, miny, minz}, {maxx, maxy, maxz}};
     return d;
@@ -163,10 +160,10 @@ extern "C" {
     int nd = g->num_dims;
     va_list vl;
     va_start(vl, buf);
-    index_t offset = 0;
-    index_t base_offset = 1;
+    PSIndex offset = 0;
+    PSIndex base_offset = 1;
     for (int i = 0; i < nd; ++i) {
-      index_t idx = va_arg(vl, index_t);
+      PSIndex idx = va_arg(vl, PSIndex);
       offset += idx * base_offset;
       base_offset *= g->dim[i];
     }

@@ -52,12 +52,49 @@ class RuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
-  
+
+  //!
+  /*!
+    \param offset_exprs Free AST node of offset expressions
+    
+    Parameter offset_exprs will be used in the returned offset
+    expression without cloning.
+   */
+  virtual SgExpression *BuildGridOffset(
+      SgExpression *gvref, int num_dim,
+      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      bool is_periodic,
+      const StencilIndexList *sil) = 0;
+  //!
+#if 0  
+  /*!
+    \param offset_exprs Free AST node of offset expressions
+    
+    Parameter offset_exprs will be used in the returned offset
+    expression without cloning.
+   */
   virtual SgExpression *BuildGet(  
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
-    TranslationContext *tx, bool is_kernel) = 0;
+    TranslationContext *tx, bool is_kernel,
+    bool is_periodic) = 0;
+#endif
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic) = 0;
+
+  virtual SgBasicBlock *BuildGridSet(
+      SgExpression *grid_var, int num_dims,
+      const SgExpressionPtrList &indices, SgExpression *val) = 0;
+
+  virtual SgFunctionCallExp *BuildGridGetID(SgExpression *grid_var) = 0;
+  
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
   }

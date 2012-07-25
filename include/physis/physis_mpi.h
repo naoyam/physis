@@ -39,7 +39,7 @@ extern "C" {
   typedef __PSGridMPI *PSGrid1DDouble;
   typedef __PSGridMPI *PSGrid2DDouble;
   typedef __PSGridMPI *PSGrid3DDouble;
-  extern index_t PSGridDim(void *p, int d);
+  extern PSIndex PSGridDim(void *p, int d);
 #endif
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
@@ -61,51 +61,51 @@ extern "C" {
 
   extern int __PSBcast(void *buf, size_t size);
 
-  extern float *__PSGridGetAddrFloat1D(__PSGridMPI *g, ssize_t x);
-  extern float *__PSGridGetAddrFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern float *__PSGridGetAddrFloat3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z);
-  extern double *__PSGridGetAddrDouble1D(__PSGridMPI *g, ssize_t x);
-  extern double *__PSGridGetAddrDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern double *__PSGridGetAddrDouble3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z);
-  extern float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, ssize_t x);
-  extern double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, ssize_t x);
-  extern float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, ssize_t x,
-                                             ssize_t y, ssize_t z);
-  extern double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, ssize_t x,
-                                               ssize_t y, ssize_t z);
-  extern float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, ssize_t x);
-  extern double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, ssize_t x);
-  extern float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y);
-  extern float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, ssize_t x,
-                                        ssize_t y, ssize_t z);
-  extern double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, ssize_t x,
-                                          ssize_t y, ssize_t z);
+  extern float *__PSGridGetAddrFloat1D(__PSGridMPI *g, PSIndex x);
+  extern float *__PSGridGetAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern float *__PSGridGetAddrFloat3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z);
+  extern double *__PSGridGetAddrDouble1D(__PSGridMPI *g, PSIndex x);
+  extern double *__PSGridGetAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern double *__PSGridGetAddrDouble3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z);
+  extern float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, PSIndex x);
+  extern double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, PSIndex x);
+  extern float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, PSIndex x,
+                                             PSIndex y, PSIndex z);
+  extern double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, PSIndex x,
+                                               PSIndex y, PSIndex z);
+  extern float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, PSIndex x);
+  extern double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, PSIndex x);
+  extern float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
+  extern float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, PSIndex x,
+                                        PSIndex y, PSIndex z);
+  extern double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, PSIndex x,
+                                          PSIndex y, PSIndex z);
 
 
   
   extern void __PSLoadNeighbor(__PSGridMPI *g,
-                               const PSVectorInt halo_fw_width,
-                               const PSVectorInt halo_bw_width,
+                               const PSVectorInt offset_min,
+                               const PSVectorInt offset_max,
                                int diagonal, int reuse,
                                int overlap, int periodic);
   extern void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
                               int reuse);
   extern void __PSLoadSubgrid2D(__PSGridMPI *g, 
-                                int min_dim1, index_t min_offset1,
-                                int min_dim2, index_t min_offset2,
-                                int max_dim1, index_t max_offset1,
-                                int max_dim2, index_t max_offset2,
+                                int min_dim1, PSIndex min_offset1,
+                                int min_dim2, PSIndex min_offset2,
+                                int max_dim1, PSIndex max_offset1,
+                                int max_dim2, PSIndex max_offset2,
                                 int reuse);
   extern void __PSLoadSubgrid3D(__PSGridMPI *g,
-                                int min_dim1, index_t min_offset1,
-                                int min_dim2, index_t min_offset2,
-                                int min_dim3, index_t min_offset3,
-                                int max_dim1, index_t max_offset1,
-                                int max_dim2, index_t max_offset2,
-                                int max_dim3, index_t max_offset3,
+                                int min_dim1, PSIndex min_offset1,
+                                int min_dim2, PSIndex min_offset2,
+                                int min_dim3, PSIndex min_offset3,
+                                int max_dim1, PSIndex max_offset1,
+                                int max_dim2, PSIndex max_offset2,
+                                int max_dim3, PSIndex max_offset3,
                                 int reuse);
   extern void __PSActivateRemoteGrid(__PSGridMPI *g,
                                      int active);

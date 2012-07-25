@@ -24,7 +24,7 @@ ReferenceTranslator::ReferenceTranslator(const Configuration &config):
     flag_constant_grid_size_optimization_(true),
     validate_ast_(true),
     grid_create_name_("__PSGridNew"),
-    ref_rt_builder_(NULL) {
+    rt_builder_(NULL) {
   target_specific_macro_ = "PHYSIS_REF";
 }
 
@@ -92,12 +92,12 @@ void ReferenceTranslator::ValidateASTConsistency() {
 void ReferenceTranslator::SetUp(SgProject *project,
                                 TranslationContext *context) {
   Translator::SetUp(project, context);
-  ref_rt_builder_ = new ReferenceRuntimeBuilder(global_scope_);  
+  rt_builder_ = new ReferenceRuntimeBuilder(global_scope_);  
 }
 
 void ReferenceTranslator::Finish() {
-  delete ref_rt_builder_;
-  ref_rt_builder_ = NULL;
+  if (rt_builder_) delete rt_builder_;
+  rt_builder_ = NULL;
   Translator::Finish();
 }
 
@@ -236,9 +236,11 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
     __PSGridGetOffsetND(g, i)
   */
   SgExpression *offset = NULL;
+#if 0  
   for (int i = 1; i <= num_dim; i++) {
     SgExpression *dim_offset = si::copyExpression(
         args->get_expressions()[i-1]);
+    goa->AppendIndex(dim_offset);
     if (is_periodic) {
       const StencilIndex &si = sil->at(i-1);
       // si.dim is assumed to be equal to i, i.e., the i'th index
@@ -251,16 +253,16 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
         dim_offset = sb::buildModOp(
             sb::buildAddOp(
                 dim_offset,
-                ref_rt_builder_->BuildGridDim(
+                rt_builder_->BuildGridDim(
                     sb::buildVarRefExp(gv->get_name()), i)),
-            ref_rt_builder_->BuildGridDim(
+            rt_builder_->BuildGridDim(
                 sb::buildVarRefExp(gv->get_name()), i));
       }
     }
     for (int j = 1; j < i; j++) {
       dim_offset = sb::buildMultiplyOp(
           dim_offset,
-          ref_rt_builder_->BuildGridDim(
+          rt_builder_->BuildGridDim(
               sb::buildVarRefExp(gv->get_name()), j));
     }
     if (offset) {
@@ -269,6 +271,19 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
       offset = dim_offset;
     }
   }
+#else
+  // Use the getoffset function
+  SgExpressionPtrList offset_args;
+  for (int i = 1; i <= num_dim; i++) {
+    SgExpression *dim_offset = si::copyExpression(
+        args->get_expressions()[i-1]);
+    offset_args.push_back(dim_offset);    
+  }
+  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);  
+  offset = rt_builder_->BuildGridOffset(g, num_dim,
+                                        &offset_args,
+                                        is_kernel, is_periodic, sil);
+#endif
   return offset;
 }
 
@@ -281,19 +296,20 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   */
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
-  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);              
-  SgExpression *offset = BuildOffset(gv, nd,
-                                     node->get_args(),
-                                     is_kernel,
-                                     is_periodic,
-                                     tx_->findStencilIndex(node), 
-                                     scope);
+  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
+  
+  SgExpression *offset = BuildOffset(
+      gv, nd, node->get_args(),
+      is_kernel, is_periodic,
+      rose_util::GetASTAttribute<GridGetAttribute>(node)->GetStencilIndexList(),
+      scope);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpression *p0 = sb::buildArrowExp(
       g, sb::buildVarRefExp("p0", grid_decl_->get_definition()));
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
+  rose_util::GetASTAttribute<GridGetAttribute>(p0)->offset() = offset;
   si::replaceExpression(node, p0);
 }
 
@@ -314,7 +330,9 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
         sb::buildVarRefExp(p, getContainingScopeStatement(node)));
   }
 
-  SgExpression *offset = BuildOffset(gv, nd, args, true, false, NULL,
+  StencilIndexList sil;
+  StencilIndexListInitSelf(sil, nd);
+  SgExpression *offset = BuildOffset(gv, nd, args, true, false, &sil,
                                      getContainingScopeStatement(node));
   SgVarRefExp *g =
       sb::buildVarRefExp(gv->get_name(),
@@ -368,7 +386,7 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {
     si::appendExpression(stencil_fields, exp);
     if (GridType::isGridType(exp->get_type())) {
       si::appendExpression(stencil_fields,
-                           ref_rt_builder_->BuildGridGetID(exp));
+                           rt_builder_->BuildGridGetID(exp));
     }
   }
 
@@ -640,7 +658,10 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
 
 SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
   SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
-  SgType *stencil_type = sb::buildPointerType(s->stencil_type());
+  SgType *stencil_type =
+      sb::buildConstType(sb::buildPointerType(
+          sb::buildConstType(s->stencil_type())));
+  //SgType *stencil_type = sb::buildPointerType(s->stencil_type());
   SgInitializedName *stencil_param =
       sb::buildInitializedName(getStencilArgName(),
                                stencil_type);
@@ -819,7 +840,7 @@ SgExpression *ReferenceTranslator::BuildDomMaxRef(SgExpression *domain)
   SgExpression *field = sb::buildVarRefExp("local_max",
                                            dom_decl->get_definition());
   //SgExpression *field = sb::buildVarRefExp("local_max");
-  if (isSgPointerType(domain->get_type())) {
+  if (si::isPointerType(domain->get_type())) {
     return sb::buildArrowExp(domain, field);
   } else {
     return sb::buildDotExp(domain, field);
@@ -833,11 +854,12 @@ SgExpression *ReferenceTranslator::BuildDomMinRef(SgExpression *domain)
       isSgClassDeclaration(
           isSgClassType(dom_type_->get_base_type())->get_declaration()->
           get_definingDeclaration());
+  LOG_DEBUG() << "domain: " << domain->unparseToString() << "\n";
   SgExpression *field = sb::buildVarRefExp("local_min",
                                            dom_decl->get_definition());
   SgType *ty = domain->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  if (isSgPointerType(ty)) {
+  if (si::isPointerType(ty)) {
     return sb::buildArrowExp(domain, field);
   } else {
     return sb::buildDotExp(domain, field);
@@ -896,7 +918,7 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
     SgExpression *stencil_ref, SgExpression *field) const {
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  if (isSgPointerType(ty)) {
+  if (si::isPointerType(ty)) {
     return sb::buildArrowExp(stencil_ref, field);
   } else {
     return sb::buildDotExp(stencil_ref, field);
@@ -907,23 +929,24 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
     SgExpression *stencil_ref, string name) const {
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
-  SgClassType *stencil_type = NULL;
-  if (isSgPointerType(ty)) {
-    stencil_type =
-        isSgClassType(isSgPointerType(
-            stencil_ref->get_type())->get_base_type());
+  SgType *stencil_type = NULL;
+  if (si::isPointerType(ty)) {
+    stencil_type = si::getElementType(stencil_ref->get_type());
   } else {
-    stencil_type =
-        isSgClassType(stencil_ref->get_type());
+    stencil_type = stencil_ref->get_type();
   }
+  if (isSgModifierType(stencil_type)) {
+    stencil_type = isSgModifierType(stencil_type)->get_base_type();
+  }
+  SgClassType *stencil_class_type = isSgClassType(stencil_type);
   // If the type is resolved to the actual class type, locate the
   // actual definition of field. Otherwise, temporary create an
   // unbound reference to the name.
   SgVarRefExp *field = NULL;
-  if (stencil_type) {
+  if (stencil_class_type) {
     SgClassDefinition *stencil_def =
         isSgClassDeclaration(
-          stencil_type->get_declaration()->get_definingDeclaration())->
+            stencil_class_type->get_declaration()->get_definingDeclaration())->
         get_definition();
     field = sb::buildVarRefExp(name, stencil_def);
   } else {
@@ -947,8 +970,8 @@ void ReferenceTranslator::translateSet(SgFunctionCallExp *node,
     indices.push_back(*it);
   }
   
-  SgBasicBlock *set_exp = ref_rt_builder_->BuildGridSet(g, nd, indices,
-                                                       args[nd]);
+  SgBasicBlock *set_exp = rt_builder_->BuildGridSet(g, nd, indices,
+                                                    args[nd]);
   SgStatement *parent_stmt = isSgStatement(node->get_parent());
   PSAssert(parent_stmt);
   

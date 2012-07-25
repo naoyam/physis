@@ -35,6 +35,7 @@ devices and network connections.
 
 ## News & Updates
 
+* 25 Jul 2012 - Version 0.4 available.
 * 24 Apr 2012 - Version 0.3 available.
 * 1 Jan 2012 - Version 0.2 available.
 * 22 Nov 2011 - Version 0.1 available.
@@ -86,6 +87,8 @@ See docs/faq.md.
 The corresponding source of each version is attached with a Git tag
 with the version number.
 
+* Version 0.4 (25 Jul 2012)
+    * Single GPU tuning. Near hand-tuned performance with 7-pt diffusion.
 * Version 0.3 (24 Apr 2012)
     * ROSE usage changed to imporve robustness of AST translation.
 * Version 0.2 (1 Jan 2012)
@@ -100,7 +103,7 @@ with the version number.
 
 ## License (BSD License)
 
-Copyright (c) 2012, Naoya Maruyama
+Copyright (c) 2011-2012, Naoya Maruyama
 
 All rights reserved.
 
@@ -114,10 +117,9 @@ met:
   notice, this list of conditions and the following disclaimer in the
   documentation and/or other materials provided with the
   distribution. 
-* Neither the name of the Tokyo Institute of Technology nor the names
-  of its contributors may be used to endorse or promote products
-  derived from this software without specific prior written
-  permission. 
+* Neither the name of RIKEN AICS nor the names of its contributors may
+  be used to endorse or promote products derived from this software
+  without specific prior written permission. 
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT

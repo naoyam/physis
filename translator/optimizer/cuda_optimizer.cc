@@ -13,17 +13,14 @@ namespace physis {
 namespace translator {
 namespace optimizer {
 
-void CUDAOptimizer::Stage1() {
+void CUDAOptimizer::DoStage1() {
 }
 
-void CUDAOptimizer::Stage2() {
-  if (config_->LookupFlag("OPT_KERNEL_INLINING") ||
-      config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+void CUDAOptimizer::DoStage2() {
+  if (config_->LookupFlag("OPT_KERNEL_INLINING")) {
     pass::kernel_inlining(proj_, tx_, builder_);
   }
-  if (config_->LookupFlag("OPT_LOOP_PEELING") ||
-      config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
+  if (config_->LookupFlag("OPT_LOOP_PEELING")) {
     pass::loop_peeling(proj_, tx_, builder_);
   }
   if (config_->LookupFlag("OPT_REGISTER_BLOCKING")) {
@@ -31,6 +28,16 @@ void CUDAOptimizer::Stage2() {
   }
   if (config_->LookupFlag("OPT_UNCONDITIONAL_GET")) {
     pass::unconditional_get(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_OFFSET_CSE")) {
+    pass::offset_cse(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_OFFSET_SPATIAL_CSE")) {
+    pass::offset_spatial_cse(proj_, tx_, builder_);
+  }
+  if (config_->LookupFlag("OPT_LOOP_OPT")) {
+    pass::loop_opt(proj_, tx_, builder_);
+    pass::premitive_optimization(proj_, tx_, builder_);
   }
 }
 

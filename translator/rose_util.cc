@@ -11,9 +11,6 @@
 namespace sb = SageBuilder;
 namespace si = SageInterface;
 
-using namespace physis;
-using namespace physis::util;
-
 namespace physis {
 namespace translator {
 namespace rose_util {
@@ -135,18 +132,27 @@ SgInitializedName *getInitializedName(SgVarRefExp *var) {
   return refDecl;
 }
 
+static int unique_name_var_index = 0;
 string generateUniqueName(SgScopeStatement *scope, const string &prefix) {
   if (scope == NULL) {
-    scope = SageBuilder::topScopeStack();
+    //scope = SageBuilder::topScopeStack();
+    scope = si::getFirstGlobalScope(si::getProject());
   }
   ROSE_ASSERT(scope);
+  string name;  
+#if 0  
   SgSymbolTable *symbol_table = scope->get_symbol_table();
-  string name;
   int post_fix = symbol_table->size();
   do {
     name = prefix + toString(post_fix);
     post_fix++;
   } while (symbol_table->exists(name));
+#else
+  do {
+    int index = unique_name_var_index++;
+    name = prefix + toString(index);
+  } while (si::lookupVariableSymbolInParentScopes(name, scope));
+#endif
   return name;
 }
 
@@ -296,7 +302,7 @@ SgNode *FindCommonParent(SgNode *n1, SgNode *n2) {
 
 SgExpression *BuildFieldRef(
     SgExpression *struct_var, SgExpression *field) {
-  if (isSgPointerType(struct_var->get_type())) {
+  if (si::isPointerType(struct_var->get_type())) {
     return sb::buildArrowExp(struct_var, field);
   } else {
     return sb::buildDotExp(struct_var, field);
@@ -340,6 +346,22 @@ void ReplaceFuncBody(SgFunctionDeclaration *func,
   func = isSgFunctionDeclaration(func->get_definingDeclaration());
   SgBasicBlock *cur_body = func->get_definition()->get_body();
   si::replaceStatement(cur_body, new_body);
+}
+
+SgGlobal *GetGlobalScope() {
+  SgGlobal *g = si::getFirstGlobalScope(si::getProject());
+  PSAssert(g);
+  return g;
+}
+
+SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl) {
+  SgAssignInitializer *asinit =
+      isSgAssignInitializer(
+          vdecl->get_definition()->get_vardefn()->get_initializer());
+  PSAssert(asinit);
+  SgExpression *rhs =  asinit->get_operand();
+  PSAssert(rhs);
+  return rhs;
 }
 
 }  // namespace rose_util

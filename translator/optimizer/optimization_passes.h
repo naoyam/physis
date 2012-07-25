@@ -22,6 +22,17 @@ inline void pre_process(
   LOG_INFO() << "OPT: " << pass_name << "\n";
 }
 
+inline void post_process(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    const char *pass_name) {
+  // Validate AST
+  if (!getenv("NOASTCHECK")) {
+    LOG_DEBUG() << "Validating AST\n";    
+    AstTests::runAllTests(proj);
+  }
+}
+
 
 //! Do-nothing optimization pass.
 /*!
@@ -29,6 +40,16 @@ inline void pre_process(
   @param tx The translation context built for the AST.
  */
 extern void null_optimization(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
+//! Apply premitive optimizations
+/*!
+  @proj The whole AST.
+  @param tx The translation context built for the AST.
+ */
+extern void premitive_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
@@ -123,6 +144,31 @@ extern void offset_cse(
   
  */
 extern void unconditional_get(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
+
+//! Apply CSE to offset calculation.
+/*!
+ */
+extern void offset_cse(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
+//! Apply CSE to offset calculation across loop iterations.
+/*!
+ */
+extern void offset_spatial_cse(
+    SgProject *proj,
+    physis::translator::TranslationContext *tx,
+    physis::translator::RuntimeBuilder *builder);
+
+//! Miscellaneous loop optimizations
+/*!
+ */
+extern void loop_opt(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);

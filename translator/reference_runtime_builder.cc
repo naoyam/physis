@@ -19,7 +19,7 @@ namespace translator {
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
     SgScopeStatement *global_scope):
     RuntimeBuilder(global_scope) {
-  PSAssert(index_t_ = si::lookupNamedTypeInParentScopes("index_t", gs_));
+  PSAssert(index_t_ = si::lookupNamedTypeInParentScopes(PS_INDEX_TYPE_NAME, gs_));
 }
 
 const std::string
@@ -60,23 +60,26 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
   return tb;
 }
 
-SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGet(
-    SgExpression *grid_var, const SgExpressionPtrList &indices,
-    SgType *elm_type) {
-  
-  SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes(
-          "__PSGridGet" + GetTypeName(elm_type));
-  PSAssert(fs);
-  SgExprListExp *args = sb::buildExprListExp(
-      grid_var);
-  FOREACH (it, indices.begin(), indices.end()) {
-    si::appendExpression(args,
-                         sb::buildCastExp(
-                             si::copyExpression(*it), index_t_));
-  }
-  SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
-  return fc;
+SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,
+    GridType *gt,
+    SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,    
+    bool is_kernel,
+    bool is_periodic) {
+  SgExpression *offset =
+      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+                      is_kernel, is_periodic, sil);
+  SgExpression *p0 = sb::buildArrowExp(
+      si::copyExpression(gvref), sb::buildVarRefExp("p0"));
+  si::fixVariableReferences(p0);
+  //GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->elm_type()));
+  p0 = sb::buildPntrArrRefExp(p0, offset);
+  GridGetAttribute *gga = new GridGetAttribute(NULL, gt->num_dim(), is_kernel,
+                                               sil);
+  rose_util::AddASTAttribute<GridGetAttribute>(p0, gga);
+  return p0;
 }
 
 SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
@@ -99,7 +102,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
     SgFunctionDeclaration *run_kernel) {
   SgInitializedName *stencil_param = run_kernel->get_args()[0];
   SgNamedType *type = isSgNamedType(
-      isSgPointerType(stencil_param->get_type())->get_base_type());
+      GetBaseType(stencil_param->get_type()));
   PSAssert(type);
   SgClassDeclaration *stencil_class_decl
       = isSgClassDeclaration(type->get_declaration());
@@ -119,23 +122,35 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
   return grid_ref;
 }
 
-SgExpression *ReferenceRuntimeBuilder::BuildOffset(
-    SgInitializedName *gv,
+SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
+    SgExpression *gvref,
     int num_dim,
-    SgExprListExp *offset_exprs,
+    SgExpressionPtrList *offset_exprs,
     bool is_kernel,
-    SgScopeStatement *scope) {
+    bool is_periodic,
+    const StencilIndexList *sil) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  std::string func_name =
-      "__PSGridGetOffset" + toString(num_dim) + "D";
-  SgExprListExp *func_args = isSgExprListExp(
-      si::deepCopyNode(offset_exprs));
-  func_args->prepend_expression(
-      sb::buildVarRefExp(gv->get_name(), scope));
-  return sb::buildFunctionCallExp(func_name, GetIndexType(),
-                                  func_args);
+  GridOffsetAttribute *goa = new GridOffsetAttribute(
+      num_dim, is_periodic, sil, gvref);
+  std::string func_name = "__PSGridGetOffset";
+  if (is_periodic) func_name += "Periodic";
+  func_name += toString(num_dim) + "D";
+  SgExprListExp *offset_params = sb::buildExprListExp(gvref);
+  FOREACH (it, offset_exprs->begin(),
+           offset_exprs->end()) {
+    si::appendExpression(offset_params,
+                         *it);
+    goa->AppendIndex(*it);
+  }
+  SgFunctionSymbol *fs
+      = si::lookupFunctionSymbolInParentScopes(func_name);
+  SgFunctionCallExp *offset_fc =
+      sb::buildFunctionCallExp(fs, offset_params);
+  rose_util::AddASTAttribute<GridOffsetAttribute>(
+      offset_fc, goa);
+  return offset_fc;
 }
 
 SgClassDeclaration *ReferenceRuntimeBuilder::GetGridDecl() {
@@ -147,15 +162,17 @@ SgClassDeclaration *ReferenceRuntimeBuilder::GetGridDecl() {
   return isSgClassDeclaration(anont->get_declaration());
 }
 
+/*
 SgExpression *ReferenceRuntimeBuilder::BuildGet(
     SgInitializedName *gv,
     SgExprListExp *offset_exprs,
     SgScopeStatement *scope,
-    TranslationContext *tx, bool is_kernel) {
+    TranslationContext *tx, bool is_kernel,
+    bool is_periodic) {
   GridType *gt = tx->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgExpression *offset = BuildOffset(
-      gv, nd, offset_exprs, is_kernel, scope);
+      gv, nd, offset_exprs, is_kernel, is_periodic, scope);
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgClassDeclaration *grid_decl = GetGridDecl();
   SgExpression *buf =
@@ -168,6 +185,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGet(
   //rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
   return elm_val;
 }
+*/
 
 
 } // namespace translator

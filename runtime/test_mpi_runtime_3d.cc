@@ -25,8 +25,8 @@ void test0() {
     data[i] = i;
   }
   print_grid<float>(g, gs->my_rank(), std::cerr);
-  gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false, false);
+  gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                         UnsignedArray(halo), false, false);
   print_grid<float>(g, gs->my_rank(), std::cerr);
   PSPrintInternalInfo(stderr);
 }
@@ -46,8 +46,8 @@ void test1() {
   }
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
-  gs->ExchangeBoundaries(gid, IntArray(halo),
-                         IntArray(halo), false, false);
+  gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                         UnsignedArray(halo), false, false);
 
   print_grid<float>(g, gs->my_rank(), std::cerr);
 
@@ -69,8 +69,8 @@ void test2() {
     data[i] = i;
   }
   //print_grid<float>(g, gs->my_rank_, std::cerr);
-  if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), false, false);
+  if (true) gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                                   UnsignedArray(halo), false, false);
   print_grid<float>(g, gs->my_rank(), std::cerr);
   PSPrintInternalInfo(stderr);
 }
@@ -89,8 +89,8 @@ void test3() {
     data[i] = i;
   }
   //print_grid<float>(g, gs->my_rank(), std::cerr);
-  if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), true, false);
+  if (true) gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                                   UnsignedArray(halo), true, false);
   print_grid<float>(g, gs->my_rank(), std::cerr);
   PSPrintInternalInfo(stderr);
 }
@@ -109,8 +109,8 @@ void test4() {
     data[i] = i;
   }
   //print_grid<float>(g, gs->my_rank(), std::cerr);
-  if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), true, false);
+  if (true) gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                                   UnsignedArray(halo), true, false);
   print_grid<float>(g, gs->my_rank(), std::cerr);
   PSPrintInternalInfo(stderr);
 }
@@ -163,8 +163,8 @@ void test6() {
     data[i] = i;
   }
   //print_grid<float>(g, gs->my_rank(), std::cerr);
-  if (true) gs->ExchangeBoundaries(gid, IntArray(halo),
-                                   IntArray(halo), true, false);
+  if (true) gs->ExchangeBoundaries(gid, UnsignedArray(halo),
+                                   UnsignedArray(halo), true, false);
   print_grid<float>(g, gs->my_rank(), std::cerr);
   PSPrintInternalInfo(stderr);
 }

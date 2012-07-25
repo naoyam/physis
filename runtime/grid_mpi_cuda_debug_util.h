@@ -23,22 +23,22 @@ std::ostream& print_grid(GridMPICUDA3D *g, int my_rank, std::ostream &os) {
   int nd = g->num_dims();
   BufferHost host(nd, g->elm_size());
   static_cast<BufferCUDADev3D*>(g->buffer())
-      ->Copyout(host, IntArray(), g->local_size());
+      ->Copyout(host, IndexArray(), g->local_size());
   T *data = (T*)host.Get();
   T **halo_peer_fw = new T*[nd];
   T **halo_peer_bw = new T*[nd];  
   for (int i = 0; i < nd; ++i) {
     BufferHost *peer_fw_buf = new BufferHost(1, g->elm_size());
     g->halo_peer_cuda_[i][1]->Copyout(
-        *peer_fw_buf, IntArray(), g->halo_peer_cuda_[i][1]->size());
+        *peer_fw_buf, IndexArray(), g->halo_peer_cuda_[i][1]->size());
     halo_peer_fw[i] = (T*)peer_fw_buf->Get();
     BufferHost *peer_bw_buf = new BufferHost(1, g->elm_size());
     g->halo_peer_cuda_[i][0]->Copyout(
-        *peer_bw_buf, IntArray(), g->halo_peer_cuda_[i][0]->size());
+        *peer_bw_buf, IndexArray(), g->halo_peer_cuda_[i][0]->size());
     halo_peer_bw[i] = (T*)peer_bw_buf->Get();
   }
 
-  IntArray lsize = g->local_size();
+  IndexArray lsize = g->local_size();
   std::stringstream ss;
   ss << "[rank:" << my_rank << "] ";
   

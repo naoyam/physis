@@ -33,9 +33,44 @@ SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
     }
   }
   LOG_ERROR() << "No grid parameter found.\n";
-  PSAbort(1);
+  PSAssert(0);
   return NULL;
 }
+
+SgExpression *CUDARuntimeBuilder::BuildGridOffset(
+    SgExpression *gvref,
+    int num_dim,
+    SgExpressionPtrList *offset_exprs,
+    bool is_kernel,
+    bool is_periodic,
+    const StencilIndexList *sil) {
+  LOG_DEBUG() << "build offset: " << gvref->unparseToString() << "\n";
+  /*
+    __PSGridGetOffsetND(g, i)
+  */
+  GridOffsetAttribute *goa = new GridOffsetAttribute(
+      num_dim, is_periodic,
+      sil, gvref);  
+  std::string func_name = "__PSGridGetOffset";
+  if (is_periodic) func_name += "Periodic";
+  func_name += toString(num_dim) + "D";
+  if (is_kernel) func_name += "Dev";
+  SgExprListExp *offset_params = sb::buildExprListExp(gvref);
+  FOREACH (it, offset_exprs->begin(),
+           offset_exprs->end()) {
+    si::appendExpression(offset_params,
+                         *it);
+    goa->AppendIndex(*it);
+  }
+  SgFunctionSymbol *fs
+      = si::lookupFunctionSymbolInParentScopes(func_name);
+  SgFunctionCallExp *offset_fc =
+      sb::buildFunctionCallExp(fs, offset_params);
+  rose_util::AddASTAttribute<GridOffsetAttribute>(
+      offset_fc, goa);
+  return offset_fc;
+}
+
 
 } // namespace translator
 } // namespace physis

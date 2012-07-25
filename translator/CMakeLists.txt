@@ -29,12 +29,18 @@ set (PHYSISC_SRC physisc.cc configuration.cc
   stencil_analysis.cc stencil_range.cc translation_util.cc
   reference_runtime_builder.cc runtime_builder.cc
   rose_ast_attribute.cc reduce.cc
-  optimizer/optimizer.cc optimizer/reference_optimizer.cc
+  optimizer/optimizer.cc
+  optimizer/optimization_common.cc
+  optimizer/reference_optimizer.cc
   optimizer/optimization_passes.cc
+  optimizer/premitive_optimization.cc
   optimizer/unconditional_get.cc
   optimizer/kernel_inlining.cc
   optimizer/loop_peeling.cc
-  optimizer/register_blocking.cc)
+  optimizer/register_blocking.cc
+  optimizer/offset_cse.cc
+  optimizer/offset_spatial_cse.cc
+  optimizer/loop_opt.cc)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
   mpi_translator.cc mpi_runtime_builder.cc

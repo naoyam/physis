@@ -59,6 +59,12 @@ CUDATranslator::CUDATranslator(const Configuration &config):
   }
 }
 
+void CUDATranslator::SetUp(SgProject *project,
+                           TranslationContext *context) {
+  ReferenceTranslator::SetUp(project, context);
+  rt_builder_ = new CUDARuntimeBuilder(global_scope_);
+}
+
 void CUDATranslator::translateKernelDeclaration(
     SgFunctionDeclaration *node) {
   SgFunctionModifier &modifier = node->get_functionModifier();
@@ -143,7 +149,7 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                   sb::buildPointerType(grid_type->getElmType())),
               BuildOffset(grid_arg,
                           num_dim,
-                          func_call_exp->get_args(),
+                          si::copyExpression(func_call_exp->get_args()),
                           is_kernel,
                           is_periodic,
                           tx_->findStencilIndex(func_call_exp),                          
@@ -394,7 +400,8 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   si::appendStatement(func_body, run_func->get_definition());
   // Mark this function as RunKernel
   rose_util::AddASTAttribute(run_func,
-                             new RunKernelAttribute(stencil));  
+                             new RunKernelAttribute(stencil));
+  si::fixVariableReferences(run_func);
   return run_func;
 }
 
@@ -414,10 +421,12 @@ SgExprListExp *CUDATranslator::BuildKernelCallArgList(
   FOREACH(it, ++(members.begin()), members.end()) {
     SgVariableDeclaration *var_decl = isSgVariableDeclaration(*it);
     PSAssert(var_decl);
-    SgExpression *exp = sb::buildVarRefExp(var_decl);
     SgVariableDefinition *var_def = var_decl->get_definition();
     PSAssert(var_def);
-    SgTypedefType *var_type = isSgTypedefType(var_def->get_type());
+    SgTypedefType *var_type = isSgTypedefType(var_def->get_type());    
+    //SgExpression *exp = sb::buildVarRefExp(var_decl);
+    SgExpression *exp = sb::buildVarRefExp(
+        var_decl->get_variables()[0]->get_name());
     if (GridType::isGridType(var_type)) {
       exp = sb::buildAddressOfOp(exp);
       // skip the grid index field

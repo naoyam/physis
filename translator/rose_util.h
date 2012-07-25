@@ -66,7 +66,7 @@ bool copyConstantFuncArgs(SgFunctionCallExp *call,
 template <class T>
 int copyConstantFuncArgs(SgExpressionPtrList::const_iterator it,
                          SgExpressionPtrList::const_iterator end,
-                          vector<T> &constantHolder) {
+                         vector<T> &constantHolder) {
   int num_constants = 0;
   while (it != end) {
     SgExpression *arg = *it;
@@ -110,7 +110,7 @@ SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name);
 bool isFuncParam(SgInitializedName *in);
 SgInitializedName *getInitializedName(SgVarRefExp *var);
 string generateUniqueName(SgScopeStatement *scope = NULL,
-                          const string &prefix = "__v");
+                          const string &prefix = "__ps_");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
 SgExpression *buildNULL(SgScopeStatement *global_scope);
 SgVariableDeclaration *buildVarDecl(const string &name,
@@ -121,7 +121,7 @@ void AppendExprStatement(SgScopeStatement *scope,
                          SgExpression *exp);
 
 SgVariableDeclaration *DeclarePSVectorInt(const std::string &name,
-                                          const physis::util::IntVector &vec,
+                                          const IntVector &vec,
                                           SgScopeStatement *block);
 
 
@@ -236,6 +236,10 @@ void PrependExpression(SgExprListExp *exp_list,
 
 void ReplaceFuncBody(SgFunctionDeclaration *func,
                      SgBasicBlock *new_body);
+
+SgGlobal *GetGlobalScope();
+
+SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
 
 }  // namespace rose_util
 }  // namespace translator

@@ -12,6 +12,12 @@ add_executable(test_7-pt-periodic.manual.ref.exe
   test_7-pt-periodic.manual.ref.c)
 add_executable(test_27-pt-periodic.manual.ref.exe 
   test_27-pt-periodic.manual.ref.c)
+add_executable(test_asymmetric-periodic.manual.ref.exe
+  test_asymmetric-periodic.manual.ref.c)
+add_executable(test_stencil-hole.manual.ref.exe
+  test_stencil-hole.manual.ref.c)
+add_executable(test_7-pt-neumann-cond.manual.ref.exe
+  test_7-pt-neumann-cond.manual.ref.c)
 
 if (CUDA_ENABLED)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
@@ -27,4 +33,10 @@ if (CUDA_ENABLED)
     test_7-pt-periodic.manual.cuda.cu)
   cuda_add_executable(test_27-pt-periodic.manual.cuda.exe 
     test_27-pt-periodic.manual.cuda.cu)
+  cuda_add_executable(test_asymmetric-periodic.manual.cuda.exe
+    test_asymmetric-periodic.manual.cuda.cu)
+  cuda_add_executable(test_stencil-hole.manual.cuda.exe
+    test_stencil-hole.manual.cuda.cu)
+  cuda_add_executable(test_7-pt-neumann-cond.manual.cuda.exe
+    test_7-pt-neumann-cond.manual.cuda.cu)
 endif ()

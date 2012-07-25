@@ -56,6 +56,8 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void FixGridType();
   
  public:
+
+  virtual void SetUp(SgProject *project, TranslationContext *context);
   
   //! Generates a CUDA grid declaration for a stencil.
   /*!

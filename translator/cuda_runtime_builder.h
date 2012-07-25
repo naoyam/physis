@@ -23,6 +23,15 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);
+  virtual SgExpression *BuildGridOffset(
+      SgExpression *gv,
+      int num_dim,
+      SgExpressionPtrList *offset_exprs,
+      bool is_kernel,
+      bool is_periodic,
+      const StencilIndexList *sil);
+
+  
 };
 
 } // namespace translator

@@ -37,37 +37,41 @@ __PSStencilRunClientFunction *__PS_stencils;
 } // namespace runtime
 } // namespace physis
 
-static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y,
-                                    ssize_t z, const IntArray &base,
-                                    const IntArray &size) {
+using physis::IndexArray;
+using physis::IntArray;
+using physis::SizeArray;
+
+static PSIndex __PSGridCalcOffset3D(PSIndex x, PSIndex y,
+                                    PSIndex z, const IndexArray &base,
+                                    const IndexArray &size) {
   return (x - base[0]) + (y - base[1]) * size[0] +
       (z - base[2]) * size[0] * size[1];
 }
 
-static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y, ssize_t z, 
-                                    const IntArray &size)
+static PSIndex __PSGridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                    const IndexArray &size)
     __attribute__ ((unused));
-static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y, ssize_t z, 
-                                    const IntArray &size) {
+static PSIndex __PSGridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                       const IndexArray &size) {
   return x + y * size[0] + z * size[0] * size[1];
 }  
 
-static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y, ssize_t z, 
-                                    ssize_t xsize, ssize_t ysize)
+static PSIndex __PSGridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                    PSIndex xsize, PSIndex ysize)
     __attribute__ ((unused));
-static ssize_t __PSGridCalcOffset3D(ssize_t x, ssize_t y, ssize_t z, 
-                                    ssize_t xsize, ssize_t ysize) {
+static PSIndex __PSGridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                    PSIndex xsize, PSIndex ysize) {
   return x + y * xsize + z * xsize * ysize;
 }  
 
-static ssize_t __PSGridCalcOffset3D(const IntArray &index,
-                                    const IntArray &size) {
+static PSIndex __PSGridCalcOffset3D(const IndexArray &index,
+                                    const IndexArray &size) {
   return index[0] + index[1] * size[0] + index[2] * size[0] * size[1];
 }
 
 // REFACTORING: This should be a member of GridMPI class
 template <class T>
-static T *__PSGridGetAddr(GridMPI *gm, IntArray indices) {
+static T *__PSGridGetAddr(GridMPI *gm, IndexArray indices) {
   // Use the remote grid if remote_grid_active is true.
   if (gm->remote_grid_active()) {
     GridMPI *rmg = gm->remote_grid();
@@ -83,7 +87,7 @@ static T *__PSGridGetAddr(GridMPI *gm, IntArray indices) {
       for (int j = i+1; j < PS_MAX_DIM; ++j) {
         if (diag) indices[j] += gm->halo_bw_width()[j];
       }
-      ssize_t offset;
+      PSIndex offset;
       T *buf;
       if (indices[i] < 0) {
         indices[i] += gm->halo_bw_width()[i];
@@ -103,20 +107,20 @@ static T *__PSGridGetAddr(GridMPI *gm, IntArray indices) {
 }
 
 template <class T>
-T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
-                         ssize_t z) {
+T *__PSGridEmitAddr3D(__PSGridMPI *g, PSIndex x, PSIndex y,
+                      PSIndex z) {
   GridMPI *gm = (GridMPI*)g;
-  ssize_t off = __PSGridCalcOffset3D(x, y, z,
+  PSIndex off = __PSGridCalcOffset3D(x, y, z,
                                      gm->local_offset(),
                                      gm->local_size());
   return ((T*)(gm->_data_emit())) + off;
 }    
 
 template <class T>
-T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, ssize_t x, ssize_t y,
-                              ssize_t z) {
+T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, PSIndex x, PSIndex y,
+                           PSIndex z) {
   GridMPI *gm = (GridMPI*)g;
-  ssize_t off = __PSGridCalcOffset3D(x, y, z,
+  PSIndex off = __PSGridCalcOffset3D(x, y, z,
                                      gm->local_offset(),
                                      gm->local_size());
   return ((T*)(gm->_data_emit())) + off;
@@ -126,9 +130,9 @@ template <class T>
 T __PSGridGet(__PSGridMPI *g, va_list args) {
   GridMPI *gm = (GridMPI*)g;
   int nd = gm->num_dims();
-  IntArray index;
+  IndexArray index;
   for (int i = 0; i < nd; ++i) {
-    index[i] = va_arg(args, index_t);
+    index[i] = va_arg(args, PSIndex);
   }
   T v;
   master->GridGet(gm, &v, index);
@@ -151,14 +155,13 @@ extern "C" {
     // the same 
     int proc_num_dims;
     va_list vl;
-    //const int *grid_size;
-    IntArray grid_size;
+    IndexArray grid_size;
 
     physis::runtime::PSInitCommon(argc, argv);
             
     va_start(vl, grid_num_dims);
     for (int i = 0; i < grid_num_dims; ++i) {
-      grid_size[i] = va_arg(vl, int);
+      grid_size[i] = va_arg(vl, PSIndex);
     }
     int num_stencil_run_calls = va_arg(vl, int);
     __PSStencilRunClientFunction *stencil_funcs
@@ -173,7 +176,7 @@ extern "C" {
     LOG_INFO() << *pinfo << "\n";
 
     IntArray proc_size;
-    proc_size.assign(1);
+    proc_size.Set(1);
     proc_num_dims = GetProcessDim(argc, argv, proc_size);
     if (proc_num_dims < 0) {
       proc_num_dims = grid_num_dims;
@@ -193,7 +196,7 @@ extern "C" {
     // Set the stencil client functions
     __PS_stencils =
         (__PSStencilRunClientFunction*)malloc(sizeof(__PSStencilRunClientFunction)
-                                             * num_stencil_run_calls);
+                                              * num_stencil_run_calls);
     memcpy(__PS_stencils, stencil_funcs,
            sizeof(__PSStencilRunClientFunction) * num_stencil_run_calls);
     if (rank != 0) {
@@ -213,30 +216,30 @@ extern "C" {
     master->Finalize();
   }
 
-  PSDomain1D PSDomain1DNew(index_t minx, index_t maxx) {
-    IntArray local_min = gs->my_offset();
-    local_min.SetNoLessThan(IntArray(minx));
-    IntArray local_max = gs->my_offset() + gs->my_size();
-    local_max.SetNoMoreThan(IntArray(maxx));
+  PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx));
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx));
     // No corresponding local region
     if (local_min >= local_max) {
-      local_min.assign(0);
-      local_max.assign(0);
+      local_min.Set(0);
+      local_max.Set(0);
     }
     PSDomain1D d = {{minx}, {maxx}, {local_min[0]}, {local_max[0]}};
     return d;
   }
   
-  PSDomain2D PSDomain2DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy) {
-    IntArray local_min = gs->my_offset();
-    local_min.SetNoLessThan(IntArray(minx, miny));    
-    IntArray local_max = gs->my_offset() + gs->my_size();
-    local_max.SetNoMoreThan(IntArray(maxx, maxy));
+  PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx, miny));    
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx, maxy));
     // No corresponding local region
     if (local_min >= local_max) {
-      local_min.assign(0);
-      local_max.assign(0);
+      local_min.Set(0);
+      local_max.Set(0);
     }
     PSDomain2D d = {{minx, miny}, {maxx, maxy},
                     {local_min[0], local_min[1]},
@@ -244,17 +247,17 @@ extern "C" {
     return d;
   }
 
-  PSDomain3D PSDomain3DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy,
-                           index_t minz, index_t maxz) {
-    IntArray local_min = gs->my_offset();
-    local_min.SetNoLessThan(IntArray(minx, miny, minz));        
-    IntArray local_max = gs->my_offset() + gs->my_size();
-    local_max.SetNoMoreThan(IntArray(maxx, maxy, maxz));    
+  PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy,
+                           PSIndex minz, PSIndex maxz) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx, miny, minz));        
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx, maxy, maxz));    
     // No corresponding local region
     if (local_min >= local_max) {
-      local_min.assign(0);
-      local_max.assign(0);
+      local_min.Set(0);
+      local_max.Set(0);
     }
     PSDomain3D d = {{minx, miny, minz}, {maxx, maxy, maxz},
                     {local_min[0], local_min[1], local_min[2]},
@@ -263,15 +266,15 @@ extern "C" {
   }
 
   void __PSDomainSetLocalSize(__PSDomain *dom) {
-    IntArray local_min = gs->my_offset();
-    IntArray global_min(dom->min);
+    IndexArray local_min = gs->my_offset();
+    IndexArray global_min(dom->min);
     local_min.SetNoLessThan(global_min);
-    IntArray local_max = gs->my_offset() + gs->my_size();
-    local_max.SetNoMoreThan(IntArray(dom->max));
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(dom->max));
     // No corresponding local region
     if (local_min >= local_max) {
-      local_min.assign(0);
-      local_max.assign(0);
+      local_min.Set(0);
+      local_max.Set(0);
     }
     local_min.Set(dom->local_min);
     local_max.Set(dom->local_max);
@@ -293,7 +296,7 @@ extern "C" {
     PSAssert(global_offset == NULL);
 
     // ensure the grid size is within the global grid space size
-    IntArray gsize = IntArray(size);
+    IndexArray gsize = IndexArray(size);
     if (gsize > gs->global_size()) {
       LOG_ERROR() << "Cannot create grids (size: " << gsize
                   << " larger than the grid space ("
@@ -301,7 +304,7 @@ extern "C" {
       return NULL;
     }
     return master->GridNew(type, elm_size, dim, gsize,
-                           double_buffering, IntArray(), attr);
+                           double_buffering, IndexArray(), attr);
   }
 
   void __PSGridSwap(void *p) {
@@ -337,15 +340,15 @@ extern "C" {
     int nd = gm->num_dims();
     va_list vl;
     va_start(vl, buf);
-    IntArray index;
+    IndexArray index;
     for (int i = 0; i < nd; ++i) {
-      index[i] = va_arg(vl, index_t);
+      index[i] = va_arg(vl, PSIndex);
     }
     va_end(vl);
     master->GridSet(gm, buf, index);
   }
 
-  index_t PSGridDim(void *p, int d) {
+  PSIndex PSGridDim(void *p, int d) {
     Grid *g = (Grid *)p;    
     return g->size_[d];
   }
@@ -367,11 +370,11 @@ extern "C" {
   void __PSStencilRun(int id, int iter, int num_stencils, ...) {
     //master->StencilRun(id, stencil_obj_size, stencil_obj, iter);
     void **stencils = new void*[num_stencils];
-    int *stencil_sizes = new int[num_stencils];
+    unsigned *stencil_sizes = new unsigned[num_stencils];
     va_list vl;
     va_start(vl, num_stencils);
     for (int i = 0; i < num_stencils; ++i) {
-      size_t stencil_size = va_arg(vl, size_t);
+      unsigned stencil_size = (unsigned)va_arg(vl, size_t);
       void *sobj = va_arg(vl, void*);
       stencils[i] = sobj;
       stencil_sizes[i] = stencil_size;
@@ -387,90 +390,90 @@ extern "C" {
     __PS_stencils[id] = (__PSStencilRunClientFunction)fptr;
   }
 
-  float *__PSGridGetAddrFloat1D(__PSGridMPI *g, ssize_t x) {
-    return __PSGridGetAddr<float>((GridMPI*)g, IntArray(x));
+  float *__PSGridGetAddrFloat1D(__PSGridMPI *g, PSIndex x) {
+    return __PSGridGetAddr<float>((GridMPI*)g, IndexArray(x));
   }
 
-  float *__PSGridGetAddrFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
-    return __PSGridGetAddr<float>((GridMPI*)g, IntArray(x, y));
+  float *__PSGridGetAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
+    return __PSGridGetAddr<float>((GridMPI*)g, IndexArray(x, y));
   }
   
-  float *__PSGridGetAddrFloat3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z) {
-    return __PSGridGetAddr<float>((GridMPI*)g, IntArray(x, y, z));
+  float *__PSGridGetAddrFloat3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z) {
+    return __PSGridGetAddr<float>((GridMPI*)g, IndexArray(x, y, z));
   }
-  double *__PSGridGetAddrDouble1D(__PSGridMPI *g, ssize_t x) {
-    return __PSGridGetAddr<double>((GridMPI*)g, IntArray(x));
+  double *__PSGridGetAddrDouble1D(__PSGridMPI *g, PSIndex x) {
+    return __PSGridGetAddr<double>((GridMPI*)g, IndexArray(x));
   }
 
-  double *__PSGridGetAddrDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
-    return __PSGridGetAddr<double>((GridMPI*)g, IntArray(x, y));
+  double *__PSGridGetAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
+    return __PSGridGetAddr<double>((GridMPI*)g, IndexArray(x, y));
   }
   
-  double *__PSGridGetAddrDouble3D(__PSGridMPI *g, ssize_t x, ssize_t y, ssize_t z) {
-    return __PSGridGetAddr<double>((GridMPI*)g, IntArray(x, y, z));
+  double *__PSGridGetAddrDouble3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z) {
+    return __PSGridGetAddr<double>((GridMPI*)g, IndexArray(x, y, z));
   }
 
 
   //
   // Get No Halo
   //
-  float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, ssize_t x) {
+  float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, PSIndex x) {
     return __PSGridGetAddrNoHalo3D<float>(g, x, 0, 0);
   }
-  double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, ssize_t x) {
+  double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, PSIndex x) {
     return __PSGridGetAddrNoHalo3D<double>(g, x, 0, 0);
   }
   
-  float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
+  float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
     return __PSGridGetAddrNoHalo3D<float>(g, x, y, 0);
   }
-  double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
+  double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
     return __PSGridGetAddrNoHalo3D<double>(g, x, y, 0);
   }
   
-  float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, ssize_t x,
-                                ssize_t y, ssize_t z) {
+  float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, PSIndex x,
+                                PSIndex y, PSIndex z) {
     return __PSGridGetAddrNoHalo3D<float>(g, x, y, z);
   }
-  double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, ssize_t x,
-                                 ssize_t y, ssize_t z) {
+  double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, PSIndex x,
+                                 PSIndex y, PSIndex z) {
     return __PSGridGetAddrNoHalo3D<double>(g, x, y, z);
   }
 
   //
   // Emit
   //
-  float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, ssize_t x) {
+  float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, PSIndex x) {
     return __PSGridEmitAddr3D<float>(g, x, 0, 0);
   }
-  double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, ssize_t x) {
+  double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, PSIndex x) {
     return __PSGridEmitAddr3D<double>(g, x, 0, 0);
   }
   
-  float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
+  float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
     return __PSGridEmitAddr3D<float>(g, x, y, 0);
   }
-  double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, ssize_t x, ssize_t y) {
+  double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
     return __PSGridEmitAddr3D<double>(g, x, y, 0);
   }
   
-  float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, ssize_t x,
-                                ssize_t y, ssize_t z) {
+  float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, PSIndex x,
+                                PSIndex y, PSIndex z) {
     return __PSGridEmitAddr3D<float>(g, x, y, z);
   }
-  double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, ssize_t x,
-                                 ssize_t y, ssize_t z) {
+  double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, PSIndex x,
+                                 PSIndex y, PSIndex z) {
     return __PSGridEmitAddr3D<double>(g, x, y, z);
   }
   
   void __PSLoadNeighbor(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
+                        const PSVectorInt offset_min,
+                        const PSVectorInt offset_max,
                         int diagonal, int reuse, int overlap,
                         int periodic) {
     if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
     GridMPI *gm = (GridMPI*)g;
-    gs->LoadNeighbor(gm, IntArray(halo_fw_width), IntArray(halo_bw_width),
+    gs->LoadNeighbor(gm, IndexArray(offset_min), IndexArray(offset_max),
                      (bool)diagonal, reuse, periodic);
     return;
   }
@@ -484,33 +487,33 @@ extern "C" {
   }
 
   void __PSLoadSubgrid2D(__PSGridMPI *g, 
-                         int min_dim1, index_t min_offset1,
-                         int min_dim2, index_t min_offset2,
-                         int max_dim1, index_t max_offset1,
-                         int max_dim2, index_t max_offset2,
+                         int min_dim1, PSIndex min_offset1,
+                         int min_dim2, PSIndex min_offset2,
+                         int max_dim1, PSIndex max_offset1,
+                         int max_dim2, PSIndex max_offset2,
                          int reuse) {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
     int dims[] = {min_dim1, min_dim2};
-    LoadSubgrid((GridMPI*)g, gs, dims, IntArray(min_offset1, min_offset2),
-                IntArray(max_offset1, max_offset2), reuse);
+    LoadSubgrid((GridMPI*)g, gs, dims, IndexArray(min_offset1, min_offset2),
+                IndexArray(max_offset1, max_offset2), reuse);
     return;
   }
   
   void __PSLoadSubgrid3D(__PSGridMPI *g, 
-                         int min_dim1, index_t min_offset1,
-                         int min_dim2, index_t min_offset2,
-                         int min_dim3, index_t min_offset3,
-                         int max_dim1, index_t max_offset1,
-                         int max_dim2, index_t max_offset2,
-                         int max_dim3, index_t max_offset3,
+                         int min_dim1, PSIndex min_offset1,
+                         int min_dim2, PSIndex min_offset2,
+                         int min_dim3, PSIndex min_offset3,
+                         int max_dim1, PSIndex max_offset1,
+                         int max_dim2, PSIndex max_offset2,
+                         int max_dim3, PSIndex max_offset3,
                          int reuse) {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
     PSAssert(min_dim3 == max_dim3);
     int dims[] = {min_dim1, min_dim2, min_dim3};
-    LoadSubgrid((GridMPI*)g, gs, dims, IntArray(min_offset1, min_offset2, min_offset3),
-                IntArray(max_offset1, max_offset2, max_offset3), reuse);
+    LoadSubgrid((GridMPI*)g, gs, dims, IndexArray(min_offset1, min_offset2, min_offset3),
+                IndexArray(max_offset1, max_offset2, max_offset3), reuse);
     return;
   }
 

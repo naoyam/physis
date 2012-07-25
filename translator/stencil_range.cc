@@ -16,6 +16,12 @@ namespace translator {
 
 const std::string StencilIndexAttribute::name = "StencilIndexList";
 
+void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dims) {
+  for (unsigned i = 1; i < num_dims; ++i) {
+    sil.push_back(StencilIndex(i, 0));
+  }
+}
+
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims) {
   if (sil.size() != num_dims) return false;
   ENUMERATE (i, it, sil.begin(), sil.end()) {
@@ -141,13 +147,12 @@ void StencilRange::merge(const StencilRange &sr) {
   diagonal_ |= sr.diagonal_;
 }
 
-// NOTE: backward will be convereted to positive values if accessing backward
-bool StencilRange::GetNeighborAccess(IntVector &forward, IntVector &backward) {
+bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) {
   if (!IsNeighborAccess()) return false;
 
   for (int i = 0; i < num_dims_; ++i) {
-    backward.push_back(min_indices_[i].begin()->offset * -1);
-    forward.push_back(max_indices_[i].begin()->offset);    
+    offset_min.push_back(min_indices_[i].begin()->offset);
+    offset_max.push_back(max_indices_[i].begin()->offset);    
   }
   return true;
 }

@@ -15,6 +15,8 @@
 namespace physis {
 namespace translator {
 
+bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
+                         SgFunctionDeclaration *kernel);
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx);
 
 } // namespace translator
