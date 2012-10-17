@@ -16,7 +16,6 @@ include_directories(${ROSE_INCLUDE_DIR})
 set(Boost_NO_BOOST_CMAKE true)
 find_package(Boost REQUIRED program_options)
 include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
 
 # JNI
 find_package(JNI REQUIRED)
