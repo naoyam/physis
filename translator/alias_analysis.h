@@ -130,7 +130,7 @@ inline std::ostream &operator<<(std::ostream &os,
   return node.print(os);
 }
 
-
+// Intra-procedural alias analysis
 class AliasGraph {
  public:
   typedef map<SgInitializedName*, AliasVarNode*> AliasVarMap;

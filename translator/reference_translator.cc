@@ -108,7 +108,7 @@ void ReferenceTranslator::Optimize() {
 }
 
 void ReferenceTranslator::optimizeConstantSizedGrids() {
-#if NOT_SUPPORTED_YET          
+#if NOT_SUPPORTED_YET
   SgNodePtrList func_calls =
       NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
   FOREACH(it, func_calls.begin(), func_calls.end()) {
@@ -140,8 +140,8 @@ void ReferenceTranslator::optimizeConstantSizedGrids() {
       SgExpression *size_exp = sb::buildIntVal(size);
       si::replaceExpression(func_call, size_exp);
     }
-#endif    
   }
+#endif  
 }
 
 void ReferenceTranslator::translateKernelDeclaration(

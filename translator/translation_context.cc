@@ -138,9 +138,10 @@ static bool handleGridDeclaration(SgInitializedName *in,
     // When no rhs, in is returned
     if (node == in) {
       LOG_DEBUG() << "No definition\n";
-      if (rose_util::isFuncParam(in)) {
-        // in is a function parameter
-        // this is handled at call sites
+      if (rose_util::isFuncParam(in) &&
+          si::isStatic(si::getEnclosingFunctionDeclaration(in))) {
+        // in is a parameter of a static function.
+        // This is handled at call sites.
         continue;
       } else {
         changed |= tx.associateVarWithGrid(in, NULL);

@@ -34,9 +34,7 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
         LOG_DEBUG() << "gobj: "
                     << (*it)->toString() << "\n";
       } else {
-        LOG_WARNING() << "Ignoring possible undefined grid: "
-                      << gv->unparseToString() << "\n";
-        continue;
+        LOG_DEBUG() << "gobj: NULL\n";
       }
     }
     grid_set.insert(gs->begin(), gs->end());
@@ -102,6 +100,19 @@ bool Kernel::isModified(Grid *g) const {
   return false;
 }
 
+bool Kernel::IsGridUnmodified(Grid *g) const {
+  assert(g != NULL);
+  // If NULL is contained, g may be modified.
+  if (wGrids.find(NULL) != wGrids.end()) return false;
+  if (wGrids.find(g) != wGrids.end()) return false;
+  FOREACH(it, calls.begin(), calls.end()) {
+    Kernel *child = it->second;
+    if (!child->IsGridUnmodified(g)) return false;
+  }
+  return true;
+}
+
+
 bool Kernel::isModifiedAny(GridSet *gs) const {
   FOREACH (it, gs->begin(), gs->end()) {
     if (isModified(*it)) return true;
@@ -121,6 +132,17 @@ bool Kernel::isRead(Grid *g) const {
   }
   return false;
 }
+
+bool Kernel::isGridUnread(Grid *g) const {
+  if (rGrids.find(NULL) != rGrids.end()) return false;
+  if (rGrids.find(g) != rGrids.end()) return false;
+  FOREACH(it, calls.begin(), calls.end()) {
+    Kernel *child = it->second;
+    if (!child->isGridUnread(g)) return false;
+  }
+  return true;
+}
+
 bool Kernel::isReadAny(GridSet *gs) const {
   FOREACH (it, gs->begin(), gs->end()) {
     if (isRead(*it)) return true;
