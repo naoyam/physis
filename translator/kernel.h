@@ -40,13 +40,20 @@ class Kernel {
   const GridSet& getOutGrids() const;
   // Returns true if grid object g may be read in this
   // kernel.
+#ifdef UNUSED_CODE    
   bool isRead(Grid *g) const;
   bool isReadAny(GridSet *gs) const;
+#endif
+  bool IsGridUnread(Grid *g) const;  
   bool isGridParamRead(SgInitializedName *v) const;
   // Returns true if grid object g may be modified in this
   // kernel.
+  // TODO: Deprecated. Use isGridNotModified() instead.
+#ifdef UNUSED_CODE    
   bool isModified(Grid *g) const;
-  bool isModifiedAny(GridSet *ngs) const;  
+  bool isModifiedAny(GridSet *ngs) const;
+#endif
+  bool IsGridUnmodified(Grid *g) const;  
   // Returns true if variable may be modified in this kernel.
   // TODO (naoya): intra-kernel calls are not analyzed. Parameters
   // modified in inner kernels are not correctly returned about its

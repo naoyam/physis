@@ -108,6 +108,7 @@ void ReferenceTranslator::Optimize() {
 }
 
 void ReferenceTranslator::optimizeConstantSizedGrids() {
+#if NOT_SUPPORTED_YET
   SgNodePtrList func_calls =
       NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
   FOREACH(it, func_calls.begin(), func_calls.end()) {
@@ -131,7 +132,7 @@ void ReferenceTranslator::optimizeConstantSizedGrids() {
     if (grid_set) {
       break;
     }
-#if NOT_SUPPORTED_YET        
+
     const Grid *grid = *(grid_set->begin());
 
     if (grid->hasStaticSize()) {
@@ -139,8 +140,8 @@ void ReferenceTranslator::optimizeConstantSizedGrids() {
       SgExpression *size_exp = sb::buildIntVal(size);
       si::replaceExpression(func_call, size_exp);
     }
-#endif    
   }
+#endif  
 }
 
 void ReferenceTranslator::translateKernelDeclaration(
@@ -151,7 +152,7 @@ void ReferenceTranslator::translateKernelDeclaration(
 
 SgExprListExp *ReferenceTranslator::generateNewArg(
     GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
-#if defined(AUTO_DOUBLE_BUFFERING)
+#ifdef UNUSED_CODE
   SgExprListExp *new_args
       = sb::buildExprListExp(sb::buildSizeOfOp(gt->getElmType()),
                              sb::buildIntVal(gt->getNumDim()),

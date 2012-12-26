@@ -23,7 +23,7 @@ DIE_IMMEDIATELY=0
 set -u
 #set -e
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
-LOGFILE=$PWD/$(basename $0 .sh).log.$TIMESTAMP
+LOGFILE=$PWD/${0%.sh}.log.$TIMESTAMP
 WD=$WD_BASE/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
 mkdir -p $WD
@@ -39,7 +39,7 @@ NUM_FAIL_EXECUTE=0
 NUM_WARNING=0
 FAILED_TESTS=""
 
-PHYSISC=${CMAKE_BINARY_DIR}/translator/physisc
+PHYSISC=@CMAKE_BINARY_DIR@/translator/physisc
 MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
@@ -125,7 +125,7 @@ function exit_error()
 
 function clear_output()
 {
-	rm -f $ORIGINAL_WD/$(basename $0 .sh).log.*
+	rm -f $ORIGINAL_WD/${0%.sh}.log.*
 	rm -rf $WD_BASE
 }
 
@@ -393,50 +393,88 @@ function generate_translation_configurations()
 
 function compile()
 {
-    src=$1
-    target=$2
-    src_file_base=$(basename $src .c).$target
-    if [ "${MPI_ENABLED}" = "TRUE" ]; then
+    local src=$1
+    local target=$2
+    local src_file_base=${src%.c}.$target
+    if [ "@MPI_ENABLED@" = "TRUE" ]; then
 		MPI_CFLAGS="-pthread"
-		for mpiinc in $(echo "${MPI_INCLUDE_PATH}" | sed 's/;/ /g'); do
+		for mpiinc in $(echo "@MPI_INCLUDE_PATH@" | sed 's/;/ /g'); do
 			MPI_CFLAGS+=" -I$mpiinc"
 		done
     fi
-    LDFLAGS="-L${CMAKE_BINARY_DIR}/runtime -lm"
-    NVCC_CFLAGS="-arch sm_20"
-    CUDA_LDFLAGS="-lcudart -L${CUDA_RT_DIR}"
+    local LDFLAGS="-L@CMAKE_BINARY_DIR@/runtime -lm"
+    local NVCC_CFLAGS="-arch sm_20"
+    local CUDA_LDFLAGS="-lcudart -L@CUDA_RT_DIR@"
+	local mod_base_file=$(get_module_base $src)
+	local mod_base_obj=$(basename ${mod_base_file%.c}.o)
+	if is_module_test $src; then
+		if [ ! -f $mod_base_obj ]; then
+			echo "[COMPILE] Compiling module base file $(basename $mod_base_file)"
+			if ! cc -c $mod_base_file $CFLAGS -o $mod_base_obj; then
+				print_error "module base file compilation error"
+				return 1
+			fi
+		else
+			echo "[COMPILE] Reusing module base object $mod_base_obj"
+		fi
+		
+	fi
     case $target in
 		ref)
-			src_file="$src_file_base".c
-			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $CFLAGS &&
-			c++ "$src_file_base".o -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
+			local src_file="$src_file_base".c
+			if ! cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $CFLAGS; then
+				print_error "Physis code comilation failed"
+				return 1
+			fi
+			if is_module_test $src; then
+				c++ "$src_file_base".o $mod_base_obj -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
+			else
+				c++ "$src_file_base".o -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
+			fi
+			if [ $? -ne 0 ]; then
+				print_error "Linking failed"
+				return 1
+			fi
 			;;
 		cuda)
-			if [ "${CUDA_ENABLED}" != "TRUE" ]; then
+			if [ "@CUDA_ENABLED@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping CUDA compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".cu
-			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include $NVCC_CFLAGS -Xcompiler $(echo $CFLAGS|sed 's/ /,/g') &&
-			nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
-				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
+			local src_file="$src_file_base".cu
+			if ! nvcc -m64 -c $src_file -I@CMAKE_SOURCE_DIR@/include $NVCC_CFLAGS \
+				-Xcompiler $(echo $CFLAGS|sed 's/ /,/g') ; then
+				print_error "Physis code comilation failed"
+				return 1
+			fi
+			if is_module_test $src; then
+				nvcc -m64 "$src_file_base".o $mod_base_obj  -lphysis_rt_cuda $LDFLAGS \
+					@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
+			else 
+				nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
+					@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
+			fi
+			if [ $? -ne 0 ]; then
+				print_error "Linking failed"
+				return 1
+			fi
 			;;
 		mpi)
-			if [ "${MPI_ENABLED}" != "TRUE" ]; then
+			if [ "@MPI_ENABLED@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".c			
-			cc -c $src_file -I${CMAKE_SOURCE_DIR}/include $MPI_CFLAGS $CFLAGS &&
+			local src_file="$src_file_base".c			
+			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi $LDFLAGS -o "$src_file_base".exe
 			;;
 		mpi-cuda)
-			if [ "${MPI_ENABLED}" != "TRUE" -o "${CUDA_ENABLED}" != "TRUE" ]; then
+			if [ "@MPI_ENABLED@" != "TRUE" -o "@CUDA_ENABLED@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI-CUDA compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".cu
-			MPI_CUDA_CFLAGS=""
+			local src_file="$src_file_base".cu
+			local MPI_CUDA_CFLAGS=""
 			for f in $CFLAGS $MPI_CFLAGS; do
 				if echo $f | grep '^-I' > /dev/null; then
 					MPI_CUDA_CFLAGS+="$f "
@@ -444,10 +482,10 @@ function compile()
 					MPI_CUDA_CFLAGS+="-Xcompiler $f "
 				fi
 			done
-			nvcc -m64 -c $src_file -I${CMAKE_SOURCE_DIR}/include \
+			nvcc -m64 -c $src_file -I@CMAKE_SOURCE_DIR@/include \
 				$NVCC_CFLAGS $MPI_CUDA_CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
-				'${CUDA_CUT_LIBRARIES}' -o "$src_file_base".exe
+				@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
 			;;
 		*)
 			exit_error "Unsupported target"
@@ -459,7 +497,7 @@ function compile()
 
 function get_reference_exe_name()
 {
-    local src_name=$(basename $1 .c)
+    local src_name=${1%%.*}
     local target=$2
     case $target in
 		mpi)
@@ -469,22 +507,23 @@ function get_reference_exe_name()
 			target=cuda
 			;;
     esac
-    local ref_exe=${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.$target.exe
+    local ref_exe=@CMAKE_CURRENT_BINARY_DIR@/test_cases/$src_name.manual.$target.exe
     echo $ref_exe
 }
 
 function execute_reference()
 {
-    local src_name=$(basename $1 .c)
+    local src_name=${1%%.*}
     local target=$2
     local ref_exe=$(get_reference_exe_name $1 $2)
+	echo $ref_exe
     local ref_out=$ref_exe.out    
     # Do nothing if no reference implementation is found.
     if [ ! -x $ref_exe ]; then
 		echo "[EXECUTE] No reference implementation found." >&2
 	# Check if other implementation variants exist. If true,
 	# warn about the lack of an implementation for this target
-		if ls ${CMAKE_CURRENT_BINARY_DIR}/test_cases/$src_name.manual.*.exe > \
+		if ls @CMAKE_CURRENT_BINARY_DIR@/test_cases/$src_name.manual.*.exe > \
 			/dev/null 2>&1 ; then
 			warn "Missing reference implementation for $target?"
 		fi
@@ -523,7 +562,7 @@ function do_mpirun()
 function execute()
 {
     local target=$2
-    local exename=$(basename $1 .c).$target.exe
+    local exename=${1%.c}.$target.exe
     echo  "[EXECUTE] Executing $exename"
     case $target in
 		ref)
@@ -546,7 +585,6 @@ function execute()
 		cat $exename.err
 		return 1
     fi
-	rm $exename		
     execute_reference $1 $2
     local ref_output=$(get_reference_exe_name $1 $2).out
     if [ -f "$ref_output" ]; then
@@ -566,7 +604,7 @@ function use_valgrind()
 {
     case $1 in
 		translate)
-			PHYSISC="valgrind --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/misc/valgrind-suppressions.supp $PHYSISC"
+			PHYSISC="valgrind --error-exitcode=1 --suppressions=@CMAKE_SOURCE_DIR@/misc/valgrind-suppressions.supp $PHYSISC"
 			;;
 		execute)
 			EXECUTE_WITH_VALGRIND=1
@@ -633,16 +671,38 @@ function get_test_cases()
 {
 	local tests=""
     if [ $# -eq 0 ]; then
-		tests=$(find ${CMAKE_CURRENT_SOURCE_DIR}/test_cases -name "test_*.c"|sort -n)
+		tests=$(find @CMAKE_CURRENT_SOURCE_DIR@/test_cases -name "test_*.c"|sort -n)
     else
 		for t in $*; do
-			tests+="${CMAKE_CURRENT_SOURCE_DIR}/test_cases/$t.c "
+			tests+="@CMAKE_CURRENT_SOURCE_DIR@/test_cases/$t.c "
 		done
 	fi
     set +e	
     tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.manual\.'; done)
+    tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.module_base\.'; done)	
     set -e
 	echo $tests
+}
+
+function is_module_test()
+{
+	echo $1 | grep 'test_.*\.module\.c' > /dev/null 2>&1
+}
+
+function is_skipped_module_test()
+{
+	if is_module_test $1; then
+		if [ "$2" = 'mpi' -o "$2" = 'mpi-cuda' ]; then
+			return 0
+		fi
+	fi
+	return 1
+}
+
+function get_module_base()
+{
+	local mod_physis=$1
+	echo @CMAKE_CURRENT_SOURCE_DIR@/test_cases/${mod_physis%.module.c}.module_base.c
 }
 
 {
@@ -747,7 +807,11 @@ function get_test_cases()
 
     for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
-			SHORTNAME=$(basename $TEST)
+			SHORTNAME=$(basename $TEST)			
+			if is_skipped_module_test $TEST $TARGET; then
+				echo "Skipping $SHORTNAME for $TARGET target"
+				continue;
+			fi
 			DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
 			if [ "x$CONFIG_ARG" = "x" ]; then
@@ -761,9 +825,9 @@ function get_test_cases()
 				echo "Dimension: $DIM"
 				cat $cfg
 				echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
-				echo $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include \
+				echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
 					--config $cfg $TEST
-				if $PHYSISC --$TARGET -I${CMAKE_SOURCE_DIR}/include \
+				if $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
 					--config $cfg $TEST > $(basename $TEST).$TARGET.log \
 					2>&1; then
 					echo "[TRANSLATE] SUCCESS"
@@ -793,15 +857,22 @@ function get_test_cases()
 				fi
 				for np in $np_target; do
 					if execute $SHORTNAME $TARGET $np $DIM; then
+						execute_success=1
+					else
+						execute_success=0
+					fi
+					if [ $execute_success -eq 1 ]; then
 						echo "[EXECUTE] SUCCESS"
 						NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
 					else
 						echo "[EXECUTE] FAIL"
 						NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
 						fail $SHORTNAME $TARGET execute $cfg $np
+						rm ${SHORTNAME%.c}.$TARGET.exe
 						continue
 					fi
 				done
+				rm ${SHORTNAME%.c}.$TARGET.exe				
 				print_results_short			
 			done
 		done
@@ -812,4 +883,3 @@ function get_test_cases()
 # Local Variables:
 # mode: sh-mode
 # End:
-

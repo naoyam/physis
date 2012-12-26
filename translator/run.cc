@@ -55,6 +55,7 @@ SgExpression *Run::findCountArg(SgFunctionCallExp *call) {
   }
 }
 
+#ifdef UNUSED_CODE
 bool Run::IsRead(Grid *g, TranslationContext *tx) {
   FOREACH (sit, stencils_.begin(), stencils_.end()) {
     StencilMap *smap = sit->second;
@@ -94,6 +95,7 @@ bool Run::IsModifiedAny(GridSet *gs, TranslationContext *tx) {
   }
   return false;
 }
+#endif
 
 bool Run::HasCount() const {
   return count_ != NULL;

@@ -158,13 +158,14 @@ class Grid {
     }
     return sj.get();
   }
-
+#ifdef UNUSED_CODE
   bool isReadWrite() const {
     return _isReadWrite;
   }
   void setReadWrite(bool b = true) {
     _isReadWrite = b;
   }
+#endif
   SgExprListExp *BuildSizeExprList();
   SgExpression *BuildAttributeExpr();
 };

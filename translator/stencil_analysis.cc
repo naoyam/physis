@@ -95,42 +95,30 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
     AnalyzeStencilIndex(lhs, lhs_index, kernel);
     if (rhs_index.dim != 0 && lhs_index.dim != 0) {
       LOG_DEBUG() << "Invalid: two variable use\n";
-      return false;
-    }
-    // REFACTORING: the following two cases are mostly identical
-    if (lhs_index.dim != 0) {
-      PSAssert(rhs_index.dim == 0);
-      idx.dim = lhs_index.dim;
-      idx.offset = rhs_index.offset;
-      if (isSgSubtractOp(arg)) {
-        idx.offset *= -1;
-      }
-      // This should be always true if constant folding works beyond brace
-      // boundaries, but apparently it's not the case.
-      // PSAssert(lhs_index.offset == 0);
-      if (lhs_index.offset != 0) {
-        idx.offset += lhs_index.offset;
-      }
-      return true;
-    } else if (rhs_index.dim != 0) {
-      PSAssert(lhs_index.dim == 0);
-      idx.dim = rhs_index.dim;
-      idx.offset = lhs_index.offset;
-      if (isSgSubtractOp(arg)) {
-        idx.dim *= -1;
-      }
-      // This should be always true if constant folding works beyond brace
-      // boundaries, but apparently it's not the case.
-      // PSAssert(rhs_index.offset == 0);
-      if (rhs_index.offset != 0) {
-        idx.offset += rhs_index.offset
-            * (isSgSubtractOp(arg) ? -1 : 1);
-      }
-      return true;
-    } else {
+      PSAbort(1);
+    } else if (rhs_index.dim == 0 && lhs_index.dim == 0) {
       LOG_ERROR() << "Invalid: LHS and RHS are both constant, but this should not happen because constant folding is applied before this routine.\n";
       PSAbort(1);
     }
+
+    // Make the variable reference lhs
+    if (rhs_index.dim != 0) {
+      std::swap(rhs_index, lhs_index);
+    }
+    
+    PSAssert(rhs_index.dim == 0);
+    idx.dim = lhs_index.dim;
+    idx.offset = rhs_index.offset;
+    if (isSgSubtractOp(arg)) {
+      idx.offset *= -1;
+    }
+    // This should be always true if constant folding works beyond brace
+    // boundaries, but apparently it's not the case.
+    // PSAssert(lhs_index.offset == 0);
+    if (lhs_index.offset != 0) {
+      idx.offset += lhs_index.offset;
+    }
+    return true;
   }
 
   if (isSgCastExp(arg)) {

@@ -138,9 +138,10 @@ static bool handleGridDeclaration(SgInitializedName *in,
     // When no rhs, in is returned
     if (node == in) {
       LOG_DEBUG() << "No definition\n";
-      if (rose_util::isFuncParam(in)) {
-        // in is a function parameter
-        // this is handled at call sites
+      if (rose_util::isFuncParam(in) &&
+          si::isStatic(si::getEnclosingFunctionDeclaration(in))) {
+        // in is a parameter of a static function.
+        // This is handled at call sites.
         continue;
       } else {
         changed |= tx.associateVarWithGrid(in, NULL);
@@ -415,9 +416,9 @@ void TranslationContext::build() {
 
   analyzeRun(*dua);
   analyzeKernelFunctions();
-
+#ifdef UNUSED_CODE
   markReadWriteGrids();
-  
+#endif
   LOG_INFO() << "Analyzing stencil range\n";
   
   FOREACH (it, stencil_map_.begin(), stencil_map_.end()) {
@@ -660,13 +661,13 @@ void TranslationContext::print(ostream &os) const {
        << s->toString() << "\n";
   }
 }
-
+#ifdef UNUSED_CODE
 void TranslationContext::markReadWriteGrids() {
   FOREACH(it, grid_new_map_.begin(), grid_new_map_.end()) {
     Grid *g = it->second;
     FOREACH(kit, entry_kernels_.begin(), entry_kernels_.end()) {
       Kernel *k = kit->second;
-      if (k->isModified(g) && k->isRead(g)) {
+      if (!(k->IsGridUnmodified(g) || k->IsGridUnread(g))) {
         g->setReadWrite(true);
         LOG_DEBUG() << g->toString()
                     << " is read and modified in a single update.\n";
@@ -675,7 +676,7 @@ void TranslationContext::markReadWriteGrids() {
     }
   }
 }
-
+#endif
 bool TranslationContext::IsInit(SgFunctionCallExp *call) const {
   const string &fname = rose_util::getFuncName(call);
   //LOG_DEBUG() << "func name: " << fname << "\n";
