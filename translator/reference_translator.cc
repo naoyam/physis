@@ -108,6 +108,7 @@ void ReferenceTranslator::Optimize() {
 }
 
 void ReferenceTranslator::optimizeConstantSizedGrids() {
+#if NOT_SUPPORTED_YET          
   SgNodePtrList func_calls =
       NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
   FOREACH(it, func_calls.begin(), func_calls.end()) {
@@ -131,7 +132,7 @@ void ReferenceTranslator::optimizeConstantSizedGrids() {
     if (grid_set) {
       break;
     }
-#if NOT_SUPPORTED_YET        
+
     const Grid *grid = *(grid_set->begin());
 
     if (grid->hasStaticSize()) {
