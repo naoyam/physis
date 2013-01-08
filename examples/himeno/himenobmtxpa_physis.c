@@ -66,6 +66,7 @@ float jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1,
 double fflop(int,int,int);
 double mflops(int,double,double);
 double second();
+double GetThroughput(int nn, int mx, int my, int mz, double time);
 
 float   omega=0.8;
 //Matrix  a,b,c,p,bnd,wrk1,wrk2;
@@ -208,6 +209,9 @@ main(int argc, char *argv[])
   printf(" Loop executed for %d times\n",nn);
   printf(" Gosa : %e \n",gosa);
   printf(" MFLOPS measured : %f\tcpu : %f\n",mflops(nn,cpu,flop),cpu);
+  printf(" Throughput   : %.3f (GB/s)\n",
+         GetThroughput(nn, mimax, mjmax, mkmax, cpu));
+  
   printf(" Score based on Pentium III 600MHz using Fortran 77: %f\n",
          mflops(nn,cpu,flop)/82);
 
@@ -232,7 +236,11 @@ main(int argc, char *argv[])
 double
 fflop(int mx,int my, int mz)
 {
+#ifdef COMPUTE_GOSA_EVERY_ITERATION
   return((double)(mz-2)*(double)(my-2)*(double)(mx-2)*34.0);
+#else
+  return((double)(mz-2)*(double)(my-2)*(double)(mx-2)*32.0);
+#endif
 }
 
 double
@@ -367,7 +375,7 @@ jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1, PSGrid3DFloat a2,
   
   assert(nn % 2 == 0);
   
-  printf("executing jacobi\n");
+  printf("Executing jacobi\n");
   PSStencilRun(PSStencilMap(jacobi_kernel, innerDom,
                             p0, p1, a0, a1, a2, a3, b0, b1, b2,
                             c0, c1, c2, bnd, wrk1, omega),
@@ -407,3 +415,18 @@ second()
   return t ;
 }
 
+double GetThroughput(int nn, int mx, int my, int mz, double time)
+{
+  // load from a0-3, b0-2, c0-2, wrk1, bnd
+  double load_interior_only =
+      (double)(mz-2)*(double)(my-2)*(double)(mx-2)*12;
+  // load from p0
+  double load_whole =
+      (double)(mz)*(double)(my)*(double)(mx)*1;
+  // store to p1
+  double store =
+      (double)(mz-2)*(double)(my-2)*(double)(mx-2)*1;
+  double total_size_per_update =
+      sizeof(float) * (load_interior_only + load_whole + store);
+  return (total_size_per_update * nn / time) * 1.0e-09;
+}
