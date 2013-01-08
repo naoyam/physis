@@ -142,9 +142,9 @@ main(int argc, char *argv[])
   mat_set(a1, 1.0, host_buf);
   mat_set(a2, 1.0, host_buf);
   mat_set(a3, 1.0/6.0, host_buf);
-  //mat_set(b0, 0.0, host_buf);
-  //mat_set(b1, 0.0, host_buf);
-  //mat_set(b2, 0.0, host_buf);
+  mat_set(b0, 0.0, host_buf);
+  mat_set(b1, 0.0, host_buf);
+  mat_set(b2, 0.0, host_buf);
   mat_set(c0, 1.0, host_buf);
   mat_set(c1, 1.0, host_buf);
   mat_set(c2, 1.0, host_buf);
@@ -158,10 +158,8 @@ main(int argc, char *argv[])
   printf(" Measure the performance in %d times.\n\n",nn);
 
   cpu0 = second();
-#if 0  
   gosa = jacobi(nn, a0, a1, a2, a3, b0, b1, b2, c0, c1, c2,
                 p0, p1, bnd, wrk1);
-#endif  
   cpu1 = second();
   cpu = cpu1 - cpu0;
   flop = fflop(imax,jmax,kmax);
@@ -331,22 +329,21 @@ void jacobi_kernel(int i, int j, int k,
                    float omega)
 {
   float s0, ss;
-    
-  s0= PSGridGet(a0, i, j, k) * PSGridGet(p0, i+1, j, k)
+  s0= PSGridGet(a0, i, j, k) * PSGridGet(p0, i, j, k+1)
       + PSGridGet(a1, i, j, k) * PSGridGet(p0, i, j+1, k)
-      + PSGridGet(a2, i, j, k) * PSGridGet(p0, i, j, k+1)
+      + PSGridGet(a2, i, j, k) * PSGridGet(p0, i+1, j, k)
       + PSGridGet(b0, i, j, k)
-      *( PSGridGet(p0, i+1, j+1, k) - PSGridGet(p0, i+1, j-1, k)
-         - PSGridGet(p0, i-1, j+1, k) + PSGridGet(p0, i-1, j-1, k) )
-      + PSGridGet(b1, i, j, k)
       *( PSGridGet(p0, i, j+1, k+1) - PSGridGet(p0, i, j-1, k+1)
          - PSGridGet(p0, i, j+1, k-1) + PSGridGet(p0, i, j-1, k-1) )
+      + PSGridGet(b1, i, j, k)
+      *( PSGridGet(p0, i+1, j+1, k) - PSGridGet(p0, i+1, j-1, k)
+         - PSGridGet(p0, i-1, j+1, k) + PSGridGet(p0, i-1, j-1, k) )
       + PSGridGet(b2, i, j, k)
-      *( PSGridGet(p0, i+1, j, k+1) - PSGridGet(p0, i-1, j, k+1)
-         - PSGridGet(p0, i+1, j, k-1) + PSGridGet(p0, i-1, j, k-1) )
-      + PSGridGet(c0, i, j, k) * PSGridGet(p0, i-1, j, k)
+      *( PSGridGet(p0, i+1, j, k+1) - PSGridGet(p0, i+1, j, k-1)
+         - PSGridGet(p0, i-1, j, k+1) + PSGridGet(p0, i-1, j, k-1) )
+      + PSGridGet(c0, i, j, k) * PSGridGet(p0, i, j, k-1)
       + PSGridGet(c1, i, j, k) * PSGridGet(p0, i, j-1, k)
-      + PSGridGet(c2, i, j, k) * PSGridGet(p0, i, j, k-1)
+      + PSGridGet(c2, i, j, k) * PSGridGet(p0, i-1, j, k)
       + PSGridGet(wrk1, i, j, k);
   ss = (s0 * PSGridGet(a3, i, j, k) - PSGridGet(p0, i, j, k))
        * PSGridGet(bnd, i, j, k);

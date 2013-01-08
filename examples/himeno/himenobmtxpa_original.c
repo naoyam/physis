@@ -139,9 +139,7 @@ main(int argc, char *argv[])
   printf(" Measure the performance in %d times.\n\n",nn);
 
   cpu0= second();
-#if 0  
   gosa= jacobi(nn,&a,&b,&c,&p,&bnd,&wrk1,&wrk2);
-#endif  
   cpu1= second();
   cpu= cpu1 - cpu0;
   flop= fflop(imax,jmax,kmax);
