@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <string.h>
 
 #define MR(mt,n,r,c,d)  mt->m[(n) * mt->mrows * mt->mcols * mt->mdeps + (r) * mt->mcols* mt->mdeps + (c) * mt->mdeps + (d)]
 
@@ -138,7 +139,9 @@ main(int argc, char *argv[])
   printf(" Measure the performance in %d times.\n\n",nn);
 
   cpu0= second();
+#if 0  
   gosa= jacobi(nn,&a,&b,&c,&p,&bnd,&wrk1,&wrk2);
+#endif  
   cpu1= second();
   cpu= cpu1 - cpu0;
   flop= fflop(imax,jmax,kmax);
@@ -151,9 +154,9 @@ main(int argc, char *argv[])
   {
     int i, j, k;
     FILE* hout = fopen("himeno.original.dat", "w");
-    for (k = 0; k < mkmax; ++k) {
+    for (i = 0; i < mimax; ++i) {    
       for (j = 0; j < mjmax; ++j) {
-        for (i = 0; i < mimax; ++i) {
+        for (k = 0; k < mkmax; ++k) {
           float v = MR((&p), 0, i, j, k);
           fprintf(hout, "%f\n", v);
         }
@@ -177,7 +180,7 @@ main(int argc, char *argv[])
   printf(" Gosa : %e \n",gosa);
   printf(" MFLOPS measured : %f\tcpu : %f\n",mflops(nn,cpu,flop),cpu);
   printf(" Score based on Pentium III 600MHz using Fortran 77: %f\n",
-         mflops(nn,cpu,flop)/82,84);
+         mflops(nn,cpu,flop)/82.84);
 
 
   /*

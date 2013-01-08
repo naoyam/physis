@@ -158,8 +158,10 @@ main(int argc, char *argv[])
   printf(" Measure the performance in %d times.\n\n",nn);
 
   cpu0 = second();
+#if 0  
   gosa = jacobi(nn, a0, a1, a2, a3, b0, b1, b2, c0, c1, c2,
                 p0, p1, bnd, wrk1);
+#endif  
   cpu1 = second();
   cpu = cpu1 - cpu0;
   flop = fflop(imax,jmax,kmax);
@@ -307,12 +309,12 @@ mat_set_init(PSGrid3DFloat Mat, float *buf)
 {
   int  i,j,k;
 
-  size_t d0 = PSGridDim(Mat, 0);
+  int d0 = PSGridDim(Mat, 2);
   size_t x = 0;
-  for(i=0; i< PSGridDim(Mat, 0); i++)
-    for(j=0; j< PSGridDim(Mat, 1); j++)
-      for(k=0; k< PSGridDim(Mat, 2); k++) {
-        float v = ((float)(i*i)) / (d0 - 1) * (d0 - 1);
+  for(k=0; k< PSGridDim(Mat, 2); k++) 
+    for(j=0; j< PSGridDim(Mat, 1); j++)        
+      for(i=0; i< PSGridDim(Mat, 0); i++) {
+        float v = (float)(k*k) / ((d0 - 1) * (d0 - 1));
         buf[x] = v;
         ++x;
       }
@@ -352,39 +354,7 @@ void jacobi_kernel(int i, int j, int k,
   PSGridEmit(p1, v);
   return;
 }
-#if 0
-void gosa_kernel(int i, int j, int k, PSGrid3DFloat p,
-                 PSGrid3DFloat a0, PSGrid3DFloat a1,
-                 PSGrid3DFloat a2, PSGrid3DFloat a3,
-                 PSGrid3DFloat b0, PSGrid3DFloat b1,
-                 PSGrid3DFloat b2, PSGrid3DFloat c0,
-                 PSGrid3DFloat c1, PSGrid3DFloat c2,
-                 PSGrid3DFloat c3, PSGrid3DFloat bnd,
-                 PSGrid3DFloat wrk1, float omega)
-{
-  float s0, ss;
-  s0= PSGridGet(a0, i, j, k) * PSGridGet(p, i+1, j, k)
-      + PSGridGet(a1, i, j, k) * PSGridGet(p, i, j+1, k)
-      + PSGridGet(a2, i, j, k) * PSGridGet(p, i, j, k+1)
-      + PSGridGet(b0, i, j, k)
-      *( PSGridGet(p, i+1, j+1, k) - PSGridGet(p, i+1, j-1, k)
-         - PSGridGet(p, i-1, j+1, k) + PSGridGet(p, i-1, j-1, k) )
-      + PSGridGet(b1, i, j, k)
-      *( PSGridGet(p, i, j+1, k+1) - PSGridGet(p, i, j-1, k+1)
-         - PSGridGet(p, i, j+1, k-1) + PSGridGet(p, i, j-1, k-1) )
-      + PSGridGet(b2, i, j, k)
-      *( PSGridGet(p, i+1, j, k+1) - PSGridGet(p, i-1, j, k+1)
-         - PSGridGet(p, i+1, j, k-1) + PSGridGet(p, i-1, j, k-1) )
-      + PSGridGet(c0, i, j, k) * PSGridGet(p, i-1, j, k)
-      + PSGridGet(c1, i, j, k) * PSGridGet(p, i, j-1, k)
-      + PSGridGet(c2, i, j, k) * PSGridGet(p, i, j, k-1)
-      + PSGridGet(wrk1, i, j, k);
-  ss = (s0 * PSGridGet(a3, i, j, k) - PSGridGet(p, i, j, k))
-       * PSGridGet(bnd, i, j, k);
-  PSGridEmit(p, ss*ss);
-  return;
-}
-#endif
+
 float
 jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1, PSGrid3DFloat a2,
        PSGrid3DFloat a3, PSGrid3DFloat b0, PSGrid3DFloat b1,
