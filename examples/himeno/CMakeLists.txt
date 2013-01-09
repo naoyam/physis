@@ -1,8 +1,9 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Makefile.cmake
   @CMAKE_CURRENT_BINARY_DIR@/tmp/Makefile @ONLY)
 
-install(FILES himenobmtxpa_physis.c himenobmtxpa_original.c
+install(FILES
+  himenobmtxpa_physis.c himenobmtxpa_original.c
+  @CMAKE_CURRENT_BINARY_DIR@/tmp/Makefile
+  physis.conf
   DESTINATION examples/himeno)
 
-install(FILES @CMAKE_CURRENT_BINARY_DIR@/tmp/Makefile
-  DESTINATION examples/himeno)

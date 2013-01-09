@@ -1,8 +1,8 @@
-PHYSISC_CONFIG ?= /dev/null
+PHYSISC_CONFIG ?= physis.conf
 PHYSISC = @CMAKE_INSTALL_PREFIX@/bin/physisc -DENABLE_DUMP --config $(PHYSISC_CONFIG)
 PHYSIS_INCLUDE = -I@CMAKE_INSTALL_PREFIX@/include
 CFLAGS = -Wall -g $(PHYSIS_INCLUDE) -O2 -DENABLE_DUMP
-NVCC_CFLAGS = -g -Xcompiler -Wall $(PHYSIS_INCLUDE) -arch sm_20 -DENABLE_DUMP
+NVCC_CFLAGS = -g -Xcompiler -Wall $(PHYSIS_INCLUDE) -arch sm_20 -DENABLE_DUMP --ptxas-options -v
 MPI_INCLUDE = $(shell for mpiinc in $(shell echo "@MPI_INCLUDE_PATH@" | sed 's/;/ /g'); do echo -n "-I$$mpiinc "; done)
 NVCC_LDFLAGS= -lcudart -L@CUDA_RT_DIR@
 
