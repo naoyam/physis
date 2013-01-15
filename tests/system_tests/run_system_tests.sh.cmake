@@ -17,7 +17,7 @@ FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
 fi
-CFLAGS="${CFLAGS} -g -Wno-unuused-variable"
+CFLAGS="${CFLAGS} -g -Wno-unused-variable"
 DIE_IMMEDIATELY=0
 ###############################################################
 set -u
