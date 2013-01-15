@@ -9,6 +9,7 @@
 #ifndef PHYSIS_RUNTIME_GRID_MPI_H_
 #define PHYSIS_RUNTIME_GRID_MPI_H_
 
+#define __STDC_LIMIT_MACROS
 #include "mpi.h"
 
 #include "runtime/runtime_common.h"
