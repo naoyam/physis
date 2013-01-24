@@ -10,7 +10,7 @@ namespace physis {
 namespace runtime {
 
 void BufferHostOpenMP::Allocate(
-  int num_dims, size_t elm_size, const IntArray &size){
+    int num_dims, size_t elm_size, const IntArray &size){
 
   DeleteOpenMP();
 
@@ -27,14 +27,14 @@ void BufferHostOpenMP::Allocate(
   const size_t alignment = sysconf(_SC_PAGESIZE);
 
   int status = CreateAlignedMultiBuffer(
-    requested_size, division_,
-    elm_size,
-    alignment,
-    &buf_mp_,
-    mp_offset_, mp_width_,
-    mp_cpu_memsize_, mp_cpu_allocBytes_,
-    mp_linesize_
-    );
+      requested_size, division_,
+      elm_size,
+      alignment,
+      &buf_mp_,
+      mp_offset_, mp_width_,
+      mp_cpu_memsize_, mp_cpu_allocBytes_,
+      mp_linesize_
+                                        );
 
   if (status) {
     LOG_ERROR() << "Calling CreateAlignedMultiBuffer failed\n";
@@ -82,8 +82,8 @@ BufferHostOpenMP::BufferHostOpenMP(int num_dims,  size_t elm_size):
     mp_cpu_allocBytes_(0),
     mbind_done_p(false)
 {
-    IntArray minimum(1,1,1);
-    division_ = minimum;
+  IntArray minimum(1,1,1);
+  division_ = minimum;
 }
 
 BufferHostOpenMP::BufferHostOpenMP(int num_dims,  size_t elm_size, IntArray &division_in):
@@ -97,8 +97,8 @@ BufferHostOpenMP::BufferHostOpenMP(int num_dims,  size_t elm_size, IntArray &div
     mp_cpu_allocBytes_(0),
     mbind_done_p(false)
 {
-    IntArray unitarray(1,1,1);
-    division_.SetNoLessThan(unitarray);
+  IntArray unitarray(1,1,1);
+  division_.SetNoLessThan(unitarray);
 }
 
 BufferHostOpenMP::~BufferHostOpenMP() {
@@ -106,18 +106,18 @@ BufferHostOpenMP::~BufferHostOpenMP() {
 }
 
 void BufferHostOpenMP::Copyin(
-  const void *buf, const IntArray &offset,
-  const IntArray &size){
+    const void *buf, const IntArray &offset,
+    const IntArray &size){
 
   Copyin(buf, offset, size, (size_t) 0);
 
 }
 
 void BufferHostOpenMP::Copyin(
-  const void *buf, const IntArray &offset,
-  const IntArray &size,
-  const size_t linear_offset
-  ){
+    const void *buf, const IntArray &offset,
+    const IntArray &size,
+    const size_t linear_offset
+                              ){
   EnsureCapacity(offset + size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -138,42 +138,42 @@ void BufferHostOpenMP::Copyin(
           for (cpucount[0] = 0; cpucount[0] < division_[0] ; cpucount[0]++) {
             //for (xyzcount[0] = 0; xyzcount[0] <  mp_width_[0][cpucount[0]]; xyzcount[0]++) {
 
-                unsigned int cpuid =
-                  cpucount[0] + 
-                    cpucount[1] * division_[0] +
-                    cpucount[2] * division_[0] * division_[1];
-                unsigned long int offset =
+            unsigned int cpuid =
+                cpucount[0] + 
+                cpucount[1] * division_[0] +
+                cpucount[2] * division_[0] * division_[1];
+            unsigned long int offset =
 #ifdef USE_LINESIZE
-                    xyzcount[1] * mp_linesize_ +
-                    xyzcount[2] * mp_linesize_ * mp_width_[1][cpucount[1]];
+                xyzcount[1] * mp_linesize_ +
+                xyzcount[2] * mp_linesize_ * mp_width_[1][cpucount[1]];
 #else
-                    xyzcount[1] * mp_width_[0][cpucount[0]] +
-                    xyzcount[2] * mp_width_[0][cpucount[0]] * mp_width_[1][cpucount[1]];
+            xyzcount[1] * mp_width_[0][cpucount[0]] +
+                xyzcount[2] * mp_width_[0][cpucount[0]] * mp_width_[1][cpucount[1]];
 #endif
-                unsigned long int size_writenow = mp_width_[0][cpucount[0]];
-                size_writenow *= elm_size_;
+            unsigned long int size_writenow = mp_width_[0][cpucount[0]];
+            size_writenow *= elm_size_;
 
-                intptr_t mp_curpos = ((intptr_t)Get_MP()[cpuid] + offset * elm_size_);
-                if (offset_left) {
-                  if (size_writenow > offset_left) {
-                    size_writenow -= offset_left;
-                    mp_curpos += offset_left;
-                    offset_left = 0;
-                  } else {
-                    offset_left -= size_writenow;
-                    size_writenow = 0;
-                  } 
-                }
+            intptr_t mp_curpos = ((intptr_t)Get_MP()[cpuid] + offset * elm_size_);
+            if (offset_left) {
+              if (size_writenow > offset_left) {
+                size_writenow -= offset_left;
+                mp_curpos += offset_left;
+                offset_left = 0;
+              } else {
+                offset_left -= size_writenow;
+                size_writenow = 0;
+              } 
+            }
 
-                if (size_writenow > size_left) size_writenow = size_left;
-                if (size_writenow) {
-                  memcpy((void *)mp_curpos, (const void *)buf_curpos, size_writenow);
-                  size_left -= size_writenow;
-                  buf_curpos += size_writenow;
-                }
+            if (size_writenow > size_left) size_writenow = size_left;
+            if (size_writenow) {
+              memcpy((void *)mp_curpos, (const void *)buf_curpos, size_writenow);
+              size_left -= size_writenow;
+              buf_curpos += size_writenow;
+            }
 
-                if (!size_left)
-                  return;
+            if (!size_left)
+              return;
 
             //} // xyzcount[0]
           } // cpucount[0]
@@ -188,17 +188,17 @@ void BufferHostOpenMP::Copyin(
 }
 
 void BufferHostOpenMP::Copyout(
-  void *buf, const IntArray &offset,
-  const IntArray &size){
+    void *buf, const IntArray &offset,
+    const IntArray &size){
 
   Copyout(buf, offset, size, (size_t) 0);
 
 }
 
 void BufferHostOpenMP::Copyout(
-  void *buf, const IntArray &offset,
-  const IntArray &size,
-  const size_t linear_offset)
+    void *buf, const IntArray &offset,
+    const IntArray &size,
+    const size_t linear_offset)
 {
   EnsureCapacity(offset + size);
   // Offset access is not yet supported.
@@ -220,42 +220,42 @@ void BufferHostOpenMP::Copyout(
           for (cpucount[0] = 0; cpucount[0] < division_[0] ; cpucount[0]++) {
             //for (xyzcount[0] = 0; xyzcount[0] <  mp_width_[0][cpucount[0]]; xyzcount[0]++) {
 
-                unsigned int cpuid =
-                  cpucount[0] + 
-                    cpucount[1] * division_[0] +
-                    cpucount[2] * division_[0] * division_[1];
-                unsigned long int offset =
+            unsigned int cpuid =
+                cpucount[0] + 
+                cpucount[1] * division_[0] +
+                cpucount[2] * division_[0] * division_[1];
+            unsigned long int offset =
 #ifdef USE_LINESIZE
-                    xyzcount[1] * mp_linesize_ +
-                    xyzcount[2] * mp_linesize_ * mp_width_[1][cpucount[1]];
+                xyzcount[1] * mp_linesize_ +
+                xyzcount[2] * mp_linesize_ * mp_width_[1][cpucount[1]];
 #else
-                    xyzcount[1] * mp_width_[0][cpucount[0]] +
-                    xyzcount[2] * mp_width_[0][cpucount[0]] * mp_width_[1][cpucount[1]];
+            xyzcount[1] * mp_width_[0][cpucount[0]] +
+                xyzcount[2] * mp_width_[0][cpucount[0]] * mp_width_[1][cpucount[1]];
 #endif
-                unsigned long int size_writenow = mp_width_[0][cpucount[0]];
-                size_writenow *= elm_size_;
+            unsigned long int size_writenow = mp_width_[0][cpucount[0]];
+            size_writenow *= elm_size_;
 
-                intptr_t mp_curpos = ((intptr_t)Get_MP()[cpuid] + offset * elm_size_);
-                if (offset_left) {
-                  if (size_writenow > offset_left) {
-                    size_writenow -= offset_left;
-                    mp_curpos += offset_left;
-                    offset_left = 0;
-                  } else {
-                    offset_left -= size_writenow;
-                    size_writenow = 0;
-                  } 
-                }
+            intptr_t mp_curpos = ((intptr_t)Get_MP()[cpuid] + offset * elm_size_);
+            if (offset_left) {
+              if (size_writenow > offset_left) {
+                size_writenow -= offset_left;
+                mp_curpos += offset_left;
+                offset_left = 0;
+              } else {
+                offset_left -= size_writenow;
+                size_writenow = 0;
+              } 
+            }
 
-                if (size_writenow > size_left) size_writenow = size_left;
-                if (size_writenow) {
-                  memcpy((void *)buf_curpos, (const void *)mp_curpos, size_writenow);
-                  size_left -= size_writenow;
-                  buf_curpos += size_writenow;
-                }
+            if (size_writenow > size_left) size_writenow = size_left;
+            if (size_writenow) {
+              memcpy((void *)buf_curpos, (const void *)mp_curpos, size_writenow);
+              size_left -= size_writenow;
+              buf_curpos += size_writenow;
+            }
 
-                if (!size_left)
-                  return;
+            if (!size_left)
+              return;
 
             //} // xyzcount[0]
           } // cpucount[0]
@@ -278,7 +278,7 @@ void BufferHostOpenMP::MPISendRecvInoI(
     MPI_Comm comm, MPI_Request *req,
     const IntArray &offset, const IntArray &size,
     const size_t *cpu_memsize
-){
+                                       ){
   // offset access is not yet support
   PSAssert(offset == 0);
   if (recv_p) {
@@ -303,7 +303,7 @@ void BufferHostOpenMP::MPISendRecvInoI(
       }
       if (!blocking_p) {
       }
-        PS_MPI_Irecv(buf, size_now, MPI_BYTE, srcdstNUM, 0, comm, req);
+      PS_MPI_Irecv(buf, size_now, MPI_BYTE, srcdstNUM, 0, comm, req);
     }
     if (!recv_p) {
       if (blocking_p) {
@@ -338,44 +338,44 @@ int BufferHostOpenMP::CreateAlignedMultiBuffer(
     size_t *&ret_cpu_memsize,
     size_t *&ret_cpu_allocbytes,
     size_t &linesize
-){
+                                               ){
 
-    int status = 0;
+  int status = 0;
 
-    LOG_DEBUG() << "Allocate size:" << requested_size << ".\n";
+  LOG_DEBUG() << "Allocate size:" << requested_size << ".\n";
 
-    IntArray req_expanded_size = requested_size;
+  IntArray req_expanded_size = requested_size;
 
-    IntArray unitarray(1,1,1);
-    req_expanded_size.SetNoLessThan(unitarray);
-    division.SetNoMoreThan(req_expanded_size);
+  IntArray unitarray(1,1,1);
+  req_expanded_size.SetNoLessThan(unitarray);
+  division.SetNoMoreThan(req_expanded_size);
 
-    ret_offset = new size_t*[PS_MAX_DIM];
-    ret_width = new size_t*[PS_MAX_DIM];
+  ret_offset = new size_t*[PS_MAX_DIM];
+  ret_width = new size_t*[PS_MAX_DIM];
 
-    for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++) {
-      ret_offset[dim] = new size_t[division[dim]];
-      ret_width[dim] = new size_t[division[dim]];
-      for (unsigned int j = 0; j < division[dim]; j++) {
-        size_t minc = requested_size[dim] * j / division[dim];
-        size_t maxc = requested_size[dim] * (j + 1) / division[dim];
-        if (j == division[dim] - 1)
-          maxc = requested_size[dim];
+  for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++) {
+    ret_offset[dim] = new size_t[division[dim]];
+    ret_width[dim] = new size_t[division[dim]];
+    for (unsigned int j = 0; j < division[dim]; j++) {
+      size_t minc = requested_size[dim] * j / division[dim];
+      size_t maxc = requested_size[dim] * (j + 1) / division[dim];
+      if (j == division[dim] - 1)
+        maxc = requested_size[dim];
 
-        ret_offset[dim][j] = minc;
-        ret_width[dim][j] = maxc - minc;
+      ret_offset[dim][j] = minc;
+      ret_width[dim][j] = maxc - minc;
 
-        if (dim == 0) {
-          if (linesize < ret_width[dim][j])
-            linesize = ret_width[dim][j];
-        }
-
+      if (dim == 0) {
+        if (linesize < ret_width[dim][j])
+          linesize = ret_width[dim][j];
       }
+
     }
+  }
 
   unsigned int total_num = 1;
   for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++)
-      total_num *= division[dim];
+    total_num *= division[dim];
 
   *ret_buf = (void **) calloc(total_num, sizeof(void *));
   ret_cpu_memsize = new size_t[total_num + 1];
@@ -405,18 +405,18 @@ int BufferHostOpenMP::CreateAlignedMultiBuffer(
     real_size *= elmsize;
 
     size_t allocate_size =
-      ((real_size + alignment - 1) / alignment) * alignment;
+        ((real_size + alignment - 1) / alignment) * alignment;
     ret_cpu_allocbytes[cpunum] = allocate_size;
     LOG_DEBUG() << real_size << " bytes requested, actually allocating "
-      << allocate_size << " bytes "
-      << "to cpuid " << cpunum << "\n";
+                << allocate_size << " bytes "
+                << "to cpuid " << cpunum << "\n";
 
     void *ptr = 0;
     if (real_size) {
       status = posix_memalign(&ptr, alignment, allocate_size);
       if (status) {
         LOG_ERROR() << "posix_memalign failed with status "
-          << status << "\n";
+                    << status << "\n";
         return 1;
       }
     }
@@ -430,11 +430,11 @@ int BufferHostOpenMP::CreateAlignedMultiBuffer(
 
 void BufferHostOpenMP::DestroyMultiBuffer(
     void ***src_buf, const IntArray &division
-){
+                                          ){
 
   unsigned int total_num = 1;
   for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++)
-      total_num *= division[dim];
+    total_num *= division[dim];
 
   void **arr_buf = *src_buf;
   if (!arr_buf) return;
@@ -448,7 +448,7 @@ void BufferHostOpenMP::DestroyMultiBuffer(
 
 void BufferHostOpenMP::DestroyMP3Dinfo(
     size_t **&src_3dinfo, const IntArray &division
-){
+                                       ){
   if (! src_3dinfo) return;
 
   for (unsigned int dim = 0; dim < PS_MAX_DIM; dim++) {

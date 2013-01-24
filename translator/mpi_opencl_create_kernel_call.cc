@@ -69,7 +69,7 @@ SgFunctionCallExp *MPIOpenCLTranslator::BuildKernelCall(
           sb::buildFunctionRefExp(newkernelname),
 #endif
           args
-          );
+                               );
   return func_call;
 }
 

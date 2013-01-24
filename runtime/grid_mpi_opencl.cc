@@ -68,11 +68,11 @@ GridMPIOpenCL3D *GridMPIOpenCL3D::Create(
     int attr,
     CLbaseinfo *clinfo_in) {
   GridMPIOpenCL3D *gmc = new GridMPIOpenCL3D(
-                                        type, elm_size, num_dims, size,
-                                        double_buffering, global_offset,
-                                        local_offset, local_size,
-                                        attr,
-                                        clinfo_in);
+      type, elm_size, num_dims, size,
+      double_buffering, global_offset,
+      local_offset, local_size,
+      attr,
+      clinfo_in);
   gmc->InitBuffer();
   return gmc;
 }
@@ -157,9 +157,9 @@ void GridMPIOpenCL3D::Copyin_CL(cl_mem dst_clmem, size_t offset, const void *src
   cl_command_queue queue = grid_clinfo_->get_queue();
   PSAssert(queue);
   status = clEnqueueWriteBuffer(
-    queue, dst_clmem, CL_TRUE, /* block */
-    offset, size, src,
-    0, NULL, NULL);
+      queue, dst_clmem, CL_TRUE, /* block */
+      offset, size, src,
+      0, NULL, NULL);
   if (status != CL_SUCCESS) {
     LOG_DEBUG() << "Calling clEnqueueWriteBuffer() failed.\n";
   }
@@ -194,9 +194,9 @@ void GridMPIOpenCL3D::Copyout_CL(void *dst, size_t offset, const cl_mem src_clme
   cl_command_queue queue = grid_clinfo_->get_queue();
   PSAssert(queue);
   status = clEnqueueReadBuffer(
-    queue, src_clmem, CL_TRUE, /* block */
-    offset, size, dst,
-    0, NULL, NULL);
+      queue, src_clmem, CL_TRUE, /* block */
+      offset, size, dst,
+      0, NULL, NULL);
   if (status != CL_SUCCESS) {
     LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
   }
@@ -231,7 +231,7 @@ std::ostream &GridMPIOpenCL3D::Print(std::ostream &os) const {
 // TODO: Not read in detail yet
 // TODO: However, perhaps no problem
 void GridMPIOpenCL3D::CopyoutHalo(int dim, unsigned width, bool fw,
-                                bool diagonal) {
+                                  bool diagonal) {
   PSAssert(num_dims() <= 3);
   halo_has_diagonal_ = diagonal;
 
@@ -290,7 +290,7 @@ void GridMPIOpenCL3D::CopyoutHalo3D1(unsigned width, bool fw) {
   int fw_idx = fw ? 1 : 0;
   // copy diag
   char *buf = (char*)halo_self_mpi_[1][fw_idx]->Get();
-      // halo_self_mpi_ is BufferHost
+  // halo_self_mpi_ is BufferHost
   IntArray sg_offset;
   if (!fw) sg_offset[1] = local_size_[1] - width;
   IntArray sg_size(local_size_[0], width, halo_bw_width_[2]);
@@ -379,16 +379,16 @@ void GridMPIOpenCL3D::FixupBufferPointers() {
   if (data_buffer_[0]) {
     if (data_[0] != 
         reinterpret_cast<char *>
-          (static_cast<BufferOpenCLDev*>(data_buffer_[0])->Get_buf_mem()))
+        (static_cast<BufferOpenCLDev*>(data_buffer_[0])->Get_buf_mem()))
     {
       LOG_DEBUG() << "Buf pointer updated by " << "data_buffer_[0]->Get_buf_mem()" << "\n";
     }
     // FIXME
     // FIXME: Be very careful!!
     data_[0] = reinterpret_cast<char *>
-                  (static_cast<BufferOpenCLDev*>(data_buffer_[0])->Get_buf_mem());
+        (static_cast<BufferOpenCLDev*>(data_buffer_[0])->Get_buf_mem());
     data_[1] = reinterpret_cast<char *>
-                  (static_cast<BufferOpenCLDev*>(data_buffer_[1])->Get_buf_mem());
+        (static_cast<BufferOpenCLDev*>(data_buffer_[1])->Get_buf_mem());
   } else {
     LOG_VERBOSE() << "data buffer 0\n";
     data_[0] = 0;
@@ -437,18 +437,18 @@ void GridMPIOpenCL3D::FixupBufferPointers() {
 }
 
 void GridMPIOpenCL3D::EnsureRemoteGrid(
-                const IntArray &local_offset,
-                const IntArray &local_size)
+    const IntArray &local_offset,
+    const IntArray &local_size)
 {
   if (remote_grid_ == NULL) {
     // For sure
     PSAssert(grid_clinfo_);
     remote_grid_ = GridMPIOpenCL3D::Create(
-            type_, elm_size_, num_dims_,
-            size_, false, global_offset_,
-            local_offset, local_size,
-              0,
-            grid_clinfo_);
+        type_, elm_size_, num_dims_,
+        size_, false, global_offset_,
+        local_offset, local_size,
+        0,
+        grid_clinfo_);
   } else {
     remote_grid_->Resize(local_offset, local_size);
   }
@@ -507,11 +507,11 @@ GridMPIOpenCL3D *GridSpaceMPIOpenCL::CreateGrid(
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
   GridMPIOpenCL3D *g = GridMPIOpenCL3D::Create(
-                                          type, elm_size, num_dims, grid_size,
-                                          double_buffering,
-                                          grid_global_offset, local_offset,
-                                          local_size, attr,
-                                          clinfo);
+      type, elm_size, num_dims, grid_size,
+      double_buffering,
+      grid_global_offset, local_offset,
+      local_size, attr,
+      clinfo);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   LOG_DEBUG() << "grid registered\n";  
@@ -554,7 +554,7 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage1(
        grid->local_offset_[dim] + grid->local_size_[dim] < grid->size_[dim])) {
 #if defined(PS_VERBOSE)            
     LOG_DEBUG() << "Sending halo of " << bw_size << " elements"
-              << " for bw access to " << fw_peer << "\n";
+                << " for bw access to " << fw_peer << "\n";
 #endif    
     st.Start();
     grid->CopyoutHalo(dim, halo_bw_width, false, diagonal);
@@ -641,12 +641,12 @@ void GridSpaceMPIOpenCL::ExchangeBoundariesStage2(
 }
 
 bool GridSpaceMPIOpenCL::SendBoundaries(GridMPIOpenCL3D *grid, int dim,
-                                      unsigned width,
-                                      bool forward, bool diagonal,
-                                      bool periodic,
-                                      ssize_t halo_size,
-                                      DataCopyProfile &prof,
-                                      MPI_Request &req) const {
+                                        unsigned width,
+                                        bool forward, bool diagonal,
+                                        bool periodic,
+                                        ssize_t halo_size,
+                                        DataCopyProfile &prof,
+                                        MPI_Request &req) const {
   // Nothing to do since the width is zero
   if (width <= 0) {
     return false;
@@ -689,10 +689,10 @@ bool GridSpaceMPIOpenCL::SendBoundaries(GridMPIOpenCL3D *grid, int dim,
 }
 
 bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
-                                      unsigned width,
-                                      bool forward, bool diagonal,
-                                      bool periodic, ssize_t halo_size,
-                                      DataCopyProfile &prof) const {
+                                        unsigned width,
+                                        bool forward, bool diagonal,
+                                        bool periodic, ssize_t halo_size,
+                                        DataCopyProfile &prof) const {
   int peer = forward ? fw_neighbors_[dim] : bw_neighbors_[dim];
   int dir_idx = forward ? 1 : 0;
   bool is_last_process =
@@ -703,7 +703,7 @@ bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
 
   if (width == 0 ||
       (!periodic && ((forward && is_last_process) ||
-                        (!forward && is_first_process)))) {
+                     (!forward && is_first_process)))) {
     if (forward) {
       grid->halo_fw_width_[dim] = 0;
       grid->halo_fw_size_[dim].assign(0);
@@ -717,7 +717,7 @@ bool GridSpaceMPIOpenCL::RecvBoundaries(GridMPIOpenCL3D *grid, int dim,
 #if defined(PS_DEBUG)
   if (!periodic) {
     if( (forward && grid->local_offset_[dim] +
-        grid->local_size_[dim] + width
+         grid->local_size_[dim] + width
          > grid->size_[dim]) ||
         (!forward && grid->local_offset_[dim] - width < 0)
         ) {
@@ -826,8 +826,8 @@ void GridSpaceMPIOpenCL::HandleFetchRequest(GridRequest &req, GridMPI *g) {
 }
 
 void GridSpaceMPIOpenCL::HandleFetchReply(GridRequest &req, GridMPI *g,
-                                        std::map<int, FetchInfo> &fetch_map,
-                                        GridMPI *sg) {
+                                          std::map<int, FetchInfo> &fetch_map,
+                                          GridMPI *sg) {
   LOG_DEBUG() << "HandleFetchReply\n";
   GridMPIOpenCL3D *sgm = static_cast<GridMPIOpenCL3D*>(sg);
   const FetchInfo &finfo = fetch_map[req.my_rank];
@@ -853,10 +853,10 @@ inline index_t GridCalcOffset3D(const IntArray &index,
 }
 
 void GridMPIOpenCL3D::GetAddress_CL(
-      const IntArray &indices_param,
-      cl_mem *buf_clmem_ret,
-      size_t *offset_ret
-)
+    const IntArray &indices_param,
+    cl_mem *buf_clmem_ret,
+    size_t *offset_ret
+                                    )
 {
   // Anyway initialize
   *buf_clmem_ret = 0;

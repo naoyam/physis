@@ -42,7 +42,7 @@ class MPIOpenCLTranslator: public MPITranslator {
     \param width the halo width.
     \param ifclause the IF clause to be taken when the condition is true.
     \return The IF block.
-   */
+  */
   virtual SgIfStmt *BuildDomainInclusionInnerCheck(
       const vector<SgVariableDeclaration*> &indices,
       SgExpression *dom_ref, SgExpression *width,
@@ -53,28 +53,28 @@ class MPIOpenCLTranslator: public MPITranslator {
                                  SgScopeStatement *loop_body,
                                  SgVariableDeclaration *dec_local_size,
                                  SgVariableDeclaration *argc_idx
-                              );
+                                 );
   virtual SgBasicBlock *BuildRunBody(Run *run); 
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   //! Generates a OpenCL function declaration that runs a stencil map. 
   /*!
     \param s The stencil map object.
     \return The function declaration.
-   */
+  */
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil The stencil map object.
     \param dom_arg The stencil domain.
     \return The body of the run function.
-   */
+  */
   virtual SgBasicBlock *BuildRunKernelBody(
       StencilMap *stencil, SgInitializedName *dom_arg);
   //! Generates OpenCL functions that run a boundary stencil.
   /*!
     \param s The stencil map object.
     \return The function declarations.
-   */
+  */
   virtual SgFunctionDeclarationPtrVector BuildRunBoundaryKernel(
       StencilMap *s);
   //! Generates a basic block to run the boundary kernel of a stencil.
@@ -84,7 +84,7 @@ class MPIOpenCLTranslator: public MPITranslator {
     \param stencil The stencil map object.
     \param dom_arg The whole domain.
     \return The basic block.
-   */
+  */
   virtual SgBasicBlock *BuildRunBoundaryKernelBody(
       StencilMap *stencil, SgInitializedName *dom_arg);
   //! Generates OpenCL functions that run boundary stencils.
@@ -93,7 +93,7 @@ class MPIOpenCLTranslator: public MPITranslator {
     
     \param s The stencil map object.
     \return The function declarations.
-   */
+  */
   virtual SgFunctionDeclarationPtrVector BuildRunMultiStreamBoundaryKernel(
       StencilMap *s);
   virtual SgBasicBlock *BuildRunMultiStreamBoundaryKernelBody(
@@ -103,7 +103,7 @@ class MPIOpenCLTranslator: public MPITranslator {
   /*!
     \param s The stencil map.
     \return The OpenCL function with a call to the interior stencil. 
-   */
+  */
   virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s);
   //! Generates code to run an inner stencil kernel.
   /*!
@@ -119,14 +119,14 @@ class MPIOpenCLTranslator: public MPITranslator {
   /*
     \param original The original kernel declaration.
     \return The interior kernel.
-   */
+  */
   virtual SgFunctionDeclaration *BuildInteriorKernel(
       SgFunctionDeclaration *original) const;
   //! Generates kernel declarations for boundaries.
   /*
     \param original The original kernel declaration.
     \return The boundary kernel list.
-   */
+  */
   virtual SgFunctionDeclarationPtrVector
   BuildBoundaryKernel(SgFunctionDeclaration *original);  
   std::string GetBoundarySuffix(int dim, bool fw);
@@ -152,13 +152,13 @@ class MPIOpenCLTranslator: public MPITranslator {
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL);
   virtual SgIfStmt *BuildDomainInclusionCheck(
-    const vector<SgVariableDeclaration*> &indices,
-    SgExpression *dom_ref) const;
+      const vector<SgVariableDeclaration*> &indices,
+      SgExpression *dom_ref) const;
   virtual void Define_and_Construct_griddom_in_device(
-    StencilMap *stencil,
-    SgInitializedName *dom_arg,
-    SgScopeStatement *scope
-    );
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgScopeStatement *scope
+                                                      );
   virtual SgExprListExp* BuildKernelCallArgList(
       StencilMap *stencil, SgExpressionPtrList &index_args);
   virtual SgFunctionCallExp* BuildKernelCall(
@@ -170,7 +170,7 @@ class MPIOpenCLTranslator: public MPITranslator {
   SgFunctionCallExp *BuildGetLocalSize(SgExpression *dim);
   SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim);
   SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
-                                     SgExpression *width);
+                                       SgExpression *width);
   SgFunctionCallExp *BuildCLThreadSynchronize(void);
   SgExpression *BuildStreamBoundaryKernel(int idx);
 

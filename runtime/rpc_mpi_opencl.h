@@ -15,9 +15,9 @@ namespace runtime {
 class MasterMPIOpenCL: public Master {
  public:
   MasterMPIOpenCL(
-                const ProcInfo &pinfo, GridSpaceMPIOpenCL *gs,
-                MPI_Comm comm,
-                CLbaseinfo *cl_in);
+      const ProcInfo &pinfo, GridSpaceMPIOpenCL *gs,
+      MPI_Comm comm,
+      CLbaseinfo *cl_in);
   virtual ~MasterMPIOpenCL();
   virtual void Finalize();
   virtual void GridCopyinLocal(GridMPI *g, const void *buf);
@@ -30,9 +30,9 @@ class MasterMPIOpenCL: public Master {
 class ClientMPIOpenCL: public Client {
  public:
   ClientMPIOpenCL(
-                const ProcInfo &pinfo, GridSpaceMPIOpenCL *gs,
-                MPI_Comm comm,
-                CLbaseinfo *cl_in);
+      const ProcInfo &pinfo, GridSpaceMPIOpenCL *gs,
+      MPI_Comm comm,
+      CLbaseinfo *cl_in);
   virtual ~ClientMPIOpenCL();
   virtual void Finalize();
  protected:

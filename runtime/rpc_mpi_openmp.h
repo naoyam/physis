@@ -34,7 +34,7 @@ class ClientOpenMP: public Client {
   GridSpaceMPIOpenMP *gs_mp_;  
  public:
   ClientOpenMP(
-    const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm);
+      const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm);
   virtual void Listen(); 
   virtual void GridNew();
   virtual void GridCopyin(int id);
@@ -51,15 +51,15 @@ class MasterOpenMP: public Master {
   GridSpaceMPIOpenMP *gs_mp_;
  public:
   MasterOpenMP(
-    const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm);
+      const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm);
   virtual void Finalize();
   virtual void Barrier();
   virtual GridMPIOpenMP *GridNew(PSType type, int elm_size,
-                           int num_dims,
-                           const IntArray &size,
-                           bool double_buffering,
-                           const IntArray &global_offset,
-                           int attr);
+                                 int num_dims,
+                                 const IntArray &size,
+                                 bool double_buffering,
+                                 const IntArray &global_offset,
+                                 int attr);
   virtual void GridDelete(GridMPIOpenMP *g);
   virtual void GridCopyin(GridMPIOpenMP *g, void *buf);
   virtual void GridCopyinLocal(GridMPIOpenMP *g, void *buf);  
@@ -68,7 +68,7 @@ class MasterOpenMP: public Master {
   virtual void GridSet(GridMPIOpenMP *g, const void *buf, const IntArray &index);
   virtual void GridGet(GridMPIOpenMP *g, void *buf, const IntArray &index);  
   virtual void StencilRun(int id, int iter, int num_stencils,
-                  void **stencils, int *stencil_sizes);
+                          void **stencils, int *stencil_sizes);
   virtual void GridReduce(void *buf, PSReduceOp op, GridMPIOpenMP *g);
 
   virtual void GridInitNUMA(GridMPIOpenMP *g, unsigned int maxMPthread);

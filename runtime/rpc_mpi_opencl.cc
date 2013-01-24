@@ -14,10 +14,10 @@
 namespace physis {
 namespace runtime {
 MasterMPIOpenCL::MasterMPIOpenCL(
-                const ProcInfo &pinfo,
-                GridSpaceMPIOpenCL *gs, MPI_Comm comm,
-                CLbaseinfo *cl_in
-                  ):
+    const ProcInfo &pinfo,
+    GridSpaceMPIOpenCL *gs, MPI_Comm comm,
+    CLbaseinfo *cl_in
+                                 ):
     Master(pinfo, gs, comm),
     cl_generic_(cl_in)
 {
@@ -30,10 +30,10 @@ MasterMPIOpenCL::~MasterMPIOpenCL() {
 }
 
 ClientMPIOpenCL::ClientMPIOpenCL(
-                const ProcInfo &pinfo,
-                GridSpaceMPIOpenCL *gs, MPI_Comm comm,
-                CLbaseinfo *cl_in                
-                  ):
+    const ProcInfo &pinfo,
+    GridSpaceMPIOpenCL *gs, MPI_Comm comm,
+    CLbaseinfo *cl_in                
+                                 ):
     Client(pinfo, gs, comm),
     cl_generic_(cl_in)
 {
@@ -72,7 +72,7 @@ void MasterMPIOpenCL::GridCopyinLocal(GridMPI *g, const void *buf) {
 void MasterMPIOpenCL::GridCopyoutLocal(GridMPI *g, void *buf) {
   BufferOpenCLDev *dev_buf = static_cast<BufferOpenCLDev*>(g->buffer());
   size_t size = g->local_size().accumulate(g->num_dims()) *
-                g->elm_size();
+      g->elm_size();
   PSAssert(dev_buf->GetLinearSize() == size);
   LOG_DEBUG() << "local_size:" << g->local_size() << "\n";
   dev_buf->Copyout(*pinned_buf_, IntArray((index_t)0), g->local_size());

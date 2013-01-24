@@ -5,8 +5,8 @@
 #include "runtime/rpc_opencl.h"
 
 namespace physis {
-  namespace runtime {
-    extern CLinfo *master;
-  }
+namespace runtime {
+extern CLinfo *master;
+}
 }
 #endif // #define PHYSIS_RUNTIME_OPENCL_RUNTIME_H_

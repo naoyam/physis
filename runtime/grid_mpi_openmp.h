@@ -15,20 +15,20 @@ class GridMPIOpenMP: public GridMPI {
   friend class GridSpaceMPIOpenMP;
  protected:
   GridMPIOpenMP(PSType type, int elm_size, int num_dims,
-          const IntArray &size,
-          bool double_buffering, const IntArray &global_offset,
-          const IntArray &local_offset, const IntArray &local_size,
-          const IntArray &division,
-          int attr);
+                const IntArray &size,
+                bool double_buffering, const IntArray &global_offset,
+                const IntArray &local_offset, const IntArray &local_size,
+                const IntArray &division,
+                int attr);
  public:
   static GridMPIOpenMP *Create(PSType type, int elm_size,
-                         int num_dims, const IntArray &size,
-                         bool double_buffering,
-                         const IntArray &global_offset,
-                         const IntArray &local_offset,
-                         const IntArray &local_size,
-                         const IntArray &division,
-                         int attr);
+                               int num_dims, const IntArray &size,
+                               bool double_buffering,
+                               const IntArray &global_offset,
+                               const IntArray &local_offset,
+                               const IntArray &local_size,
+                               const IntArray &division,
+                               int attr);
   virtual ~GridMPIOpenMP() {};
   
   virtual void CopyoutHalo2D0(unsigned width, bool fw, char *buf);
@@ -66,24 +66,24 @@ class GridMPIOpenMP: public GridMPI {
 
  public:
   virtual void CopyinoutSubgrid(
-    bool copyout_to_buf_p,
-    size_t elm_size, int num_dims,
-    BufferHostOpenMP *bufmp,
-    const IntArray &grid_size,
-    void *buf,
-    const IntArray &subgrid_offset,
-    const IntArray &subgrid_size
-  );
+      bool copyout_to_buf_p,
+      size_t elm_size, int num_dims,
+      BufferHostOpenMP *bufmp,
+      const IntArray &grid_size,
+      void *buf,
+      const IntArray &subgrid_offset,
+      const IntArray &subgrid_size
+                                );
 
   virtual void CopyinoutSubgrid(
-    bool copyIN_FROM_BUF_p,
-    size_t elm_size, int num_dims,
-    void *global_buf,
-    const IntArray &global_size,
-    BufferHostOpenMP *subbufmp,
-    const IntArray &subgrid_offset,
-    const IntArray &subgrid_size
-  );
+      bool copyIN_FROM_BUF_p,
+      size_t elm_size, int num_dims,
+      void *global_buf,
+      const IntArray &global_size,
+      BufferHostOpenMP *subbufmp,
+      const IntArray &subgrid_offset,
+      const IntArray &subgrid_size
+                                );
 
  public:
   virtual void InitNUMA(unsigned int maxMPthread);
@@ -93,18 +93,18 @@ class GridMPIOpenMP: public GridMPI {
 class GridSpaceMPIOpenMP: public GridSpaceMPI {
  public:
   GridSpaceMPIOpenMP(
-        int num_dims, const IntArray &global_size,
-        int proc_num_dims, const IntArray &proc_size,
-        int my_rank);
+      int num_dims, const IntArray &global_size,
+      int proc_num_dims, const IntArray &proc_size,
+      int my_rank);
   
   virtual ~GridSpaceMPIOpenMP();
 
   virtual GridMPIOpenMP *CreateGrid(
-                              PSType type, int elm_size, int num_dims,
-                              const IntArray &size, bool double_buffering,
-                              const IntArray &global_offset,
-                              const IntArray &division,
-                              int attr);
+      PSType type, int elm_size, int num_dims,
+      const IntArray &size, bool double_buffering,
+      const IntArray &global_offset,
+      const IntArray &division,
+      int attr);
 
  protected:
   virtual void CollectPerProcSubgridInfo(const GridMPI *g,

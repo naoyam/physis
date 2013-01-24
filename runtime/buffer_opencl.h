@@ -110,7 +110,7 @@ class BufferOpenCLDev: public Buffer {
   virtual const void *Get() const;
   virtual void *&Get();
   virtual void GetChunk_CL(
-    const IntArray &size, cl_mem *ret_p_mem, size_t *ret_pitch);
+      const IntArray &size, cl_mem *ret_p_mem, size_t *ret_pitch);
 
  protected:
   virtual void *GetChunk(const IntArray &size);

@@ -139,9 +139,9 @@ extern "C" {
     // proc_num_dims: 3 <dimension>
     // proc_size: {1, 1, 6}
     gs = new GridSpaceMPIOpenCL(
-                              grid_num_dims, grid_size,
-                              proc_num_dims, proc_size, rank,
-                              clinfo_generic);
+        grid_num_dims, grid_size,
+        proc_num_dims, proc_size, rank,
+        clinfo_generic);
 
     LOG_INFO() << "Grid space: " << *gs << "\n";
 
@@ -155,14 +155,14 @@ extern "C" {
     if (rank != 0) {
       LOG_INFO() << "Client launched.\n";
       client = new ClientMPIOpenCL(
-            *pinfo, gs, MPI_COMM_WORLD,
-            clinfo_inner);
+          *pinfo, gs, MPI_COMM_WORLD,
+          clinfo_inner);
       client->Listen();
       master = NULL;
     } else {
       LOG_INFO() << "Master process launched.\n";        
       master = new MasterMPIOpenCL(
-            *pinfo, gs, MPI_COMM_WORLD, clinfo_generic);
+          *pinfo, gs, MPI_COMM_WORLD, clinfo_generic);
       client = NULL;
     }
     
@@ -249,7 +249,7 @@ extern "C" {
                               int double_buffering,
                               int attr,
                               const PSVectorInt global_offset
-) {
+                              ) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
@@ -380,36 +380,36 @@ extern "C" {
   }
 
   void __PSLoadNeighborStage1(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap,
-                        int periodic) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse, int overlap,
+                              int periodic) {
     GridMPI *gm = (GridMPI*)g;
     CLbaseinfo *strm = 0;
     if (overlap) {
       strm = clinfo_boundary_copy;
     }
     gs->LoadNeighborStage1(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse, periodic,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           (bool)diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
 
   void __PSLoadNeighborStage2(__PSGridMPI *g,
-                        const PSVectorInt halo_fw_width,
-                        const PSVectorInt halo_bw_width,
-                        int diagonal, int reuse, int overlap,
-                        int periodic) {
+                              const PSVectorInt halo_fw_width,
+                              const PSVectorInt halo_bw_width,
+                              int diagonal, int reuse, int overlap,
+                              int periodic) {
     GridMPI *gm = (GridMPI*)g;
     CLbaseinfo *strm = 0;
     if (overlap) {
       strm = clinfo_boundary_copy;
     }
     gs->LoadNeighborStage2(gm, IntArray(halo_fw_width),
-                     IntArray(halo_bw_width),
-                     (bool)diagonal, reuse, periodic,
-                     NULL, NULL, strm);
+                           IntArray(halo_bw_width),
+                           (bool)diagonal, reuse, periodic,
+                           NULL, NULL, strm);
     return;
   }
   
@@ -473,7 +473,7 @@ extern "C" {
 
   index_t __PSGetLocalSize(int dim) {
     return gs->my_size()[dim];
- }
+  }
 
   index_t __PSGetLocalOffset(int dim) {
     return gs->my_offset()[dim];

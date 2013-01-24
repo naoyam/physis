@@ -14,8 +14,7 @@ SgExpression *OpenCLTranslator::buildOffset(
     int numDim,
     const StencilIndexList *sil,
     bool is_periodic,
-    SgExpressionPtrList &args)
-{
+    SgExpressionPtrList &args) {
 
   /*
     Create the offset of PSGridGet or Emit
@@ -51,11 +50,11 @@ SgExpression *OpenCLTranslator::buildOffset(
         std::string varname = name_var_grid_dim(gv->get_name().getString(), i);
         dim_offset = sb::buildModOp(
             sb::buildAddOp(
-              dim_offset,
-              sb::buildOpaqueVarRefExp(varname, scope)
-              ),
+                dim_offset,
+                sb::buildOpaqueVarRefExp(varname, scope)
+                           ),
             sb::buildOpaqueVarRefExp(varname, scope)
-            );
+                                    );
       }
     }
 
@@ -63,23 +62,23 @@ SgExpression *OpenCLTranslator::buildOffset(
     for (int j = 0; j < i; j++) { // j is the dimension
       // __PS_ga_dim_x
       std::string newargname = name_var_grid_dim(gv->get_name().getString(), j);
-       // z * __PS_ga_dim_x * __PS_ga_dim_y, for example
+      // z * __PS_ga_dim_x * __PS_ga_dim_y, for example
       dim_offset =
           sb::buildMultiplyOp(si::copyExpression(dim_offset),
 #ifdef DEBUG_FIX_CONSISTENCY
                               sb::buildOpaqueVarRefExp(newargname, scope));
 #else
-                              sb::buildVarRefExp(newargname));
+      sb::buildVarRefExp(newargname));
 #endif
-    }
-    if (offset) {
-      offset = sb::buildAddOp(offset, dim_offset);
-    } else {
-      offset = dim_offset;
-    }
   }
+  if (offset) {
+    offset = sb::buildAddOp(offset, dim_offset);
+  } else {
+    offset = dim_offset;
+  }
+}
 
-  return offset;
+return offset;
 
 } // buildOffset
 
@@ -88,7 +87,7 @@ void OpenCLTranslator::translateGet(
     SgFunctionCallExp *node,
     SgInitializedName *gv,
     bool isKernel, bool is_periodic
-)
+                                    )
 {
   /*
     This function should return __PS_ga_buf[offset]
@@ -120,7 +119,7 @@ void OpenCLTranslator::translateGet(
 
 
 void OpenCLTranslator::translateEmit(SgFunctionCallExp *node,
-                                        SgInitializedName *gv) {
+                                     SgInitializedName *gv) {
   /*
     This function should return __PS_ga_buf[offset] = value;
     No cast should be needed as compared with CUDA translation code.

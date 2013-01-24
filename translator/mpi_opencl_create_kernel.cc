@@ -38,9 +38,9 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
       // Domain type
       if (!dom_arg) {
         dom_arg =  
-          sb::buildInitializedName(
-              arg->get_name(), arg->get_type());
-        }
+            sb::buildInitializedName(
+                arg->get_name(), arg->get_type());
+      }
 
       // Adding __PS_CL_ARG_EXPAND_ELEMENT_DOM_WITH_TYPE(dom)
       // Defined with macro !!
@@ -49,7 +49,7 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
           "__PS_CL_ARG_EXPAND_ELEMENT_DOM_WITH_TYPE(" + name_dom + ")";
       // VERY ugly hack 2!!
       SgInitializedName *init_dom = 
-        sb::buildInitializedName(name_macro_dom, sg_nulltype);
+          sb::buildInitializedName(name_macro_dom, sg_nulltype);
       si::appendArg(params, init_dom);
       continue; // Done for dom type
 
@@ -60,7 +60,7 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
       if (!grid_arg) {
         grid_arg = 
             sb::buildInitializedName(
-              arg->get_name(), arg->get_type());
+                arg->get_name(), arg->get_type());
       }
       // skip the grid index
       ++member;
@@ -82,7 +82,7 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
 
       // VERY ugly hack 3!!
       SgInitializedName *init_grid = 
-        sb::buildInitializedName(name_macro_grid, sg_nulltype);
+          sb::buildInitializedName(name_macro_grid, sg_nulltype);
       si::appendArg(params, init_grid);
 
       continue; // Done for dom type
@@ -97,7 +97,7 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
 
 void MPIOpenCLTranslator::add_macro_mark_function_inner_device(
     SgFunctionDeclaration *func
-){
+                                                               ){
   {
     LOG_INFO() << "Adding #ifdef << " << kernel_mode_macro() << " \n";
     std::string str_insert = "#endif /* #ifndef ";
@@ -106,31 +106,31 @@ void MPIOpenCLTranslator::add_macro_mark_function_inner_device(
     str_insert += "#ifdef ";
     str_insert += kernel_mode_macro();
     si::attachArbitraryText(
-      func,
-      str_insert,
-      PreprocessingInfo::before
-      );
+        func,
+        str_insert,
+        PreprocessingInfo::before
+                            );
     str_insert = "#endif /* #ifdef ";
     str_insert += kernel_mode_macro();
     str_insert += "*/";
     si::attachArbitraryText(
-      func,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        func,
+        str_insert,
+        PreprocessingInfo::after
+                            );
     str_insert = "#ifndef ";
     str_insert += kernel_mode_macro();
     si::attachArbitraryText(
-      func,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        func,
+        str_insert,
+        PreprocessingInfo::after
+                            );
   }
 }
 
 SgFunctionDeclaration *MPIOpenCLTranslator::BuildRunKernel(
     StencilMap *stencil
-)
+                                                           )
 {
   // Initialize
   SgFunctionParameterList *params = sb::buildFunctionParameterList();
@@ -145,8 +145,8 @@ SgFunctionDeclaration *MPIOpenCLTranslator::BuildRunKernel(
   // add offset for process
   for (int i = 0; i < stencil->getNumDim()-1; ++i) {
     si::appendArg(
-      params,
-      sb::buildInitializedName("offset" + toString(i), sb::buildLongType()));
+        params,
+        sb::buildInitializedName("offset" + toString(i), sb::buildLongType()));
   }
 
   // Add dom, grid type to params
@@ -248,9 +248,9 @@ MPIOpenCLTranslator::BuildRunBoundaryKernel(StencilMap *stencil) {
   }
 
   si::appendArg(
-    params,
-    sb::buildInitializedName(
-        boundary_kernel_width_name_, sb::buildLongType()));
+      params,
+      sb::buildInitializedName(
+          boundary_kernel_width_name_, sb::buildLongType()));
   
   // Add dom, grid type to params
   BuildFunctionParamList(param_struct_def, params, grid_arg, dom_arg);

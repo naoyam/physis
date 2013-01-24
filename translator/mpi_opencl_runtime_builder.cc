@@ -31,7 +31,7 @@ SgFunctionCallExp *MPIOpenCLTranslator::BuildGetLocalOffset(SgExpression *dim) {
 }
 
 SgFunctionCallExp *MPIOpenCLTranslator::BuildDomainShrink(SgExpression *dom,
-                                     SgExpression *width) {
+                                                          SgExpression *width) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSDomainShrink");
   SgFunctionCallExp *fc =
@@ -42,12 +42,12 @@ SgFunctionCallExp *MPIOpenCLTranslator::BuildDomainShrink(SgExpression *dom,
 
 SgFunctionCallExp *MPIOpenCLTranslator::BuildCLThreadSynchronize(void)
 {
-    SgFunctionCallExp *fc =
+  SgFunctionCallExp *fc =
       sb::buildFunctionCallExp(
-        sb::buildFunctionRefExp("__PS_CL_ThreadSynchronize"),
-        sb::buildExprListExp(NULL)
-        );
-    return fc;
+          sb::buildFunctionRefExp("__PS_CL_ThreadSynchronize"),
+          sb::buildExprListExp(NULL)
+                               );
+  return fc;
 }
 
 SgExpression *MPIOpenCLTranslator::BuildStreamBoundaryKernel(int idx) {

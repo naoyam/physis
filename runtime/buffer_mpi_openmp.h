@@ -38,32 +38,32 @@ class BufferHostOpenMP: public BufferHost {
 
  public:
   virtual void MPISendRecvInoI(
-    int recv_p,
-    int blocking_p,
-    int srcdstNUM,
-    MPI_Comm comm, MPI_Request *req,
-    const IntArray &offset, const IntArray &size,
-    const size_t *cpu_memsize
-  );
+      int recv_p,
+      int blocking_p,
+      int srcdstNUM,
+      MPI_Comm comm, MPI_Request *req,
+      const IntArray &offset, const IntArray &size,
+      const size_t *cpu_memsize
+                               );
   
  protected:
   virtual int CreateAlignedMultiBuffer(
-    const IntArray &requested_size, IntArray &division,
-    const int elmsize,
-    const size_t alignment,
-    void ***ret_buf,
-    size_t **&ret_offset, size_t **&ref_width,
-    size_t *&ret_cpu_memsize,
-    size_t *&ret_cpu_allocbytes,
-    size_t &linesize
-    );
+      const IntArray &requested_size, IntArray &division,
+      const int elmsize,
+      const size_t alignment,
+      void ***ret_buf,
+      size_t **&ret_offset, size_t **&ref_width,
+      size_t *&ret_cpu_memsize,
+      size_t *&ret_cpu_allocbytes,
+      size_t &linesize
+                                       );
 
   virtual void DestroyMultiBuffer(
-    void ***src_buf, const IntArray &division
-  );
+      void ***src_buf, const IntArray &division
+                                  );
   virtual void DestroyMP3Dinfo(
-    size_t **&mp_3dinfo, const IntArray &division
-  );
+      size_t **&mp_3dinfo, const IntArray &division
+                               );
 
  protected:
   void **buf_mp_; // release with free

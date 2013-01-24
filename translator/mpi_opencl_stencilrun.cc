@@ -30,11 +30,11 @@ SgBasicBlock *MPIOpenCLTranslator::BuildRunBody(Run *run) {
   SgVariableDeclaration *dec_local_size;
   {
     SgExprListExp *element = sb::buildExprListExp(
-      opencl_trans_->BuildBlockDimX(),
-      opencl_trans_->BuildBlockDimY(),
-      opencl_trans_->BuildBlockDimZ(),
-      NULL
-    );
+        opencl_trans_->BuildBlockDimX(),
+        opencl_trans_->BuildBlockDimY(),
+        opencl_trans_->BuildBlockDimZ(),
+        NULL
+                                                  );
     SgType *type_sg_gb = sb::buildArrayType(
         sb::buildOpaqueType("size_t", global_scope_));
     SgAggregateInitializer *initval =
@@ -51,10 +51,10 @@ SgBasicBlock *MPIOpenCLTranslator::BuildRunBody(Run *run) {
 
   // Declare argc, unsigned int argc = 0;
   SgVariableDeclaration *argc_idx =
-    sb::buildVariableDeclaration(
-      "argc",  sb::buildUnsignedIntType(), NULL, loopBody);
+      sb::buildVariableDeclaration(
+          "argc",  sb::buildUnsignedIntType(), NULL, loopBody);
   argc_idx->reset_initializer(
-    sb::buildAssignInitializer(sb::buildUnsignedIntVal(0)));
+      sb::buildAssignInitializer(sb::buildUnsignedIntVal(0)));
 
   si::appendStatement(argc_idx, loopBody);
   ENUMERATE(i, it, run->stencils().begin(), run->stencils().end()) {
@@ -79,7 +79,7 @@ SgBasicBlock *MPIOpenCLTranslator::BuildRunBody(Run *run) {
   TraceStencilRun(run, loop, block);
   // ThreadSynchronize after each loop
   si::insertStatement(
-    loop, sb::buildExprStatement(BuildCLThreadSynchronize()), false);
+      loop, sb::buildExprStatement(BuildCLThreadSynchronize()), false);
   
   return block;
 }
@@ -137,99 +137,99 @@ MPIOpenCLTranslator::BuildInteriorKernel(SgFunctionDeclaration *original)
 #if 0
   if (opencl_trans_->flag_pre_calc_grid_address()) {
 #else
-  if (0) {
+    if (0) {
 #endif
-    MPIOpenCLOptimizer opt(*this);
-    opt.GridPreCalcAddr(inner_version);
-  }
-  return inner_version;
-}
-
-static int GetMaximumNumberOfDimensions(SgFunctionDeclaration *func) {
-  // TODO: This does not work for intra kernels
-  // Possible fix: find the Kernel object, and get the parent
-  // func Find The root kernel func, and then use the below logic to
-  // get the number of possible max dim.
-  SgFunctionParameterList *params = func->get_parameterList();
-  SgInitializedNamePtrList &param_args = params->get_args();
-  int dim = 0;
-  ENUMERATE (i, it, param_args.begin(), param_args.end()) {
-    SgInitializedName *p = *it;
-    if (!rose_util::IsIntLikeType(p)) {
-      dim = i;
-      break;
+      MPIOpenCLOptimizer opt(*this);
+      opt.GridPreCalcAddr(inner_version);
     }
+    return inner_version;
   }
-  LOG_DEBUG() << "Kernel (" << string(func->get_name()) << ") max dim: "
-              << dim << "\n";
-  return dim;
+
+  static int GetMaximumNumberOfDimensions(SgFunctionDeclaration *func) {
+    // TODO: This does not work for intra kernels
+    // Possible fix: find the Kernel object, and get the parent
+    // func Find The root kernel func, and then use the below logic to
+    // get the number of possible max dim.
+    SgFunctionParameterList *params = func->get_parameterList();
+    SgInitializedNamePtrList &param_args = params->get_args();
+    int dim = 0;
+    ENUMERATE (i, it, param_args.begin(), param_args.end()) {
+      SgInitializedName *p = *it;
+      if (!rose_util::IsIntLikeType(p)) {
+        dim = i;
+        break;
+      }
+    }
+    LOG_DEBUG() << "Kernel (" << string(func->get_name()) << ") max dim: "
+                << dim << "\n";
+    return dim;
   
-}
+  }
 
-// Generates per-boundary kernels. 
-std::vector<SgFunctionDeclaration*>
-MPIOpenCLTranslator::BuildBoundaryKernel(SgFunctionDeclaration *original) {
-  std::vector<SgFunctionDeclaration*> bkernels;
-  int ndim = GetMaximumNumberOfDimensions(original);
-  for (int i = 0; i < ndim; ++i) {
-    for (int j = 0; j < 2; ++j) {
-      string suffix = GetBoundarySuffix(i, j);
-      LOG_INFO() << "Generating device function: "
-                  << string(original->get_name() + suffix) << "\n";
-      SgFunctionDeclaration *boundary_version =
-          rose_util::CloneFunction(original,
-                                   original->get_name() + suffix,
-                                   global_scope_);
-      PSAssert(boundary_version);
-      bkernels.push_back(boundary_version);
-      Rose_STL_Container<SgNode*> calls =
-          NodeQuery::querySubTree(boundary_version, V_SgFunctionCallExp);
+  // Generates per-boundary kernels. 
+  std::vector<SgFunctionDeclaration*>
+      MPIOpenCLTranslator::BuildBoundaryKernel(SgFunctionDeclaration *original) {
+    std::vector<SgFunctionDeclaration*> bkernels;
+    int ndim = GetMaximumNumberOfDimensions(original);
+    for (int i = 0; i < ndim; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        string suffix = GetBoundarySuffix(i, j);
+        LOG_INFO() << "Generating device function: "
+                   << string(original->get_name() + suffix) << "\n";
+        SgFunctionDeclaration *boundary_version =
+            rose_util::CloneFunction(original,
+                                     original->get_name() + suffix,
+                                     global_scope_);
+        PSAssert(boundary_version);
+        bkernels.push_back(boundary_version);
+        Rose_STL_Container<SgNode*> calls =
+            NodeQuery::querySubTree(boundary_version, V_SgFunctionCallExp);
 
-      FOREACH (it, calls.begin(), calls.end()) {
-        SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
-        PSAssert(fc);
-        SgFunctionDeclaration *decl = fc->getAssociatedFunctionDeclaration();
-        PSAssert(decl);
-        SgFunctionSymbol *sym = fc->getAssociatedFunctionSymbol();
-        PSAssert(sym);
-        string name = sym->get_name();
-        if (startswith(name, get_addr_name_)) {
-          if (startswith(name, get_addr_no_halo_name_)) continue;
-          if (!fc->attributeExists(StencilIndexAttribute::name)) continue;
-          const StencilIndexList &sil =
-              static_cast<StencilIndexAttribute*>(fc->getAttribute("StencilIndexList"))->stencil_index_list();
+        FOREACH (it, calls.begin(), calls.end()) {
+          SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
+          PSAssert(fc);
+          SgFunctionDeclaration *decl = fc->getAssociatedFunctionDeclaration();
+          PSAssert(decl);
+          SgFunctionSymbol *sym = fc->getAssociatedFunctionSymbol();
+          PSAssert(sym);
+          string name = sym->get_name();
+          if (startswith(name, get_addr_name_)) {
+            if (startswith(name, get_addr_no_halo_name_)) continue;
+            if (!fc->attributeExists(StencilIndexAttribute::name)) continue;
+            const StencilIndexList &sil =
+                static_cast<StencilIndexAttribute*>(fc->getAttribute("StencilIndexList"))->stencil_index_list();
 
-          LOG_DEBUG() << "sil: " << sil << "\n";
-          // TODO: the kernel might be used for smaller dimension
-          // grids, but that kernel is not recognized as regular even
-          // if it's really the case because ndim is used as num_dim param.
-          if (!StencilIndexRegularOrder(sil, ndim)) continue;
-          int offset = sil[i].offset;
-          StencilIndexList t = sil;
-          t[i].offset = 0;
-          if (!StencilIndexSelf(t, ndim)) continue;
-          if ((j == 0 && offset < 0) || ((j == 1) && offset > 0)) {
+            LOG_DEBUG() << "sil: " << sil << "\n";
+            // TODO: the kernel might be used for smaller dimension
+            // grids, but that kernel is not recognized as regular even
+            // if it's really the case because ndim is used as num_dim param.
+            if (!StencilIndexRegularOrder(sil, ndim)) continue;
+            int offset = sil[i].offset;
+            StencilIndexList t = sil;
+            t[i].offset = 0;
+            if (!StencilIndexSelf(t, ndim)) continue;
+            if ((j == 0 && offset < 0) || ((j == 1) && offset > 0)) {
+              continue;
+            }
+            string key = GetTypeDimSig(name);
+            PSAssert(key != "");
+            name = get_addr_no_halo_name_ + key;
+            LOG_INFO() << "Redirecting to " << name << "\n";
+            fc->set_function(sb::buildFunctionRefExp(name));
             continue;
           }
-          string key = GetTypeDimSig(name);
-          PSAssert(key != "");
-          name = get_addr_no_halo_name_ + key;
-          LOG_INFO() << "Redirecting to " << name << "\n";
-          fc->set_function(sb::buildFunctionRefExp(name));
-          continue;
-        }
-        // No redirection for emits
-        if (startswith(name, emit_addr_name_)) continue;
-        // Redirect intra-kernel calls
-        if (decl->get_definingDeclaration()) {
-          fc->set_function(sb::buildFunctionRefExp(name + suffix));
-          continue;
+          // No redirection for emits
+          if (startswith(name, emit_addr_name_)) continue;
+          // Redirect intra-kernel calls
+          if (decl->get_definingDeclaration()) {
+            fc->set_function(sb::buildFunctionRefExp(name + suffix));
+            continue;
+          }
         }
       }
     }
+    return bkernels;
   }
-  return bkernels;
-}
 
 
 

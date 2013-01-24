@@ -44,7 +44,7 @@ namespace physis {
 namespace runtime {
 extern void InitOpenCL(
     int my_rank, int num_local_processes, int *argc, char ***argv
-);
+                       );
 extern void DestroyOpenCL(void);
 } // namespace runtime
 } // namespace physis

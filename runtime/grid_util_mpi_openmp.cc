@@ -17,7 +17,7 @@ void getMPOffset(
     unsigned int &cpuid_OUT,
     size_t &gridid_OUT,
     size_t &width_avail_OUT
-){
+                 ){
 
   unsigned long cpuid[PS_MAX_DIM] = {0};
   IntArray local_offset(0,0,0);
@@ -32,9 +32,9 @@ void getMPOffset(
     for (divid = 0; divid + 1 < grid_division[dim]; divid++) {
 #if 0
       LOG_DEBUG() << "dim, divid,  offset[dim], grid_mp_offset[dim][divid]" <<
-        dim << " " << divid << " " << offset[dim] << " " <<
-        grid_mp_offset[dim][divid] << ""
-        << "\n";
+          dim << " " << divid << " " << offset[dim] << " " <<
+          grid_mp_offset[dim][divid] << ""
+                  << "\n";
 #endif
       if ((size_t) offset[dim] < grid_mp_offset[dim][divid + 1]) break;
     }
@@ -66,7 +66,7 @@ void CopyinoutSubgrid_MP(
     const IntArray &subgrid_division,
     const size_t * const *subgrid_mp_offset,
     const size_t * const *subgrid_mp_width
-  )
+                         )
 {
 #if 0
   intptr_t subgrid_original = (intptr_t)subgrid; // just for sanity checking
@@ -132,26 +132,26 @@ void CopyinoutSubgrid_MP(
         while (size_left) {
 #if 0
           LOG_DEBUG() << "offset[0], size_left, grid_size[0] " <<
-            offset[0] << " " << size_left << " " << grid_size[0] <<
-            "\n";
+              offset[0] << " " << size_left << " " << grid_size[0] <<
+              "\n";
 #endif
           PSAssert(offset[0] < grid_size[0]);
           getMPOffset(
-            num_dims,
-            offset, grid_size, grid_division,
-            grid_mp_offset, grid_mp_width,
-            cpuid, gridid, width_avail
-          );
+              num_dims,
+              offset, grid_size, grid_division,
+              grid_mp_offset, grid_mp_width,
+              cpuid, gridid, width_avail
+                      );
           size_writenow = width_avail;
           if (size_writenow > size_left)
             size_writenow = size_left;
 
           intptr_t srcgridpos = 
-            (intptr_t) grid_mp[cpuid] + gridid * elm_size;
+              (intptr_t) grid_mp[cpuid] + gridid * elm_size;
 
           memcpy(
-            (void *)tmpbuf_pos, (void *) srcgridpos,
-            size_writenow * elm_size);
+              (void *)tmpbuf_pos, (void *) srcgridpos,
+              size_writenow * elm_size);
 
           tmpbuf_pos += size_writenow * elm_size;
           offset[0] += size_writenow;
@@ -170,27 +170,27 @@ void CopyinoutSubgrid_MP(
         while (size_left) {
           PSAssert(subgrid_pos[0] < subgrid_size[0]);
           getMPOffset(
-            num_dims,
-            subgrid_pos, subgrid_size, subgrid_division,
-            subgrid_mp_offset, subgrid_mp_width,
-            cpuid, gridid, width_avail
-          );
+              num_dims,
+              subgrid_pos, subgrid_size, subgrid_division,
+              subgrid_mp_offset, subgrid_mp_width,
+              cpuid, gridid, width_avail
+                      );
           size_writenow = width_avail;
           if (size_writenow > size_left)
             size_writenow = size_left;
 
           intptr_t dstgridpos = 
-            (intptr_t) subgrid_mp[cpuid] + gridid * elm_size;
+              (intptr_t) subgrid_mp[cpuid] + gridid * elm_size;
 #if 0
           LOG_DEBUG() << "subgrid_pos, subgrid_size, cpuid, gridid" <<
-                subgrid_pos << " " << subgrid_size << " " <<
-                cpuid << " " << gridid <<
-                "\n";
+              subgrid_pos << " " << subgrid_size << " " <<
+              cpuid << " " << gridid <<
+              "\n";
 #endif
 #if 1
           memcpy(
-            (void *) dstgridpos, (void *)tmpbuf_pos, 
-            size_writenow * elm_size);
+              (void *) dstgridpos, (void *)tmpbuf_pos, 
+              size_writenow * elm_size);
 #endif
 
           tmpbuf_pos += size_writenow * elm_size;
@@ -211,20 +211,20 @@ void CopyinoutSubgrid_MP(
         while (size_left) {
           PSAssert(subgrid_pos[0] < subgrid_size[0]);
           getMPOffset(
-            num_dims,
-            subgrid_pos, subgrid_size, subgrid_division,
-            subgrid_mp_offset, subgrid_mp_width,
-            cpuid, gridid, width_avail
-          );
+              num_dims,
+              subgrid_pos, subgrid_size, subgrid_division,
+              subgrid_mp_offset, subgrid_mp_width,
+              cpuid, gridid, width_avail
+                      );
           size_writenow = width_avail;
           if (size_writenow > size_left)
             size_writenow = size_left;
 
           intptr_t srcgridpos = 
-            (intptr_t) subgrid_mp[cpuid] + gridid * elm_size;
+              (intptr_t) subgrid_mp[cpuid] + gridid * elm_size;
           memcpy(
-            (void *)tmpbuf_pos, (void *) srcgridpos,
-            size_writenow * elm_size);
+              (void *)tmpbuf_pos, (void *) srcgridpos,
+              size_writenow * elm_size);
 
           tmpbuf_pos += size_writenow * elm_size;
           subgrid_pos[0] += size_writenow;
@@ -243,20 +243,20 @@ void CopyinoutSubgrid_MP(
         while (size_left) {
           PSAssert(offset[0] < grid_size[0]);
           getMPOffset(
-            num_dims,
-            offset, grid_size, grid_division,
-            grid_mp_offset, grid_mp_width,
-            cpuid, gridid, width_avail
-          );
+              num_dims,
+              offset, grid_size, grid_division,
+              grid_mp_offset, grid_mp_width,
+              cpuid, gridid, width_avail
+                      );
           size_writenow = width_avail;
           if (size_writenow > size_left)
             size_writenow = size_left;
 
           intptr_t dstgridpos = 
-            (intptr_t) grid_mp[cpuid] + gridid * elm_size;
+              (intptr_t) grid_mp[cpuid] + gridid * elm_size;
           memcpy(
-            (void *) dstgridpos, (void *)tmpbuf_pos, 
-            size_writenow * elm_size);
+              (void *) dstgridpos, (void *)tmpbuf_pos, 
+              size_writenow * elm_size);
 
           tmpbuf_pos += size_writenow * elm_size;
           offset[0] += size_writenow;

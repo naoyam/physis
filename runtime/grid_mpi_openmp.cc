@@ -12,12 +12,12 @@ namespace physis {
 namespace runtime {
 
 GridMPIOpenMP::GridMPIOpenMP(PSType type, int elm_size, int num_dims,
-                 const IntArray &size,
-                 bool double_buffering, const IntArray &global_offset,
-                 const IntArray &local_offset,                 
-                 const IntArray &local_size,
-                 const IntArray &division,
-                 int attr):
+                             const IntArray &size,
+                             bool double_buffering, const IntArray &global_offset,
+                             const IntArray &local_offset,                 
+                             const IntArray &local_size,
+                             const IntArray &division,
+                             int attr):
     GridMPI(type, elm_size, num_dims,
             size,
             double_buffering, global_offset,
@@ -34,19 +34,19 @@ GridMPIOpenMP::GridMPIOpenMP(PSType type, int elm_size, int num_dims,
 
 // This is the only interface to create a GridMPI grid
 GridMPIOpenMP *GridMPIOpenMP::Create(
-                         PSType type, int elm_size,
-                         int num_dims, const IntArray &size,
-                         bool double_buffering,
-                         const IntArray &global_offset,
-                         const IntArray &local_offset,
-                         const IntArray &local_size,
-                         const IntArray &division,
-                         int attr) {
+    PSType type, int elm_size,
+    int num_dims, const IntArray &size,
+    bool double_buffering,
+    const IntArray &global_offset,
+    const IntArray &local_offset,
+    const IntArray &local_size,
+    const IntArray &division,
+    int attr) {
   GridMPIOpenMP *gm = new GridMPIOpenMP(
-                          type, elm_size, num_dims, size,
-                          double_buffering, global_offset,
-                          local_offset, local_size, division,
-                          attr);
+      type, elm_size, num_dims, size,
+      double_buffering, global_offset,
+      local_offset, local_size, division,
+      attr);
   gm->InitBuffer();
   return gm;
 }
@@ -54,7 +54,7 @@ GridMPIOpenMP *GridMPIOpenMP::Create(
 void GridMPIOpenMP::InitBuffer() {
 
   BufferHostOpenMP *data_buffer_mp0 =
-    new BufferHostOpenMP(num_dims_, elm_size_, division_);
+      new BufferHostOpenMP(num_dims_, elm_size_, division_);
   BufferHostOpenMP *data_buffer_mp1 = 0;
 
   data_buffer_mp0->Allocate(local_size_);
@@ -80,14 +80,14 @@ void GridMPIOpenMP::Swap() {
 }
 
 void GridMPIOpenMP::EnsureRemoteGrid(const IntArray &local_offset,
-                               const IntArray &local_size) {
+                                     const IntArray &local_size) {
   if (remote_grid_ == NULL) {
     remote_grid_ = GridMPIOpenMP::Create(
-                              type_, elm_size_, num_dims_,
-                              size_, false, global_offset_,
-                              local_offset, local_size, 
-                              division_,
-                                  0);
+        type_, elm_size_, num_dims_,
+        size_, false, global_offset_,
+        local_offset, local_size, 
+        division_,
+        0);
   } else {
     remote_grid_->Resize(local_offset, local_size);
   }
@@ -126,12 +126,12 @@ void GridMPIOpenMP::CopyoutHalo2D0(unsigned width, bool fw, char *buf) {
   // As data_[0] should be (char*)data_buffer_[0]->Get();
   // And data_buffer_ should be BufferHost(OpenMP):
   BufferHostOpenMP* data_buffer_mp0 = 
-    dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
+      dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
   PSAssert(data_buffer_mp0);
   CopyinoutSubgrid(
-    1, elm_size_, 2,
-    data_buffer_mp0,
-    local_size_, buf, sg_offset, sg_size);
+      1, elm_size_, 2,
+      data_buffer_mp0,
+      local_size_, buf, sg_offset, sg_size);
 
   buf += line_size * local_size_[1];
 
@@ -159,11 +159,11 @@ void GridMPIOpenMP::CopyoutHalo3D0(unsigned width, bool fw, char *buf) {
   char *halo_bw_2 = halo_peer_bw_[2] + xoffset * elm_size_;
   char *halo_fw_2 = halo_peer_fw_[2] + xoffset * elm_size_;
 #if 0
-// This method cannot be used, sorry
+  // This method cannot be used, sorry
   char *halo_0 = data_[0] + xoffset * elm_size_;
 #endif
   BufferHostOpenMP* data_buffer_mp0 = 
-    dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
+      dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
   PSAssert(data_buffer_mp0);
   IntArray emptyoffset(0,0,0);
 
@@ -206,10 +206,10 @@ void GridMPIOpenMP::CopyoutHalo3D0(unsigned width, bool fw, char *buf) {
         //memcpy(buf, t, line_size);
         size_t mp0_offset = 
             xoffset + j * local_size_[0] +
-              (k - halo_bw_width_[2]) * local_size_[0] * local_size_[1];
+            (k - halo_bw_width_[2]) * local_size_[0] * local_size_[1];
         IntArray want_size(width, 1, 1);
         data_buffer_mp0->Copyout(
-          buf, emptyoffset, want_size, mp0_offset);
+            buf, emptyoffset, want_size, mp0_offset);
 
       }
       buf += line_size;
@@ -252,17 +252,17 @@ void GridMPIOpenMP::CopyoutHalo3D1(unsigned width, bool fw, char *buf) {
   // And data_buffer_ should be BufferHost(OpenMP):
   sg_size[2] = local_size_[2];
   BufferHostOpenMP* data_buffer_mp0 = 
-    dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
+      dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
   PSAssert(data_buffer_mp0);
 #if 0
   CopyoutSubgrid(elm_size_, num_dims_, data_[0], local_size_,
                  buf, sg_offset, sg_size);
 #else
   CopyinoutSubgrid(
-    1, elm_size_, num_dims_,
-    data_buffer_mp0,
-    local_size_, buf, sg_offset, sg_size
-  );
+      1, elm_size_, num_dims_,
+      data_buffer_mp0,
+      local_size_, buf, sg_offset, sg_size
+                   );
 #endif
   buf += sg_size.accumulate(nd) * elm_size_;
 
@@ -279,12 +279,12 @@ void GridMPIOpenMP::CopyoutHalo3D1(unsigned width, bool fw, char *buf) {
 void GridMPIOpenMP::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal) {
   halo_has_diagonal_ = diagonal;
 
-// For the case dim == num_dims_ -1,
-// Change the below strategy so that we prepare
-// the actual tmpbuffer halo_self_{fw,bw}[2] and
-// copy the data_buffer_ to that tmpbuffer
+  // For the case dim == num_dims_ -1,
+  // Change the below strategy so that we prepare
+  // the actual tmpbuffer halo_self_{fw,bw}[2] and
+  // copy the data_buffer_ to that tmpbuffer
 
-// So the following is changed:
+  // So the following is changed:
 #if 0
   if (dim == num_dims_ - 1) {
     if (fw) {
@@ -337,13 +337,13 @@ void GridMPIOpenMP::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal)
                    *halo_buf, halo_offset, halo_size);
 #else
     BufferHostOpenMP* data_buffer_mp0 = 
-      dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
+        dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
     PSAssert(data_buffer_mp0);
     CopyinoutSubgrid(
-      1, elm_size_, num_dims_,
-      data_buffer_mp0,
-      local_size_, *halo_buf, halo_offset, halo_size
-    );
+        1, elm_size_, num_dims_,
+        data_buffer_mp0,
+        local_size_, *halo_buf, halo_offset, halo_size
+                     );
 #endif
     return;
   }
@@ -372,9 +372,9 @@ void GridMPIOpenMP::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal)
 
 void GridMPIOpenMP::FixupBufferPointers() {
   BufferHostOpenMP *data_buffer_mp0 = 
-    dynamic_cast<BufferHostOpenMP *>(data_buffer_[0]);
+      dynamic_cast<BufferHostOpenMP *>(data_buffer_[0]);
   BufferHostOpenMP *data_buffer_mp1 = 
-    dynamic_cast<BufferHostOpenMP *>(data_buffer_[1]);
+      dynamic_cast<BufferHostOpenMP *>(data_buffer_[1]);
   PSAssert(data_buffer_mp0);
   PSAssert(data_buffer_mp1);
 
@@ -395,13 +395,13 @@ int ReduceGridMPIOpenMP(GridMPIOpenMP *g, PSReduceOp op, T *out) {
   T v = d[0];
 #else
   BufferHostOpenMP* data_buffer_mp0=
-    dynamic_cast<BufferHostOpenMP*>(g->buffer());
+      dynamic_cast<BufferHostOpenMP*>(g->buffer());
   PSAssert(data_buffer_mp0);
   IntArray want_size(1, 1, 1);
   T v = (T) 0;
   IntArray emptyoffset;
   data_buffer_mp0->Copyout(
-    &v, emptyoffset, want_size, 0);
+      &v, emptyoffset, want_size, 0);
 #endif
   for (size_t i = 1; i < nelms; ++i) {
 #if 0
@@ -409,7 +409,7 @@ int ReduceGridMPIOpenMP(GridMPIOpenMP *g, PSReduceOp op, T *out) {
 #else
     T buf = (T) 0;
     data_buffer_mp0->Copyout(
-      &buf, emptyoffset, want_size, i);
+        &buf, emptyoffset, want_size, i);
     v = func(v, buf);
 #endif
   }
@@ -439,7 +439,7 @@ void GridMPIOpenMP::InitNUMA(unsigned int maxMPthread)
 #else
 #if 0
   BufferHostOpenMP* data_buffer_mp0 = 
-    dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
+      dynamic_cast<BufferHostOpenMP*>(data_buffer_[0]);
   PSAssert(data_buffer_mp0);
   data_buffer_mp0->InitNUMA(maxMPthread);
 #else
@@ -450,12 +450,12 @@ void GridMPIOpenMP::InitNUMA(unsigned int maxMPthread)
 
 
 GridSpaceMPIOpenMP::GridSpaceMPIOpenMP(
-                          int num_dims, const IntArray &global_size,
-                          int proc_num_dims, const IntArray &proc_size,
-                          int my_rank):
-  GridSpaceMPI(num_dims, global_size,
-               proc_num_dims, proc_size,
-               my_rank)
+    int num_dims, const IntArray &global_size,
+    int proc_num_dims, const IntArray &proc_size,
+    int my_rank):
+    GridSpaceMPI(num_dims, global_size,
+                 proc_num_dims, proc_size,
+                 my_rank)
 {
 }
 
@@ -464,12 +464,12 @@ GridSpaceMPIOpenMP::~GridSpaceMPIOpenMP() {
 
 
 GridMPIOpenMP *GridSpaceMPIOpenMP::CreateGrid(PSType type, int elm_size,
-                                  int num_dims,
-                                  const IntArray &size,
-                                  bool double_buffering,
-                                  const IntArray &global_offset,
-                                  const IntArray &division,
-                                  int attr) {
+                                              int num_dims,
+                                              const IntArray &size,
+                                              bool double_buffering,
+                                              const IntArray &global_offset,
+                                              const IntArray &division,
+                                              int attr) {
   IntArray grid_size = size;
   IntArray grid_global_offset = global_offset;
   if (num_dims_ < num_dims) {
@@ -492,10 +492,10 @@ GridMPIOpenMP *GridSpaceMPIOpenMP::CreateGrid(PSType type, int elm_size,
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
   GridMPIOpenMP *g = GridMPIOpenMP::Create(
-                              type, elm_size, num_dims, grid_size,
-                              double_buffering,
-                              grid_global_offset, local_offset,
-                              local_size, division, attr);
+      type, elm_size, num_dims, grid_size,
+      double_buffering,
+      grid_global_offset, local_offset,
+      local_size, division, attr);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   return g;
@@ -522,7 +522,7 @@ void GridSpaceMPIOpenMP::CollectPerProcSubgridInfo(
   FetchInfo dummy;
   fetch_info->push_back(dummy);
   for (int d = 0; d < num_dims_; ++d) {
-// VERY CAREFUL !!
+    // VERY CAREFUL !!
     const GridMPIOpenMP *g_dyn = dynamic_cast<const GridMPIOpenMP *>(g);
     PSAssert(g_dyn);
 
@@ -570,7 +570,7 @@ bool GridSpaceMPIOpenMP::SendFetchRequest(FetchInfo &finfo) const {
   SendGridRequest(my_rank_, peer_rank, comm_, FETCH_REQUEST);
   MPI_Request mpi_req;  
   CHECK_MPI(PS_MPI_Isend(&finfo, sizeof(FetchInfo), MPI_BYTE,
-                      peer_rank, 0, comm_, &mpi_req));
+                         peer_rank, 0, comm_, &mpi_req));
   return true;
 }
 
@@ -591,15 +591,15 @@ void GridSpaceMPIOpenMP::HandleFetchRequest(GridRequest &req, GridMPI *g) {
   GridMPIOpenMP* g_MP = dynamic_cast<GridMPIOpenMP*>(g);
   PSAssert(g_MP);
   BufferHostOpenMP* g_data_buffer_MP =
-    dynamic_cast<BufferHostOpenMP*>(g_MP->buffer());
+      dynamic_cast<BufferHostOpenMP*>(g_MP->buffer());
   PSAssert(g_data_buffer_MP);
   g_MP->CopyinoutSubgrid(
-    1, g_MP->elm_size(), nd,
-    g_data_buffer_MP,
-    g_MP->local_size(),
-    buf, finfo.peer_offset - g->local_offset(),
-    finfo.peer_size
-  );
+      1, g_MP->elm_size(), nd,
+      g_data_buffer_MP,
+      g_MP->local_size(),
+      buf, finfo.peer_offset - g->local_offset(),
+      finfo.peer_size
+                         );
 #endif
   SendGridRequest(my_rank_, req.my_rank, comm_, FETCH_REPLY);
   MPI_Request mr;
@@ -608,8 +608,8 @@ void GridSpaceMPIOpenMP::HandleFetchRequest(GridRequest &req, GridMPI *g) {
 }
 
 void GridSpaceMPIOpenMP::HandleFetchReply(GridRequest &req, GridMPI *g,
-                                    std::map<int, FetchInfo> &fetch_map,
-                                    GridMPI *sg) {
+                                          std::map<int, FetchInfo> &fetch_map,
+                                          GridMPI *sg) {
   LOG_DEBUG() << "HandleFetchReply\n";
   const FetchInfo &finfo = fetch_map[req.my_rank];
   PSAssert(GetProcessRank(finfo.peer_index) == req.my_rank);
@@ -627,15 +627,15 @@ void GridSpaceMPIOpenMP::HandleFetchReply(GridRequest &req, GridMPI *g,
   GridMPIOpenMP* sg_MP = dynamic_cast<GridMPIOpenMP*>(g);
   PSAssert(sg_MP);
   BufferHostOpenMP* sg_data_buffer_MP =
-    dynamic_cast<BufferHostOpenMP*>(sg_MP->buffer());
+      dynamic_cast<BufferHostOpenMP*>(sg_MP->buffer());
   PSAssert(sg_data_buffer_MP);
   sg_MP->CopyinoutSubgrid(
-    false, sg_MP->elm_size(), num_dims_,
-    sg_data_buffer_MP,
-    sg_MP->local_size(),
-    buf, finfo.peer_offset - sg->local_offset(),
-    finfo.peer_size
-  );
+      false, sg_MP->elm_size(), num_dims_,
+      sg_data_buffer_MP,
+      sg_MP->local_size(),
+      buf, finfo.peer_offset - sg->local_offset(),
+      finfo.peer_size
+                          );
 #endif
   return;;
 }
@@ -656,18 +656,18 @@ void *GridMPIOpenMP::GetAddress(const IntArray &indices_param) {
     GridMPIOpenMP *rmg_MP = dynamic_cast<GridMPIOpenMP *>(rmg);
     PSAssert(rmg_MP);
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(rmg_MP->buffer());
+        dynamic_cast<BufferHostOpenMP *>(rmg_MP->buffer());
     PSAssert(buf_MP);
     unsigned int cpuid = 0;
     size_t gridid = 0;
     size_t width_avail = 0;
     mpiopenmputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                               );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid * buf_MP->elm_size();
     return (void *) pos;
@@ -702,18 +702,18 @@ void *GridMPIOpenMP::GetAddress(const IntArray &indices_param) {
 #else
   {
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(buffer());
+        dynamic_cast<BufferHostOpenMP *>(buffer());
     PSAssert(buf_MP);
     unsigned int cpuid = 0;
     size_t gridid = 0;
     size_t width_avail = 0;
     mpiopenmputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                               );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid *= buf_MP->elm_size();
     return (void *) pos;

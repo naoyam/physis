@@ -8,7 +8,7 @@ namespace physis {
 namespace runtime {
 namespace mpiopenmputil {
 
-  void CopyinoutSubgrid_MP(
+void CopyinoutSubgrid_MP(
     bool copyout_to_subgrid_mode_p,
     size_t elm_size, int num_dims,
     void **grid_mp,
@@ -22,9 +22,9 @@ namespace mpiopenmputil {
     const IntArray &subgrid_division,
     const size_t * const *subgrid_mp_offset,
     const size_t * const *subgrid_mp_width
-  );
+                         );
 
-  void getMPOffset(
+void getMPOffset(
     const unsigned int num_dims,
     const IntArray &offset,
     const IntArray &grid_size,
@@ -34,7 +34,7 @@ namespace mpiopenmputil {
     unsigned int &cpuid_OUT,
     size_t &gridid_OUT,
     size_t &width_avail_OUT
-  );  
+                 );  
 
 } // namespace mpiopenmputil
 } // namespace runtime
