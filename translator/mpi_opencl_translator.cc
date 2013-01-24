@@ -56,7 +56,7 @@ MPIOpenCLTranslator::~MPIOpenCLTranslator() {
 }
 
 void MPIOpenCLTranslator::SetUp(SgProject *project,
-                              TranslationContext *context) {
+                                TranslationContext *context) {
   MPITranslator::SetUp(project, context);
   LOG_DEBUG() << "Parent setup done\n";
   opencl_trans_->SetUp(project, context);
@@ -68,18 +68,16 @@ void MPIOpenCLTranslator::Finish() {
   std::string str_insert = "#ifndef ";
   str_insert += kernel_mode_macro();
   si::attachArbitraryText(
-    src_->get_globalScope(),
-    str_insert,
-    PreprocessingInfo::before
-    );
+      src_->get_globalScope(),
+      str_insert,
+      PreprocessingInfo::before);
   str_insert = "#endif /* #ifndef ";
   str_insert += kernel_mode_macro();
   str_insert += " */";
   si::attachArbitraryText(
-    src_->get_globalScope(),
-    str_insert,
-    PreprocessingInfo::after
-    );
+      src_->get_globalScope(),
+      str_insert,
+      PreprocessingInfo::after);
 
   add_opencl_extension_pragma();
 
@@ -132,8 +130,8 @@ void MPIOpenCLTranslator::Finish() {
         if (size < NUM_BUF_SIZE - 1) break;
       }
 #undef NUM_BUF_SIZE
-        // Insert new line
-        contents_headers += "\n";
+      // Insert new line
+      contents_headers += "\n";
 
     } // (num = 0; header_lists[num]; num++)
 
@@ -150,11 +148,9 @@ void MPIOpenCLTranslator::Finish() {
     str_insert += kernel_mode_macro();
     str_insert += "\n";
     si::attachArbitraryText(
-      src_->get_globalScope(),
-      str_insert,
-      PreprocessingInfo::before
-      );
-
+        src_->get_globalScope(),
+        str_insert,
+        PreprocessingInfo::before);
   }
 #endif
 
@@ -196,12 +192,9 @@ void MPIOpenCLTranslator::add_opencl_extension_pragma()
     str_insert += "\n";
 
     si::attachArbitraryText(
-      src_->get_globalScope(),
-      str_insert,
-      PreprocessingInfo::before
-      );
-
-
+        src_->get_globalScope(),
+        str_insert,
+        PreprocessingInfo::before);
     break;
   };
 

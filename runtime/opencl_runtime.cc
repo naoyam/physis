@@ -9,9 +9,9 @@
 #include "runtime/opencl_runtime.h"
 
 namespace physis {
-  namespace runtime {
-    CLinfo *master;
-  } // namespace runtime
+namespace runtime {
+CLinfo *master;
+} // namespace runtime
 } // namespace physis
 
 

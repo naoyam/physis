@@ -58,18 +58,18 @@ void OpenCLTranslator::Finish()
   std::string str_insert = "#ifndef ";
   str_insert += kernel_mode_macro();
   si::attachArbitraryText(
-    src_->get_globalScope(),
-    str_insert,
-    PreprocessingInfo::before
-    );
+      src_->get_globalScope(),
+      str_insert,
+      PreprocessingInfo::before
+                          );
   str_insert = "#endif /* #ifndef ";
   str_insert += kernel_mode_macro();
   str_insert += " */";
   si::attachArbitraryText(
-    src_->get_globalScope(),
-    str_insert,
-    PreprocessingInfo::after
-    );
+      src_->get_globalScope(),
+      str_insert,
+      PreprocessingInfo::after
+                          );
 
   add_opencl_extension_pragma();
   check_consistency();
@@ -104,10 +104,10 @@ void OpenCLTranslator::add_opencl_extension_pragma()
     str_insert += "\n";
 
     si::attachArbitraryText(
-      src_->get_globalScope(),
-      str_insert,
-      PreprocessingInfo::before
-      );
+        src_->get_globalScope(),
+        str_insert,
+        PreprocessingInfo::before
+                            );
 
     break;
   };
@@ -140,7 +140,7 @@ SgType *OpenCLTranslator::BuildOnDeviceGridType(GridType *gt)
   std::transform(elm_name.begin(), elm_name.begin() +1,
                  elm_name.begin(), toupper);
   string ondev_type_name = "__PSGrid" + toString(nd) + "D"
-                           + elm_name + "Dev";
+      + elm_name + "Dev";
   LOG_DEBUG() << "On device grid type name: "
               << ondev_type_name << "\n";
   SgType *t =

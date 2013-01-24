@@ -28,7 +28,7 @@ void OpenCLTranslator::translateKernelDeclaration(
   if (1) {
     // Check function calls in the body
     SgNodePtrList calls =
-      NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
+        NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
     FOREACH (it, calls.begin(), calls.end()) {
       SgFunctionCallExp *fcexp;
 #if DEBUG_FIX_DUP_SGEXP
@@ -48,7 +48,7 @@ void OpenCLTranslator::translateKernelDeclaration(
       // Create new argument list
       SgScopeStatement *scope_func = node_pos->get_scope();
       SgExprListExp *newargexplist = 
-        new_arguments_of_funccall_in_device(argexplist, scope_func);
+          new_arguments_of_funccall_in_device(argexplist, scope_func);
       fcexp = isSgFunctionCallExp(*it);
       fcexp->set_args(newargexplist);
 
@@ -60,69 +60,69 @@ void OpenCLTranslator::translateKernelDeclaration(
 
   // Rename the call to kernel function to __PS_opencl_InDeviceFunc
   if (1) {
-      // Search function call
-      SgNodePtrList calls =
+    // Search function call
+    SgNodePtrList calls =
         NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
-        FOREACH(it, calls.begin(), calls.end()) {
-          SgFunctionCallExp *callexp = isSgFunctionCallExp(*it);
-          if (!callexp) continue;
+    FOREACH(it, calls.begin(), calls.end()) {
+      SgFunctionCallExp *callexp = isSgFunctionCallExp(*it);
+      if (!callexp) continue;
 
-          SgFunctionDeclaration *calldec = callexp->getAssociatedFunctionDeclaration();
+      SgFunctionDeclaration *calldec = callexp->getAssociatedFunctionDeclaration();
 
-          // Change the call of PSGridDim to __PS_g_dim?x, for example
-          std::string callname = calldec->get_name().getString();
-          const char *callname_c = callname.c_str();
-          if (!strcmp(callname_c, "PSGridDim")) {
-            LOG_DEBUG() << "PSGridDim called.\n";
-            std::string str_gdim_name = "__PS_";
+      // Change the call of PSGridDim to __PS_g_dim?x, for example
+      std::string callname = calldec->get_name().getString();
+      const char *callname_c = callname.c_str();
+      if (!strcmp(callname_c, "PSGridDim")) {
+        LOG_DEBUG() << "PSGridDim called.\n";
+        std::string str_gdim_name = "__PS_";
 
-            SgExpressionPtrList &oldargs = callexp->get_args()->get_expressions();
-            int firstone = 1;
-            FOREACH(it, oldargs.begin(), oldargs.end()) {
-              SgExpression *arg = isSgExpression(*it);
-              // handle grid type
-              if (firstone) {
-                std::string str_gname = arg->unparseToString();
-                str_gdim_name += str_gname;
-                firstone = 0;
-              } else { // if (firstone)
-                std::string str_dim = arg->unparseToString();
-                const char *cstr_dim = str_dim.c_str();
-                int dim_arg = atoi(cstr_dim);
-                switch(dim_arg) {
-                  case 0:
-                      str_gdim_name += "_dim_x";
-                      break;
-                  case 1:
-                      str_gdim_name += "_dim_y";
-                      break;
-                  case 2:
-                      str_gdim_name += "_dim_z";
-                      break;
-                  default:
-                      break;
-                } // switch(dim_arg)
-              } // // if (GridType::isGridType(cur_type))
-            } // FOREACH(it, oldargs.begin(), oldargs.end())
-            LOG_DEBUG() << "Changing the call PSGridDim to variable " << str_gdim_name << "\n";
-            SgVarRefExp *gdim_refexp =
-              sb::buildVarRefExp(str_gdim_name, getContainingScopeStatement(node_pos));
-            si::replaceExpression(callexp, gdim_refexp);
+        SgExpressionPtrList &oldargs = callexp->get_args()->get_expressions();
+        int firstone = 1;
+        FOREACH(it, oldargs.begin(), oldargs.end()) {
+          SgExpression *arg = isSgExpression(*it);
+          // handle grid type
+          if (firstone) {
+            std::string str_gname = arg->unparseToString();
+            str_gdim_name += str_gname;
+            firstone = 0;
+          } else { // if (firstone)
+            std::string str_dim = arg->unparseToString();
+            const char *cstr_dim = str_dim.c_str();
+            int dim_arg = atoi(cstr_dim);
+            switch(dim_arg) {
+              case 0:
+                str_gdim_name += "_dim_x";
+                break;
+              case 1:
+                str_gdim_name += "_dim_y";
+                break;
+              case 2:
+                str_gdim_name += "_dim_z";
+                break;
+              default:
+                break;
+            } // switch(dim_arg)
+          } // // if (GridType::isGridType(cur_type))
+        } // FOREACH(it, oldargs.begin(), oldargs.end())
+        LOG_DEBUG() << "Changing the call PSGridDim to variable " << str_gdim_name << "\n";
+        SgVarRefExp *gdim_refexp =
+            sb::buildVarRefExp(str_gdim_name, getContainingScopeStatement(node_pos));
+        si::replaceExpression(callexp, gdim_refexp);
 
-            continue; // end
-          } // (!strcmp(callname_c, "PSGridDim"))
+        continue; // end
+      } // (!strcmp(callname_c, "PSGridDim"))
 
-          // If it is not a call to device function, continue
-          if (! tx_->isKernel(calldec)) continue;
+      // If it is not a call to device function, continue
+      if (! tx_->isKernel(calldec)) continue;
 
-          // Rename caller to __PS_opencl_InDeviceFunc
-          std::string oldfuncname = calldec->get_name().getString();
-          std::string newfuncname = name_new_kernel(oldfuncname);
-          LOG_DEBUG() << "Calling to kernel function " << oldfuncname << " found.\n";
-          LOG_DEBUG() << "Changing the call to " << newfuncname << ".\n";
-          SgName newsgname(newfuncname);
-          callexp->set_function(sb::buildFunctionRefExp(newsgname));
-        } // FOREACH(it, calls.begin(), calls.end())
+      // Rename caller to __PS_opencl_InDeviceFunc
+      std::string oldfuncname = calldec->get_name().getString();
+      std::string newfuncname = name_new_kernel(oldfuncname);
+      LOG_DEBUG() << "Calling to kernel function " << oldfuncname << " found.\n";
+      LOG_DEBUG() << "Changing the call to " << newfuncname << ".\n";
+      SgName newsgname(newfuncname);
+      callexp->set_function(sb::buildFunctionRefExp(newsgname));
+    } // FOREACH(it, calls.begin(), calls.end())
   }
 
   // Rename function name on the declaration in kernel side
@@ -134,7 +134,7 @@ void OpenCLTranslator::translateKernelDeclaration(
     std::string newkernelname = name_new_kernel(oldkernelname);
 
     LOG_DEBUG() << "Changing the name of the function declaration: from " 
-      << oldkernelname << " to " << newkernelname << ".\n";
+                << oldkernelname << " to " << newkernelname << ".\n";
     // Create declaration copy, and rename it
     SgFunctionDeclaration *node_new = isSgFunctionDeclaration(si::copyStatement(node));
     node_new->set_name(newkernelname);
@@ -155,23 +155,23 @@ void OpenCLTranslator::translateKernelDeclaration(
   SgInitializedNamePtrList &oldargs = oldparams->get_args();
 
   FOREACH(it, oldargs.begin(), oldargs.end()) {
-      SgInitializedName *newarg = isSgInitializedName(*it);
+    SgInitializedName *newarg = isSgInitializedName(*it);
 
-      // handle grid type
-      SgType *cur_type = newarg->get_type();
-      if (GridType::isGridType(cur_type)) {
-        arg_add_grid_type(newparams, newarg);
-        continue;
-      } // if (GridType::isGridType(cur_type))
+    // handle grid type
+    SgType *cur_type = newarg->get_type();
+    if (GridType::isGridType(cur_type)) {
+      arg_add_grid_type(newparams, newarg);
+      continue;
+    } // if (GridType::isGridType(cur_type))
 
-      // If the argument is not grid type, add it as it is
+    // If the argument is not grid type, add it as it is
 #ifdef DEBUG_FIX_CONSISTENCY
-      SgTreeCopy tc;
-      newarg = isSgInitializedName(newarg->copy(tc));
+    SgTreeCopy tc;
+    newarg = isSgInitializedName(newarg->copy(tc));
 #ifdef DEBUG_FIX_AST_APPEND
-      si::appendArg(newparams, newarg);
+    si::appendArg(newparams, newarg);
 #else
-      newparams->append_arg(newarg);
+    newparams->append_arg(newarg);
 #endif
 #endif
   } // FOREACH(it, oldargs.begin(), oldargs.end())
@@ -204,25 +204,25 @@ void OpenCLTranslator::translateKernelDeclaration(
     str_insert += kernel_mode_macro();
     str_insert += "*/";
     si::attachArbitraryText(
-      node_pos,
-      str_insert,
-      PreprocessingInfo::before
-      );
+        node_pos,
+        str_insert,
+        PreprocessingInfo::before
+                            );
     str_insert = "#endif /* #ifndef ";
     str_insert += kernel_mode_macro();
     str_insert += "*/";
     si::attachArbitraryText(
-      node_pos,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        node_pos,
+        str_insert,
+        PreprocessingInfo::after
+                            );
     str_insert = "#ifndef ";
     str_insert += kernel_mode_macro();
     si::attachArbitraryText(
-      node_pos,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        node_pos,
+        str_insert,
+        PreprocessingInfo::after
+                            );
 
   }
 

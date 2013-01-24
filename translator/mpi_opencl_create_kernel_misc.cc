@@ -21,7 +21,7 @@ SgType *MPIOpenCLTranslator::BuildOnDeviceGridType(GridType *gt, int inner_devic
   std::transform(elm_name.begin(), elm_name.begin() +1,
                  elm_name.begin(), toupper);
   string ondev_type_name = "__PSGrid" + toString(nd) + "D"
-                             + elm_name + "Dev";
+      + elm_name + "Dev";
   if (inner_device)
     ondev_type_name += "_CLKernel";
   LOG_DEBUG() << "On device grid type name: "
@@ -34,8 +34,8 @@ SgType *MPIOpenCLTranslator::BuildOnDeviceGridType(GridType *gt, int inner_devic
 }
 
 SgType *MPIOpenCLTranslator::BuildOnDeviceDomType(void){
-    SgType *t_ret = sb::buildOpaqueType("__PSDomain_CLKernel", global_scope_);
-    return t_ret;
+  SgType *t_ret = sb::buildOpaqueType("__PSDomain_CLKernel", global_scope_);
+  return t_ret;
 }
 
 

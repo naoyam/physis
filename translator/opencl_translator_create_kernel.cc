@@ -73,7 +73,7 @@ SgFunctionDeclaration *OpenCLTranslator::BuildRunKernel(
       // handling domain type done: continuing
       continue;
 
-    // Next grid type
+      // Next grid type
     } else if (GridType::isGridType(type)) { // if (Domain::isDomainType(type))
 
       SgType *gt = BuildOnDeviceGridType(tx_->findGridType(type));
@@ -135,25 +135,25 @@ SgFunctionDeclaration *OpenCLTranslator::BuildRunKernel(
     str_insert += kernel_mode_macro();
     str_insert += "*/";
     si::attachArbitraryText(
-      run_func,
-      str_insert,
-      PreprocessingInfo::before
-      );
+        run_func,
+        str_insert,
+        PreprocessingInfo::before
+                            );
     str_insert = "#endif /* #ifndef ";
     str_insert += kernel_mode_macro();
     str_insert += "*/";
     si::attachArbitraryText(
-      run_func,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        run_func,
+        str_insert,
+        PreprocessingInfo::after
+                            );
     str_insert = "#ifndef ";
     str_insert += kernel_mode_macro();
     si::attachArbitraryText(
-      run_func,
-      str_insert,
-      PreprocessingInfo::after
-      );
+        run_func,
+        str_insert,
+        PreprocessingInfo::after
+                            );
   }
 
   return run_func;
@@ -219,28 +219,28 @@ SgBasicBlock *OpenCLTranslator::generateRunKernelBody(
       // x = get_global_id(0);
       x_index->reset_initializer(
           sb::buildAssignInitializer(
-            BuildFunctionCall(
-              "get_global_id", sb::buildIntVal(0)
-                )));
+              BuildFunctionCall(
+                  "get_global_id", sb::buildIntVal(0)
+                                )));
 
       // y = get_global_id(1);
       y_index->reset_initializer(
           sb::buildAssignInitializer(
-            BuildFunctionCall(
-              "get_global_id", sb::buildIntVal(1)
-                )));
+              BuildFunctionCall(
+                  "get_global_id", sb::buildIntVal(1)
+                                )));
 
       // z = 0; (anyway)
       z_index->reset_initializer(
-        sb::buildAssignInitializer(
-            sb::buildIntVal(0)
-              ));
+          sb::buildAssignInitializer(
+              sb::buildIntVal(0)
+                                     ));
 
 
       // for (z = ...) {...};
       loop_index = z_index;
 
-       // z = __PS_dom_zmin;
+      // z = __PS_dom_zmin;
       SgExpression *dom_min_z = sb::buildVarRefExp(name_var_dom(dim - 1, 0));
       loop_init = sb::buildAssignStatement(
           sb::buildVarRefExp(loop_index), dom_min_z);
@@ -319,9 +319,9 @@ SgIfStmt *OpenCLTranslator::BuildDomainInclusionCheck(
     SgExpression *test_add = sb::buildOrOp(
         sb::buildLessThanOp(idx, sb::buildVarRefExp(name_var_dom(dim, 0))),
         sb::buildGreaterOrEqualOp(idx, sb::buildVarRefExp(name_var_dom(dim, 1)))
-          );
+                                           );
     if (test_all) {
-       // (<test_all>) || (<test>)
+      // (<test_all>) || (<test>)
       test_all = sb::buildOrOp(test_all, test_add);
     } else {
       test_all = test_add;
@@ -385,7 +385,7 @@ SgFunctionCallExp *OpenCLTranslator::generateKernelCall(
     PSAssert(var_def);
     SgTypedefType *var_type = isSgTypedefType(var_def->get_type());
 
-   // Handling grid type
+    // Handling grid type
     if (GridType::isGridType(var_type)) {
       std::string newargname;
       SgExpression *exp_new;
@@ -446,7 +446,7 @@ SgFunctionCallExp *OpenCLTranslator::generateKernelCall(
   SgFunctionCallExp *func_call =
       sb::buildFunctionCallExp(
           sb::buildFunctionRefExp(newsgname), args
-          );
+                               );
 
   return func_call;
 } // generateKernelCall

@@ -18,7 +18,7 @@ void MPIOpenCLTranslator::Define_and_Construct_griddom_in_device(
     StencilMap *stencil,
     SgInitializedName *dom_arg,
     SgScopeStatement *scope
-)
+                                                                 )
 {
   // Find out grid type, then construct device grid type
   {
@@ -39,27 +39,27 @@ void MPIOpenCLTranslator::Define_and_Construct_griddom_in_device(
       SgType *type_dev = BuildOnDeviceGridType(gt, 1);
       SgVariableDeclaration *dec_grid_dev = 
           sb::buildVariableDeclaration(
-            var_name, type_dev, NULL, scope
-            );
-        si::appendStatement(dec_grid_dev, scope);
+              var_name, type_dev, NULL, scope
+                                       );
+      si::appendStatement(dec_grid_dev, scope);
       {
         SgExprListExp* args_st = sb::buildExprListExp();
         si::appendExpression(args_st, 
-            sb::buildAddressOfOp(sb::buildVarRefExp(dec_grid_dev)));
+                             sb::buildAddressOfOp(sb::buildVarRefExp(dec_grid_dev)));
 
         // Actually macro, however...
         {
           SgExprListExp *args_g = sb::buildExprListExp();
           si::appendExpression(args_g,
-            sb::buildVarRefExp(dec_grid_dev));
+                               sb::buildVarRefExp(dec_grid_dev));
           SgFunctionCallExp *exp_macro_gtype =
-            sb::buildFunctionCallExp(
-              sb::buildFunctionRefExp("__PS_CL_ARG_EXPAND_ELEMENT_G"), args_g);
+              sb::buildFunctionCallExp(
+                  sb::buildFunctionRefExp("__PS_CL_ARG_EXPAND_ELEMENT_G"), args_g);
           si::appendExpression(args_st, exp_macro_gtype);
         }
 
 
-      // __PS_CL_construct_PSGrid_from_arg(&ga,__PS_CL_ARG_EXPAND_ELEMENT_G(ga));
+        // __PS_CL_construct_PSGrid_from_arg(&ga,__PS_CL_ARG_EXPAND_ELEMENT_G(ga));
         std::string callname = "__PS_CL_construct_PSGrid_from_arg";
         {
           SgType *ty = gt->getElmType();
@@ -67,10 +67,10 @@ void MPIOpenCLTranslator::Define_and_Construct_griddom_in_device(
             callname += "_DOUBLE";
         }
         SgFunctionCallExp *exp_fcall =
-          sb::buildFunctionCallExp(
-            sb::buildFunctionRefExp(callname),
-            args_st
-            );
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp(callname),
+                args_st
+                                     );
         si::appendStatement(sb::buildExprStatement(exp_fcall), scope);
       }
     
@@ -80,35 +80,35 @@ void MPIOpenCLTranslator::Define_and_Construct_griddom_in_device(
   { // For dom type
     std::string dom_name = dom_arg->get_name().getString();
     SgVariableDeclaration *dec_dom_dev = 
-      sb::buildVariableDeclaration(
-        dom_name, BuildOnDeviceDomType(), NULL, scope);
+        sb::buildVariableDeclaration(
+            dom_name, BuildOnDeviceDomType(), NULL, scope);
     si::appendStatement(dec_dom_dev, scope);
 
-      {
-        SgExprListExp* args_st = sb::buildExprListExp();
-        si::appendExpression(args_st, 
-            sb::buildAddressOfOp(sb::buildVarRefExp(dec_dom_dev)));
+    {
+      SgExprListExp* args_st = sb::buildExprListExp();
+      si::appendExpression(args_st, 
+                           sb::buildAddressOfOp(sb::buildVarRefExp(dec_dom_dev)));
 
-        // Actually macro, however...
-        {
-          SgExprListExp *args_d = sb::buildExprListExp();
-          si::appendExpression(args_d,
-            sb::buildVarRefExp(dec_dom_dev));
-          SgFunctionCallExp *exp_macro_dom =
+      // Actually macro, however...
+      {
+        SgExprListExp *args_d = sb::buildExprListExp();
+        si::appendExpression(args_d,
+                             sb::buildVarRefExp(dec_dom_dev));
+        SgFunctionCallExp *exp_macro_dom =
             sb::buildFunctionCallExp(
-              sb::buildFunctionRefExp("__PS_CL_ARG_EXPAND_ELEMENT_DOM"), args_d);
-          si::appendExpression(args_st, exp_macro_dom);
-        }
+                sb::buildFunctionRefExp("__PS_CL_ARG_EXPAND_ELEMENT_DOM"), args_d);
+        si::appendExpression(args_st, exp_macro_dom);
+      }
 
 
       // __PS_CL_construct_PSDomain_from_arg(&ga,__PS_CL_ARG_EXPAND_ELEMENT_DOM(ga));
-        SgFunctionCallExp *exp_fcall =
+      SgFunctionCallExp *exp_fcall =
           sb::buildFunctionCallExp(
-            sb::buildFunctionRefExp("__PS_CL_construct_PSDomain_from_arg"),
-            args_st
-            );
-        si::appendStatement(sb::buildExprStatement(exp_fcall), scope);
-      }
+              sb::buildFunctionRefExp("__PS_CL_construct_PSDomain_from_arg"),
+              args_st
+                                   );
+      si::appendStatement(sb::buildExprStatement(exp_fcall), scope);
+    }
   }
 }
 
@@ -161,16 +161,16 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunKernelBody(
             sb::buildAddOp(
                 BuildFunctionCall(
                     "get_global_id", sb::buildIntVal(0)
-                      ),
+                                  ),
                 offset_exprs[0])));
 
     // y = blockIdx.y * blockDim.y + threadIdx.y + offset.y;
     y_index->reset_initializer(
         sb::buildAssignInitializer(
             sb::buildAddOp(
-              BuildFunctionCall(
-                "get_global_id", sb::buildIntVal(1)
-                  ),
+                BuildFunctionCall(
+                    "get_global_id", sb::buildIntVal(1)
+                                  ),
                 offset_exprs[1])));
 
     SgVariableDeclaration *loop_index = z_index;
@@ -218,7 +218,7 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunInteriorKernelBody(
   SgBasicBlock *body = BuildRunKernelBody(stencil, dom_arg);
   const std::string &normal_kernel_name = stencil->getKernel()->get_name();
   const std::string &inner_kernel_name = normal_kernel_name 
-                                         + inner_prefix_;
+      + inner_prefix_;
   LOG_DEBUG() << "normal kernel name: " << normal_kernel_name << "\n";
   LOG_DEBUG() << "inner kernel name: " << inner_kernel_name << "\n";
   SgFunctionDeclaration *inner_kernel =
@@ -280,8 +280,8 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunBoundaryKernelBody(
       sb::buildAssignInitializer(
           sb::buildAddOp(
               BuildFunctionCall(
-                "get_global_id", sb::buildIntVal(0)
-                  ),
+                  "get_global_id", sb::buildIntVal(0)
+                                ),
               offset_exprs[0])));
       
 
@@ -290,8 +290,8 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunBoundaryKernelBody(
       sb::buildAssignInitializer(
           sb::buildAddOp(
               BuildFunctionCall(
-                "get_global_id", sb::buildIntVal(1)
-                  ),
+                  "get_global_id", sb::buildIntVal(1)
+                                ),
               offset_exprs[1])));
   
   SgVariableDeclaration *loop_index = z_index;      
@@ -330,9 +330,9 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunBoundaryKernelBody(
   loop = sb::buildForStatement(loop_init, loop_test,
                                loop_incr, loop_body);
   si::appendStatement(
-    BuildDomainInclusionInnerCheck(
-      range_checking_idx, domain, width, loop),
-    block);
+      BuildDomainInclusionInnerCheck(
+          range_checking_idx, domain, width, loop),
+      block);
 
   loop_init = sb::buildAssignStatement(
       sb::buildVarRefExp(loop_index), sb::buildSubtractOp(dom_max_z,

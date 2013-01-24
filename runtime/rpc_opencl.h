@@ -14,24 +14,24 @@
 */
 
 namespace physis {
-  namespace runtime {
+namespace runtime {
 
-    class CLinfo : public CLbaseinfo {
-      protected:
+class CLinfo : public CLbaseinfo {
+ protected:
 
-      public:
-        CLinfo(): CLbaseinfo() {};
-        virtual ~CLinfo() {};
+ public:
+  CLinfo(): CLbaseinfo() {};
+  virtual ~CLinfo() {};
 
-        virtual __PSGrid* GridNew(int elm_size, int num_dims, PSVectorInt dim, int double_buffering);
-        virtual void GridFree(__PSGrid *g);
-        virtual void GridCopyin(__PSGrid *g, const void *src_buf);
-        virtual void GridCopyout(__PSGrid *g, void *dst_buf);
-        virtual void GridSet(__PSGrid *g, const void *val_ptr, va_list valst_dim);
+  virtual __PSGrid* GridNew(int elm_size, int num_dims, PSVectorInt dim, int double_buffering);
+  virtual void GridFree(__PSGrid *g);
+  virtual void GridCopyin(__PSGrid *g, const void *src_buf);
+  virtual void GridCopyout(__PSGrid *g, void *dst_buf);
+  virtual void GridSet(__PSGrid *g, const void *val_ptr, va_list valst_dim);
 
-    }; // class CLinfo
+}; // class CLinfo
 
-  } // namespace runtime
+} // namespace runtime
 } // namespace physis
 
 #endif /* #define PHYSIS_RUNTIME_RPC_OPENCL_H_ */

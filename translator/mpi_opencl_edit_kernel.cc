@@ -59,31 +59,31 @@ void MPIOpenCLTranslator::translateKernelDeclaration(
 
   // Rename the call to kernel function to __PS_opencl_kernel
   if (1) {
-      // Search function call
-      SgNodePtrList calls =
+    // Search function call
+    SgNodePtrList calls =
         NodeQuery::querySubTree(node_pos, V_SgFunctionCallExp);
-        FOREACH(it, calls.begin(), calls.end()) {
-          SgFunctionCallExp *callexp = isSgFunctionCallExp(*it);
-          if (!callexp) continue;
+    FOREACH(it, calls.begin(), calls.end()) {
+      SgFunctionCallExp *callexp = isSgFunctionCallExp(*it);
+      if (!callexp) continue;
 
-          // If it is not a call to device function, continue
-          SgFunctionDeclaration *calldec = callexp->getAssociatedFunctionDeclaration();
-          if (! tx_->isKernel(calldec)) continue;
+      // If it is not a call to device function, continue
+      SgFunctionDeclaration *calldec = callexp->getAssociatedFunctionDeclaration();
+      if (! tx_->isKernel(calldec)) continue;
 
-          // Rename caller to __PS_opencl_kernel if the called
-          // function name is "kernel" (OpenCL won't allow this)
-          std::string oldfuncname = calldec->get_name().getString();
-          const char *oldfuncname_c = oldfuncname.c_str();
+      // Rename caller to __PS_opencl_kernel if the called
+      // function name is "kernel" (OpenCL won't allow this)
+      std::string oldfuncname = calldec->get_name().getString();
+      const char *oldfuncname_c = oldfuncname.c_str();
 
-          if (strcmp(oldfuncname_c, "kernel")) // No need to rename
-            continue;
+      if (strcmp(oldfuncname_c, "kernel")) // No need to rename
+        continue;
 
-          std::string newfuncname = opencl_trans_->name_new_kernel(oldfuncname);
-          LOG_DEBUG() << "Calling to kernel function " << oldfuncname << " found.\n";
-          LOG_DEBUG() << "Changing the call to " << newfuncname << ".\n";
-          SgName newsgname(newfuncname);
-          callexp->set_function(sb::buildFunctionRefExp(newsgname));
-        } // FOREACH(it, calls.begin(), calls.end())
+      std::string newfuncname = opencl_trans_->name_new_kernel(oldfuncname);
+      LOG_DEBUG() << "Calling to kernel function " << oldfuncname << " found.\n";
+      LOG_DEBUG() << "Changing the call to " << newfuncname << ".\n";
+      SgName newsgname(newfuncname);
+      callexp->set_function(sb::buildFunctionRefExp(newsgname));
+    } // FOREACH(it, calls.begin(), calls.end())
   }
 
   // And rename the function name of this node if the name is
@@ -97,7 +97,7 @@ void MPIOpenCLTranslator::translateKernelDeclaration(
     std::string newkernelname = opencl_trans_->name_new_kernel(oldkernelname);
 
     LOG_DEBUG() << "Changing the name of the function declaration: from " 
-      << oldkernelname << " to " << newkernelname << ".\n";
+                << oldkernelname << " to " << newkernelname << ".\n";
     // Create declaration copy, and rename it
     SgFunctionDeclaration *node_new = 
         rose_util::CloneFunction(node, newkernelname);
@@ -134,10 +134,10 @@ void MPIOpenCLTranslator::translateKernelDeclaration(
 
 
 bool MPIOpenCLTranslator::translateGetKernel(
-          SgFunctionCallExp *node,
-          SgInitializedName *gv,
-          bool is_periodic
-) {
+    SgFunctionCallExp *node,
+    SgInitializedName *gv,
+    bool is_periodic
+                                             ) {
   // 
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
 

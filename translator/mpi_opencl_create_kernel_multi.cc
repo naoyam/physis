@@ -91,24 +91,24 @@ SgBasicBlock* MPIOpenCLTranslator::BuildRunMultiStreamBoundaryKernelBody(
       sb::buildAddOp(
           BuildFunctionCall(
               "get_local_id", sb::buildIntVal(0)
-            ),
-         sb::buildPntrArrRefExp(
-            min_field,
-            sb::buildIntVal(0)
-            )
-        )
-    );
+                            ),
+          sb::buildPntrArrRefExp(
+              min_field,
+              sb::buildIntVal(0)
+                                 )
+                     )
+                                                    );
   SgStatement *loop_test = sb::buildExprStatement(
       sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
                           sb::buildPntrArrRefExp(max_field,
                                                  sb::buildIntVal(0))));
   SgExpression *loop_incr =
       sb::buildPlusAssignOp(
-        sb::buildVarRefExp(loop_index),
-        BuildFunctionCall(
-          "get_local_size", sb::buildIntVal(0)
-          )
-        );
+          sb::buildVarRefExp(loop_index),
+          BuildFunctionCall(
+              "get_local_size", sb::buildIntVal(0)
+                            )
+                            );
 
   SgBasicBlock *loop_body = sb::buildBasicBlock();
   SgExprListExp *kernel_args=

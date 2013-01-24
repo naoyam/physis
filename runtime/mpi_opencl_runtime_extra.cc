@@ -8,7 +8,7 @@ namespace runtime {
 
 void InitOpenCL(
     int my_rank, int num_local_processes, int *argc, char ***argv
-)
+                )
 {
   // Assumes each local process has successive process rank
   int dev_id = my_rank % num_local_processes;
@@ -25,9 +25,9 @@ void InitOpenCL(
 
   num_clinfo_boundary_kernel = NUM_CLINFO_BOUNDARY_KERNEL;
   unsigned int i;
-// FIXME
-// FIXME
-// Get this back later
+  // FIXME
+  // FIXME
+  // Get this back later
   for (i = 0; i < ::num_clinfo_boundary_kernel; i++) {
   }
 
@@ -35,14 +35,14 @@ void InitOpenCL(
   phru::clinfo_nowusing = phru::clinfo_generic;
 
 #if 1
-    /* As currently header_path is always 0, move this
-       to InitOpencl
-      */
-    if (!phru::clinfo_nowusing->get_prog()) {
-      phru::clinfo_nowusing->set_header_include_path(0);
-      std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
-      phru::clinfo_nowusing->create_program(kernel_filen);
-    }
+  /* As currently header_path is always 0, move this
+     to InitOpencl
+  */
+  if (!phru::clinfo_nowusing->get_prog()) {
+    phru::clinfo_nowusing->set_header_include_path(0);
+    std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
+    phru::clinfo_nowusing->create_program(kernel_filen);
+  }
 #endif
 }
 
@@ -69,11 +69,11 @@ void DestroyOpenCL(void) {
 extern "C" {
 #endif
 
-void __PSSetKernel(
+  void __PSSetKernel(
       const char *kernelname,
       enum CL_STREAM_FLAG strm_flg, unsigned int strm_num,
       const char *header_path)
-{
+  {
     std::string string_kernelname = kernelname;
 
     PSAssert(phru::clinfo_generic);
@@ -82,7 +82,7 @@ void __PSSetKernel(
 #if 0
     /* As currently header_path is always 0, move this
        to InitOpencl
-      */
+    */
     if (!phru::clinfo_nowusing->get_prog()) {
       phru::clinfo_nowusing->set_header_include_path(header_path);
       std::string kernel_filen = phru::clinfo_nowusing->get_kernel_filen();
@@ -135,7 +135,7 @@ void __PSSetKernel(
 
       default:
         LOG_DEBUG() << "The flag value " << strm_flg << 
-          " does not match any of the registered values.\n";
+            " does not match any of the registered values.\n";
         PSAbort(1);
 
         phru::clinfo_nowusing = phru::clinfo_generic;
@@ -143,34 +143,34 @@ void __PSSetKernel(
     }
 
     phru::clinfo_nowusing->create_kernel(string_kernelname);
-} // __PSSetKernel
+  } // __PSSetKernel
 
-void __PS_CL_ThreadSynchronize(void){
-  if (phru::clinfo_generic)
-    phru::clinfo_generic->sync_queue();
-  if (phru::clinfo_inner)
-    phru::clinfo_inner->sync_queue();
-  if (phru::clinfo_boundary_copy)
-    phru::clinfo_boundary_copy->sync_queue();
+  void __PS_CL_ThreadSynchronize(void){
+    if (phru::clinfo_generic)
+      phru::clinfo_generic->sync_queue();
+    if (phru::clinfo_inner)
+      phru::clinfo_inner->sync_queue();
+    if (phru::clinfo_boundary_copy)
+      phru::clinfo_boundary_copy->sync_queue();
 
-  FOREACH(it, phru::clinfo_boundary_kernel.begin(), phru::clinfo_boundary_kernel.end())
-  {
-    phru::CLMPIbaseinfo *cl_usenow = *it;
-    cl_usenow->sync_queue();
+    FOREACH(it, phru::clinfo_boundary_kernel.begin(), phru::clinfo_boundary_kernel.end())
+    {
+      phru::CLMPIbaseinfo *cl_usenow = *it;
+      cl_usenow->sync_queue();
+    }
   }
-}
 
-void __PSSetKernelArg(unsigned int arg_index, size_t arg_size, const void *arg_val)
-{
+  void __PSSetKernelArg(unsigned int arg_index, size_t arg_size, const void *arg_val)
+  {
     phru::clinfo_nowusing->SetKernelArg((cl_uint) arg_index, arg_size, arg_val);
-} // __PSSetKernelArg
+  } // __PSSetKernelArg
 
-void __PSSetKernelArgCLMem(unsigned int arg_index, const void *arg_val){
+  void __PSSetKernelArgCLMem(unsigned int arg_index, const void *arg_val){
     phru::clinfo_nowusing->SetKernelArg((cl_uint) arg_index, sizeof(cl_mem), arg_val);
-} // __PSSetKernelArgCLMem
+  } // __PSSetKernelArgCLMem
 
-// Float case
-void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
+  // Float case
+  void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
     unsigned int argc = *p_argc;
     int dim = 0;
     int fwbw = 0;
@@ -202,11 +202,11 @@ void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
         }
         argc++;
         {
-        cl_long j = 1;
-        if (!buf)
-          j = 0;
-        __PSSetKernelArg(argc, sizeof(j), &j);
-        argc++;
+          cl_long j = 1;
+          if (!buf)
+            j = 0;
+          __PSSetKernelArg(argc, sizeof(j), &j);
+          argc++;
         }
       } // for (fwbw = 0 ; fwbw < 2; fwbw++)
     } // for (dim = 0; dim < 3; dim++)
@@ -219,10 +219,10 @@ void __PSSetKernelArg_Grid3DFloat(unsigned int *p_argc, __PSGrid3DFloatDev *g) {
     { cl_long j = g->diag; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
 
     *p_argc = argc;
-} // __PSSetKernelArg_Grid3DFloat
+  } // __PSSetKernelArg_Grid3DFloat
 
-// Double case
-void __PSSetKernelArg_Grid3DDouble(unsigned int *p_argc, __PSGrid3DDoubleDev *g) {
+  // Double case
+  void __PSSetKernelArg_Grid3DDouble(unsigned int *p_argc, __PSGrid3DDoubleDev *g) {
     unsigned int argc = *p_argc;
     int dim = 0;
     int fwbw = 0;
@@ -254,11 +254,11 @@ void __PSSetKernelArg_Grid3DDouble(unsigned int *p_argc, __PSGrid3DDoubleDev *g)
         }
         argc++;
         {
-        cl_long j = 1;
-        if (!buf)
-          j = 0;
-        __PSSetKernelArg(argc, sizeof(j), &j);
-        argc++;
+          cl_long j = 1;
+          if (!buf)
+            j = 0;
+          __PSSetKernelArg(argc, sizeof(j), &j);
+          argc++;
         }
       } // for (fwbw = 0 ; fwbw < 2; fwbw++)
     } // for (dim = 0; dim < 3; dim++)
@@ -271,9 +271,9 @@ void __PSSetKernelArg_Grid3DDouble(unsigned int *p_argc, __PSGrid3DDoubleDev *g)
     { cl_long j = g->diag; __PSSetKernelArg(argc, sizeof(j), &j); argc++; }
 
     *p_argc = argc;
-} // __PSSetKernelArg_Grid3DDouble
+  } // __PSSetKernelArg_Grid3DDouble
 
-void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom) {
+  void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom) {
     unsigned int argc = *p_argc;
     int dim = 0;
 
@@ -287,11 +287,11 @@ void __PSSetKernelArg_Dom(unsigned int *p_argc, __PSDomain *p_dom) {
     }
 
     *p_argc = argc;
-} // __PSSetKernelArg_Dom
+  } // __PSSetKernelArg_Dom
 
-void __PSRunKernel(size_t *globalsize, size_t *localsize){
+  void __PSRunKernel(size_t *globalsize, size_t *localsize){
     phru::clinfo_nowusing->RunKernel(globalsize, localsize);
-} // __PSRunKernel
+  } // __PSRunKernel
 
 
 #ifdef __cplusplus

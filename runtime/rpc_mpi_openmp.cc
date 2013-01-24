@@ -74,7 +74,7 @@ void ClientOpenMP::Listen() {
         break;
       case FUNC_MP_RUN:
         LOG_DEBUG() << "Client: run requested ("
-                        << req.opt << ")\n";
+                    << req.opt << ")\n";
         StencilRun(req.opt);
         LOG_DEBUG() << "Client: run done\n";
         break;
@@ -102,7 +102,7 @@ void ClientOpenMP::Listen() {
 }
 
 ClientOpenMP::ClientOpenMP(
-  const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm):
+    const ProcInfoOpenMP &pinfo_mp, GridSpaceMPIOpenMP *gs_mp, MPI_Comm comm):
     Client(pinfo_mp, gs_mp, comm),
     pinfo_mp_(pinfo_mp), gs_mp_(gs_mp)
 {
@@ -136,20 +136,20 @@ void MasterOpenMP::Barrier() {
 }
 
 GridMPIOpenMP *MasterOpenMP::GridNew(PSType type, int elm_size,
-                         int num_dims, const IntArray &size,
-                         bool double_buffering,
-                         const IntArray &global_offset,
-                         int attr) {
+                                     int num_dims, const IntArray &size,
+                                     bool double_buffering,
+                                     const IntArray &global_offset,
+                                     int attr) {
   LOG_DEBUG() << "[" << pinfo_mp_.rank() << "] New\n";
   NotifyCall(FUNC_MP_NEW);
   RequestMPNEW req = {type, elm_size, num_dims, size,
-                    double_buffering, global_offset, attr};
+                      double_buffering, global_offset, attr};
   MPI_Bcast(&req, sizeof(RequestMPNEW), MPI_BYTE, 0, comm_);
   GridMPIOpenMP *g = gs_mp_->CreateGrid(
-                            type, elm_size, num_dims, size,
-                            double_buffering, global_offset,
-                            pinfo_mp_.division_size(),
-                            attr);
+      type, elm_size, num_dims, size,
+      double_buffering, global_offset,
+      pinfo_mp_.division_size(),
+      attr);
   return g;
 }
 
@@ -158,10 +158,10 @@ void ClientOpenMP::GridNew() {
   RequestMPNEW req;
   MPI_Bcast(&req, sizeof(RequestMPNEW), MPI_BYTE, 0, comm_);
   gs_mp_->CreateGrid(
-        req.type, req.elm_size, req.num_dims, req.size,
-        req.double_buffering, req.global_offset,
-        pinfo_mp_.division_size(),
-        req.attr);
+      req.type, req.elm_size, req.num_dims, req.size,
+      req.double_buffering, req.global_offset,
+      pinfo_mp_.division_size(),
+      req.attr);
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Create done\n";
   return;
 }
@@ -177,23 +177,23 @@ void MasterOpenMP::GridDelete(GridMPIOpenMP *g) {
 void MasterOpenMP::GridCopyinLocal(GridMPIOpenMP *g, void *buf) {
 #if 0
   size_t s = g->local_size().accumulate(g->num_dims()) *
-             g->elm_size();
+      g->elm_size();
   PSAssert(g->buffer()->GetLinearSize() == s);
   CopyoutSubgrid(g->elm_size(), g->num_dims(), buf,
                  g->size(), g->buffer()->Get(),
                  g->local_offset(), g->local_size());
 #else
   BufferHostOpenMP *gbuf_MP =
-    dynamic_cast<BufferHostOpenMP *>(g->buffer());
+      dynamic_cast<BufferHostOpenMP *>(g->buffer());
   PSAssert(gbuf_MP);
   g->CopyinoutSubgrid(
-    1,
-    g->elm_size(), g->num_elms(),
-    buf,
-    g->size(),
-    gbuf_MP,
-    g->local_offset(), g->local_size()
-  );
+      1,
+      g->elm_size(), g->num_elms(),
+      buf,
+      g->size(),
+      gbuf_MP,
+      g->local_offset(), g->local_size()
+                      );
 #endif
 }
 
@@ -224,20 +224,20 @@ void MasterOpenMP::GridCopyin(GridMPIOpenMP *g, void *buf) {
     unsigned int num_cpu = 0;
     unsigned int cpuid = 0;
     PS_MPI_Recv(
-      &num_cpu, sizeof(unsigned int), MPI_BYTE, i,
-      0, comm_, MPI_STATUS_IGNORE);
+        &num_cpu, sizeof(unsigned int), MPI_BYTE, i,
+        0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE_MPI() 
-      << "Child thread " << i
-      << " has " << num_cpu << "memory blocks\n";
+        << "Child thread " << i
+        << " has " << num_cpu << "memory blocks\n";
     for (cpuid = 0; cpuid < num_cpu; cpuid++) {
       LOG_VERBOSE_MPI() 
-        << "Thread " << i << " Memory id:" << cpuid
-        << "\n";
+          << "Thread " << i << " Memory id:" << cpuid
+          << "\n";
       PS_MPI_Recv(&subgrid_offset, sizeof(IntArray), MPI_BYTE, i,
-                0, comm_, MPI_STATUS_IGNORE);
+                  0, comm_, MPI_STATUS_IGNORE);
       LOG_VERBOSE_MPI() << "sg offset: " << subgrid_offset << "\n";    
       PS_MPI_Recv(&subgrid_size, sizeof(IntArray), MPI_BYTE, i,
-                0, comm_, MPI_STATUS_IGNORE);
+                  0, comm_, MPI_STATUS_IGNORE);
       LOG_VERBOSE_MPI() << "sg size: " << subgrid_size << "\n";        
       size_t gsize = sbuf.GetLinearSize(subgrid_size);
 
@@ -246,8 +246,8 @@ void MasterOpenMP::GridCopyin(GridMPIOpenMP *g, void *buf) {
       sbuf.EnsureCapacity(subgrid_size);
       // Okay with CopyoutSubgrid
       CopyoutSubgrid(g->elm_size(), g->num_dims(), buf,
-                   g->size(), sbuf.Get(),
-                   subgrid_offset, subgrid_size);
+                     g->size(), sbuf.Get(),
+                     subgrid_offset, subgrid_size);
       PS_MPI_Send(sbuf.Get(), gsize, MPI_BYTE, i, 0, comm_);
     } // for (cpuid = 0; cpuid < num_cpu, cpuid++)
   } // for (int i = 1; i < gs_->num_procs(); ++i)
@@ -257,29 +257,29 @@ void MasterOpenMP::GridCopyin(GridMPIOpenMP *g, void *buf) {
 void ClientOpenMP::GridCopyin(int id) {
   LOG_DEBUG() << "Copyin\n";
   GridMPIOpenMP *g = 
-    dynamic_cast<GridMPIOpenMP*>(gs_mp_->FindGrid(id));
+      dynamic_cast<GridMPIOpenMP*>(gs_mp_->FindGrid(id));
   PSAssert(g);
 
   // The opposite
-    // - send offset
-    // - send gridsize
-    // - receive the data from parent MPI thread
-    // - copyin to memory
-    // ... for each NUMA memory in the grid
-    //     in child MPI thread
+  // - send offset
+  // - send gridsize
+  // - receive the data from parent MPI thread
+  // - copyin to memory
+  // ... for each NUMA memory in the grid
+  //     in child MPI thread
 
   BufferHostOpenMP *gbuf_MP =
-    dynamic_cast<BufferHostOpenMP *>(g->buffer());
+      dynamic_cast<BufferHostOpenMP *>(g->buffer());
   PSAssert(gbuf_MP);
   PSAssert(g->division() >= gbuf_MP->MPdivision());
 
   unsigned int num_cpu = 
-    gbuf_MP->MPdivision().accumulate(g->num_dims());
+      gbuf_MP->MPdivision().accumulate(g->num_dims());
   unsigned int cpuid = 0;
 
   // First notify cpu number
   PS_MPI_Send(&num_cpu, sizeof(unsigned int),
-      MPI_BYTE, 0, 0, comm_);
+              MPI_BYTE, 0, 0, comm_);
 
   for (cpuid = 0; cpuid < num_cpu; cpuid++) {
     unsigned int cpugrid[PS_MAX_DIM] = {0, 0, 0};
@@ -316,10 +316,10 @@ void ClientOpenMP::GridCopyin(int id) {
 #else
     void *cur_buf_ptr = (gbuf_MP->Get_MP())[cpuid];
     PS_MPI_Recv(
-      cur_buf_ptr,
-      gbuf_MP->GetLinearSize(width), MPI_BYTE, 0,
-      0, comm_, MPI_STATUS_IGNORE
-      );
+        cur_buf_ptr,
+        gbuf_MP->GetLinearSize(width), MPI_BYTE, 0,
+        0, comm_, MPI_STATUS_IGNORE
+                );
 
 #endif
 
@@ -338,7 +338,7 @@ void MasterOpenMP::GridCopyoutLocal(GridMPIOpenMP *g, void *buf) {
                 g->local_size());
 #else
   BufferHostOpenMP *gbuf_MP =
-    dynamic_cast<BufferHostOpenMP *>(g->buffer());
+      dynamic_cast<BufferHostOpenMP *>(g->buffer());
   PSAssert(gbuf_MP);
   g->CopyinoutSubgrid(
       0,
@@ -347,7 +347,7 @@ void MasterOpenMP::GridCopyoutLocal(GridMPIOpenMP *g, void *buf) {
       g->size(),
       gbuf_MP,
       g->local_offset(), g->local_size()
-      );
+                      );
 #endif
   return;
 }
@@ -379,20 +379,20 @@ void MasterOpenMP::GridCopyout(GridMPIOpenMP *g, void *buf) {
     unsigned int num_cpu = 0;
     unsigned int cpuid = 0;
     PS_MPI_Recv(
-      &num_cpu, sizeof(unsigned int), MPI_BYTE, i,
-      0, comm_, MPI_STATUS_IGNORE);
+        &num_cpu, sizeof(unsigned int), MPI_BYTE, i,
+        0, comm_, MPI_STATUS_IGNORE);
     LOG_VERBOSE_MPI() 
-      << "Child thread " << i
-      << " has " << num_cpu << "memory blocks\n";
+        << "Child thread " << i
+        << " has " << num_cpu << "memory blocks\n";
     for (cpuid = 0; cpuid < num_cpu; cpuid++) {
       LOG_VERBOSE_MPI() 
-        << "Thread " << i << " Memory id:" << cpuid
-        << "\n";
+          << "Thread " << i << " Memory id:" << cpuid
+          << "\n";
       PS_MPI_Recv(&subgrid_offset, sizeof(IntArray), MPI_BYTE, i,
-                0, comm_, MPI_STATUS_IGNORE);
+                  0, comm_, MPI_STATUS_IGNORE);
       LOG_VERBOSE() << "sg offset: " << subgrid_offset << "\n";
       PS_MPI_Recv(&subgrid_size, sizeof(IntArray), MPI_BYTE, i,
-                0, comm_, MPI_STATUS_IGNORE);
+                  0, comm_, MPI_STATUS_IGNORE);
       LOG_VERBOSE() << "sg size: " << subgrid_size << "\n";
       size_t gsize = sbuf.GetLinearSize(subgrid_size);
 
@@ -401,8 +401,8 @@ void MasterOpenMP::GridCopyout(GridMPIOpenMP *g, void *buf) {
       sbuf.MPIRecv(i, comm_, IntArray((index_t)0), subgrid_size);
       // Okay with CopyoutSubgrid
       CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
-                  g->size(), sbuf.Get(), subgrid_offset,
-                  subgrid_size);
+                    g->size(), sbuf.Get(), subgrid_offset,
+                    subgrid_size);
     } // for (cpuid = 0; cpuid < num_cpu, cpuid++)
   } // for (int i = 1; i < gs_->num_procs(); ++i)
 }
@@ -410,28 +410,28 @@ void MasterOpenMP::GridCopyout(GridMPIOpenMP *g, void *buf) {
 void ClientOpenMP::GridCopyout(int id) {
   LOG_DEBUG() << "Copyout\n";
   GridMPIOpenMP *g = 
-    dynamic_cast<GridMPIOpenMP*>(gs_mp_->FindGrid(id));
+      dynamic_cast<GridMPIOpenMP*>(gs_mp_->FindGrid(id));
   PSAssert(g);
 
   // The opposite
-    // - send offset
-    // - send gridsize
-    // - send the data from parent MPI thread
-    // ... for each NUMA memory in the grid
-    //     in child MPI thread
+  // - send offset
+  // - send gridsize
+  // - send the data from parent MPI thread
+  // ... for each NUMA memory in the grid
+  //     in child MPI thread
 
   BufferHostOpenMP *gbuf_MP =
-    dynamic_cast<BufferHostOpenMP *>(g->buffer());
+      dynamic_cast<BufferHostOpenMP *>(g->buffer());
   PSAssert(gbuf_MP);
   PSAssert(g->division() >= gbuf_MP->MPdivision());
 
   unsigned int num_cpu = 
-    gbuf_MP->MPdivision().accumulate(g->num_dims());
+      gbuf_MP->MPdivision().accumulate(g->num_dims());
   unsigned int cpuid = 0;
 
   // First notify cpu number
   PS_MPI_Send(&num_cpu, sizeof(unsigned int),
-      MPI_BYTE, 0, 0, comm_);
+              MPI_BYTE, 0, 0, comm_);
 
   for (cpuid = 0; cpuid < num_cpu; cpuid++) {
     unsigned int cpugrid[PS_MAX_DIM] = {0, 0, 0};
@@ -472,10 +472,10 @@ void ClientOpenMP::GridCopyout(int id) {
 #else
     void *cur_buf_ptr = (gbuf_MP->Get_MP())[cpuid];
     PS_MPI_Send(
-      cur_buf_ptr,
-      gbuf_MP->GetLinearSize(width), MPI_BYTE, 0,
-      0, comm_
-      );
+        cur_buf_ptr,
+        gbuf_MP->GetLinearSize(width), MPI_BYTE, 0,
+        0, comm_
+                );
 #endif
   } // for (cpuid = 0; cpuid < num_cpu; cpuid++)
 
@@ -483,8 +483,8 @@ void ClientOpenMP::GridCopyout(int id) {
 }
 
 void MasterOpenMP::StencilRun(int id, int iter, int num_stencils,
-                        void **stencils,
-                        int *stencil_sizes) {
+                              void **stencils,
+                              int *stencil_sizes) {
   LOG_DEBUG() << "Master StencilRun(" << id << ")\n";
   
   NotifyCall(FUNC_MP_RUN, id);
@@ -566,9 +566,9 @@ void ClientOpenMP::GridInitNUMA(int gridid)
   // Receive the max openmp therad number
   unsigned int maxMPthread = 0;
   PS_MPI_Recv(
-    &maxMPthread, sizeof(unsigned int), MPI_BYTE, 0,
-    0, comm_, MPI_STATUS_IGNORE
-    );
+      &maxMPthread, sizeof(unsigned int), MPI_BYTE, 0,
+      0, comm_, MPI_STATUS_IGNORE
+              );
   g->InitNUMA(maxMPthread);
 }
 

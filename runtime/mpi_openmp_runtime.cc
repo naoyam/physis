@@ -70,9 +70,9 @@ template <class T>
 static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
   // Use the remote grid if remote_grid_active is true.
   if (gm->remote_grid_active()) {
-// FIXME
-// FIXME
-// VERY CAREFUL!!
+    // FIXME
+    // FIXME
+    // VERY CAREFUL!!
     GridMPI *rmg_orig = gm->remote_grid();
     GRIDMPI *rmg = dynamic_cast<GRIDMPI *>(rmg_orig);
     PSAssert(rmg);
@@ -82,23 +82,23 @@ static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
     GridMPIOpenMP *rmg_MP = dynamic_cast<GridMPIOpenMP *>(rmg);
     PSAssert(rmg_MP);
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(rmg_MP->buffer());
+        dynamic_cast<BufferHostOpenMP *>(rmg_MP->buffer());
     PSAssert(buf_MP);
 #else
     GridMPIOpenMP *rmg_MP = static_cast<GridMPIOpenMP *>(rmg);
     BufferHostOpenMP *buf_MP =
-      static_cast<BufferHostOpenMP *>(rmg_MP->buffer());
+        static_cast<BufferHostOpenMP *>(rmg_MP->buffer());
 #endif
     unsigned int cpuid = 0;
     size_t gridid = 0;
     size_t width_avail = 0;
     phrumputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                            );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid * buf_MP->elm_size();
     return (T *) pos;
@@ -134,22 +134,22 @@ static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
   {
 #if 0
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(gm->buffer());
+        dynamic_cast<BufferHostOpenMP *>(gm->buffer());
     PSAssert(buf_MP);
 #else
     BufferHostOpenMP *buf_MP =
-      static_cast<BufferHostOpenMP *>(gm->buffer());
+        static_cast<BufferHostOpenMP *>(gm->buffer());
 #endif
     unsigned int cpuid = 0;
     size_t gridid = 0;
     size_t width_avail = 0;
     phrumputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                            );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid *= buf_MP->elm_size();
     return (T*) pos;
@@ -162,14 +162,14 @@ static T *__PSGridGetAddr(GRIDMPI *gm, IntArray indices) {
 
 template <class T>
 T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
-                         ssize_t z) {
+                      ssize_t z) {
   GRIDMPI *gm = (GRIDMPI*)g;
 #ifdef USE_OPENMP_NUMA
   IntArray indices(x, y, z);
   indices -= gm->local_offset();
   {
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
+        dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
     PSAssert(buf_MP);
     //PSAssert(gm->local_size() == buf_MP->size());
 
@@ -177,12 +177,12 @@ T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
     size_t gridid = 0;
     size_t width_avail = 0;
     phrumputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                            );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid *= buf_MP->elm_size();
     return (T*) pos;
@@ -197,14 +197,14 @@ T *__PSGridEmitAddr3D(__PSGridMPI *g, ssize_t x, ssize_t y,
 
 template <class T>
 T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, ssize_t x, ssize_t y,
-                              ssize_t z) {
+                           ssize_t z) {
   GRIDMPI *gm = (GRIDMPI*)g;
 #ifdef USE_OPENMP_NUMA
   IntArray indices(x, y, z);
   indices -= gm->local_offset();
   {
     BufferHostOpenMP *buf_MP = 
-      dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
+        dynamic_cast<BufferHostOpenMP *>(gm->buffer_emit());
     PSAssert(buf_MP);
     //PSAssert(gm->local_size() == buf_MP->size());
 
@@ -212,12 +212,12 @@ T *__PSGridGetAddrNoHalo3D(__PSGridMPI *g, ssize_t x, ssize_t y,
     size_t gridid = 0;
     size_t width_avail = 0;
     phrumputil::getMPOffset(
-      buf_MP->num_dims(), indices,
-      buf_MP->size(), buf_MP->MPdivision(),
-      buf_MP->MPoffset(),
-      buf_MP->MPwidth(),
-      cpuid, gridid, width_avail
-    );
+        buf_MP->num_dims(), indices,
+        buf_MP->size(), buf_MP->MPdivision(),
+        buf_MP->MPoffset(),
+        buf_MP->MPwidth(),
+        cpuid, gridid, width_avail
+                            );
     intptr_t pos = (intptr_t) ((buf_MP->Get_MP())[cpuid]);
     pos += gridid *= buf_MP->elm_size();
     return (T*) pos;
@@ -314,7 +314,7 @@ extern "C" {
     // Set the stencil client functions
     __PS_stencils =
         (__PSStencilRunClientFunction*)malloc(sizeof(__PSStencilRunClientFunction)
-                                             * num_stencil_run_calls);
+                                              * num_stencil_run_calls);
     memcpy(__PS_stencils, stencil_funcs,
            sizeof(__PSStencilRunClientFunction) * num_stencil_run_calls);
     if (rank != 0) {
@@ -551,11 +551,11 @@ extern "C" {
   }
   
   float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, ssize_t x,
-                                ssize_t y, ssize_t z) {
+                                      ssize_t y, ssize_t z) {
     return __PSGridGetAddrNoHalo3D<float>(g, x, y, z);
   }
   double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, ssize_t x,
-                                 ssize_t y, ssize_t z) {
+                                        ssize_t y, ssize_t z) {
     return __PSGridGetAddrNoHalo3D<double>(g, x, y, z);
   }
 
@@ -577,11 +577,11 @@ extern "C" {
   }
   
   float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, ssize_t x,
-                                ssize_t y, ssize_t z) {
+                                 ssize_t y, ssize_t z) {
     return __PSGridEmitAddr3D<float>(g, x, y, z);
   }
   double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, ssize_t x,
-                                 ssize_t y, ssize_t z) {
+                                   ssize_t y, ssize_t z) {
     return __PSGridEmitAddr3D<double>(g, x, y, z);
   }
   

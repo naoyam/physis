@@ -40,7 +40,7 @@ void *BufferOpenCLHost::GetChunk(const IntArray &size) {
 }
 
 void BufferOpenCLHost::Copyin(const void *buf, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   EnsureCapacity(offset+size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -48,12 +48,12 @@ void BufferOpenCLHost::Copyin(const void *buf, const IntArray &offset,
 }
 
 void BufferOpenCLHost::Copyin(const BufferHost &buf, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   Copyin(buf.Get(), offset, size);
 }
 
 void BufferOpenCLHost::Copyout(void *buf, const IntArray &offset,
-                             const IntArray &s) {
+                               const IntArray &s) {
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -61,24 +61,24 @@ void BufferOpenCLHost::Copyout(void *buf, const IntArray &offset,
 }
 
 void BufferOpenCLHost::Copyout(BufferHost &buf,
-                             const IntArray &offset,
-                             const IntArray &size) {
+                               const IntArray &offset,
+                               const IntArray &size) {
   buf.EnsureCapacity(num_dims_, elm_size_, size);
   Copyout(buf.Get(), offset, size);
 }
 
 
 void BufferOpenCLHost::MPIRecv(int src, MPI_Comm comm,
-                             const IntArray &offset,
-                             const IntArray &size) {
+                               const IntArray &offset,
+                               const IntArray &size) {
   mpi_buf_->MPIRecv(src, comm, IntArray((index_t)0), size);
   Copyin(*mpi_buf_, offset, size);
   //mpi_buf_->Delete();
 }
 
 void BufferOpenCLHost::MPISend(int dst, MPI_Comm comm,
-                             const IntArray &offset,
-                             const IntArray &size) {
+                               const IntArray &offset,
+                               const IntArray &size) {
   Copyout(*mpi_buf_, offset, size);
   mpi_buf_->MPISend(dst, comm, IntArray((index_t)0), size);
   //mpi_buf_->Delete();
@@ -135,19 +135,19 @@ void *&BufferOpenCLDev::Get() {
 }
 
 void BufferOpenCLDev::Copyin(const void *buf, const IntArray &offset,
-                           const IntArray &size) {
+                             const IntArray &size) {
   pinned_buf_->Copyin(buf, size);
   Copyin(*pinned_buf_, offset, size);  
 }
 
 void BufferOpenCLDev::Copyin(const BufferHost &buf, const IntArray &offset,
-                           const IntArray &size) {
+                             const IntArray &size) {
   Copyin(buf.Get(), offset, size);
 }
 
 void BufferOpenCLDev::Copyin(const BufferOpenCLHost &buf,
-                           const IntArray &offset,
-                           const IntArray &size) {
+                             const IntArray &offset,
+                             const IntArray &size) {
   PSAssert(offset == 0);
   EnsureCapacity(offset+size);
 
@@ -172,18 +172,18 @@ void BufferOpenCLDev::Copyin(const BufferOpenCLHost &buf,
 }
 
 void BufferOpenCLDev::Copyout(void *buf, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   Copyout(*pinned_buf_, offset, size);
   pinned_buf_->Copyout(buf, size);
 }
 
 void BufferOpenCLDev::Copyout(BufferHost &buf, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   Copyin(buf.Get(), offset, size);
 }
 
 void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   PSAssert(offset == 0);
   PSAssert(offset + size <= this->size());
   buf.EnsureCapacity(num_dims_, elm_size_, size);
@@ -202,7 +202,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
       0, GetLinearSize(size), buf.Get(),
       0, NULL, NULL);
   if (status != CL_SUCCESS) {
-      LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
+    LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed.\n";
   }
 
   // And block
@@ -211,7 +211,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
 
 #if 0
 void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
-                            const IntArray &size, const IntArray &total_size) {
+                              const IntArray &size, const IntArray &total_size) {
   if ((size[1] == 0) && (size[2] == 0)) {
     Copyout(buf, offset, size);
     return;
@@ -240,13 +240,13 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
           + zord * total_size[0] * total_size[1];
       offset_pos *= elm_size_;
       cl_int status = clEnqueueReadBuffer(
-        buf_queue_, Get_buf_mem(), CL_FALSE, /* Once no block */
-        offset_pos, size_read_once, ptr_pos,
-        0, NULL, NULL);
+          buf_queue_, Get_buf_mem(), CL_FALSE, /* Once no block */
+          offset_pos, size_read_once, ptr_pos,
+          0, NULL, NULL);
       ptr_pos += size_read_once; /* DONT FORGET TO SHIFT BUFFER!! */
       if (status != CL_SUCCESS) {
         LOG_DEBUG() << "Calling clEnqueueReadBuffer() failed"
-          << " for yord, zord:" << yord << ", " << zord <<"\n";
+                    << " for yord, zord:" << yord << ", " << zord <<"\n";
       } // if (status != CL_SUCCESS)
     } // for (yord = offset[1]; yord < offset[1] + size[1]; yord++)
   } // for (zord = offset[2]; zord < offset[2] + size[2]; zord++)
@@ -257,7 +257,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
 #else
 
 void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
-                            const IntArray &size, const IntArray &total_size) {
+                              const IntArray &size, const IntArray &total_size) {
   if ((size[1] == 0) && (size[2] == 0)) {
     Copyout(buf, offset, size);
     return;
@@ -281,12 +281,12 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
 
   // First copyout buffer including offset region
   size_t offset_begin = 
-    offset[0] + offset[1] * total_size[0]
-    + offset[2] * total_size[0] * total_size[1];
+      offset[0] + offset[1] * total_size[0]
+      + offset[2] * total_size[0] * total_size[1];
   size_t offset_end =
-    (offset[0] + size[0] -1) + (offset[1] + size[1] -1) * total_size[0]
-    + (offset[2] + size[2] -1) * total_size[0] * total_size[1]
-    + 1;
+      (offset[0] + size[0] -1) + (offset[1] + size[1] -1) * total_size[0]
+      + (offset[2] + size[2] -1) * total_size[0] * total_size[1]
+      + 1;
   size_t offset_all_bytes = offset_end - offset_begin;
   offset_all_bytes *= elm_size_;
   if (tmpbuf_size() < offset_all_bytes) {
@@ -300,10 +300,10 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
   }
 
   cl_int status = clEnqueueReadBuffer(
-    buf_queue_, Get_buf_mem(), CL_TRUE, /* block */
-    offset_begin * elm_size_, offset_all_bytes,
-    tmpbuf(),
-    0, NULL, NULL);
+      buf_queue_, Get_buf_mem(), CL_TRUE, /* block */
+      offset_begin * elm_size_, offset_all_bytes,
+      tmpbuf(),
+      0, NULL, NULL);
   if (status != CL_SUCCESS) {
     LOG_ERROR() << "Calling clEnqueueBuffer failed\n";
   }
@@ -326,7 +326,7 @@ void BufferOpenCLDev::Copyout(BufferOpenCLHost &buf, const IntArray &offset,
 #endif
   
 void BufferOpenCLDev::MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   // First, recv with the host pinned buffer (which also performs
   // internal copying between MPI and OpenCL buffers.
   pinned_buf_->Buffer::MPIRecv(src, comm, size);
@@ -335,15 +335,15 @@ void BufferOpenCLDev::MPIRecv(int src, MPI_Comm comm, const IntArray &offset,
 }
 
 void BufferOpenCLDev::MPISend(int dst, MPI_Comm comm, const IntArray &offset,
-                            const IntArray &size) {
+                              const IntArray &size) {
   Copyout(*pinned_buf_, offset, size);
   pinned_buf_->Buffer::MPISend(dst, comm, size);
 }
 
 void BufferOpenCLDev::GetChunk_CL(
-  const IntArray &size, cl_mem *ret_p_mem, 
-  size_t *ret_pitch
-)
+    const IntArray &size, cl_mem *ret_p_mem, 
+    size_t *ret_pitch
+                                  )
 {
   *ret_p_mem = 0;
   // FIXME
@@ -360,7 +360,7 @@ void BufferOpenCLDev::GetChunk_CL(
     cl_context buf_context_ = clinfo_use->get_context();
     PSAssert(buf_context_);
     *ret_p_mem = clCreateBuffer(
-      buf_context_, CL_MEM_READ_WRITE, GetLinearSize(size), NULL, &status);
+        buf_context_, CL_MEM_READ_WRITE, GetLinearSize(size), NULL, &status);
     if (status != CL_SUCCESS)
       LOG_DEBUG() << "Calling clCreateBuffer failed\n";
   }

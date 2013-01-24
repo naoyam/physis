@@ -28,11 +28,11 @@ class GridMPIOpenCL3D: public GridMPI {
   friend class GridSpaceMPIOpenCL;
  protected:
   GridMPIOpenCL3D(
-                PSType type, int elm_size, int num_dims, const IntArray &size,
-                bool double_buffering, const IntArray &global_offset,
-                const IntArray &local_offset, const IntArray &local_size,
-                int attr,
-                CLbaseinfo *clinfo_in);
+      PSType type, int elm_size, int num_dims, const IntArray &size,
+      bool double_buffering, const IntArray &global_offset,
+      const IntArray &local_offset, const IntArray &local_size,
+      int attr,
+      CLbaseinfo *clinfo_in);
   __PSGrid3DDev dev_;
   // the source is address of ordinary memory region
   virtual void Copyin(void *dst, const void *src, size_t size);
@@ -101,25 +101,25 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
  public:
   using GridSpaceMPI::ExchangeBoundaries;
   GridSpaceMPIOpenCL(
-                  int num_dims, const IntArray &global_size,
-                  int proc_num_dims, const IntArray &proc_size,
-                  int my_rank,
-                  CLbaseinfo *clinfo_in);
+      int num_dims, const IntArray &global_size,
+      int proc_num_dims, const IntArray &proc_size,
+      int my_rank,
+      CLbaseinfo *clinfo_in);
   virtual ~GridSpaceMPIOpenCL();
 
   virtual GridMPIOpenCL3D *CreateGrid(
-                                    PSType type, int elm_size, int num_dims,
-                                    const IntArray &size,
-                                    bool double_buffering,
-                                    const IntArray &global_offset,
-                                    int attr,
-                                    CLbaseinfo *clinfo);
+      PSType type, int elm_size, int num_dims,
+      const IntArray &size,
+      bool double_buffering,
+      const IntArray &global_offset,
+      int attr,
+      CLbaseinfo *clinfo);
   virtual GridMPIOpenCL3D *CreateGrid(
-                                    PSType type, int elm_size, int num_dims,
-                                    const IntArray &size,
-                                    bool double_buffering,
-                                    const IntArray &global_offset,
-                                    int attr);
+      PSType type, int elm_size, int num_dims,
+      const IntArray &size,
+      bool double_buffering,
+      const IntArray &global_offset,
+      int attr);
   virtual bool SendBoundaries(GridMPIOpenCL3D *grid, int dim, unsigned width,
                               bool forward, bool diagonal, bool periodic,
                               ssize_t halo_size,
@@ -159,23 +159,23 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                 const bool *bw_enabled=NULL,
                                 CLbaseinfo *cl_stream=0);
   virtual GridMPI *LoadNeighborStage1(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
-                                bool diagonal,
-                                bool reuse,
-                                bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL,
-                                CLbaseinfo *cl_stream = 0);
+                                      const IntArray &halo_fw_width,
+                                      const IntArray &halo_bw_width,
+                                      bool diagonal,
+                                      bool reuse,
+                                      bool periodic,
+                                      const bool *fw_enabled=NULL,
+                                      const bool *bw_enabled=NULL,
+                                      CLbaseinfo *cl_stream = 0);
   virtual GridMPI *LoadNeighborStage2(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
-                                bool diagonal,
-                                bool reuse,
-                                bool periodic,
-                                const bool *fw_enabled=NULL,
-                                const bool *bw_enabled=NULL,
-                                CLbaseinfo *cl_stream=0);
+                                      const IntArray &halo_fw_width,
+                                      const IntArray &halo_bw_width,
+                                      bool diagonal,
+                                      bool reuse,
+                                      bool periodic,
+                                      const bool *fw_enabled=NULL,
+                                      const bool *bw_enabled=NULL,
+                                      CLbaseinfo *cl_stream=0);
   
 
   virtual void HandleFetchRequest(GridRequest &req, GridMPI *g);
