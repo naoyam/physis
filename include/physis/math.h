@@ -10,7 +10,7 @@ extern float cosf(float x);
 extern double acos(double x);
 extern float acosf(float x);
 #else
-#if defined(PHYSIS_REF) || defined(PHYSIS_MPI)
+#if defined(PHYSIS_REF) || defined(PHYSIS_MPI) || defined(PHYSIS_MPI_OPENMP)
 #include <math.h>
 #endif
 #endif

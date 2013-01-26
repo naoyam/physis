@@ -114,8 +114,41 @@ find_package(MPI)
 if (MPI_FOUND)
   set(MPI_ENABLED TRUE)
   set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
+  set(MPI_OPENMP_ENABLED TRUE)
 else()
   set(MPI_ENABLED FALSE)
+  set(MPI_OPENMP_ENABLED FALSE)
+endif()
+find_library(NUMA_LIBRARY numa)
+if (NUMA_LIBRARY)
+  set(NUMA_ENABLED TRUE)
+else()
+  set(NUMA_ENABLED FALSE)
+endif()
+
+set(OPENCL_FOUND FALSE)
+if (TRUE)
+  find_path(OPENCL_INCLUDE_PATH
+    NAMES CL/cl.h
+    PATHS ${CUDA_INCLUDE_DIRS}
+  )
+  message(STATUS "OPENCL_INCLUDE_PATH=${OPENCL_INCLUDE_PATH}")
+endif()
+if (OPENCL_INCLUDE_PATH)
+  find_library(OPENCL_LIBRARY
+    NAMES OpenCL
+    PATHS env LD_LIBRARY_PATH
+    )
+  message(STATUS "OPENCL_LIBRARY=${OPENCL_LIBRARY}")
+  #TODO: How to set include directory?
+endif()
+if (OPENCL_LIBRARY)
+  set(OPENCL_FOUND TRUE)
+endif()
+if (OPENCL_FOUND)
+  set(OPENCL_ENABLED TRUE)
+else()
+  set(OPENCL_ENABLED FALSE)
 endif()
 
 # http://www.cmake.org/Wiki/CMake_RPATH_handling
