@@ -13,6 +13,7 @@
 
 ###############################################################
 WD_BASE=$PWD/test_output
+DEFAULT_TARGETS="ref cuda mpi mpi-cuda"
 FLAG_KEEP_OUTPUT=1
 if [ "x$CFLAGS" = "x" ]; then
     CFLAGS=""
@@ -44,6 +45,7 @@ MPIRUN=mpirun
 MPI_PROC_DIM="1,1x1,1x1x1" # use only 1 process by default; can be controlled by the -np option
 MPI_MACHINEFILE=""
 PHYSIS_NLP=1
+TRACE=""
 
 EXECUTE_WITH_VALGRIND=0
 
@@ -369,6 +371,93 @@ function generate_translation_configurations_mpi_cuda()
     echo $new_configs
 }
 
+function generate_translation_configurations_opencl()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+	configs=$*
+    else
+	configs=config.empty
+	echo -n "" > config.empty
+    fi
+    local bsize="64,4,1 32,8,1"
+    local new_configs=""
+    local idx=0
+	for j in $bsize; do
+	    for k in $configs; do
+		local c=config.opencl.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "OPENCL_BLOCK_SIZE = {$j}" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    echo $new_configs
+}
+
+function generate_translation_configurations_mpi_opencl()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+	configs=$*
+    else
+	configs=config.empty
+	echo -n "" > config.empty
+    fi
+    configs=$(generate_translation_configurations_opencl "$configs")
+    local overlap='false true'
+    local multistream='false true'
+    local new_configs=""
+    local idx=0
+    for i in $overlap; do
+	for j in $multistream; do
+	    for k in $configs; do
+		# skip configurations with not all options enabled
+		if [ \( $i = 'true' -a $j = 'false' \)  \
+			-o \( $i = 'false' -a $j = 'true' \) ]; then
+		    continue;
+		fi
+		local c=config.mpi-opencl.$idx
+		idx=$(($idx + 1))
+		cat $k > $c
+		echo "MPI_OVERLAP = $i" >> $c
+		echo "MULTISTREAM_BOUNDARY = $j" >> $c
+		new_configs="$new_configs $c"
+	    done
+	done
+    done
+    echo $new_configs
+}
+
+
+function generate_translation_configurations_mpi_openmp()
+{
+    local configs=""    
+    if [ $# -gt 0 ]; then
+        configs=$*
+    else
+        configs=config.empty
+        echo -n "" > config.empty
+    fi
+    local dsize="1,1,1 2,2,2"
+    local csize="100,100,100 5,5,5"
+    local new_configs=""
+    local idx=0
+    for j in $dsize; do
+      for jj in $csize ; do
+        for k in $configs; do
+            local c=config.mpi-openmp.$idx
+            idx=$(($idx + 1))
+            cat $k > $c
+            echo "MPI_OPENMP_DIVISION = {$j}" >> $c
+            echo "MPI_OPENMP_CACHESIZE = {$jj}" >> $c
+            new_configs="$new_configs $c"
+        done
+      done
+    done
+    echo $new_configs
+}
+
 function generate_translation_configurations()
 {
     target=$1
@@ -385,6 +474,15 @@ function generate_translation_configurations()
 		mpi-cuda)
 			generate_translation_configurations_mpi_cuda
 			;;
+		opencl)
+			generate_translation_configurations_opencl
+			;;
+		mpi-opencl)
+			generate_translation_configurations_mpi_opencl
+			;;
+		mpi-openmp | mpi-openmp-numa )
+			generate_translation_configurations_mpi_openmp
+			;;
 		*)
 			generate_empty_compile_configuration
 			;;
@@ -398,6 +496,7 @@ function compile()
     local src_file_base=${src%.c}.$target
     if [ "@MPI_ENABLED@" = "TRUE" ]; then
 		MPI_CFLAGS="-pthread"
+		OPENMP_CFLAGS="-fopenmp"
 		for mpiinc in $(echo "@MPI_INCLUDE_PATH@" | sed 's/;/ /g'); do
 			MPI_CFLAGS+=" -I$mpiinc"
 		done
@@ -417,7 +516,6 @@ function compile()
 		else
 			echo "[COMPILE] Reusing module base object $mod_base_obj"
 		fi
-		
 	fi
     case $target in
 		ref)
@@ -487,12 +585,49 @@ function compile()
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
 				@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
 			;;
+		opencl)
+			OPENCL_LDFLAGS=-lOpenCL
+			if [ "@OPENCL_ENABLED@" != "TRUE" ]; then
+				echo "[COMPILE] Skipping OpenCL compilation (not supported)"
+				return 0
+			fi
+			src_file="$src_file_base".c
+			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $CFLAGS &&
+			c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base".exe
+			;;
+		mpi-opencl)
+			OPENCL_LDFLAGS=-lOpenCL
+			if [ "@MPI_ENABLED@" != "TRUE" -o "@OPENCL_ENABLED@" != "TRUE" ]; then
+				echo "[COMPILE] Skipping MPI-OpenCL compilation (not supported)"
+				return 0
+			fi
+			src_file="$src_file_base".c			
+			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $MPI_CFLAGS $CFLAGS &&
+			mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base".exe
+			;;
+		mpi-openmp | mpi-openmp-numa )
+			if [ "@MPI_ENABLED@" != "TRUE" ]; then
+				echo "[COMPILE] Skipping MPI-OPENMP compilation (not supported)"
+				return 0
+			fi
+			src_file="$src_file_base".c		
+			LIBRARY=physis_rt_mpi_openmp
+			if [ $target = mpi-openmp-numa ] ; then
+				if [ "@NUMA_ENABLED@" != "TRUE" ]; then
+					echo "[COMPILE] Skipping MPI-OPENMP-NUMA compilation (not supported)"
+					return 0
+				fi
+				LIBRARY=physis_rt_mpi_openmp_numa
+				LDFLAGS+=" -lnuma"
+			fi	
+			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $OPENMP_CFLAGS $CFLAGS &&
+			mpic++ $OPENMP_CFLAGS "$src_file_base".o -l$LIBRARY $LDFLAGS -o "$src_file_base".exe
+			;;
+		
 		*)
 			exit_error "Unsupported target"
 			;;
     esac
-
-    #sync
 }
 
 function get_reference_exe_name()
@@ -500,11 +635,21 @@ function get_reference_exe_name()
     local src_name=${1%%.*}
     local target=$2
     case $target in
+
 		mpi)
 			target=ref
 			;;
 		mpi-cuda)
 			target=cuda
+			;;
+		opencl)
+			target=ref
+			;;
+		mpi-opencl)
+			target=ref
+			;;
+		mpi-openmp | mpi-openmp-numa )
+			target=ref
 			;;
     esac
     local ref_exe=@CMAKE_CURRENT_BINARY_DIR@/test_cases/$src_name.manual.$target.exe
@@ -566,16 +711,25 @@ function execute()
     echo  "[EXECUTE] Executing $exename"
     case $target in
 		ref)
-			./$exename > $exename.out 2> $exename.err
+			./$exename $TRACE > $exename.out 2> $exename.err
 			;;
 		cuda)
-			./$exename > $exename.out 2> $exename.err    
+			./$exename $TRACE > $exename.out 2> $exename.err    
 			;;
 		mpi)
-			do_mpirun $3 $4  "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    
+			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename $TRACE > $exename.out 2> $exename.err    
 			;;
 		mpi-cuda)
-			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename > $exename.out 2> $exename.err    
+			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename $TRACE > $exename.out 2> $exename.err    
+			;;
+		opencl)
+			./$exename $TRACE > $exename.out 2> $exename.err
+			;;
+		mpi-opencl)
+			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename $TRACE > $exename.out 2> $exename.err
+			;;
+		mpi-openmp | mpi-openmp-numa )
+			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename $TRACE > $exename.out 2> $exename.err	    
 			;;
 		*)
 			exit_error "Unsupported target: $2"
@@ -633,12 +787,16 @@ function print_usage()
     echo -e "\t\tTest only execution and its dependent tasks."
     echo -e "\t-m, --mpirun"
     echo -e "\t\tThe mpirun command for testing MPI-based runs."
+    echo -e "\t--config <file-path>"
+    echo -e "\t\tConfiguration file passed to the translator."
     echo -e "\t--proc-dim <proc-dim-list>"
     echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
     echo -e "\t--physis-nlp <number-of-gpus-per-node>"
     echo -e "\t\tNumber of GPUs per node."
     echo -e "\t--machinefile <file-path>"
     echo -e "\t\tThe MPI machinefile."
+    echo -e "\t--trace"
+	echo -e "\t\tTrace kernel execution"
     echo -e "\t--with-valgrind <translate|execute>"
     echo -e "\t\tExecute the given step with Valgrind. Excution with Valgrind\n\t\tis not yet supported."
     echo -e "\t--priority <level>"
@@ -692,9 +850,10 @@ function is_module_test()
 function is_skipped_module_test()
 {
 	if is_module_test $1; then
-		if [ "$2" = 'mpi' -o "$2" = 'mpi-cuda' ]; then
-			return 0
-		fi
+		case "$2" in
+			mpi|mpi-cuda|opencl|mpi-opencl|mpi-openmp|mpi-openmp-numa)
+				return 0
+		esac
 	fi
 	return 1
 }
@@ -711,7 +870,8 @@ function get_module_base()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,config: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config: -- "$@")
+
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
 		print_usage
@@ -770,6 +930,10 @@ function get_module_base()
 				PRIORITY=$2
 				shift 2
 				;;
+			--trace)
+				TRACE=--physis-trace
+				shift
+				;;
 			--config)
 				CONFIG_ARG=$(abs_path $2)
 				shift 2
@@ -799,8 +963,9 @@ function get_module_base()
 	echo priority: $PRIORITY
 	TESTS=$(filter_test_case_by_priority $PRIORITY $TESTS)
     
-	# Test all targets by default
-    if [ "x$TARGETS" = "x" ]; then TARGETS=$($PHYSISC --list-targets); fi
+    if [ "x$TARGETS" = "x" ]; then
+		TARGETS=$DEFAULT_TARGETS
+	fi
     
     echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
     echo "Targets: $TARGETS"
@@ -850,11 +1015,15 @@ function get_module_base()
 					continue				
 				fi
 				if [ "$STAGE" = "COMPILE" ]; then continue; fi
-				np_target=1
-				if [ "$TARGET" = "mpi" -o "$TARGET" = "mpi-cuda" ]; then
-					np_target=$MPI_PROC_DIM
-					echo "[EXECUTE] Trying with process configurations: $np_target"
-				fi
+				
+				case "$TARGET" in
+					mpi|mpi-*)
+						np_target=$MPI_PROC_DIM
+						;;
+					*)
+						np_target=1
+				esac
+				echo "[EXECUTE] Trying with process configurations: $np_target"				
 				for np in $np_target; do
 					if execute $SHORTNAME $TARGET $np $DIM; then
 						execute_success=1

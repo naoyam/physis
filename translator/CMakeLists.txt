@@ -71,6 +71,71 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-cuda.cmake
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda
   DESTINATION bin)
 
+#if (OPENCL_ENABLED)
+#  set(OPENCL_INCLUDE_DIR ${OPENCL_INCLUDE_DIRS})
+  set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -DOPENCL_DEVICE_HEADER_PATH=\\\"${CMAKE_INSTALL_PREFIX}/include\\\""
+    )
+  set(PHYSISC_SRC ${PHYSISC_SRC}
+    opencl_translator.cc
+    opencl_translator_arghack.cc
+    opencl_translator_consistency.cc
+    opencl_translator_create_kernel.cc
+    opencl_translator_edit_kernel.cc
+    opencl_translator_getemit.cc
+    opencl_translator_misc.cc
+    opencl_translator_stencilrun.cc
+    )
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/physisc-opencl.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/physisc-opencl
+    )
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-opencl
+    DESTINATION
+    bin)
+#endif()
+
+#if (MPI_ENABLED AND OPENCL_ENABLED)
+set(PHYSISC_SRC ${PHYSISC_SRC}
+  mpi_opencl_create_kernel_body.cc
+  mpi_opencl_create_kernel_call.cc
+  mpi_opencl_create_kernel_misc.cc
+  mpi_opencl_create_kernel.cc
+  mpi_opencl_create_kernel_multi.cc
+  mpi_opencl_stencilmap.cc
+  mpi_opencl_stencilrun.cc
+  mpi_opencl_edit_kernel.cc
+  mpi_opencl_translator.cc
+  mpi_opencl_runtime_builder.cc
+  mpi_opencl_optimizer.cc
+  )
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-opencl.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-opencl
+  )
+install(
+  PROGRAMS
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-opencl
+  DESTINATION bin)
+#endif ()
+
+#if (MPI_ENABLED AND MPI_OPENMP_ENABLED)
+set(PHYSISC_SRC 
+  ${PHYSISC_SRC}
+  mpi_openmp_init.cc
+  mpi_openmp_create_kernel.cc
+  mpi_openmp_translator.cc
+)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-openmp.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-openmp
+)
+install(PROGRAMS
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-openmp
+  DESTINATION bin
+)
+#endif()
+
 add_executable(physisc ${PHYSISC_SRC})
 target_link_libraries(physisc ${ROSE_LIBRARIES})
 target_link_libraries(physisc ${JAVA_JVM_LIBRARY})
