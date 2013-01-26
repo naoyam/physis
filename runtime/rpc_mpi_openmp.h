@@ -68,7 +68,7 @@ class MasterOpenMP: public Master {
   virtual void GridSet(GridMPIOpenMP *g, const void *buf, const IntArray &index);
   virtual void GridGet(GridMPIOpenMP *g, void *buf, const IntArray &index);  
   virtual void StencilRun(int id, int iter, int num_stencils,
-                          void **stencils, int *stencil_sizes);
+                          void **stencils, unsigned *stencil_sizes);
   virtual void GridReduce(void *buf, PSReduceOp op, GridMPIOpenMP *g);
 
   virtual void GridInitNUMA(GridMPIOpenMP *g, unsigned int maxMPthread);

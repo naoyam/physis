@@ -699,7 +699,8 @@ function do_mpirun()
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
 	# make sure the binary is availale on each node; without this mpirun often fails
 	# if mpi-cuda is used
-    $MPIRUN -np $np $mfile_option --output-filename executable-copy $1
+    #    $MPIRUN -np $np $mfile_option --output-filename executable-copy cat $1 > /dev/null 2> /dev/null
+    $MPIRUN -np $np $mfile_option cat $1 > /dev/null 2> /dev/null
     echo "[EXECUTE] $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP" >&2
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP
 }

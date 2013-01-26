@@ -484,7 +484,7 @@ void ClientOpenMP::GridCopyout(int id) {
 
 void MasterOpenMP::StencilRun(int id, int iter, int num_stencils,
                               void **stencils,
-                              int *stencil_sizes) {
+                              unsigned *stencil_sizes) {
   LOG_DEBUG() << "Master StencilRun(" << id << ")\n";
   
   NotifyCall(FUNC_MP_RUN, id);

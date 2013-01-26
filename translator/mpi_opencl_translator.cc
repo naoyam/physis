@@ -49,6 +49,7 @@ MPIOpenCLTranslator::MPIOpenCLTranslator(const Configuration &config)
   if (flag_multistream_boundary_) {
     LOG_INFO() << "Multistream boundary enabled\n";
   }
+  validate_ast_ = false;
 }
 
 MPIOpenCLTranslator::~MPIOpenCLTranslator() {

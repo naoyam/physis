@@ -204,8 +204,8 @@ SgExpression *CUDATranslator::BuildBlockDimZ() {
   return sb::buildIntVal(block_dim_z_);
 }
 
-SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
-  SgBasicBlock *block = sb::buildBasicBlock();
+void CUDATranslator::GenerateRunBody(
+    SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func) {
   // int i;
   SgVariableDeclaration *loop_index =
       sb::buildVariableDeclaration("i", sb::buildIntType(), NULL, block);
@@ -234,7 +234,7 @@ SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
       loop,
       sb::buildExprStatement(BuildCudaThreadSynchronize()));
   
-  return block;
+  return;
 }
 
 SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(

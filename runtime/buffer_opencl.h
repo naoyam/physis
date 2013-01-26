@@ -24,19 +24,19 @@ class BufferOpenCLHost: public Buffer {
   BufferOpenCLHost(int num_dims, size_t elm_size);  
   virtual ~BufferOpenCLHost();
   
-  virtual void Copyin(const void *buf, const IntArray &offset,
-                      const IntArray &size);
-  virtual void Copyin(const void *buf, const IntArray &size) {
-    Copyin(buf, IntArray((index_t)0), size);
+  virtual void Copyin(const void *buf, const IndexArray &offset,
+                      const IndexArray &size);
+  virtual void Copyin(const void *buf, const IndexArray &size) {
+    Copyin(buf, IndexArray(), size);
   }
   // Assumes 1-D buffer as buf  
   virtual void Copyin(const BufferHost &buf, const IntArray &offset,
                       const IntArray &size);                       
  
-  virtual void Copyout(void *buf, const IntArray &offset,
-                       const IntArray &size);
-  virtual void Copyout(void *buf,  const IntArray &size) {
-    Copyout(buf, IntArray((index_t)0), size);
+  virtual void Copyout(void *buf, const IndexArray &offset,
+                       const IndexArray &size);
+  virtual void Copyout(void *buf,  const IndexArray &size) {
+    Copyout(buf, IndexArray(), size);
   }
   virtual void Copyout(BufferHost &buf, const IntArray &offset,
                        const IntArray &size);                       

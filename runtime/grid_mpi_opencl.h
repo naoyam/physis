@@ -150,8 +150,8 @@ class GridSpaceMPIOpenCL: public GridSpaceMPI {
                                         bool periodic) const;
 
   virtual GridMPI *LoadNeighbor(GridMPI *g,
-                                const IntArray &halo_fw_width,
-                                const IntArray &halo_bw_width,
+                                const IndexArray &halo_fw_width,
+                                const IndexArray &halo_bw_width,
                                 bool diagonal,
                                 bool reuse,
                                 bool periodic,

@@ -89,10 +89,12 @@ class CUDATranslator : public ReferenceTranslator {
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.
   /*!
+    \param run The top-level function basic block.
     \param run The stencil run object.
-    \return The basic block of the stencil run function. 
+    \param run_func The run function.
    */
-  virtual SgBasicBlock *BuildRunBody(Run *run);
+  virtual void GenerateRunBody(
+      SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   //! Generates a basic block of the run loop body.
   /*!
     This is a helper function for BuildRunBody. The run parameter

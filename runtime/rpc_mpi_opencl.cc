@@ -66,7 +66,7 @@ void MasterMPIOpenCL::GridCopyinLocal(GridMPI *g, const void *buf) {
                  g->local_offset(), g->local_size());
   // send it out to device memory
   static_cast<BufferOpenCLDev*>(g->buffer())->Copyin(
-      *pinned_buf_, IntArray((index_t)0), g->local_size());
+      *pinned_buf_, IndexArray(), g->local_size());
 }
 
 void MasterMPIOpenCL::GridCopyoutLocal(GridMPI *g, void *buf) {
@@ -75,7 +75,7 @@ void MasterMPIOpenCL::GridCopyoutLocal(GridMPI *g, void *buf) {
       g->elm_size();
   PSAssert(dev_buf->GetLinearSize() == size);
   LOG_DEBUG() << "local_size:" << g->local_size() << "\n";
-  dev_buf->Copyout(*pinned_buf_, IntArray((index_t)0), g->local_size());
+  dev_buf->Copyout(*pinned_buf_, IndexArray(), g->local_size());
   CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
                 g->size(), pinned_buf_->Get(), g->local_offset(),
                 g->local_size());

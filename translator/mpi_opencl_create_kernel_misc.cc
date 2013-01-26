@@ -51,9 +51,17 @@ SgIfStmt *MPIOpenCLTranslator::BuildDomainInclusionCheck(
   SgExpression *test_all = NULL;
   ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
     SgExpression *idx = sb::buildVarRefExp(*index_it);
+    SgExpression *dom_min = sb::buildPntrArrRefExp(
+        sb::buildDotExp(dom_ref,
+                        sb::buildVarRefExp("local_min")),
+        sb::buildIntVal(dim));
+    SgExpression *dom_max = sb::buildPntrArrRefExp(
+        sb::buildDotExp(dom_ref,
+                        sb::buildVarRefExp("local_max")),
+        sb::buildIntVal(dim));
     SgExpression *test = sb::buildOrOp(
-        sb::buildLessThanOp(idx, BuildDomMinRef(dom_ref, dim)),
-        sb::buildGreaterOrEqualOp(idx, BuildDomMaxRef(dom_ref, dim)));
+        sb::buildLessThanOp(idx, dom_min),
+        sb::buildGreaterOrEqualOp(idx, dom_max));
     if (test_all) {
       test_all = sb::buildOrOp(test_all, test);
     } else {
