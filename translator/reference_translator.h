@@ -106,7 +106,8 @@ class ReferenceTranslator : public Translator {
       StencilMap *s, SgExpressionPtrList &indexArgs,
       SgInitializedName *stencil_param);
   virtual void defineMapSpecificTypesAndFunctions();
-  virtual SgBasicBlock *BuildRunBody(Run *run);
+  virtual void GenerateRunBody(
+      SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual void translateRun(SgFunctionCallExp *node, Run *run);
 

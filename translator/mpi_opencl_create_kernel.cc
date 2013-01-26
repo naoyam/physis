@@ -37,9 +37,13 @@ void MPIOpenCLTranslator::BuildFunctionParamList(
     if (Domain::isDomainType(type)) {
       // Domain type
       if (!dom_arg) {
+#if 0        
         dom_arg =  
             sb::buildInitializedName(
                 arg->get_name(), arg->get_type());
+#else
+        dom_arg = arg;
+#endif
       }
 
       // Adding __PS_CL_ARG_EXPAND_ELEMENT_DOM_WITH_TYPE(dom)

@@ -489,6 +489,18 @@ function generate_translation_configurations()
     esac
 }
 
+function get_exe_name()
+{
+	local src=$1
+	local target=$2
+	local src_file_base=${src%.c}.$target
+	if [ "$target" = "opencl" -o "$target" = "mpi-opencl" ]; then
+		echo $src_file_base
+	else
+		echo "$src_file_base".exe
+	fi
+}
+
 function compile()
 {
     local src=$1
@@ -517,6 +529,7 @@ function compile()
 			echo "[COMPILE] Reusing module base object $mod_base_obj"
 		fi
 	fi
+	local exe_name=$(get_exe_name $src $target)
     case $target in
 		ref)
 			local src_file="$src_file_base".c
@@ -527,7 +540,7 @@ function compile()
 			if is_module_test $src; then
 				c++ "$src_file_base".o $mod_base_obj -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
 			else
-				c++ "$src_file_base".o -lphysis_rt_ref $LDFLAGS -o "$src_file_base".exe
+				c++ "$src_file_base".o -lphysis_rt_ref $LDFLAGS -o $exe_name
 			fi
 			if [ $? -ne 0 ]; then
 				print_error "Linking failed"
@@ -547,10 +560,10 @@ function compile()
 			fi
 			if is_module_test $src; then
 				nvcc -m64 "$src_file_base".o $mod_base_obj  -lphysis_rt_cuda $LDFLAGS \
-					@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
+					@CUDA_CUT_LIBRARIES@ -o $exe_name
 			else 
 				nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
-					@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
+					@CUDA_CUT_LIBRARIES@ -o $exe_name
 			fi
 			if [ $? -ne 0 ]; then
 				print_error "Linking failed"
@@ -564,7 +577,7 @@ function compile()
 			fi
 			local src_file="$src_file_base".c			
 			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
-			mpic++ "$src_file_base".o -lphysis_rt_mpi $LDFLAGS -o "$src_file_base".exe
+			mpic++ "$src_file_base".o -lphysis_rt_mpi $LDFLAGS -o $exe_name
 			;;
 		mpi-cuda)
 			if [ "@MPI_ENABLED@" != "TRUE" -o "@CUDA_ENABLED@" != "TRUE" ]; then
@@ -583,7 +596,7 @@ function compile()
 			nvcc -m64 -c $src_file -I@CMAKE_SOURCE_DIR@/include \
 				$NVCC_CFLAGS $MPI_CUDA_CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
-				@CUDA_CUT_LIBRARIES@ -o "$src_file_base".exe
+				@CUDA_CUT_LIBRARIES@ -o $exe_name
 			;;
 		opencl)
 			OPENCL_LDFLAGS=-lOpenCL
@@ -593,7 +606,7 @@ function compile()
 			fi
 			src_file="$src_file_base".c
 			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $CFLAGS &&
-			c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base".exe
+			c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o $exe_name
 			;;
 		mpi-opencl)
 			OPENCL_LDFLAGS=-lOpenCL
@@ -603,7 +616,7 @@ function compile()
 			fi
 			src_file="$src_file_base".c			
 			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $MPI_CFLAGS $CFLAGS &&
-			mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o "$src_file_base".exe
+			mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o $exe_name
 			;;
 		mpi-openmp | mpi-openmp-numa )
 			if [ "@MPI_ENABLED@" != "TRUE" ]; then
@@ -621,7 +634,7 @@ function compile()
 				LDFLAGS+=" -lnuma"
 			fi	
 			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $OPENMP_CFLAGS $CFLAGS &&
-			mpic++ $OPENMP_CFLAGS "$src_file_base".o -l$LIBRARY $LDFLAGS -o "$src_file_base".exe
+			mpic++ $OPENMP_CFLAGS "$src_file_base".o -l$LIBRARY $LDFLAGS -o $exe_name
 			;;
 		
 		*)
@@ -699,7 +712,8 @@ function do_mpirun()
     local np=$(($(echo $proc_dim | sed 's/x/*/g')))
 	# make sure the binary is availale on each node; without this mpirun often fails
 	# if mpi-cuda is used
-    $MPIRUN -np $np $mfile_option --output-filename executable-copy $1
+    #    $MPIRUN -np $np $mfile_option --output-filename executable-copy cat $1 > /dev/null 2> /dev/null
+    $MPIRUN -np $np $mfile_option cat $1 > /dev/null 2> /dev/null
     echo "[EXECUTE] $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP" >&2
     $MPIRUN -np $np $mfile_option $* --physis-proc $proc_dim --physis-nlp $PHYSIS_NLP
 }
@@ -707,7 +721,7 @@ function do_mpirun()
 function execute()
 {
     local target=$2
-    local exename=${1%.c}.$target.exe
+    local exename=$(get_exe_name $1 $target)
     echo  "[EXECUTE] Executing $exename"
     case $target in
 		ref)
@@ -1037,11 +1051,11 @@ function get_module_base()
 						echo "[EXECUTE] FAIL"
 						NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
 						fail $SHORTNAME $TARGET execute $cfg $np
-						rm ${SHORTNAME%.c}.$TARGET.exe
+						rm $(get_exe_name $SHORTNAME $TARGET)
 						continue
 					fi
 				done
-				rm ${SHORTNAME%.c}.$TARGET.exe				
+				rm $(get_exe_name $SHORTNAME $TARGET)				
 				print_results_short			
 			done
 		done

@@ -39,21 +39,21 @@ void *BufferOpenCLHost::GetChunk(const IntArray &size) {
   return ptr;
 }
 
-void BufferOpenCLHost::Copyin(const void *buf, const IntArray &offset,
-                              const IntArray &size) {
+void BufferOpenCLHost::Copyin(const void *buf, const IndexArray &offset,
+                              const IndexArray &size) {
   EnsureCapacity(offset+size);
   // Offset access is not yet supported.
   PSAssert(offset == 0);
   memcpy(Get(), buf, GetLinearSize(size));
 }
 
-void BufferOpenCLHost::Copyin(const BufferHost &buf, const IntArray &offset,
-                              const IntArray &size) {
+void BufferOpenCLHost::Copyin(const BufferHost &buf, const IndexArray &offset,
+                              const IndexArray &size) {
   Copyin(buf.Get(), offset, size);
 }
 
-void BufferOpenCLHost::Copyout(void *buf, const IntArray &offset,
-                               const IntArray &s) {
+void BufferOpenCLHost::Copyout(void *buf, const IndexArray &offset,
+                               const IndexArray &s) {
   PSAssert(offset + s <= size());
   // Offset access is not yet supported.
   PSAssert(offset == 0);
@@ -61,26 +61,26 @@ void BufferOpenCLHost::Copyout(void *buf, const IntArray &offset,
 }
 
 void BufferOpenCLHost::Copyout(BufferHost &buf,
-                               const IntArray &offset,
-                               const IntArray &size) {
+                               const IndexArray &offset,
+                               const IndexArray &size) {
   buf.EnsureCapacity(num_dims_, elm_size_, size);
   Copyout(buf.Get(), offset, size);
 }
 
 
 void BufferOpenCLHost::MPIRecv(int src, MPI_Comm comm,
-                               const IntArray &offset,
-                               const IntArray &size) {
-  mpi_buf_->MPIRecv(src, comm, IntArray((index_t)0), size);
+                               const IndexArray &offset,
+                               const IndexArray &size) {
+  mpi_buf_->MPIRecv(src, comm, IndexArray(), size);
   Copyin(*mpi_buf_, offset, size);
   //mpi_buf_->Delete();
 }
 
 void BufferOpenCLHost::MPISend(int dst, MPI_Comm comm,
-                               const IntArray &offset,
-                               const IntArray &size) {
+                               const IndexArray &offset,
+                               const IndexArray &size) {
   Copyout(*mpi_buf_, offset, size);
-  mpi_buf_->MPISend(dst, comm, IntArray((index_t)0), size);
+  mpi_buf_->MPISend(dst, comm, IndexArray(), size);
   //mpi_buf_->Delete();
 }
 

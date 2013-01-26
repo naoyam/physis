@@ -6,7 +6,8 @@ using std::vector;
 using std::map;
 using std::string;
 
-using physis::util::IntArray;
+using physis::IntArray;
+using physis::IndexArray;
 using namespace physis::runtime;
 
 namespace physis {
@@ -55,9 +56,9 @@ template <class T>
 T __PSGridGet(__PSGridMPI *g, va_list args) {
   GridMPI *gm = (GridMPI*)g;
   int nd = gm->num_dims();
-  IntArray index;
+  IndexArray index;
   for (int i = 0; i < nd; ++i) {
-    index[i] = va_arg(args, index_t);
+    index[i] = va_arg(args, PSIndex);
   }
   T v;
   master->GridGet(gm, &v, index);
@@ -173,10 +174,10 @@ extern "C" {
     DestroyOpenCL();
   }
 
-  PSDomain1D PSDomain1DNew(index_t minx, index_t maxx) {
-    IntArray local_min = gs->my_offset();
+  PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
+    IndexArray local_min = gs->my_offset();
     local_min.SetNoLessThan(IntArray(minx));
-    IntArray local_max = gs->my_offset() + gs->my_size();
+    IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IntArray(maxx));
     // No corresponding local region
     if (local_min >= local_max) {
@@ -187,11 +188,11 @@ extern "C" {
     return d;
   }
   
-  PSDomain2D PSDomain2DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy) {
-    IntArray local_min = gs->my_offset();
+  PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy) {
+    IndexArray local_min = gs->my_offset();
     local_min.SetNoLessThan(IntArray(minx, miny));    
-    IntArray local_max = gs->my_offset() + gs->my_size();
+    IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IntArray(maxx, maxy));
     // No corresponding local region
     if (local_min >= local_max) {
@@ -204,12 +205,12 @@ extern "C" {
     return d;
   }
 
-  PSDomain3D PSDomain3DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy,
-                           index_t minz, index_t maxz) {
-    IntArray local_min = gs->my_offset();
+  PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy,
+                           PSIndex minz, PSIndex maxz) {
+    IndexArray local_min = gs->my_offset();
     local_min.SetNoLessThan(IntArray(minx, miny, minz));        
-    IntArray local_max = gs->my_offset() + gs->my_size();
+    IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IntArray(maxx, maxy, maxz));    
     // No corresponding local region
     // TODO: dom may have a smaller number of dimensions than
@@ -306,7 +307,7 @@ extern "C" {
     va_start(vl, buf);
     IntArray index;
     for (int i = 0; i < nd; ++i) {
-      index[i] = va_arg(vl, index_t);
+      index[i] = va_arg(vl, PSIndex);
     }
     va_end(vl);
     master->GridSet(gm, buf, index);
@@ -314,7 +315,7 @@ extern "C" {
   
 
   // same as mpi_runtime.cc
-  index_t PSGridDim(void *p, int d) {
+  PSIndex PSGridDim(void *p, int d) {
     Grid *g = (Grid *)p;    
     return g->size_[d];
   }
@@ -340,7 +341,7 @@ extern "C" {
   void __PSStencilRun(int id, int iter, int num_stencils, ...) {
     //master->StencilRun(id, stencil_obj_size, stencil_obj, iter);
     void **stencils = new void*[num_stencils];
-    int *stencil_sizes = new int[num_stencils];
+    unsigned *stencil_sizes = new unsigned[num_stencils];
     va_list vl;
     va_start(vl, num_stencils);
     for (int i = 0; i < num_stencils; ++i) {
@@ -426,10 +427,10 @@ extern "C" {
 
   // same as mpi_runtime.cc  
   void __PSLoadSubgrid2D(__PSGridMPI *g, 
-                         int min_dim1, index_t min_offset1,
-                         int min_dim2, index_t min_offset2,
-                         int max_dim1, index_t max_offset1,
-                         int max_dim2, index_t max_offset2,
+                         int min_dim1, PSIndex min_offset1,
+                         int min_dim2, PSIndex min_offset2,
+                         int max_dim1, PSIndex max_offset1,
+                         int max_dim2, PSIndex max_offset2,
                          int reuse) {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
@@ -441,12 +442,12 @@ extern "C" {
 
   // same as mpi_runtime.cc
   void __PSLoadSubgrid3D(__PSGridMPI *g, 
-                         int min_dim1, index_t min_offset1,
-                         int min_dim2, index_t min_offset2,
-                         int min_dim3, index_t min_offset3,
-                         int max_dim1, index_t max_offset1,
-                         int max_dim2, index_t max_offset2,
-                         int max_dim3, index_t max_offset3,
+                         int min_dim1, PSIndex min_offset1,
+                         int min_dim2, PSIndex min_offset2,
+                         int min_dim3, PSIndex min_offset3,
+                         int max_dim1, PSIndex max_offset1,
+                         int max_dim2, PSIndex max_offset2,
+                         int max_dim3, PSIndex max_offset3,
                          int reuse) {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
@@ -471,11 +472,11 @@ extern "C" {
     return gm->GetDev();
   }
 
-  index_t __PSGetLocalSize(int dim) {
+  PSIndex __PSGetLocalSize(int dim) {
     return gs->my_size()[dim];
   }
 
-  index_t __PSGetLocalOffset(int dim) {
+  PSIndex __PSGetLocalOffset(int dim) {
     return gs->my_offset()[dim];
   }
 

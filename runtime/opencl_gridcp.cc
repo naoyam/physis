@@ -52,13 +52,13 @@ void CLinfo::GridSet(__PSGrid *g, const void *ptr_val, va_list valst_dim) {
   cl_mem dev_mem = (cl_mem) g->buf;
   size_t offset = 0;
   size_t base_offset = 1;
-  index_t idx = 0;
+  PSIndex idx = 0;
   int i = 0;
   int status = -1;
   err_status = 1;
 
   for (i = 0; i <  g->num_dims; i++) {
-    idx = va_arg(valst_dim, index_t);
+    idx = va_arg(valst_dim, PSIndex);
     offset += idx;
     base_offset *= g->dim[i];
   }
