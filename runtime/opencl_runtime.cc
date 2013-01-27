@@ -49,7 +49,7 @@ extern "C" {
 
 
   // PSGrid3DRealNew(NX, NX, NX); is translated into
-  // int dims[3] = {((index_t )NX), ((index_t )NX), ((index_t )NX)};
+  // int dims[3] = {((PSIndex )NX), ((PSIndex )NX), ((PSIndex )NX)};
   // g = __PSGridNew(sizeof(float), 3, dims, 0);
   __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
                         int grid_attribute) {
@@ -75,21 +75,21 @@ extern "C" {
     // Currently double buffering is not used, so do nothing.
   } // void __PSGridSwap()
 
-  PSDomain1D PSDomain1DNew(index_t minx, index_t maxx) {
+  PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
     PSDomain1D d = {{minx}, {maxx}, {minx}, {maxx}};
     return d;
   } // PSDomain1D PSDomain1DNew()
 
-  PSDomain2D PSDomain2DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy) {
+  PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy) {
     PSDomain2D d = {{minx, miny}, {maxx, maxy},
                     {minx, miny}, {maxx, maxy}};
     return d;
   } // PSDomain2D PSDomain2DNew()
 
-  PSDomain3D PSDomain3DNew(index_t minx, index_t maxx,
-                           index_t miny, index_t maxy,
-                           index_t minz, index_t maxz) {
+  PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy,
+                           PSIndex minz, PSIndex maxz) {
     PSDomain3D d = {{minx, miny, minz}, {maxx, maxy, maxz},
                     {minx, miny, minz}, {maxx, maxy, maxz}};
     return d;

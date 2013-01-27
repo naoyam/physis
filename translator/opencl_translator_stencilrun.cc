@@ -17,11 +17,9 @@ namespace translator {
 
 // BuildRunBody:
 // Genereate the skeleton of loop for iteration
-SgBasicBlock *OpenCLTranslator::BuildRunBody(Run *run)
+void OpenCLTranslator::GenerateRunBody(
+    SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func)
 {
-  // build loop block
-  SgBasicBlock *block = sb::buildBasicBlock();
-
   // declare "int i" in the block;
   SgVariableDeclaration *loop_index =
       sb::buildVariableDeclaration("i", sb::buildIntType(), NULL, block);
@@ -45,14 +43,15 @@ SgBasicBlock *OpenCLTranslator::BuildRunBody(Run *run)
       sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
 
   // Generate loop body
-  SgBasicBlock *loop_body = GenerateRunLoopBody(run, block);
+  SgBasicBlock *loop_body = GenerateRunLoopBody(block, run,
+                                                run_func);
   SgForStatement *loop =
       sb::buildForStatement(loop_init, loop_test, loop_incr, loop_body);
 
   // Add TranceStencilRun
   TraceStencilRun(run, loop, block);
   
-  return block;
+  return;
 } // generateRunBody
 
 
@@ -285,9 +284,9 @@ SgVariableDeclaration *OpenCLTranslator::generate2DGlobalsize(
 //
 // Generate the loop body where to call OpenCL kernel
 SgBasicBlock *OpenCLTranslator::GenerateRunLoopBody(
+    SgScopeStatement *outer_block,    
     Run *run,
-    SgScopeStatement *outer_block)
-{
+    SgFunctionDeclaration *run_func) {
   // Generate the basic body
   SgBasicBlock *loop_body = sb::buildBasicBlock();
 
@@ -326,7 +325,24 @@ SgBasicBlock *OpenCLTranslator::GenerateRunLoopBody(
     PSAssert(kern_sym);
 
     std::string stencil_name = "s" + toString(stencil_idx); // s0
-    SgVarRefExp *stencil_var = sb::buildVarRefExp(stencil_name);
+#if 0    
+    SgVarRefExp *stencil_var = sb::buildVarRefExp(stencil_name,
+                                                  outer_block);
+#elif 1
+    SgVarRefExp *stencil_var = sb::buildVarRefExp(
+        stencil_name, outer_block);
+    si::fixVariableReferences(stencil_var);
+#else
+    SgVariableSymbol *ss =
+        si::lookupVariableSymbolInParentScopes(stencil_name, run_func->get_scope());
+    LOG_DEBUG() << "stencil_symbol: "
+                << ss->unparseToString() << "\n";
+    SgVarRefExp *stencil_var = sb::buildVarRefExp(ss);
+#endif
+    LOG_DEBUG() << "stencil_var: "
+                << stencil_var->unparseToString() << "\n";
+    LOG_DEBUG() << "stencil_var type: "
+                << stencil_var->get_type()->unparseToString() << "\n";
 
     // Stencil structure definition of StencilMap *sm
     SgClassDefinition *stencil_def = sm->GetStencilTypeDefinition();
@@ -378,9 +394,9 @@ SgBasicBlock *OpenCLTranslator::GenerateRunLoopBody(
           // Create the init value of j
           // s0.dom.local_<min,max>[pos_dim]
           SgExpression *exp_dom_minmax_ref;
-#ifdef DEBUG_FIX_DUP_SGEXP
-          stencil_var = sb::buildVarRefExp(stencil_name);
-#endif
+          stencil_var = sb::buildVarRefExp(
+              stencil_name, outer_block);
+          si::fixVariableReferences(stencil_var);
           if (maxflag == 0) // add s0.dom.local_min[pos_dim];
             exp_dom_minmax_ref = BuildStencilDomMinRef(stencil_var, pos_dim);
           else // s0.dom.local_max[pos_dim];

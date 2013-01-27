@@ -30,6 +30,9 @@ class MPIOpenMPTranslator : public MPITranslator {
  protected:
   virtual void translateInit(SgFunctionCallExp *node);
 
+  // Nothing performed for this target for now
+  virtual void FixAST() {}
+
  public:
   virtual SgBasicBlock *BuildRunKernelBody(
       StencilMap *s, SgInitializedName *stencil_param);

@@ -846,8 +846,8 @@ void GridSpaceMPIOpenCL::HandleFetchReply(GridRequest &req, GridMPI *g,
   return;
 }
 
-inline index_t GridCalcOffset3D(const IntArray &index,
-                                const IntArray &size,
+inline PSIndex GridCalcOffset3D(const IndexArray &index,
+                                const IndexArray &size,
                                 size_t pitch) {
   return index[0] + index[1] * pitch + index[2] * pitch * size[1];
 }
@@ -904,8 +904,8 @@ void GridMPIOpenCL3D::GetAddress_CL(
 
 GridMPI *GridSpaceMPIOpenCL::LoadNeighbor(
     GridMPI *g,
-    const IntArray &halo_fw_width,
-    const IntArray &halo_bw_width,
+    const IndexArray &halo_fw_width,
+    const IndexArray &halo_bw_width,
     bool diagonal,  bool reuse, bool periodic,
     const bool *fw_enabled,  const bool *bw_enabled,
     CLbaseinfo *cl_stream) {
@@ -914,8 +914,7 @@ GridMPI *GridSpaceMPIOpenCL::LoadNeighbor(
   GridMPIOpenCL3D *gmc = static_cast<GridMPIOpenCL3D*>(g);
   gmc->SetOpenCLinfo(cl_stream);
   GridMPI *rg = GridSpaceMPI::LoadNeighbor(g, halo_fw_width, halo_bw_width,
-                                           diagonal, reuse, periodic, fw_enabled,
-                                           bw_enabled);
+                                           diagonal, reuse, periodic);
   gmc->SetOpenCLinfo(0);
   return rg;
 }

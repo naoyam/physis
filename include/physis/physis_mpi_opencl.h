@@ -33,7 +33,7 @@ extern "C" {
   typedef __PSGridMPI *PSGrid1DDouble;
   typedef __PSGridMPI *PSGrid2DDouble;
   typedef __PSGridMPI *PSGrid3DDouble;
-  extern index_t PSGridDim(void *p, int d);
+  extern PSIndex PSGridDim(void *p, int d);
 #define __PSGridDimDev(p, d) ((p)->dim[d])
 #endif
   extern unsigned int num_clinfo_boundary_kernel;
@@ -116,26 +116,26 @@ extern "C" {
   extern void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
                               int reuse);
   extern void __PSLoadSubgrid2D(__PSGridMPI *g, 
-                                int min_dim1, index_t min_offset1,
-                                int min_dim2, index_t min_offset2,
-                                int max_dim1, index_t max_offset1,
-                                int max_dim2, index_t max_offset2,
+                                int min_dim1, PSIndex min_offset1,
+                                int min_dim2, PSIndex min_offset2,
+                                int max_dim1, PSIndex max_offset1,
+                                int max_dim2, PSIndex max_offset2,
                                 int reuse);
   extern void __PSLoadSubgrid3D(__PSGridMPI *g,
-                                int min_dim1, index_t min_offset1,
-                                int min_dim2, index_t min_offset2,
-                                int min_dim3, index_t min_offset3,
-                                int max_dim1, index_t max_offset1,
-                                int max_dim2, index_t max_offset2,
-                                int max_dim3, index_t max_offset3,
+                                int min_dim1, PSIndex min_offset1,
+                                int min_dim2, PSIndex min_offset2,
+                                int min_dim3, PSIndex min_offset3,
+                                int max_dim1, PSIndex max_offset1,
+                                int max_dim2, PSIndex max_offset2,
+                                int max_dim3, PSIndex max_offset3,
                                 int reuse);
   extern void __PSActivateRemoteGrid(__PSGridMPI *g,
                                      int active);
   extern int __PSIsRoot();
 
   extern void *__PSGridGetDev(void *g);
-  extern index_t __PSGetLocalSize(int dim);
-  extern index_t __PSGetLocalOffset(int dim);
+  extern PSIndex __PSGetLocalSize(int dim);
+  extern PSIndex __PSGetLocalOffset(int dim);
 
   extern __PSDomain __PSDomainShrink(__PSDomain *dom, int width);
 

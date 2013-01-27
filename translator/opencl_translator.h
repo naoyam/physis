@@ -62,6 +62,8 @@ class OpenCLTranslator : public ReferenceTranslator {
       bool isKernel, bool is_periodic);
   virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
 
+  // Nothing performed for this target for now
+  virtual void FixAST() {}
 
  public:
   virtual SgVariableDeclaration *generate2DLocalsize(
@@ -76,7 +78,8 @@ class OpenCLTranslator : public ReferenceTranslator {
 
 
  protected:
-  virtual SgBasicBlock *BuildRunBody(Run *run);
+  virtual void GenerateRunBody(SgBasicBlock *block, Run *run,
+                               SgFunctionDeclaration *run_func);
  public:
   virtual SgBasicBlock *block_setkernelarg(
       SgVariableDeclaration *argc_idx,
@@ -84,8 +87,9 @@ class OpenCLTranslator : public ReferenceTranslator {
       SgType *sgtype = 0);
  protected:
   virtual SgBasicBlock *GenerateRunLoopBody(
+      SgScopeStatement *outer_block,      
       Run *run,
-      SgScopeStatement *outer_block);
+      SgFunctionDeclaration *run_func);
  public:
   virtual SgExpression *BuildBlockDimX();
   virtual SgExpression *BuildBlockDimY();
