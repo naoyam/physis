@@ -68,10 +68,10 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   desc.add_options()("cuda", "CUDA translation");
   desc.add_options()("mpi", "MPI translation");
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
-  desc.add_options()("opencl", "OPENCL translation");
-  desc.add_options()("mpi-opencl", "MPI-OPENCL translation");
-  desc.add_options()("mpi-openmp", "MPI-OPENMP translation");
-  desc.add_options()("mpi-openmp-numa", "MPI-OPENMP translation");
+  desc.add_options()("opencl", "*EXPERIMENTAL* OpenCL translation");
+  desc.add_options()("mpi-opencl", "*EXPERIMENTAL* MPI-OpenCL translation");
+  desc.add_options()("mpi-openmp", "*EXPERIMENTAL* MPI-OpenMP translation");
+  desc.add_options()("mpi-openmp-numa", "*EXPERIMENTAL* NUMA-aware MPI-OpenMP translation");
   desc.add_options()("list-targets", "List available targets");
 
   bpo::variables_map vm;
@@ -123,25 +123,29 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   }
 
   if (vm.count("opencl")) {
-    LOG_DEBUG() << "OPENCL translation.\n";
+    LOG_DEBUG() << "OpenCL translation.\n";
+    LOG_WARNING() << "OpenCL: EXPERIMENTAL FEATURE\n";
     opts.opencl_trans = true;
     return;
   }
 
   if (vm.count("mpi-opencl")) {
-    LOG_DEBUG() << "MPI-OPENCL translation.\n";
+    LOG_DEBUG() << "MPI-OpenCL translation.\n";
+    LOG_WARNING() << "MPI-OpenCL: EXPERIMENTAL FEATURE\n";
     opts.mpi_opencl_trans = true;
     return;
   }
 
   if (vm.count("mpi-openmp")) {
-    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
+    LOG_DEBUG() << "MPI-OpenMP translation.\n";
+    LOG_WARNING() << "MPI-OpenMP: EXPERIMENTAL FEATURE\n";
     opts.mpi_openmp_trans = true;
     return;
   }
 
   if (vm.count("mpi-openmp-numa")) {
-    LOG_DEBUG() << "MPI-OPENMP(-NUMA) translation.\n";
+    LOG_DEBUG() << "MPI-OpenMP-NUMA translation.\n";
+    LOG_WARNING() << "MPI-OpenMP-NUMA: EXPERIMENTAL FEATURE\n";
     opts.mpi_openmp_numa_trans = true;
     return;
   }
