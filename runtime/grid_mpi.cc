@@ -419,6 +419,11 @@ std::ostream &GridSpaceMPI::Print(std::ostream &os) const {
   return os;
 }
 
+// For example
+// num_dims: 3 <dimension>
+// num_procs: 6 = 1*1*6
+// size = global_size: {64, 64, 64}
+// num_partitions = proc_size: {1, 1, 6}
 static void partition(int num_dims, int num_procs,
                       const IndexArray &size, 
                       const IntArray &num_partitions,
@@ -441,20 +446,25 @@ static void partition(int num_dims, int num_procs,
     offsets[i] = new PSIndex[num_partitions[i]];    
     int offset = 0;
     for (int j = 0; j < num_partitions[i]; ++j) {
-      int rem = size[i] % num_partitions[i];
-      partitions[i][j] = size[i] / num_partitions[i];
+      int rem = size[i] % num_partitions[i]; // <0, 0, 4>
+      partitions[i][j] = size[i] / num_partitions[i]; // {{64}, {64}, {10,10,10,10,10,10}}
       if (num_partitions[i] - j <= rem) {
-        ++partitions[i][j];
+        ++partitions[i][j]; // {{64}, {64}, {10,10,11,11,11,11}}
       }
-      min_partition[i] = std::min(min_partition[i], partitions[i][j]);
+      min_partition[i] = std::min(min_partition[i], partitions[i][j]); // {64,64,10}
       offsets[i][j] = offset;
-      offset += partitions[i][j];
+      offset += partitions[i][j]; // {{0}, {0}, {0,10,20,31,42,53}}
     }
   }
   
   return;
 }
 
+// For example
+// num_dims: 3 <dimension>
+// global_size: {64, 64, 64}
+// proc_num_dims: 3 <dimension>
+// proc_size: {1, 1, 6}
 GridSpaceMPI::GridSpaceMPI(int num_dims, const IndexArray &global_size,
                            int proc_num_dims, const IntArray &proc_size,
                            int my_rank):
@@ -463,7 +473,7 @@ GridSpaceMPI::GridSpaceMPI(int num_dims, const IndexArray &global_size,
     my_rank_(my_rank), buf(NULL), cur_buf_size(0) {
   assert(num_dims_ == proc_num_dims_);
   
-  num_procs_ = proc_size_.accumulate(proc_num_dims_);
+  num_procs_ = proc_size_.accumulate(proc_num_dims_); // For example 6
 
   partitions_ = new PSIndex*[num_dims_];
   offsets_ = new PSIndex*[num_dims_];
@@ -471,16 +481,16 @@ GridSpaceMPI::GridSpaceMPI(int num_dims, const IndexArray &global_size,
   partition(num_dims_, num_procs_, global_size_, proc_size_,
             partitions_, offsets_, proc_indices_, min_partition_);
 
-  my_idx_ = proc_indices_[my_rank_];
+  my_idx_ = proc_indices_[my_rank_]; // Usually {0,0, my_rank_}
   
   for (int i = 0; i < num_dims_; ++i) {
-    my_offset_[i] = offsets_[i][my_idx_[i]];
-    my_size_[i] = partitions_[i][my_idx_[i]];
+    my_offset_[i] = offsets_[i][my_idx_[i]]; // For example {0,0,31}
+    my_size_[i] = partitions_[i][my_idx_[i]]; // For example {0,0,11}
   }
 
   comm_ = MPI_COMM_WORLD;
   for (int i = 0; i < num_dims_; ++i) {
-    IntArray neighbor = my_idx_;
+    IntArray neighbor = my_idx_; // Usually {0, 0, my_rank_}
     neighbor[i] += 1;
     // wrap around for periodic boundary access
     neighbor[i] %= proc_size_[i];

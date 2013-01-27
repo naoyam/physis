@@ -13,6 +13,9 @@
 #include "translator/cuda_translator.h"
 #include "translator/mpi_translator.h"
 #include "translator/mpi_cuda_translator.h"
+#include "translator/opencl_translator.h"
+#include "translator/mpi_opencl_translator.h"
+#include "translator/mpi_openmp_translator.h"
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
@@ -40,9 +43,17 @@ struct CommandLineOptions {
   bool cuda_trans;
   bool mpi_trans;
   bool mpi_cuda_trans;
+  bool opencl_trans;
+  bool mpi_opencl_trans;
+  bool mpi_openmp_trans;
+  bool mpi_openmp_numa_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
                         mpi_trans(false), mpi_cuda_trans(false),
+                        opencl_trans(false),
+                        mpi_opencl_trans(false),
+                        mpi_openmp_trans(false),
+                        mpi_openmp_numa_trans(false),
                         config_file_path(std::make_pair(false, "")) {}
 };
 
@@ -57,6 +68,10 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   desc.add_options()("cuda", "CUDA translation");
   desc.add_options()("mpi", "MPI translation");
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
+  desc.add_options()("opencl", "*EXPERIMENTAL* OpenCL translation");
+  desc.add_options()("mpi-opencl", "*EXPERIMENTAL* MPI-OpenCL translation");
+  desc.add_options()("mpi-openmp", "*EXPERIMENTAL* MPI-OpenMP translation");
+  desc.add_options()("mpi-openmp-numa", "*EXPERIMENTAL* NUMA-aware MPI-OpenMP translation");
   desc.add_options()("list-targets", "List available targets");
 
   bpo::variables_map vm;
@@ -106,13 +121,45 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     opts.mpi_cuda_trans = true;
     return;
   }
-  
+
+  if (vm.count("opencl")) {
+    LOG_DEBUG() << "OpenCL translation.\n";
+    LOG_WARNING() << "OpenCL: EXPERIMENTAL FEATURE\n";
+    opts.opencl_trans = true;
+    return;
+  }
+
+  if (vm.count("mpi-opencl")) {
+    LOG_DEBUG() << "MPI-OpenCL translation.\n";
+    LOG_WARNING() << "MPI-OpenCL: EXPERIMENTAL FEATURE\n";
+    opts.mpi_opencl_trans = true;
+    return;
+  }
+
+  if (vm.count("mpi-openmp")) {
+    LOG_DEBUG() << "MPI-OpenMP translation.\n";
+    LOG_WARNING() << "MPI-OpenMP: EXPERIMENTAL FEATURE\n";
+    opts.mpi_openmp_trans = true;
+    return;
+  }
+
+  if (vm.count("mpi-openmp-numa")) {
+    LOG_DEBUG() << "MPI-OpenMP-NUMA translation.\n";
+    LOG_WARNING() << "MPI-OpenMP-NUMA: EXPERIMENTAL FEATURE\n";
+    opts.mpi_openmp_numa_trans = true;
+    return;
+  }
+
   if (vm.count("list-targets")) {
     StringJoin sj(" ");
     sj << "ref";
     sj << "mpi";
     sj << "cuda";
     sj << "mpi-cuda";
+    sj << "opencl";
+    sj << "mpi-opencl";
+    sj << "mpi-openmp";
+    sj << "mpi-openmp-numa";
     std::cout << sj << "\n";
     exit(0);
   }
@@ -149,7 +196,9 @@ static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
   } else if (opts.mpi_cuda_trans) {
     builder = new pt::MPICUDARuntimeBuilder(gs);
   }
-  PSAssert(builder != NULL);
+  if (builder == NULL) {
+    LOG_WARNING() << "No runtime builder found for this target\n";
+  }
   return builder;
 }
 static pto::Optimizer *GetOptimizer(TranslationContext *tx,
@@ -171,7 +220,9 @@ static pto::Optimizer *GetOptimizer(TranslationContext *tx,
     optimizer = new pto::MPICUDAOptimizer(proj, tx,
                                           builder, cfg);        
   }
-  PSAssert(optimizer != NULL);
+  if (optimizer == NULL) {
+    LOG_WARNING() << "No optimizer found for this target\n";
+  }
   return optimizer;
 }
 
@@ -218,6 +269,32 @@ int main(int argc, char *argv[]) {
     argvec.push_back("-DPHYSIS_MPI_CUDA");
   }
 
+  if (opts.opencl_trans) {
+    trans = new pt::OpenCLTranslator(config);
+    filename_suffix = "opencl.c";
+    argvec.push_back("-DPHYSIS_OPENCL");
+  }
+
+  if (opts.mpi_opencl_trans) {
+    trans = new pt::MPIOpenCLTranslator(config);
+    filename_suffix = "mpi-opencl.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENCL");
+  }
+
+  if (opts.mpi_openmp_trans) {
+    trans = new pt::MPIOpenMPTranslator(config);
+    filename_suffix = "mpi-openmp.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENMP");
+  }
+
+  if (opts.mpi_openmp_numa_trans) {
+    // Use the same MPIOpenMPTranslator
+    trans = new pt::MPIOpenMPTranslator(config);
+    filename_suffix = "mpi-openmp-numa.c";
+    argvec.push_back("-DPHYSIS_MPI_OPENMP");
+    argvec.push_back("-DPHYSIS_MPI_OPENMP_NUMA");
+  }
+
   if (trans == NULL) {
     LOG_INFO() << "No translation done.\n";
     exit(0);
@@ -257,7 +334,8 @@ int main(int argc, char *argv[]) {
       GetOptimizer(&tx, proj, rt_builder, opts, &config);
 
   LOG_INFO() << "Performing optimization Stage 1\n";
-  optimizer->Stage1();
+  // optimizer is null if not defined for this target
+  if (optimizer) optimizer->Stage1();
   LOG_INFO() << "Optimization Stage 1 done\n";
   
   LOG_INFO() << "Translating the AST\n";
@@ -267,7 +345,7 @@ int main(int argc, char *argv[]) {
   LOG_INFO() << "Translation done\n";
   
   LOG_INFO() << "Performing optimization Stage 2\n";
-  optimizer->Stage2();
+  if (optimizer) optimizer->Stage2();
   LOG_INFO() << "Optimization Stage 2 done\n";
   
   trans->Finish();
