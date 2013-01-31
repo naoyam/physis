@@ -5,5 +5,7 @@ install(FILES
   himenobmtxpa_physis.c himenobmtxpa_original.c
   @CMAKE_CURRENT_BINARY_DIR@/tmp/Makefile
   physis.conf
+  opt.conf
+  autotune.conf
   DESTINATION examples/himeno)
 
