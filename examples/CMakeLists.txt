@@ -1,1 +1,2 @@
 add_subdirectory(himeno)
+add_subdirectory(diffusion-benchmark)
