@@ -6,5 +6,6 @@ install(FILES
   @CMAKE_CURRENT_BINARY_DIR@/tmp/Makefile
   physis.conf
   opt.conf
+  autotune.conf
   DESTINATION examples/himeno)
 
