@@ -152,6 +152,7 @@ $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.o: NVCC_CFLAGS += -I@CMAKE_INSTALL_P
 $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.exe: $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.o \
 	main_physis.o baseline.o diffusion3d.o @CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_cuda.a
 	$(CXX) -o $@ $^ $(LDFLAGS) $(CUDA_LDFLAGS)
+
 # mpi
 $(PHYSIS_BUILD_DIR)/diffusion3d_physis.mpi.c: diffusion3d_physis.c $(PHYSISC_CONFIG)
 	cd $(PHYSIS_BUILD_DIR) && $(PHYSISC_MPI) ../../$<
