@@ -42,13 +42,20 @@ extern "C" {
   extern PSIndex PSGridDim(void *p, int d);
 #endif
 
-  extern void __PSDomainSetLocalSize(__PSDomain *dom);  
+  extern void __PSDomainSetLocalSize(__PSDomain *dom);
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size,
                                      int dim,
                                      const PSVectorInt size,
                                      int double_buffering,
                                      int attr,
                                      const PSVectorInt global_offset);
+  extern __PSGridMPI* __PSGridNewMPI2(PSType type, int elm_size,
+                                      int dim,
+                                      const PSVectorInt size,
+                                      int attr,
+                                      const PSVectorInt global_offset,
+                                      const PSVectorInt stencil_width_fw,
+                                      const PSVectorInt stencil_width_bw);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

@@ -25,7 +25,15 @@ if (MPI_ENABLED)
   add_executable(test_grid_mpi_3d test_grid_mpi_3d.cc)
   target_link_libraries(test_grid_mpi_3d physis_rt_mpi ${MPI_LIBRARIES})  
   add_executable(test_grid_mpi_2d_3d test_grid_mpi_2d_3d.cc)
-  target_link_libraries(test_grid_mpi_2d_3d physis_rt_mpi ${MPI_LIBRARIES})  
+  target_link_libraries(test_grid_mpi_2d_3d physis_rt_mpi ${MPI_LIBRARIES})
+  # MPI runtime version 2
+  add_library(physis_rt_mpi2 ${RUNTIME_COMMON_SRC}
+    mpi_runtime2.cc mpi_runtime_common.cc grid.cc grid_mpi.cc
+    grid_util.cc rpc_mpi.cc rpc_mpi2.cc mpi_wrapper.cc grid_mpi2.cc)
+  set_target_properties(
+    physis_rt_mpi2 PROPERTIES COMPILE_FLAGS "-DMPI_RUNTIME_2"
+  )
+  install(TARGETS physis_rt_mpi2 DESTINATION lib)  
 endif()
 
 if (CUDA_ENABLED)

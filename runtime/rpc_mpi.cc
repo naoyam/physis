@@ -15,22 +15,6 @@
 namespace physis {
 namespace runtime {
 
-struct Request {
-  RT_FUNC_KIND kind;
-  int opt;
-  Request(RT_FUNC_KIND k=FUNC_INVALID, int opt=0)
-      : kind(k), opt(opt) {}
-};
-
-struct RequestNEW {
-  PSType type;
-  int elm_size;
-  int num_dims;
-  IndexArray size;
-  bool double_buffering;
-  IndexArray global_offset;
-  int attr;
-};
 
 
 std::ostream &ProcInfo::print(std::ostream &os) const {
@@ -159,8 +143,9 @@ GridMPI *Master::GridNew(PSType type, int elm_size,
                          int attr) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
   NotifyCall(FUNC_NEW);
+  Width2 dummy; // Unused in this class (used in Master2)
   RequestNEW req = {type, elm_size, num_dims, size,
-                    double_buffering, global_offset, attr};
+                    double_buffering, global_offset, dummy, attr};
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
   GridMPI *g = gs_->CreateGrid(type, elm_size, num_dims, size,
                                double_buffering, global_offset,
@@ -194,7 +179,7 @@ void Client::GridDelete(int id) {
 
 void Master::GridCopyinLocal(GridMPI *g, const void *buf) {
   size_t s = g->local_size().accumulate(g->num_dims()) *
-             g->elm_size();
+      g->elm_size();
   PSAssert(g->buffer()->GetLinearSize() == s);
   CopyoutSubgrid(g->elm_size(), g->num_dims(), buf,
                  g->size(), g->buffer()->Get(),
@@ -255,7 +240,7 @@ void Client::GridCopyin(int id) {
 
 void Master::GridCopyoutLocal(GridMPI *g, void *buf) {
   if (g->empty()) return;
-  
+
   CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
                 g->size(), g->buffer()->Get(), g->local_offset(),
                 g->local_size());
@@ -395,6 +380,7 @@ void Client::GridSet(int id) {
   //memcpy(g->GetAddress(index), buf, g->elm_size());
   g->Set(index, buf);
   LOG_DEBUG() << "Client GridSet done\n";
+  free(buf);
   return;
 }
 

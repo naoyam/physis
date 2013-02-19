@@ -28,6 +28,11 @@
 namespace physis {
 namespace runtime {
 
+struct Width2 {
+  UnsignedArray bw;
+  UnsignedArray fw;
+};
+
 // Internal method to initialize common runtime components. This is
 // only called by the user-visible runtime initialize, i.e., PSInit.
 void PSInitCommon(int *argc, char ***argv);

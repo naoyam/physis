@@ -36,6 +36,24 @@ class ProcInfo {
   bool IsRoot() const { return rank_ == 0; }
 };
 
+struct Request {
+  RT_FUNC_KIND kind;
+  int opt;
+  Request(RT_FUNC_KIND k=FUNC_INVALID, int opt=0)
+      : kind(k), opt(opt) {}
+};
+
+struct RequestNEW {
+  PSType type;
+  int elm_size;
+  int num_dims;
+  IndexArray size;
+  bool double_buffering;
+  IndexArray global_offset;
+  Width2 stencil_width;
+  int attr;
+};
+
 class Client {
  protected:
   const ProcInfo &pinfo_;

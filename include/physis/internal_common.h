@@ -73,6 +73,12 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
       (*this)[i] = (ty)v[i];
     }
   }
+  template <typename ty2>
+  IntegerArray(const IntegerArray<ty2> &v) {
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      (*this)[i] = (ty)v[i];
+    }
+  }
   void Set(ty v) {
     this->assign(v);
   }

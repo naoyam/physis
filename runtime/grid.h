@@ -63,6 +63,7 @@ class Grid {
   char *_data() { return data_[0]; }
   char *_data_emit() { return data_[1]; }  
   Buffer *buffer() { return data_buffer_[0]; }
+  const Buffer *buffer() const { return data_buffer_[0]; }  
   virtual void *GetAddress(const IndexArray &indices);    
   virtual void Set(const IndexArray &indices, const void *buf);
   virtual void Get(const IndexArray &indices, void *buf); 

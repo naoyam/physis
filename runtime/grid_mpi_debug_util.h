@@ -18,6 +18,13 @@
 namespace physis {
 namespace runtime {
 
+#ifdef MPI_RUNTIME_2
+// TODO
+template <class T> inline
+std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
+  return os;
+}
+#else
 template <class T> inline
 std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
   T *data = (T*)g->_data();
@@ -65,7 +72,7 @@ std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
   os << ss.str();;
   return os;
 }
-
+#endif
 } // namespace runtime
 } // namespace physis
 

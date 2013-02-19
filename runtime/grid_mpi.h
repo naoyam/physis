@@ -5,7 +5,6 @@
 // LICENSE.txt.
 //
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
-
 #ifndef PHYSIS_RUNTIME_GRID_MPI_H_
 #define PHYSIS_RUNTIME_GRID_MPI_H_
 
@@ -48,6 +47,9 @@ class GridMPI: public Grid {
   size_t CalcHaloSize(int dim, unsigned width, bool diagonal);
   virtual std::ostream &Print(std::ostream &os) const;
   const IndexArray& local_size() const { return local_size_; }
+  size_t GetLocalBufferSize() const {
+    return local_size_.accumulate(num_dims_) * elm_size_;
+  };
   const IndexArray& local_offset() const { return local_offset_; }
   bool halo_has_diagonal() const { return halo_has_diagonal_; }
   const UnsignedArray& halo_fw_width() const { return halo_fw_width_; }
@@ -86,7 +88,7 @@ class GridMPI: public Grid {
 
   virtual void Resize(const IndexArray &local_offset,
                       const IndexArray &local_size);
-  
+
   virtual int Reduce(PSReduceOp op, void *out);
 
  protected:
