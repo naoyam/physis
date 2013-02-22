@@ -491,7 +491,8 @@ SgExprListExp *MPITranslator::generateNewArg(
 }
 
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
-                                      Grid *g) {
+                                      Grid *g,
+                                      SgVariableDeclaration *dim_decl) {
   // attribute
   si::appendExpression(args, sb::buildIntVal(0));
   // global offset

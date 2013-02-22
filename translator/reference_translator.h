@@ -55,7 +55,8 @@ class ReferenceTranslator : public Translator {
   virtual void translateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
-  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
+  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
+                                 SgVariableDeclaration *dim_decl);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel,

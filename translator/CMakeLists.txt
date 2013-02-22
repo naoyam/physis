@@ -51,6 +51,13 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi
   DESTINATION bin)
 
 set(PHYSISC_SRC ${PHYSISC_SRC}
+  mpi_translator2.cc)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi2.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi2)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi2
+  DESTINATION bin)
+
+set(PHYSISC_SRC ${PHYSISC_SRC}
   cuda_translator.cc
   cuda_builder.cc
   cuda_runtime_builder.cc

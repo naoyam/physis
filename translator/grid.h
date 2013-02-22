@@ -88,7 +88,7 @@ class GridType: public AstAttribute {
 class Grid {
   GridType *gt;
   SgFunctionCallExp *newCall;
-  //StencilRange sr;
+  StencilRange stencil_range_;
   SizeVector static_size_;
   bool has_static_size_;
   void identifySize(SgExpressionPtrList::const_iterator size_begin,
@@ -99,7 +99,7 @@ class Grid {
  public:
   
   Grid(GridType *gt, SgFunctionCallExp *newCall):
-      gt(gt), newCall(newCall), 
+      gt(gt), newCall(newCall), stencil_range_(gt->getNumDim()),
       _isReadWrite(false), attribute_(NULL) {
     SgExpressionPtrList &args = newCall->get_args()->get_expressions();
     size_t num_dims = gt->getNumDim();
@@ -167,7 +167,16 @@ class Grid {
   }
 #endif
   SgExprListExp *BuildSizeExprList();
+
   SgExpression *BuildAttributeExpr();
+
+  const StencilRange &stencil_range() const {
+    return stencil_range_;
+  }
+  StencilRange &stencil_range() {
+    return stencil_range_;
+  }
+  virtual void SetStencilRange(const StencilRange &sr);
 };
 
 typedef std::set<Grid*> GridSet;

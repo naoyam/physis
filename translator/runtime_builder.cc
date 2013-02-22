@@ -75,5 +75,27 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
   return fc;
 }
 
+SgExprListExp *RuntimeBuilder::BuildStencilWidth(const StencilRange &sr,
+                                                 bool is_forward) {
+  //TODO
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  //int nd = gt->getNumDim();
+  int nd = 3;
+  for (int i = 0; i < nd; ++i) {
+    //exp_list->append_expression(si::copyExpression(args[i]));
+    si::appendExpression(exp_list, sb::buildIntVal(0));
+  }
+  return exp_list;
+}
+
+SgExprListExp *RuntimeBuilder::BuildStencilWidthFW(const StencilRange &sr) {
+  return BuildStencilWidth(sr, true);
+}
+
+SgExprListExp *RuntimeBuilder::BuildStencilWidthBW(const StencilRange &sr) {
+  return BuildStencilWidth(sr, false);
+}
+
+
 } // namespace translator
 } // namespace physis

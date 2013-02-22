@@ -168,12 +168,13 @@ SgExprListExp *ReferenceTranslator::generateNewArg(
   //SgExpression *attr = g->BuildAttributeExpr();
   //if (!attr) attr = sb::buildIntVal(0);
   //si::appendExpression(new_args, attr);
-  appendNewArgExtra(new_args, g);
+  appendNewArgExtra(new_args, g, dim_decl);
   return new_args;
 }
 
 void ReferenceTranslator::appendNewArgExtra(SgExprListExp *args,
-                                            Grid *g) {
+                                            Grid *g,
+                                            SgVariableDeclaration *dim_decl) {
   return;
 }
 

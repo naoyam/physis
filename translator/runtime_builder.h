@@ -98,9 +98,15 @@ class RuntimeBuilder {
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
   }
+
+  virtual SgExprListExp *BuildStencilWidthFW(const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilWidthBW(const StencilRange &sr);
       
  protected:
   SgScopeStatement *gs_;
+  
+  virtual SgExprListExp *BuildStencilWidth(const StencilRange &sr,
+                                           bool is_forward);
 };
 
 } // namespace translator

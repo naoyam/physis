@@ -165,6 +165,7 @@ extern "C" {
 
   __PSGridMPI* __PSGridNewMPI2(PSType type, int elm_size, int dim,
                                const PSVectorInt size,
+                               int double_buffering,
                                int attr,
                                const PSVectorInt global_offset,
                                const PSVectorInt stencil_width_fw,

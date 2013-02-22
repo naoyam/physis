@@ -33,7 +33,8 @@ class MPITranslator: public ReferenceTranslator {
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
-  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
+  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
+                                 SgVariableDeclaration *dim_decl);
   virtual bool translateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic);

@@ -141,6 +141,28 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
   return false;
 }
 
+static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) {
+  GridRangeMap &gr = sm.grid_stencil_range_map();
+  FOREACH (it, gr.begin(), gr.end()) {
+    SgInitializedName *gn = it->first;
+    StencilRange &sr = it->second;
+    const GridSet *gs = tx.findGrid(gn);
+    FOREACH (git, gs->begin(), gs->end()) {
+      Grid *g = *git;
+      // Note: g is NULL if InitializedName can be initialized
+      // with external variables. That happens if a stencil kernel is
+      // not designated as static.
+      if (g == NULL) {
+        LOG_INFO() << "Externally passed grid not set with stencil range info.\n";
+        continue;
+      } 
+      g->SetStencilRange(sr);
+      LOG_DEBUG() << "Grid stencil range: "
+                  << *g << ", " << sr << "\n";
+    }
+  }
+}
+
 #if 0
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   SgFunctionDeclaration *kernel = sm.getKernel();
@@ -240,6 +262,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   LOG_DEBUG() << "Stencil access: "
               << GridRangeMapToString(gr)
               << std::endl;
+  PropagateStencilRangeToGrid(sm, tx);
 }
 #endif
 
