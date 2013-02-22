@@ -468,7 +468,7 @@ function generate_translation_configurations()
 		cuda)
 			generate_translation_configurations_cuda
 			;;
-		mpi)
+		mpi|mpi2)
 			generate_translation_configurations_mpi
 			;;
 		mpi-cuda)
@@ -570,14 +570,16 @@ function compile()
 				return 1
 			fi
 			;;
-		mpi)
+		mpi|mpi2)
 			if [ "@MPI_ENABLED@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI compilation (not supported)"
 				return 0
 			fi
 			local src_file="$src_file_base".c			
 			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
-			mpic++ "$src_file_base".o -lphysis_rt_mpi $LDFLAGS -o $exe_name
+			local lib_name=physis_rt_mpi
+			if [ $target = "mpi2" ]; then lib_name=physis_rt_mpi2; fi
+			mpic++ "$src_file_base".o -l$lib_name $LDFLAGS -o $exe_name
 			;;
 		mpi-cuda)
 			if [ "@MPI_ENABLED@" != "TRUE" -o "@CUDA_ENABLED@" != "TRUE" ]; then
@@ -648,8 +650,7 @@ function get_reference_exe_name()
     local src_name=${1%%.*}
     local target=$2
     case $target in
-
-		mpi)
+		mpi|mpi2)
 			target=ref
 			;;
 		mpi-cuda)
@@ -730,7 +731,7 @@ function execute()
 		cuda)
 			./$exename $TRACE > $exename.out 2> $exename.err    
 			;;
-		mpi)
+		mpi|mpi2)
 			do_mpirun $3 $4 "$MPI_MACHINEFILE" ./$exename $TRACE > $exename.out 2> $exename.err    
 			;;
 		mpi-cuda)
@@ -865,7 +866,7 @@ function is_skipped_module_test()
 {
 	if is_module_test $1; then
 		case "$2" in
-			mpi|mpi-cuda|opencl|mpi-opencl|mpi-openmp|mpi-openmp-numa)
+			mpi|mpi2|mpi-cuda|opencl|mpi-opencl|mpi-openmp|mpi-openmp-numa)
 				return 0
 		esac
 	fi
@@ -1031,7 +1032,7 @@ function get_module_base()
 				if [ "$STAGE" = "COMPILE" ]; then continue; fi
 				
 				case "$TARGET" in
-					mpi|mpi-*)
+					mpi|mpi2|mpi-*)
 						np_target=$MPI_PROC_DIM
 						;;
 					*)
