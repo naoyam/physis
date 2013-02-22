@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
 
   if (opts.mpi2_trans) {
     trans = new pt::MPITranslator2(config);
-    filename_suffix = "mpi.c";
+    filename_suffix = "mpi2.c";
     argvec.push_back("-DPHYSIS_MPI");
   }
 
