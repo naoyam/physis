@@ -210,7 +210,7 @@ SgExprListExp *Grid::BuildSizeExprList() {
   SgExpressionPtrList &args = newCall->get_args()->get_expressions();  
   int nd = gt->getNumDim();
   for (int i = 0; i < nd; ++i) {
-    exp_list->append_expression(si::copyExpression(args[i]));
+    si::appendExpression(exp_list, si::copyExpression(args[i]));
   }
   return exp_list;
 }

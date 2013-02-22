@@ -34,19 +34,23 @@ SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression *gref,
   SgExprListExp *args = sb::buildExprListExp(gref);
   for (int i = 0; i < sr.num_dims(); ++i) {
     PSAssert(sr.min_indices()[i].size() == 1);
-    args->append_expression(
+    si::appendExpression(
+        args,
         rose_util::BuildIntLikeVal(sr.min_indices()[i].front().dim));
-    args->append_expression(
+    si::appendExpression(
+        args,
         rose_util::BuildIntLikeVal(sr.min_indices()[i].front().offset));
   }
   for (int i = 0; i < sr.num_dims(); ++i) {
     PSAssert(sr.max_indices()[i].size() == 1);
-    args->append_expression(
+    si::appendExpression(
+        args,
         rose_util::BuildIntLikeVal(sr.max_indices()[i].front().dim));
-    args->append_expression(
+    si::appendExpression(
+        args,
         rose_util::BuildIntLikeVal(sr.max_indices()[i].front().offset));
   }
-  args->append_expression(reuse);
+  si::appendExpression(args, reuse);
   
   SgFunctionCallExp *call;
   SgFunctionSymbol *fs = NULL;
