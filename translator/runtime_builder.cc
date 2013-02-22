@@ -77,13 +77,23 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
 
 SgExprListExp *RuntimeBuilder::BuildStencilWidth(const StencilRange &sr,
                                                  bool is_forward) {
-  //TODO
   SgExprListExp *exp_list = sb::buildExprListExp();
-  //int nd = gt->getNumDim();
-  int nd = 3;
-  for (int i = 0; i < nd; ++i) {
-    //exp_list->append_expression(si::copyExpression(args[i]));
-    si::appendExpression(exp_list, sb::buildIntVal(0));
+  IntVector offset_min, offset_max;
+  int nd = sr.num_dims();
+  if (sr.IsEmpty()) {
+    for (int i = 0; i < nd; ++i) {
+      offset_min.push_back(0);
+      offset_max.push_back(0);
+    }
+  } else if (!sr.GetNeighborAccess(offset_min, offset_max)) {
+    LOG_DEBUG() << "Stencil access is not regular: "
+                << sr << "\n";
+    return NULL;
+  }
+  for (int i = 0; i < (int)offset_min.size(); ++i) {
+    PSIndex v = is_forward ? offset_max[i] : -offset_min[i];
+    if (v < 0) v = 0;
+    si::appendExpression(exp_list, sb::buildIntVal(v));
   }
   return exp_list;
 }

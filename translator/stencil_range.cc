@@ -147,7 +147,7 @@ void StencilRange::merge(const StencilRange &sr) {
   diagonal_ |= sr.diagonal_;
 }
 
-bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) {
+bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) const {
   if (!IsNeighborAccess()) return false;
 
   for (int i = 0; i < num_dims_; ++i) {
