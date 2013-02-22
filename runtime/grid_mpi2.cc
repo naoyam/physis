@@ -72,13 +72,14 @@ std::ostream &GridMPI2::Print(std::ostream &os) const {
      << ", global offset: " << global_offset_
      << ", local offset: " << local_offset_
      << ", local size: " << local_size_
+     << ", local real size: " << local_real_size_      
      << "}";
   return os;
 }
 
 void GridMPI2::InitBuffer() {
   data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
-  data_buffer_[0]->Allocate(local_size_);
+  data_buffer_[0]->Allocate(local_real_size_);
   data_buffer_[1] = NULL;
   data_[0] = (char*)data_buffer_[0]->Get();
   data_[1] = NULL;

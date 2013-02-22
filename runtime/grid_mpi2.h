@@ -47,7 +47,7 @@ class GridMPI2: public GridMPI {
   const IndexArray& local_offset() const { return local_offset_; }
   bool empty() const { return empty_; }
   const Width2 &halo() const { return halo_; }
-  bool HasHalo() const { return halo_.fw == 0 && halo_.bw == 0; }
+  bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
   
   // Buffer management
   virtual void InitBuffer();
@@ -66,13 +66,8 @@ class GridMPI2: public GridMPI {
   virtual void Copyin(const void *src);
   
  protected:
-  bool empty_;
-  IndexArray global_offset_;
-  IndexArray local_offset_;
   IndexArray local_real_offset_;  
-  IndexArray local_size_;
   IndexArray local_real_size_;  
-  bool halo_has_diagonal_;
   Width2 halo_;
 
 };

@@ -94,7 +94,7 @@ void Client2::GridCopyout(int id) {
 void Master2::GridCopyinLocal(GridMPI *g, const void *buf) {
   if (g->empty()) return;
 
-  size_t s = g->local_size().accumulate(g->num_dims()) *
+  size_t s = ((GridMPI2*)g)->local_real_size().accumulate(g->num_dims()) *
       g->elm_size();
   PSAssert(g->buffer()->GetLinearSize() == s);
 

@@ -69,7 +69,7 @@ static void CopySubgrid(void *buf, const void *src,
     PSIndex initial_size;
     IndexArray ss = subgrid_size;
     bool done = false;
-    while (done) {
+    while (!done) {
       initial_size = subgrid_size[0];
       if (offset[0] < 0) {
         // Copy sub region with backward periodic access
