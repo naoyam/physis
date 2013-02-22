@@ -21,7 +21,8 @@ class Master2: public Master {
                            int num_dims,
                            const IndexArray &size,
                            const IndexArray &global_offset,
-                           const Width2 &stencil_width,
+                           const IndexArray &stencil_offset_min,
+                           const IndexArray &stencil_offset_max,                           
                            int attr);
   virtual void GridCopyoutLocal(GridMPI *g, void *buf);
   virtual void GridCopyinLocal(GridMPI *g, const void *buf);

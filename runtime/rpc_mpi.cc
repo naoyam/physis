@@ -143,9 +143,9 @@ GridMPI *Master::GridNew(PSType type, int elm_size,
                          int attr) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
   NotifyCall(FUNC_NEW);
-  Width2 dummy; // Unused in this class (used in Master2)
+  IndexArray dummy; // Unused in this class (used in Master2)
   RequestNEW req = {type, elm_size, num_dims, size,
-                    double_buffering, global_offset, dummy, attr};
+                    double_buffering, global_offset, dummy, dummy, attr};
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
   GridMPI *g = gs_->CreateGrid(type, elm_size, num_dims, size,
                                double_buffering, global_offset,

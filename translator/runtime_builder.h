@@ -99,14 +99,14 @@ class RuntimeBuilder {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
   }
 
-  virtual SgExprListExp *BuildStencilWidthFW(const StencilRange &sr);
-  virtual SgExprListExp *BuildStencilWidthBW(const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilOffsetMax(const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilOffsetMin(const StencilRange &sr);
       
  protected:
   SgScopeStatement *gs_;
   
-  virtual SgExprListExp *BuildStencilWidth(const StencilRange &sr,
-                                           bool is_forward);
+  virtual SgExprListExp *BuildStencilOffset(const StencilRange &sr,
+                                            bool is_max);
 };
 
 } // namespace translator

@@ -28,6 +28,7 @@ GridMPI2::GridMPI2(PSType type, int elm_size, int num_dims,
                    int attr):
     GridMPI(type, elm_size, num_dims, size, false, global_offset,
             local_offset, local_size, attr) {
+
   local_real_size_ = local_size_;
   local_real_offset_ = local_offset_;
   for (int i = 0; i < num_dims_; ++i) {
@@ -138,7 +139,8 @@ GridSpaceMPI2::~GridSpaceMPI2() {
 GridMPI2 *GridSpaceMPI2::CreateGrid(PSType type, int elm_size, int num_dims,
                                     const IndexArray &size, 
                                     const IndexArray &global_offset,
-                                    const Width2 &stencil_width,
+                                    const IndexArray &stencil_offset_min,
+                                    const IndexArray &stencil_offset_max,
                                     int attr) {
   IndexArray grid_size = size;
   IndexArray grid_global_offset = global_offset;
@@ -155,12 +157,17 @@ GridMPI2 *GridSpaceMPI2::CreateGrid(PSType type, int elm_size, int num_dims,
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
   
-  Width2 halo = stencil_width;
+  Width2 halo;
+  halo.fw = stencil_offset_max;
+  halo.bw = stencil_offset_min;
+  halo.bw *= -1;
   for (int i = 0; i < num_dims_; ++i) {
     if (local_size[i] == 0 || proc_size()[i] == 1) {
       halo.bw[i] = 0;
       halo.fw[i] = 0;
     }
+    if (halo.bw[i] < 0) halo.bw[i] = 0;
+    if (halo.fw[i] < 0) halo.fw[i] = 0;    
   }
   
   GridMPI2 *g = GridMPI2::Create(

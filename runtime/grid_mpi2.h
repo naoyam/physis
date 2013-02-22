@@ -81,7 +81,8 @@ class GridSpaceMPI2: public GridSpaceMPI {
   virtual GridMPI2 *CreateGrid(PSType type, int elm_size, int num_dims,
                                const IndexArray &size, 
                                const IndexArray &global_offset,
-                               const Width2 &stencil_width,
+                               const IndexArray &stencil_offset_min,
+                               const IndexArray &stencil_offset_max,
                                int attr);
 };
 

@@ -55,8 +55,8 @@ extern "C" {
                                       int double_buffering,
                                       int attr,
                                       const PSVectorInt global_offset,
-                                      const PSVectorInt stencil_width_fw,
-                                      const PSVectorInt stencil_width_bw);
+                                      const PSVectorInt stencil_offset_min,
+                                      const PSVectorInt stencil_offset_max);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

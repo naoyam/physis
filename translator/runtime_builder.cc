@@ -75,8 +75,8 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
   return fc;
 }
 
-SgExprListExp *RuntimeBuilder::BuildStencilWidth(const StencilRange &sr,
-                                                 bool is_forward) {
+SgExprListExp *RuntimeBuilder::BuildStencilOffset(const StencilRange &sr,
+                                                  bool is_max) {
   SgExprListExp *exp_list = sb::buildExprListExp();
   IntVector offset_min, offset_max;
   int nd = sr.num_dims();
@@ -91,19 +91,18 @@ SgExprListExp *RuntimeBuilder::BuildStencilWidth(const StencilRange &sr,
     return NULL;
   }
   for (int i = 0; i < (int)offset_min.size(); ++i) {
-    PSIndex v = is_forward ? offset_max[i] : -offset_min[i];
-    if (v < 0) v = 0;
+    PSIndex v = is_max ? offset_max[i] : offset_min[i];
     si::appendExpression(exp_list, sb::buildIntVal(v));
   }
   return exp_list;
 }
 
-SgExprListExp *RuntimeBuilder::BuildStencilWidthFW(const StencilRange &sr) {
-  return BuildStencilWidth(sr, true);
+SgExprListExp *RuntimeBuilder::BuildStencilOffsetMax(const StencilRange &sr) {
+  return BuildStencilOffset(sr, true);
 }
 
-SgExprListExp *RuntimeBuilder::BuildStencilWidthBW(const StencilRange &sr) {
-  return BuildStencilWidth(sr, false);
+SgExprListExp *RuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
+  return BuildStencilOffset(sr, false);
 }
 
 

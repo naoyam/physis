@@ -50,7 +50,8 @@ struct RequestNEW {
   IndexArray size;
   bool double_buffering;
   IndexArray global_offset;
-  Width2 stencil_width;
+  IndexArray stencil_offset_min;
+  IndexArray stencil_offset_max;
   int attr;
 };
 

@@ -26,25 +26,25 @@ void MPITranslator2::appendNewArgExtra(SgExprListExp *args,
   
   const StencilRange &sr = g->stencil_range();
   
-  SgExprListExp *stencil_fw_val =
-      mpi_rt_builder_->BuildStencilWidthFW(sr);
-  assert(stencil_fw_val);
-  SgVariableDeclaration *stencil_fw_var
+  SgExprListExp *stencil_min_val =
+      mpi_rt_builder_->BuildStencilOffsetMin(sr);
+  assert(stencil_min_val);
+  SgVariableDeclaration *stencil_min_var
       = sb::buildVariableDeclaration(
-          "stencil_width_fw", ivec_type_,
-          sb::buildAggregateInitializer(stencil_fw_val, ivec_type_));
-  si::insertStatementAfter(dim_decl, stencil_fw_var);
-  si::appendExpression(args, sb::buildVarRefExp(stencil_fw_var));
+          "stencil_offset_min", ivec_type_,
+          sb::buildAggregateInitializer(stencil_min_val, ivec_type_));
+  si::insertStatementAfter(dim_decl, stencil_min_var);
+  si::appendExpression(args, sb::buildVarRefExp(stencil_min_var));
 
-  SgExprListExp *stencil_bw_val =
-      mpi_rt_builder_->BuildStencilWidthBW(sr);
-  assert(stencil_bw_val);
-  SgVariableDeclaration *stencil_bw_var
+  SgExprListExp *stencil_max_val =
+      mpi_rt_builder_->BuildStencilOffsetMax(sr);
+  assert(stencil_max_val);
+  SgVariableDeclaration *stencil_max_var
       = sb::buildVariableDeclaration(
-          "stencil_width_bw", ivec_type_,
-          sb::buildAggregateInitializer(stencil_bw_val, ivec_type_));
-  si::insertStatementAfter(dim_decl, stencil_bw_var);
-  si::appendExpression(args, sb::buildVarRefExp(stencil_bw_var));
+          "stencil_offset_max", ivec_type_,
+          sb::buildAggregateInitializer(stencil_max_val, ivec_type_));
+  si::insertStatementAfter(dim_decl, stencil_max_var);
+  si::appendExpression(args, sb::buildVarRefExp(stencil_max_var));
   
   return;
 }

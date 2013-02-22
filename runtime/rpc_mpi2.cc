@@ -15,17 +15,19 @@ namespace runtime {
 GridMPI *Master2::GridNew(PSType type, int elm_size,
                           int num_dims, const IndexArray &size,
                           const IndexArray &global_offset,
-                          const Width2 &stencil_width,
+                          const IndexArray &stencil_offset_min,
+                          const IndexArray &stencil_offset_max,                          
                           int attr) {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
   NotifyCall(FUNC_NEW);
   RequestNEW req = {type, elm_size, num_dims, size,
                     false, global_offset,
-                    stencil_width, attr};
+                    stencil_offset_min, stencil_offset_max,
+                    attr};
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
   GridMPI *g = ((GridSpaceMPI2*)gs_)->CreateGrid
       (type, elm_size, num_dims, size,
-       global_offset, stencil_width, attr);
+       global_offset, stencil_offset_min, stencil_offset_max, attr);
   return g;
 }
 
@@ -33,9 +35,11 @@ void Client2::GridNew() {
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Create\n";
   RequestNEW req;
   MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
-  ((GridSpaceMPI2*)gs_)->CreateGrid(req.type, req.elm_size, req.num_dims, req.size,
-                                    req.global_offset,
-                                    req.stencil_width, req.attr);
+  ((GridSpaceMPI2*)gs_)->CreateGrid(
+      req.type, req.elm_size, req.num_dims, req.size,
+      req.global_offset,
+      req.stencil_offset_min, req.stencil_offset_max,
+      req.attr);
   LOG_DEBUG() << "[" << pinfo_.rank() << "] Create done\n";
   return;
 }

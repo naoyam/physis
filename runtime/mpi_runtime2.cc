@@ -168,8 +168,8 @@ extern "C" {
                                int double_buffering,
                                int attr,
                                const PSVectorInt global_offset,
-                               const PSVectorInt stencil_width_fw,
-                               const PSVectorInt stencil_width_bw) {
+                               const PSVectorInt stencil_offset_min,
+                               const PSVectorInt stencil_offset_max) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
@@ -181,12 +181,10 @@ extern "C" {
                   << gs->global_size() << "\n";
       return NULL;
     }
-    Width2 stencil_width;
-    stencil_width.fw = stencil_width_fw;
-    stencil_width.bw = stencil_width_fw;
     return ((Master2*)master)->GridNew(
         type, elm_size, dim, gsize,
-        IndexArray(), stencil_width, attr);
+        IndexArray(), stencil_offset_min, stencil_offset_max,
+        attr);
   }
 
   void __PSGridSwap(void *p) {
@@ -266,6 +264,19 @@ extern "C" {
     return __PSGridGetAddr<double>(g, x, y, z);
   }
 
+  // TODO
+  void __PSLoadNeighbor(__PSGridMPI *g,
+                        const PSVectorInt offset_min,
+                        const PSVectorInt offset_max,
+                        int diagonal, int reuse, int overlap,
+                        int periodic) {
+    if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
+    GridMPI *gm = (GridMPI*)g;
+    gs->LoadNeighbor(gm, IndexArray(offset_min), IndexArray(offset_max),
+                     (bool)diagonal, reuse, periodic);
+    return;
+  }
+
 #if 0
   float __PSGridGetFloat(__PSGridMPI *g, ...) {
     va_list args;
@@ -300,17 +311,6 @@ extern "C" {
     __PS_stencils[id] = (__PSStencilRunClientFunction)fptr;
   }
   
-  void __PSLoadNeighbor(__PSGridMPI *g,
-                        const PSVectorInt offset_min,
-                        const PSVectorInt offset_max,
-                        int diagonal, int reuse, int overlap,
-                        int periodic) {
-    if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
-    GridMPI *gm = (GridMPI*)g;
-    gs->LoadNeighbor(gm, IndexArray(offset_min), IndexArray(offset_max),
-                     (bool)diagonal, reuse, periodic);
-    return;
-  }
 
   void __PSLoadSubgrid2D(__PSGridMPI *g, 
                          int min_dim1, PSIndex min_offset1,
