@@ -49,19 +49,21 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
                    const IndexArray &subgrid_size);
 
 
-inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                const IndexArray &size) {
-  return x + y * size[0] + z * size[0] * size[1];
+
+inline intptr_t GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                 PSIndex xsize, PSIndex ysize) {
+  return ((intptr_t)x) + ((intptr_t)y) * ((intptr_t)xsize)
+      + ((intptr_t)z) * ((intptr_t)xsize) * ((intptr_t)ysize);
+}
+
+inline intptr_t GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                 const IndexArray &size) {
+  return GridCalcOffset3D(x, y, z, size[0], size[1]);
 }  
 
-inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                PSIndex xsize, PSIndex ysize) {
-  return x + y * xsize + z * xsize * ysize;
-}  
-
-inline PSIndex GridCalcOffset3D(const IndexArray &index,
-                                const IndexArray &size) {
-  return index[0] + index[1] * size[0] + index[2] * size[0] * size[1];
+inline intptr_t GridCalcOffset3D(const IndexArray &index,
+                                 const IndexArray &size) {
+  return GridCalcOffset3D(index[0], index[1], index[2], size[0], size[1]);  
 }
 
 } // namespace runtime

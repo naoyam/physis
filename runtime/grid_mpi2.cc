@@ -62,7 +62,7 @@ GridMPI2 *GridMPI2::Create(
       local_size,
       halo,
       attr);
-  g->InitBuffer();
+  g->InitBuffers();
   return g;
 }
 
@@ -78,17 +78,54 @@ std::ostream &GridMPI2::Print(std::ostream &os) const {
   return os;
 }
 
-void GridMPI2::InitBuffer() {
+void GridMPI2::InitBuffers() {
   data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
   data_buffer_[0]->Allocate(local_real_size_);
   data_buffer_[1] = NULL;
   data_[0] = (char*)data_buffer_[0]->Get();
+  LOG_DEBUG() << "buffer addr: " << (void*)(data_[0]) << "\n";
   data_[1] = NULL;
+  InitHaloBuffers();
+}
+
+void GridMPI2::InitHaloBuffers() {
+  // Note that the halo for the last dimension is continuously located
+  // in memory, so no separate buffer is necessary.
+  for (int i = 0; i < num_dims_ - 1; ++i) {
+    halo_self_fw_[i] = halo_self_bw_[i] = NULL;
+    halo_peer_fw_[i] = halo_peer_bw_[i] = NULL;
+    if (halo_.fw[i]) {
+      halo_self_fw_[i] =
+          (char*)malloc(CalcHaloSize(i, halo_.fw[i]) * elm_size_);
+      assert(halo_self_fw_[i]);
+      halo_peer_fw_[i] =
+          (char*)malloc(CalcHaloSize(i, halo_.fw[i]) * elm_size_);
+      assert(halo_peer_fw_[i]);      
+    } 
+    if (halo_.bw[i]) {
+      halo_self_bw_[i] =
+          (char*)malloc(CalcHaloSize(i, halo_.bw[i]) * elm_size_);
+      assert(halo_self_bw_[i]);
+      halo_peer_bw_[i] =
+          (char*)malloc(CalcHaloSize(i, halo_.bw[i]) * elm_size_);
+      assert(halo_peer_bw_[i]);      
+    } 
+  }
+  
 }
 
 void GridMPI2::DeleteBuffers() {
   if (empty_) return;
   Grid::DeleteBuffers();
+}
+
+void GridMPI2::DeleteHaloBuffers() {
+  for (int i = 0; i < num_dims_ - 1; ++i) {
+    PS_XFREE(halo_self_fw_[i]);
+    PS_XFREE(halo_self_bw_[i]);
+    PS_XFREE(halo_peer_fw_[i]);
+    PS_XFREE(halo_peer_bw_[i]);
+  }
 }
 
 void *GridMPI2::GetAddress(const IndexArray &indices_param) {
@@ -100,8 +137,6 @@ void *GridMPI2::GetAddress(const IndexArray &indices_param) {
 }
 
 void GridMPI2::Copyout(void *dst) const {
-  // REFACTORING: Implement offset access in the buffer classes and
-  // use it instead.
   const void *src = buffer()->Get();
   if (HasHalo()) {
     IndexArray offset(halo().bw);
@@ -156,19 +191,25 @@ GridMPI2 *GridSpaceMPI2::CreateGrid(PSType type, int elm_size, int num_dims,
                 local_offset, local_size);
 
   LOG_DEBUG() << "local_size: " << local_size << "\n";
-  
-  Width2 halo;
-  halo.fw = stencil_offset_max;
-  halo.bw = stencil_offset_min;
-  halo.bw *= -1;
+  LOG_DEBUG() << "stencil_offset_min: "
+              << stencil_offset_min << "\n";
+  LOG_DEBUG() << "stencil_offset_max: "
+              << stencil_offset_max << "\n";
+
+  IndexArray halo_fw = stencil_offset_max;
+  IndexArray halo_bw = stencil_offset_min;  
+  halo_bw = halo_bw * -1;
   for (int i = 0; i < num_dims_; ++i) {
     if (local_size[i] == 0 || proc_size()[i] == 1) {
-      halo.bw[i] = 0;
-      halo.fw[i] = 0;
+      halo_bw[i] = 0;
+      halo_fw[i] = 0;
     }
-    if (halo.bw[i] < 0) halo.bw[i] = 0;
-    if (halo.fw[i] < 0) halo.fw[i] = 0;    
+    if (halo_bw[i] < 0) halo_bw[i] = 0;
+    if (halo_fw[i] < 0) halo_fw[i] = 0;    
   }
+  Width2 halo = {halo_bw, halo_fw};
+  LOG_DEBUG() << "halo.fw: " << halo.fw << "\n";
+  LOG_DEBUG() << "halo.bw: " << halo.bw << "\n";  
   
   GridMPI2 *g = GridMPI2::Create(
       type, elm_size, num_dims, grid_size,
@@ -177,11 +218,233 @@ GridMPI2 *GridSpaceMPI2::CreateGrid(PSType type, int elm_size, int num_dims,
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   return g;
+}
+
+size_t GridMPI2::CalcHaloSize(int dim, unsigned width) {
+  IndexArray halo_size = local_real_size_;
+  halo_size[dim] = width;
+  return halo_size.accumulate(num_dims_);
+}
+
+// REFACTORING: halo_fw|bw-size_ are Used?
+void GridMPI2::SetHaloSize(int dim, bool fw, unsigned width, bool diagonal) {
+  PSAbort(1);
+  IndexArray s = local_real_size_;
+  s[dim] = width;  
+  if (fw) {
+    halo_fw_size_[dim] = s;
+  } else {
+    halo_bw_size_[dim] = s;    
+  }
+  return;
+}
+
+char *GridMPI2::GetHaloPeerBuf(int dim, bool fw, unsigned width) {
+  if (dim == num_dims_ - 1) {
+    IndexArray offset(0);
+    if (fw) {
+      offset[dim] = local_real_size_[dim] - halo_.fw[dim];
+    } else {
+      offset[dim] = halo_.fw[dim] - width;
+    }
+    return _data() + GridCalcOffset3D(offset, local_real_size_) * elm_size_;
+  } else {
+    if (fw) return halo_peer_fw_[dim];
+    else  return halo_peer_bw_[dim];
+  }
   
+}
+
+// Note: width is unsigned. 
+void GridSpaceMPI2::ExchangeBoundariesAsync(
+    GridMPI *grid, int dim, unsigned halo_fw_width, unsigned halo_bw_width,
+    bool diagonal, bool periodic,
+    std::vector<MPI_Request> &requests) const {
+  
+  if (grid->empty()) return;
+
+  GridMPI2 *g2 = static_cast<GridMPI2*>(grid);
+  int fw_peer = fw_neighbors_[dim];
+  int bw_peer = bw_neighbors_[dim];
+  int tag = 0;
+  size_t fw_size = g2->CalcHaloSize(dim, halo_fw_width)
+      * grid->elm_size_;
+  size_t bw_size = g2->CalcHaloSize(dim, halo_bw_width)
+      * grid->elm_size_;
+
+  LOG_DEBUG() << "Periodic?: " << periodic << "\n";
+
+  /*
+    Send and receive ordering must match. First get the halo for the
+    forward access, and then the halo for the backward access.
+   */
+  
+  if (halo_fw_width > 0 &&
+      (periodic ||
+       grid->local_offset()[dim] + grid->local_size()[dim]
+       < grid->size_[dim])) {
+    LOG_DEBUG() << "[" << my_rank_ << "] "
+                << "Receiving halo of " << fw_size
+                << " bytes for fw access from " << fw_peer << "\n";
+    //grid->halo_fw_width()[dim] = halo_fw_width;
+    //grid->SetHaloSize(dim, true, halo_fw_width, diagonal);
+    MPI_Request req;
+    CHECK_MPI(MPI_Irecv(
+        g2->GetHaloPeerBuf(dim, true, halo_fw_width),
+        fw_size, MPI_BYTE, fw_peer, tag, comm_, &req));
+    requests.push_back(req);
+  }
+
+  if (halo_bw_width > 0 &&
+      (periodic || grid->local_offset()[dim] > 0)) {
+    LOG_DEBUG() << "[" << my_rank_ << "] "
+                << "Receiving halo of " << bw_size
+                << " bytes for bw access from " << bw_peer << "\n";
+    // REFACTORING: Necessary?
+    //grid->halo_bw_width()[dim] = halo_bw_width;
+    // REFACTORING: Necessary?    
+    //grid->SetHaloSize(dim, false, halo_bw_width, diagonal);
+    MPI_Request req;
+    CHECK_MPI(MPI_Irecv(
+        g2->GetHaloPeerBuf(dim, false, halo_bw_width),
+        bw_size, MPI_BYTE, bw_peer, tag, comm_, &req));
+    requests.push_back(req);
+  }
+
+  // Sends out the halo for forward access
+  if (halo_fw_width > 0 &&
+      (periodic || grid->local_offset()[dim] > 0)) {
+    LOG_DEBUG() << "[" << my_rank_ << "] "
+                << "Sending halo of " << fw_size << " bytes"
+                << " for fw access to " << bw_peer << "\n";
+    LOG_DEBUG() << "grid: " << grid << "\n";
+    grid->CopyoutHalo(dim, halo_fw_width, true, diagonal);
+    LOG_DEBUG() << "grid2: " << (void*)(grid->_data()) << "\n";
+    LOG_DEBUG() << "dim: " << dim << "\n";        
+    MPI_Request req;
+    LOG_DEBUG() << "send buf: " <<
+        (void*)(grid->_halo_self_fw()[dim])
+                << "\n";        
+    CHECK_MPI(PS_MPI_Isend(grid->_halo_self_fw()[dim], fw_size, MPI_BYTE,
+                           bw_peer, tag, comm_, &req));
+  }
+
+   // Sends out the halo for backward access
+  if (halo_bw_width > 0 &&
+      (periodic || 
+       grid->local_offset()[dim] + grid->local_size()[dim]
+       < grid->size_[dim])) {
+    LOG_DEBUG() << "[" << my_rank_ << "] "
+                << "Sending halo of " << bw_size << " bytes"
+                << " for bw access to " << fw_peer << "\n";
+    grid->CopyoutHalo(dim, halo_bw_width, false, diagonal);
+    MPI_Request req;
+    CHECK_MPI(PS_MPI_Isend(grid->_halo_self_bw()[dim], bw_size, MPI_BYTE,
+                           fw_peer, tag, comm_, &req));
+  }
+
+  return;
+}
+
+void GridSpaceMPI2::ExchangeBoundaries(GridMPI *grid,
+                                       int dim,
+                                       unsigned halo_fw_width,
+                                       unsigned halo_bw_width,
+                                       bool diagonal,
+                                       bool periodic) const {
+  std::vector<MPI_Request> requests;
+  ExchangeBoundariesAsync(grid, dim, halo_fw_width,
+                          halo_bw_width, diagonal,
+                          periodic, requests);
+  GridMPI2 *g2 = static_cast<GridMPI2*>(grid);
+  FOREACH (it, requests.begin(), requests.end()) {
+    MPI_Request *req = &(*it);
+    CHECK_MPI(MPI_Wait(req, MPI_STATUS_IGNORE));
+    g2->CopyinHalo(dim, halo_bw_width, false, diagonal);
+    g2->CopyinHalo(dim, halo_fw_width, true, diagonal);
+  }
+  
+  return;
+}
+
+GridMPI *GridSpaceMPI2::LoadNeighbor(GridMPI *g,
+                                     const IndexArray &offset_min,
+                                     const IndexArray &offset_max,
+                                     bool diagonal,
+                                     bool reuse,
+                                     bool periodic) {
+  UnsignedArray halo_fw_width, halo_bw_width;
+  for (int i = 0; i < PS_MAX_DIM; ++i) {
+    halo_bw_width[i] = (offset_min[i] <= 0) ? (unsigned)(abs(offset_min[i])) : 0;
+    halo_fw_width[i] = (offset_max[i] >= 0) ? (unsigned)(offset_max[i]) : 0;
+  }
+  GridSpaceMPI::ExchangeBoundaries(g->id(), halo_fw_width,
+                                   halo_bw_width, diagonal, periodic, reuse);
   return NULL;
 }
 
+// fw: copy in halo buffer received for forward access if true
+void GridMPI2::CopyinHalo(int dim, unsigned width, bool fw, bool diagonal) {
+  // The slowest changing dimension does not need actual copying
+  // because it's directly copied into the grid buffer.
+  if (dim == num_dims_ - 1) {
+    return;
+  }
+  
+  IndexArray halo_offset(0);
+  if (fw) {
+    halo_offset[dim] = local_real_size_[dim] - halo_.fw[dim];
+  } else {
+    halo_offset[dim] = halo_.bw[dim] - width;
+  }
+  
+  char *halo_buf = fw ? halo_peer_fw_[dim] : halo_peer_bw_[dim];
 
+  IndexArray halo_size = local_real_size_;
+  halo_size[dim] = width;
+  
+  CopyinSubgrid(elm_size_, num_dims_, data_[0], local_real_size_,
+                halo_buf, halo_offset, halo_size);
+}
+
+// fw: prepare buffer for sending halo for forward access if true
+void GridMPI2::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal) {
+#if 0
+  LOG_DEBUG() << "FW?: " << fw << ", width: " << width
+              << ", local size: " << local_size_
+              << ", halo fw: " << halo_.fw
+              << ", halo bw: " << halo_.bw << "\n";
+#endif
+
+  IndexArray halo_offset(0);
+  if (fw) {
+    halo_offset[dim] = halo_.bw[dim];
+  } else {
+    halo_offset[dim] = local_real_size_[dim] - halo_.fw[dim] - width;
+  }
+
+  LOG_DEBUG() << "halo offset: "
+              << halo_offset << "\n";
+  
+  char **halo_buf = fw ? &(halo_self_fw_[dim]) : &(halo_self_bw_[dim]);
+
+  // The slowest changing dimension does not need actual copying
+  // because its halo region is physically continuous.
+  if (dim == (num_dims_ - 1)) {
+    char *p = data_[0]
+        + GridCalcOffset3D(halo_offset, local_real_size_) * elm_size_;
+    LOG_DEBUG() << "halo_offset: " << halo_offset << "\n";
+    *halo_buf = p;
+    LOG_DEBUG() << "p: " << (void*)p << "\n";
+    return;
+  } else {
+    IndexArray halo_size = local_real_size_;
+    halo_size[dim] = width;
+    CopyoutSubgrid(elm_size_, num_dims_, data_[0], local_real_size_,
+                   *halo_buf, halo_offset, halo_size);
+    return;
+  }
+}
 
 } // namespace runtime
 } // namespace physis

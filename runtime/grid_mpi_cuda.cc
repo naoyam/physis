@@ -51,7 +51,7 @@ GridMPICUDA3D *GridMPICUDA3D::Create(
                                          double_buffering, global_offset,
                                          local_offset, local_size,
                                          attr);
-  gmc->InitBuffer();
+  gmc->InitBuffers();
   return gmc;
 }
 
@@ -96,7 +96,7 @@ void GridMPICUDA3D::DeleteBuffers() {
 }
 
 
-void GridMPICUDA3D::InitBuffer() {
+void GridMPICUDA3D::InitBuffers() {
   LOG_DEBUG() << "Initializing grid buffer\n";
 
   if (empty_) return;
@@ -372,7 +372,7 @@ void GridMPICUDA3D::Save() {
 void GridMPICUDA3D::Restore() {
   LOG_DEBUG() << "Restoring grid\n";
   LOG_DEBUG() << "Initializing buffer\n";
-  InitBuffer();
+  InitBuffers();
   LOG_DEBUG() << "Buffer initialized\n";
   // Read from a file
   BufferCUDADev3D *buf = static_cast<BufferCUDADev3D*>(
@@ -815,7 +815,7 @@ GridMPI *GridSpaceMPICUDA::LoadNeighborStage1(
   IndexArray halo_fw_width(offset_max);
   halo_fw_width.SetNoLessThan(0);  
   IndexArray halo_bw_width(offset_min);
-  halo_bw_width *= -1;
+  halo_bw_width = halo_bw_width * -1;
   halo_bw_width.SetNoLessThan(0);
   
   //for (int i = g->num_dims_ - 1; i >= 0; --i) {
@@ -842,7 +842,7 @@ GridMPI *GridSpaceMPICUDA::LoadNeighborStage2(
   IndexArray halo_fw_width(offset_max);
   halo_fw_width.SetNoLessThan(0);  
   IndexArray halo_bw_width(offset_min);
-  halo_bw_width *= -1;
+  halo_bw_width = halo_bw_width * -1;
   halo_bw_width.SetNoLessThan(0);
 
   // Does not perform staging for the continuous dimension. 

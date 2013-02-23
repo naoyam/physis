@@ -146,7 +146,7 @@ void Client2::GridCopyin(int id) {
   dst_buf->MPIRecv(0, comm_, IndexArray(), g->local_size());
   if (g->HasHalo()) {
     g->Copyin(dst_buf->Get());
-    free(dst_buf);
+    delete dst_buf;
   }
   return;
 }

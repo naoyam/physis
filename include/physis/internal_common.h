@@ -18,6 +18,12 @@
 #include "physis/physis_common.h"
 #include "physis/physis_util.h"
 
+#define PS_XFREE(p) do {                        \
+    if (p) {                                    \
+      free(p);                                  \
+      p = NULL;                                 \
+    } } while (0)
+
 namespace physis {
 
 template <typename ty>
@@ -122,6 +128,20 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
     IntegerArray ret;
     for (int i = 0; i < PS_MAX_DIM; ++i) {
       ret[i] = (*this)[i] - x;
+    }
+    return ret;
+  }
+  IntegerArray<ty> operator*(const ty &x) const {
+    IntegerArray ret;
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      ret[i] = (*this)[i] * x;
+    }
+    return ret;
+  }
+  IntegerArray<ty> operator/(const ty &x) const {
+    IntegerArray ret;
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      ret[i] = (*this)[i] / x;
     }
     return ret;
   }

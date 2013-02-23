@@ -264,7 +264,6 @@ extern "C" {
     return __PSGridGetAddr<double>(g, x, y, z);
   }
 
-  // TODO
   void __PSLoadNeighbor(__PSGridMPI *g,
                         const PSVectorInt offset_min,
                         const PSVectorInt offset_max,

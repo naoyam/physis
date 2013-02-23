@@ -49,9 +49,22 @@ class GridMPI2: public GridMPI {
   const Width2 &halo() const { return halo_; }
   bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
   
-  // Buffer management
-  virtual void InitBuffer();
+  // Allocates buffers
+  virtual void InitBuffers();
+  //! Allocates buffers for halo communications
+  virtual void InitHaloBuffers();
+  //! Deletes buffers
   virtual void DeleteBuffers();
+  //! Deletes halo buffers
+  virtual void DeleteHaloBuffers();
+  // Returns buffer for remote halo
+  /*
+    \param dim Access dimension.
+    \param fw Flag to indicate access direction.
+    \param width Halo width.
+    \return Buffer pointer.
+  */
+  char *GetHaloPeerBuf(int dim, bool fw, unsigned width);
 
   virtual void *GetAddress(const IndexArray &indices_param);
 
@@ -65,11 +78,16 @@ class GridMPI2: public GridMPI {
   virtual void Copyout(void *dst) const;
   virtual void Copyin(const void *src);
   
+  virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
+  virtual void CopyinHalo(int dim, unsigned width, bool fw, bool diagonal);
+  
  protected:
   IndexArray local_real_offset_;  
   IndexArray local_real_size_;  
   Width2 halo_;
 
+  size_t CalcHaloSize(int dim, unsigned width);
+  void SetHaloSize(int dim, bool fw, unsigned width, bool diagonal);
 };
 
 class GridSpaceMPI2: public GridSpaceMPI {
@@ -84,6 +102,26 @@ class GridSpaceMPI2: public GridSpaceMPI {
                                const IndexArray &stencil_offset_min,
                                const IndexArray &stencil_offset_max,
                                int attr);
+  virtual GridMPI *LoadNeighbor(GridMPI *g,
+                                const IndexArray &offset_min,
+                                const IndexArray &offset_max,
+                                bool diagonal,
+                                bool reuse,
+                                bool periodic);
+
+ protected:
+  void ExchangeBoundariesAsync(
+      GridMPI *grid, int dim,
+      unsigned halo_fw_width, unsigned halo_bw_width,
+      bool diagonal, bool periodic,
+      std::vector<MPI_Request> &requests) const;
+  void ExchangeBoundaries(GridMPI *grid,
+                          int dim,
+                          unsigned halo_fw_width,
+                          unsigned halo_bw_width,
+                          bool diagonal,
+                          bool periodic) const;
+  
 };
 
 

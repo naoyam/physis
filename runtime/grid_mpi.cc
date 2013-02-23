@@ -91,11 +91,11 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
   GridMPI *gm = new GridMPI(type, elm_size, num_dims, size,
                             double_buffering, global_offset,
                             local_offset, local_size, attr);
-  gm->InitBuffer();
+  gm->InitBuffers();
   return gm;
 }
 
-void GridMPI::InitBuffer() {
+void GridMPI::InitBuffers() {
   data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
   data_buffer_[0]->Allocate(local_size_);
   if (double_buffering_) {

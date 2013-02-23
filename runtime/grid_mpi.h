@@ -39,6 +39,13 @@ class GridMPI: public Grid {
                          int attr);
   virtual ~GridMPI();
 
+  //! Gets the buffer pointer for halo from remote.
+  /*
+   * \param dim The halo dimension.
+   * \param width The halo width.
+   * \param fw Flag to indicate whether it is a forward access.
+   * \return diagonal Flag to indicate diagonal points are accessed.
+   */
   char *GetHaloBuf(int dim, unsigned width, bool fw, bool diagonal);
   virtual void CopyoutHalo2D0(unsigned width, bool fw);
   virtual void CopyoutHalo3D0(unsigned width, bool fw);
@@ -53,7 +60,9 @@ class GridMPI: public Grid {
   const IndexArray& local_offset() const { return local_offset_; }
   bool halo_has_diagonal() const { return halo_has_diagonal_; }
   const UnsignedArray& halo_fw_width() const { return halo_fw_width_; }
+  UnsignedArray& halo_fw_width() { return halo_fw_width_; }
   const UnsignedArray& halo_bw_width() const { return halo_bw_width_; }
+  UnsignedArray& halo_bw_width() { return halo_bw_width_; }  
   const UnsignedArray& halo_fw_max_width() const { return halo_fw_max_width_; }
   const UnsignedArray& halo_bw_max_width() const { return halo_bw_max_width_; }
   char **_halo_self_fw() { return halo_self_fw_; }
@@ -119,7 +128,7 @@ class GridMPI: public Grid {
   // read-only, LoadSubgrid decides to use the remote grid, and this
   // variale is set true again. 
   bool remote_grid_active_;
-  virtual void InitBuffer();
+  virtual void InitBuffers();
   virtual void DeleteBuffers();
   virtual void FixupBufferPointers();
 };

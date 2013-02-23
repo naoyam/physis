@@ -106,7 +106,11 @@ extern "C" {
            sizeof(__PSStencilRunClientFunction) * num_stencil_run_calls);
     if (rank != 0) {
       LOG_DEBUG() << "I'm a client.\n";
+#ifdef MPI_RUNTIME_2
+      client = new Client2(*pinfo, gs, MPI_COMM_WORLD);
+#else      
       client = new Client(*pinfo, gs, MPI_COMM_WORLD);
+#endif
       client->Listen();
       master = NULL;
     } else {
