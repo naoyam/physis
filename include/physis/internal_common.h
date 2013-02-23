@@ -35,16 +35,16 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
   IntegerArray() {
     this->assign(0);
   }
-  IntegerArray(ty x) {
+  explicit IntegerArray(ty x) {
     this->assign(0);
     (*this)[0] = x;
   }
-  IntegerArray(ty x, ty y) {
+  explicit IntegerArray(ty x, ty y) {
     this->assign(0);
     (*this)[0] = x;
     (*this)[1] = y;
   }
-  IntegerArray(ty x, ty y, ty z) {
+  explicit IntegerArray(ty x, ty y, ty z) {
     this->assign(0);    
     (*this)[0] = x;
     (*this)[1] = y;

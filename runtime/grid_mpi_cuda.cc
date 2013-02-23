@@ -193,7 +193,8 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, bool fw,
   // Next, copy out to the halo buffer from CUDA pinned host memory
   halo_mpi_host->EnsureCapacity(CalcHaloSize(dim, width, diagonal));
   if (dim == num_dims_ - 1 || !diagonal) {
-    halo_cuda_host->Copyout(*halo_mpi_host, halo_size.accumulate(num_dims_));
+    halo_cuda_host->Copyout(*halo_mpi_host,
+                            IndexArray(halo_size.accumulate(num_dims_)));
     return;
   }
 
@@ -239,7 +240,7 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, bool fw) {
   // copy halo
   sg_size[2] = local_size_[2];
   // different
-  halo_self_cuda_[1][fw_idx]->Copyout(buf, sg_size.accumulate(nd));
+  halo_self_cuda_[1][fw_idx]->Copyout(buf, IndexArray(sg_size.accumulate(nd)));
   buf += sg_size.accumulate(nd) * elm_size_;
   
   // copy diag
