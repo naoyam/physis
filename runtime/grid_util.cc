@@ -27,12 +27,76 @@ static size_t get1DOffset(const IndexArray &md_offset,
   return offset_1d;
 }
 
+// Copy a continuous sub grid.
+/*
+ * This is a special case of CopySubgrid.
+ *
+ * \param buf Destination buffer.
+ * \param src Source buffer.
+ * \param elm_size Element size in bytes.
+ * \param num_dims Number of dimensions.
+ * \param grid_size Number of elements of each dimension in the grid.
+ * \param subgrid_offset Offset to copy from or into.
+ * \param subgrid_size Size of sub grid.
+ * \param is_copyin Flag to indicate copyin or copyout.
+ */
+static void CopyContinuousSubgrid(
+    void *buf,const void *src,
+    size_t elm_size, int num_dims,
+    const IndexArray &grid_size,
+    const IndexArray &subgrid_offset,
+    const IndexArray &subgrid_size,
+    bool is_copyin) {
+  intptr_t linear_offset =
+      GridCalcOffset3D(subgrid_offset, grid_size) * elm_size;
+  size_t size = 
+      subgrid_size.accumulate(num_dims) * elm_size;
+  if (is_copyin) {
+    memcpy((void*)(((intptr_t)buf) + linear_offset), src, size);
+  } else {
+    memcpy(buf, (void*)(((intptr_t)src) + linear_offset), size);
+  }
+  return;
+}
+
+// Copy a sub grid from or out to a linear buffer.
+/*
+ * This is a special case of CopySubgrid.
+ *
+ * \param buf Destination buffer.
+ * \param src Source buffer.
+ * \param elm_size Element size in bytes.
+ * \param num_dims Number of dimensions.
+ * \param grid_size Number of elements of each dimension in the grid.
+ * \param subgrid_offset Offset to copy from or into.
+ * \param subgrid_size Size of sub grid.
+ * \param is_copyin Flag to indicate copyin or copyout.
+ */
 static void CopySubgrid(void *buf, const void *src,
                         size_t elm_size, int num_dims,
                         const IndexArray &grid_size,
                         const IndexArray &subgrid_offset,
                         const IndexArray &subgrid_size,
                         bool is_copyin) {
+
+  bool continuous = true;
+  for (int i = 0; i < num_dims - 1; ++i) {
+    if (subgrid_offset[i] != 0 ||
+        subgrid_size[i] != grid_size[i]) {
+      continuous = false;
+      break;
+    }
+  }
+
+  if (continuous) {
+    CopyContinuousSubgrid(buf, src, elm_size,
+                          num_dims, grid_size,
+                          subgrid_offset, subgrid_size,
+                          is_copyin);
+    return;
+  }
+  
+  
   // just for sanity checking
   intptr_t subgrid_original = (intptr_t) (is_copyin ? src : buf);
   std::list<IndexArray> *offsets = new std::list<IndexArray>;
