@@ -346,6 +346,43 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
   return;
 }
 
+template <class T>
+int ReduceGridMPI3D(GridMPI2 *g, PSReduceOp op, T *out) {
+  size_t nelms = g->local_size().accumulate(g->num_dims());
+  if (nelms == 0) return 0;
+  boost::function<T (T, T)> func = GetReducer<T>(op);
+  T *d = (T *)g->_data();
+  T v = GetReductionDefaultValue<T>(op);
+  for (int k = 0; k < g->local_size()[2]; ++k) {
+    for (int j = 0; j < g->local_size()[1]; ++j) {
+      for (int i = 0; i < g->local_size()[0]; ++i) {
+        intptr_t offset =
+            GridCalcOffset3D(i + g->halo().bw[0], j + g->halo().bw[1],
+                             k + g->halo().bw[2], g->local_real_size());
+        v = func(v, d[offset]);
+      }
+    }
+  }
+  *out = v;
+  return nelms;
+}
+
+int GridMPI2::Reduce(PSReduceOp op, void *out) {
+  int rv = 0;
+  PSAssert(num_dims_ == 3);
+  switch (type_) {
+    case PS_FLOAT:
+      rv = ReduceGridMPI3D<float>(this, op, (float*)out);
+      break;
+    case PS_DOUBLE:
+      rv = ReduceGridMPI3D<double>(this, op, (double*)out);
+      break;
+    default:
+      PSAbort(1);
+  }
+  return rv;
+}
+
 void GridSpaceMPI2::ExchangeBoundaries(GridMPI *grid,
                                        int dim,
                                        unsigned halo_fw_width,

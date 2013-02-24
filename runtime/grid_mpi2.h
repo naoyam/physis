@@ -69,11 +69,8 @@ class GridMPI2: public GridMPI {
   virtual void *GetAddress(const IndexArray &indices_param);
 
   // Reduction
-  virtual int Reduce(PSReduceOp op, void *out) {
-    LOG_ERROR() << "Not implemented.\n";
-    PSAbort(1);
-    return 0;
-  }
+  virtual int Reduce(PSReduceOp op, void *out);
+
 
   virtual void Copyout(void *dst) const;
   virtual void Copyin(const void *src);

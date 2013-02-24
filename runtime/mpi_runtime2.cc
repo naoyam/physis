@@ -175,6 +175,16 @@ extern "C" {
     return;
   }
 
+  void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
+                           __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);
+  }
+  
+  void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
+                            __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);    
+  }
+
 #if 0
   float __PSGridGetFloat(__PSGridMPI *g, ...) {
     va_list args;
@@ -209,15 +219,6 @@ extern "C" {
     return pinfo->IsRoot();
   }
 
-  void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
-                           __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPI*)g);
-  }
-  
-  void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
-                            __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPI*)g);    
-  }
 #endif  
 
 #ifdef __cplusplus
