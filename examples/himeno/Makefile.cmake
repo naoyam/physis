@@ -33,8 +33,7 @@ himenobmtxpa_physis.cuda.o: himenobmtxpa_physis.cuda.cu
 	nvcc -c $^ $(NVCC_CFLAGS)
 
 himenobmtxpa_physis.cuda.exe: himenobmtxpa_physis.cuda.o
-	nvcc $^ -o $@ $(LDFLAGS) @CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_cuda.a \
-		@CUDA_CUT_LIBRARIES@
+	nvcc $^ -o $@ $(LDFLAGS) @CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_cuda.a
 
 # MPI target
 mpi: himenobmtxpa_physis.mpi.exe
@@ -58,8 +57,9 @@ himenobmtxpa_physis.mpi-cuda.o: himenobmtxpa_physis.mpi-cuda.cu
 	nvcc -c $^ $(NVCC_CFLAGS) $(MPI_INCLUDE) 
 
 himenobmtxpa_physis.mpi-cuda.exe: himenobmtxpa_physis.mpi-cuda.o
-	mpicxx $^ -o $@ $(LDFLAGS) @CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_mpi_cuda.a \
-		@CUDA_CUT_LIBRARIES@ $(NVCC_LDFLAGS)
+	mpicxx $^ -o $@ $(LDFLAGS) \
+	@CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_mpi_cuda.a \
+	 $(NVCC_LDFLAGS)
 
 clean:
 	-rm -f *.exe *.o *~ himenobmtxpa_physis.*.*

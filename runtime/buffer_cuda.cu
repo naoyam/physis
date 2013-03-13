@@ -7,9 +7,9 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "runtime/buffer_cuda.h"
+#include "runtime/runtime_common_cuda.h"
 
 #include <cuda_runtime.h>
-#include <cutil.h>
 
 #define CUDA_MEMCPY_ASYNC_SIZE (64 << 10) // 64KB
 
@@ -232,7 +232,7 @@ void BufferCUDADev::Copyin(const BufferCUDAHost &buf,
                               cudaMemcpyHostToDevice));
     if ((size.accumulate(num_dims_) * elm_size_) <=
         CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_THREAD_SYNC();
+      CUDA_SAFE_CALL(cudaDeviceSynchronize());
     }
   }
 }
@@ -262,7 +262,7 @@ void BufferCUDADev::Copyout(BufferCUDAHost &buf, const IndexArray &offset,
                               cudaMemcpyDeviceToHost));
     if ((size.accumulate(num_dims_) * elm_size_) <=
         CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_THREAD_SYNC();
+      CUDA_SAFE_CALL(cudaDeviceSynchronize());
     }
   }
 }
@@ -379,7 +379,7 @@ void BufferCUDADev3D::Copyin(const BufferCUDAHost &buf,
     CUDA_SAFE_CALL(cudaMemcpy3D(&parms));
     if ((size.accumulate(num_dims_) * elm_size_) <=
         CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_THREAD_SYNC();
+      CUDA_SAFE_CALL(cudaDeviceSynchronize());
     }
   }
 }
@@ -477,7 +477,7 @@ void BufferCUDADev3D::Copyout(BufferCUDAHostMapped &buf,
     CUDA_SAFE_CALL(cudaMemcpy3D(&parms));
     if ((size.accumulate(num_dims_) * elm_size_) <=
         CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_THREAD_SYNC();
+      CUDA_SAFE_CALL(cudaDeviceSynchronize());      
     }
   }
 }
@@ -501,7 +501,7 @@ void BufferCUDADev3D::Copyout(BufferCUDAHost &buf, const IndexArray &offset,
     CUDA_SAFE_CALL(cudaMemcpy3D(&parms));
     if ((size.accumulate(num_dims_) * elm_size_) <=
         CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_THREAD_SYNC();
+      CUDA_SAFE_CALL(cudaDeviceSynchronize());            
     }
   }
 }

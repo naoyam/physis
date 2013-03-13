@@ -12,8 +12,6 @@
 
 #include <stdarg.h>
 #include <cuda_runtime.h>
-#include <cutil.h>
-#include <cutil_inline_runtime.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +19,8 @@ extern "C" {
 
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
     physis::runtime::PSInitCommon(argc, argv);
-    CUT_DEVICE_INIT(*argc, *argv);
-    CUT_CHECK_ERROR("CUDA initialization");
+    CUDA_DEVICE_INIT(0);
+    CUDA_CHECK_ERROR("CUDA initialization");
     if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
       PSAbort(1);
     }

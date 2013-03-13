@@ -12,8 +12,6 @@
 #include "physis/physis_mpi_cuda.h"
 
 #include <cuda_runtime.h>
-#include <cutil.h>
-#include <cutil_inline_runtime.h>
 
 using std::vector;
 using std::map;
@@ -62,7 +60,7 @@ void InitCUDA(int my_rank, int num_local_processes) {
              << ": " << dp.name << "\n";
   CUDA_SAFE_CALL(cudaSetDeviceFlags(cudaDeviceMapHost));
   CUDA_SAFE_CALL(cudaSetDevice(dev_id));
-  CUT_CHECK_ERROR("CUDA initialization");
+  CUDA_CHECK_ERROR("CUDA initialization");
   if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
     PSAbort(1);
   }

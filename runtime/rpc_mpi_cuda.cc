@@ -9,9 +9,10 @@
 #include "runtime/rpc_mpi_cuda.h"
 #include "runtime/mpi_wrapper.h"
 #include "runtime/grid_util.h"
+#include "runtime/runtime_common_cuda.h"
 
 #include <cuda_runtime.h>
-#include <cutil.h>
+
 
 namespace physis {
 namespace runtime {

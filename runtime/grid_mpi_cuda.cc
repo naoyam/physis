@@ -7,12 +7,12 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "runtime/grid_mpi_cuda.h"
+#include "runtime/runtime_common_cuda.h"
 #include "runtime/buffer_cuda.h"
 #include "runtime/grid_util.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <cutil.h>
 
 using namespace physis::runtime::performance;
 using std::make_pair;

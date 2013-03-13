@@ -4,7 +4,6 @@
 #include "common/config.h"
 
 #cmakedefine CUDA_INCLUDE_DIR "@CUDA_INCLUDE_DIR@"
-#cmakedefine CUDA_CUT_INCLUDE_DIR "@CUDA_CUT_INCLUDE_DIR@"
 #cmakedefine MPI_INCLUDE_DIR "@MPI_INCLUDE_DIR@"
 
 #endif /* PHYSIS_COMMON_CONFIG_H_ */

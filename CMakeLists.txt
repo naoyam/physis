@@ -78,32 +78,6 @@ if (CUDA_FOUND AND
   endforeach()
   message(STATUS "CUDART=${CUDA_LIBRT}")
   get_filename_component(CUDA_RT_DIR ${CUDA_LIBRT} PATH)
-  find_path (CUDA_CUT_INCLUDE_DIR cutil.h
-    PATHS ${CUDA_SDK_SEARCH_PATH}
-    PATH_SUFFIXES "common/inc"
-    NO_DEFAULT_PATH
-    )
-  message(STATUS "CUDA_CUT_INCLUDE_DIR=${CUDA_CUT_INCLUDE_DIR}")
-  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(cuda_cutil_name cutil64)
-  else(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(cuda_cutil_name cutil32)
-  endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-  find_library(CUDA_CUT_LIBRARY
-    NAMES cutil cutil_x86_64 ${cuda_cutil_name}
-    PATHS ${CUDA_SDK_SEARCH_PATH}
-    # The new version of the sdk shows up in common/lib, but the old one is in lib
-    PATH_SUFFIXES "common/lib" "lib"
-    DOC "Location of cutil library"
-    NO_DEFAULT_PATH
-    )
-  # Now search system paths
-  find_library(CUDA_CUT_LIBRARY NAMES cutil ${cuda_cutil_name}
-    DOC "Location of cutil library")
-  mark_as_advanced(CUDA_CUT_LIBRARY)
-  set(CUDA_CUT_LIBRARIES ${CUDA_CUT_LIBRARY})
-  message(STATUS "CUDA_CUT_LIBRARIES=${CUDA_CUT_LIBRARIES}")
 else()
   message(WARNING "Compatible CUDA toolkit (4.0 or higher) not found.")
   message(WARNING "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")

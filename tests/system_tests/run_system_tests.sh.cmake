@@ -559,11 +559,11 @@ function compile()
 				return 1
 			fi
 			if is_module_test $src; then
-				nvcc -m64 "$src_file_base".o $mod_base_obj  -lphysis_rt_cuda $LDFLAGS \
-					@CUDA_CUT_LIBRARIES@ -o $exe_name
+				nvcc -m64 "$src_file_base".o $mod_base_obj -lphysis_rt_cuda \
+					$LDFLAGS -o $exe_name
 			else 
 				nvcc -m64 "$src_file_base".o  -lphysis_rt_cuda $LDFLAGS \
-					@CUDA_CUT_LIBRARIES@ -o $exe_name
+					-o $exe_name
 			fi
 			if [ $? -ne 0 ]; then
 				print_error "Linking failed"
@@ -598,7 +598,7 @@ function compile()
 			nvcc -m64 -c $src_file -I@CMAKE_SOURCE_DIR@/include \
 				$NVCC_CFLAGS $MPI_CUDA_CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_cuda $LDFLAGS $CUDA_LDFLAGS \
-				@CUDA_CUT_LIBRARIES@ -o $exe_name
+				-o $exe_name
 			;;
 		opencl)
 			OPENCL_LDFLAGS=-lOpenCL
