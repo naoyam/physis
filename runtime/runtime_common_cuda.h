@@ -14,12 +14,12 @@
 #include <cuda_runtime.h>
 
 #define CUDA_SAFE_CALL(x) do {                                  \
-  cudaError_t e = x;                                            \
-  if (x != cudaSuccess) {                                       \
-    fprintf(stderr, "CUDA ERROR at " __FILE__ "#%d: %s\n",        \
-            __LINE__, cudaGetErrorString(e));                   \
-    exit(EXIT_FAILURE);                                         \
-  }                                                             \
+    cudaError_t e = x;                                          \
+    if (e != cudaSuccess) {                                     \
+      fprintf(stderr, "CUDA ERROR at " __FILE__ "#%d: %s\n",    \
+              __LINE__, cudaGetErrorString(e));                 \
+      exit(EXIT_FAILURE);                                       \
+    }                                                           \
   } while (0)
 
 #define CUDA_CHECK_ERROR(msg) do {                                      \

@@ -17,6 +17,14 @@
 namespace physis {
 namespace runtime {
 
+extern int PS_MPI_Init(int *argc, char ***argv);
+
+extern int PS_MPI_Finalize();
+
+extern int PS_MPI_Comm_rank(MPI_Comm comm, int *rank);
+
+extern int PS_MPI_Comm_size(MPI_Comm comm, int *size);
+
 extern int PS_MPI_Send( void *buf, int count, MPI_Datatype datatype, int dest, 
                         int tag, MPI_Comm comm );
 extern int PS_MPI_Isend(void *buf, int count, MPI_Datatype datatype,
@@ -37,6 +45,12 @@ extern int PS_MPI_Bcast(void *buffer, int count, MPI_Datatype datatype,
 extern int PS_MPI_Reduce(void *sendbuf, void *recvbuf, int count,
                          MPI_Datatype datatype, MPI_Op op,
                          int root, MPI_Comm comm);
+
+extern int PS_MPI_Barrier(MPI_Comm comm);
+
+extern int PS_MPI_Test(MPI_Request *req);
+
+extern int PS_MPI_Wait();
                          
 
 } // namespace runtime

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 # CMAKE_BUILD_TYPE must be set before calling project.
 set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
+  "Choose the type of build, options are: VerboseDebug Debug Release RelWithDebInfo MinSizeRel.")
 message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
 project(physis)
@@ -54,12 +54,22 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
-# Logging configuration
+# Default logging configuration
 set(PS_VERBOSE FALSE)
 set(PS_DEBUG FALSE)
 set(PS_WARNING TRUE)
+# Enable debug logging in the debug mode
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set (PS_DEBUG TRUE)
+endif ()
+# Disable debug logging in the debug mode
+if ((CMAKE_BUILD_TYPE STREQUAL "Release") OR
+    (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+  set (PS_WARNING FALSE)
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "VerboseDebug")
+  set (PS_DEBUG TRUE)
+  set (PS_VERBOSE TRUE)
 endif ()
 
 set(AUTO_DOUBLE_BUFFERING FALSE)
@@ -89,6 +99,10 @@ if (MPI_FOUND)
   set(MPI_ENABLED TRUE)
   set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
   set(MPI_OPENMP_ENABLED TRUE)
+  message(STATUS "MPI found")
+  message(STATUS "MPIEXEC=${MPIEXEC}")
+  message(STATUS "MPI_INCLUDE_PATH=${MPI_INCLUDE_PATH}")
+  message(STATUS "MPI_LIBRARIES=${MPI_LIBRARIES}")
 else()
   set(MPI_ENABLED FALSE)
   set(MPI_OPENMP_ENABLED FALSE)

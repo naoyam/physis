@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "runtime/grid_mpi.h"
 
@@ -96,11 +94,11 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
 }
 
 void GridMPI::InitBuffers() {
-  data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
-  data_buffer_[0]->Allocate(local_size_);
+  data_buffer_[0] = new BufferHost();
+  data_buffer_[0]->Allocate(GetLocalBufferSize());
   if (double_buffering_) {
-    data_buffer_[1] = new BufferHost(num_dims_, elm_size_);
-    data_buffer_[1]->Allocate(local_size_);    
+    data_buffer_[1] = new BufferHost();
+    data_buffer_[1]->Allocate(GetLocalBufferSize());
   } else {
     data_buffer_[1] = data_buffer_[0];
   }
@@ -356,7 +354,7 @@ void GridMPI::Resize(const IndexArray &local_offset,
   PSAssert(!double_buffering_);
   local_size_ = local_size;
   local_offset_ = local_offset;
-  buffer()->EnsureCapacity(local_size_);
+  buffer()->EnsureCapacity(GetLocalBufferSize());
   FixupBufferPointers();
 }
 

@@ -4,7 +4,7 @@
 // This file is distributed under the BSD license. See LICENSE.txt for
 // details.
 
-#include "runtime/rpc_mpi2.h"
+#include "runtime/rpc2.h"
 #include "runtime/grid_mpi2.h"
 #include "runtime/grid_util.h"
 #include "runtime/mpi_wrapper.h"
@@ -19,13 +19,13 @@ GridMPI *Master2::GridNew(PSType type, int elm_size,
                           const IndexArray &stencil_offset_min,
                           const IndexArray &stencil_offset_max,                          
                           int attr) {
-  LOG_DEBUG() << "[" << pinfo_.rank() << "] New\n";
+  LOG_DEBUG() << "[" << rank() << "] New\n";
   NotifyCall(FUNC_NEW);
   RequestNEW req = {type, elm_size, num_dims, size,
                     false, global_offset,
                     stencil_offset_min, stencil_offset_max,
                     attr};
-  MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
+  ipc_->Bcast(&req, sizeof(RequestNEW), rank());  
   GridMPI *g = ((GridSpaceMPI2*)gs_)->CreateGrid
       (type, elm_size, num_dims, size,
        global_offset, stencil_offset_min, stencil_offset_max, attr);
@@ -33,15 +33,15 @@ GridMPI *Master2::GridNew(PSType type, int elm_size,
 }
 
 void Client2::GridNew() {
-  LOG_DEBUG() << "[" << pinfo_.rank() << "] Create\n";
+  LOG_DEBUG() << "[" << rank() << "] Create\n";
   RequestNEW req;
-  MPI_Bcast(&req, sizeof(RequestNEW), MPI_BYTE, 0, comm_);
-  ((GridSpaceMPI2*)gs_)->CreateGrid(
+  ipc_->Bcast(&req, sizeof(RequestNEW), GetMasterRank());
+  static_cast<GridSpaceMPI2*>(gs_)->CreateGrid(
       req.type, req.elm_size, req.num_dims, req.size,
       req.global_offset,
       req.stencil_offset_min, req.stencil_offset_max,
       req.attr);
-  LOG_DEBUG() << "[" << pinfo_.rank() << "] Create done\n";
+  LOG_DEBUG() << "[" << rank() << "] Create done\n";
   return;
 }
 
@@ -74,10 +74,10 @@ void Client2::GridCopyout(int id) {
   GridMPI2 *g = static_cast<GridMPI2*>(gs_->FindGrid(id));
   // notify the local offset
   IndexArray ia = g->local_offset();
-  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
   // notify the local size
   ia = g->local_size();
-  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
   if (g->empty()) {
     LOG_DEBUG() << "No copy needed because this grid is empty.\n";
     return;
@@ -88,8 +88,8 @@ void Client2::GridCopyout(int id) {
     sbuf->EnsureCapacity(g->GetLocalBufferSize());
     g->Copyout(sbuf->Get());
   } 
-  PS_MPI_Send(sbuf->Get(), g->GetLocalBufferSize(),
-              MPI_BYTE, 0, 0, comm_);
+  ipc_->Send(sbuf->Get(),  g->GetLocalBufferSize(),
+             GetMasterRank());
   if (g->HasHalo()) {
     free(sbuf);
   }
@@ -131,10 +131,10 @@ void Client2::GridCopyin(int id) {
   GridMPI2 *g = static_cast<GridMPI2*>(gs_->FindGrid(id));
   // notify the local offset
   IndexArray ia = g->local_offset();
-  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
   // notify the local size
   ia = g->local_size();
-  PS_MPI_Send(&ia, sizeof(IndexArray), MPI_BYTE, 0, 0, comm_);
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
   if (g->empty()) {
     LOG_DEBUG() << "No copy needed because this grid is empty.\n";
     return;
@@ -145,16 +145,14 @@ void Client2::GridCopyin(int id) {
     dst_buf = new BufferHost();
     dst_buf->EnsureCapacity(g->GetLocalBufferSize());
   }
-  PS_MPI_Recv(dst_buf->Get(), g->GetLocalBufferSize(),
-              MPI_BYTE, 0, 0, comm_, MPI_STATUS_IGNORE);
+  ipc_->Recv(dst_buf->Get(), g->GetLocalBufferSize(),
+             GetMasterRank());  
   if (g->HasHalo()) {
     g->Copyin(dst_buf->Get());
     delete dst_buf;
   }
   return;
 }
-
-
 
 
 } // namespace runtime

@@ -42,8 +42,10 @@ class GridMPI2: public GridMPI {
   virtual ~GridMPI2();
   virtual std::ostream &Print(std::ostream &os) const;
 
-  const IndexArray& local_size() const { return local_size_; }
   const IndexArray& local_real_size() const { return local_real_size_; }
+  size_t GetLocalBufferRealSize() const {
+    return local_real_size_.accumulate(num_dims_) * elm_size_;
+  };
   const IndexArray& local_offset() const { return local_offset_; }
   bool empty() const { return empty_; }
   const Width2 &halo() const { return halo_; }
@@ -66,9 +68,68 @@ class GridMPI2: public GridMPI {
   */
   char *GetHaloPeerBuf(int dim, bool fw, unsigned width);
 
-  virtual void *GetAddress(const IndexArray &indices_param);
-  virtual PSIndex CalcOffset(const IndexArray &indices_param);
-  virtual PSIndex CalcOffsetPeriodic(const IndexArray &indices_param);
+  // These are not virtual because they are used inside kernel inner
+  // loops 
+  void *GetAddress(const IndexArray &indices_param);
+
+  template <int dim>
+  PSIndex CalcOffset(const IndexArray &indices_param) {
+#if 0
+    IndexArray indices = indices_param;
+    indices -= local_real_offset_;
+    return GridCalcOffset3D(indices, local_real_size_);
+#elif 0    
+    return (indices_param[0] - local_real_offset_[0]) +
+        (indices_param[1] - local_real_offset_[1]) * local_real_size_[0] +
+        (indices_param[2] - local_real_offset_[2]) *
+        local_real_size_[0] *local_real_size_[1];
+#else
+    PSIndex off = indices_param[0] - local_real_offset_[0];
+    if (dim > 1)
+      off += (indices_param[1] - local_real_offset_[1]) * local_real_size_[0];
+    if (dim > 2)
+      off +=
+          (indices_param[2] - local_real_offset_[2]) *
+          local_real_size_[0] *local_real_size_[1];
+#endif
+    return off;
+  }
+
+  template <int dim>
+  PSIndex CalcOffsetPeriodic(const IndexArray &indices_param) {
+#if 0    
+    IndexArray indices = indices_param;
+    for (int i = 0; i < num_dims_; ++i) {
+      // No halo if no domain decomposition is done for a
+      // dimension. Periodic access must be done by wrap around the offset
+      if (local_size_[i] == size_[i]) {
+        indices[i] = (indices[i] + size_[i]) % size_[i];
+      } else {
+        indices[i] -= local_real_offset_[i];
+      }
+    }
+    return GridCalcOffset3D(indices, local_real_size_);
+#else
+    PSIndex off =
+        local_size_[0] == size_[0] ? 
+        (indices_param[0] + size_[0]) % size_[0] :
+        indices_param[0] - local_real_offset_[0];
+    if (dim > 1)
+      off +=
+          (local_size_[1] == size_[1] ? 
+           (indices_param[1] + size_[1]) % size_[1] :
+           indices_param[1] - local_real_offset_[1])
+          * local_real_size_[0];
+    if (dim > 2)
+      off +=
+          (local_size_[2] == size_[2] ? 
+           (indices_param[2] + size_[2]) % size_[2] :
+           indices_param[2] - local_real_offset_[2])
+          * local_real_size_[0] * local_real_size_[1];
+    return off;
+#endif
+  }
+
 
   // Reduction
   virtual int Reduce(PSReduceOp op, void *out);

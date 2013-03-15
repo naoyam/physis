@@ -49,15 +49,17 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
                    const IndexArray &subgrid_size);
 
 
-
-inline intptr_t GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                 PSIndex xsize, PSIndex ysize) {
-  return ((intptr_t)x) + ((intptr_t)y) * ((intptr_t)xsize)
-      + ((intptr_t)z) * ((intptr_t)xsize) * ((intptr_t)ysize);
+// TODO: Create two distinctive types: offset_type and index_type
+//#define _OFFSET_TYPE intprt_t
+#define _OFFSET_TYPE PSIndex
+inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                     PSIndex xsize, PSIndex ysize) {
+  return ((_OFFSET_TYPE)x) + ((_OFFSET_TYPE)y) * ((_OFFSET_TYPE)xsize)
+      + ((_OFFSET_TYPE)z) * ((_OFFSET_TYPE)xsize) * ((_OFFSET_TYPE)ysize);
 }
 
-inline intptr_t GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                 const IndexArray &size) {
+inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                     const IndexArray &size) {
   return GridCalcOffset3D(x, y, z, size[0], size[1]);
 }  
 

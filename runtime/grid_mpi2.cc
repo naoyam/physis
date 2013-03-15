@@ -79,9 +79,9 @@ std::ostream &GridMPI2::Print(std::ostream &os) const {
 }
 
 void GridMPI2::InitBuffers() {
-  if (empty_) return;
-  data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
-  data_buffer_[0]->Allocate(local_real_size_);
+  if (empty_) return;  
+  data_buffer_[0] = new BufferHost();
+  data_buffer_[0]->Allocate(GetLocalBufferRealSize());
   data_buffer_[1] = NULL;
   data_[0] = (char*)data_buffer_[0]->Get();
   LOG_DEBUG() << "buffer addr: " << (void*)(data_[0]) << "\n";
@@ -135,26 +135,6 @@ void *GridMPI2::GetAddress(const IndexArray &indices_param) {
   return (void*)(_data() +
                  GridCalcOffset3D(indices, local_real_size_)
                  * elm_size());
-}
-
-PSIndex GridMPI2::CalcOffset(const IndexArray &indices_param) {
-  IndexArray indices = indices_param;
-  indices -= local_real_offset_;
-  return GridCalcOffset3D(indices, local_real_size_);
-}
-
-PSIndex GridMPI2::CalcOffsetPeriodic(const IndexArray &indices_param) {
-  IndexArray indices = indices_param;
-  for (int i = 0; i < num_dims_; ++i) {
-    // No halo if no domain decomposition is done for a
-    // dimension. Periodic access must be done by wrap around the offset
-    if (local_size_[i] == size_[i]) {
-      indices[i] = (indices[i] + size_[i]) % size_[i];
-    } else {
-      indices[i] -= local_real_offset_[i];
-    }
-  }
-  return GridCalcOffset3D(indices, local_real_size_);
 }
 
 void GridMPI2::Copyout(void *dst) const {

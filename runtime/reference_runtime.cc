@@ -14,9 +14,14 @@
 #include <functional>
 #include <boost/function.hpp>
 
-namespace physis {
-namespace runtime {
-  
+#include "runtime/runtime_ref.h"
+
+using namespace physis::runtime;
+
+namespace {
+
+RuntimeRef *rt;
+
 template <class T>
 void PSReduceGridTemplate(void *buf, PSReduceOp op,
                           __PSGrid *g) {
@@ -29,7 +34,7 @@ void PSReduceGridTemplate(void *buf, PSReduceOp op,
   *((T*)buf) = v;
   return;
 }
-}
+
 }
 
 #ifdef __cplusplus
@@ -37,9 +42,14 @@ extern "C" {
 #endif
 
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    physis::runtime::PSInitCommon(argc, argv);
+    rt = new RuntimeRef();
+    va_list vl;
+    va_start(vl, grid_num_dims);
+    rt->Init(argc, argv, grid_num_dims, vl);
   }
-  void PSFinalize() {}
+  void PSFinalize() {
+    delete rt;
+  }
 
   // Id is not used on shared memory 
   int __PSGridGetID(__PSGrid *g) {
@@ -151,14 +161,13 @@ extern "C" {
   
   void __PSReduceGridFloat(void *buf, PSReduceOp op,
                            __PSGrid *g) {
-    physis::runtime::PSReduceGridTemplate<float>(buf, op, g);
+    PSReduceGridTemplate<float>(buf, op, g);
   }
 
   void __PSReduceGridDouble(void *buf, PSReduceOp op,
                             __PSGrid *g) {
-    physis::runtime::PSReduceGridTemplate<double>(buf, op, g);
+    PSReduceGridTemplate<double>(buf, op, g);
   }
-  
   
 
 #ifdef __cplusplus

@@ -7,7 +7,6 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 
-
 #include <stdarg.h>
 #include <map>
 #include <string>
@@ -18,6 +17,7 @@
 #include "runtime/grid_mpi_debug_util.h"
 #include "runtime/mpi_util.h"
 #include "runtime/mpi_runtime_common.h"
+#include "runtime/runtime_mpi2.h"
 
 #include "physis/physis_mpi.h"
 #include "physis/physis_util.h"
@@ -33,6 +33,8 @@ using physis::SizeArray;
 namespace physis {
 namespace runtime {
 
+Master *master;
+GridSpaceMPI *gs;
 
 } // namespace runtime
 } // namespace physis
@@ -60,7 +62,153 @@ static T *__PSGridGetAddr(void *g, PSIndex x, PSIndex y,
 #ifdef __cplusplus
 extern "C" {
 #endif
+  
+  // Assumes extra arguments. The first argument is the number of
+  // dimensions, and each of the remaining ones is the size of
+  // respective dimension.
+  void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
+    RuntimeMPI2 *rt = new RuntimeMPI2();
+    va_list vl;
+    va_start(vl, grid_num_dims);
+    rt->Init(argc, argv, grid_num_dims, vl);
+    gs = rt->gs();
+    if (rt->IsMaster()) {
+      master = static_cast<Master*>(rt->proc());
+    } else {
+      rt->Listen();
+    }
+  }
 
+  void PSFinalize() {
+    master->Finalize();
+  }
+
+  PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx));
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx));
+    // No corresponding local region
+    if (local_min >= local_max) {
+      local_min.Set(0);
+      local_max.Set(0);
+    }
+    PSDomain1D d = {{minx}, {maxx}, {local_min[0]}, {local_max[0]}};
+    return d;
+  }
+  
+  PSDomain2D PSDomain2DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx, miny));    
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx, maxy));
+    // No corresponding local region
+    if (local_min >= local_max) {
+      local_min.Set(0);
+      local_max.Set(0);
+    }
+    PSDomain2D d = {{minx, miny}, {maxx, maxy},
+                    {local_min[0], local_min[1]},
+                    {local_max[0], local_max[1]}};
+    return d;
+  }
+
+  PSDomain3D PSDomain3DNew(PSIndex minx, PSIndex maxx,
+                           PSIndex miny, PSIndex maxy,
+                           PSIndex minz, PSIndex maxz) {
+    IndexArray local_min = gs->my_offset();
+    local_min.SetNoLessThan(IndexArray(minx, miny, minz));        
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(maxx, maxy, maxz));    
+    // No corresponding local region
+    if (local_min >= local_max) {
+      local_min.Set(0);
+      local_max.Set(0);
+    }
+    PSDomain3D d = {{minx, miny, minz}, {maxx, maxy, maxz},
+                    {local_min[0], local_min[1], local_min[2]},
+                    {local_max[0], local_max[1], local_max[2]}};
+    return d;
+  }
+
+  void __PSDomainSetLocalSize(__PSDomain *dom) {
+    IndexArray local_min = gs->my_offset();
+    IndexArray global_min(dom->min);
+    local_min.SetNoLessThan(global_min);
+    IndexArray local_max = gs->my_offset() + gs->my_size();
+    local_max.SetNoMoreThan(IndexArray(dom->max));
+    // No corresponding local region
+    if (local_min >= local_max) {
+      local_min.Set(0);
+      local_max.Set(0);
+    }
+    local_min.Set(dom->local_min);
+    local_max.Set(dom->local_max);
+  }
+  
+  void PSPrintInternalInfo(FILE *out) {
+    std::ostringstream ss;
+    if (master) ss << *master << "\n";
+    ss << *gs << "\n";
+    fprintf(out, "%s", ss.str().c_str());
+  }
+
+  
+  int __PSGridGetID(__PSGridMPI *g) {
+    return ((GridMPI *)g)->id();
+  }
+
+  __PSGridMPI *__PSGetGridByID(int id) {
+    return (__PSGridMPI*)gs->FindGrid(id);
+  }
+
+  void PSGridFree(void *p) {
+    master->GridDelete((GridMPI*)p);
+  }
+
+  void PSGridCopyin(void *g, const void *buf) {
+    master->GridCopyin((GridMPI*)g, buf);
+    return;
+  }
+
+  void PSGridCopyout(void *g, void *buf) {
+    master->GridCopyout((GridMPI*)g, buf);;
+    return;
+  }
+
+  PSIndex PSGridDim(void *p, int d) {
+    Grid *g = (Grid *)p;    
+    return g->size_[d];
+  }
+
+  void __PSStencilRun(int id, int iter, int num_stencils, ...) {
+    //master->StencilRun(id, stencil_obj_size, stencil_obj, iter);
+    void **stencils = new void*[num_stencils];
+    unsigned *stencil_sizes = new unsigned[num_stencils];
+    va_list vl;
+    va_start(vl, num_stencils);
+    for (int i = 0; i < num_stencils; ++i) {
+      unsigned stencil_size = (unsigned)va_arg(vl, size_t);
+      void *sobj = va_arg(vl, void*);
+      stencils[i] = sobj;
+      stencil_sizes[i] = stencil_size;
+    }
+    va_end(vl);
+    master->StencilRun(id, iter, num_stencils, stencils, stencil_sizes);
+    delete[] stencils;
+    delete[] stencil_sizes;
+    return;
+  }
+
+  void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
+                       int reuse) {
+    // NOTE: This should be very rare. Not sure it should actually be
+    // supported either.
+    PSAssert(0 && "Not implemented yet");
+    return;
+  }
+  
 
   __PSGridMPI* __PSGridNewMPI2(PSType type, int elm_size, int dim,
                                const PSVectorInt size,
@@ -140,30 +288,30 @@ extern "C" {
   }
 
   PSIndex __PSGridGetOffset1D(__PSGridMPI *g, PSIndex i1) {
-    return static_cast<GridMPI2*>(g)->CalcOffset(IndexArray(i1));
+    return static_cast<GridMPI2*>(g)->CalcOffset<1>(IndexArray(i1));
   }
   PSIndex __PSGridGetOffset2D(__PSGridMPI *g, PSIndex i1,
                               PSIndex i2) {
-    return static_cast<GridMPI2*>(g)->CalcOffset(
+    return static_cast<GridMPI2*>(g)->CalcOffset<2>(
         IndexArray(i1, i2));
   }
   PSIndex __PSGridGetOffset3D(__PSGridMPI *g, PSIndex i1,
                               PSIndex i2, PSIndex i3) {
-    return static_cast<GridMPI2*>(g)->CalcOffset(
+    return static_cast<GridMPI2*>(g)->CalcOffset<3>(
         IndexArray(i1, i2, i3));
   }
   PSIndex __PSGridGetOffsetPeriodic1D(__PSGridMPI *g, PSIndex i1) {
-    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic<1>(
         IndexArray(i1));
   }
   PSIndex __PSGridGetOffsetPeriodic2D(__PSGridMPI *g, PSIndex i1,
                                       PSIndex i2) {
-    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic<2>(
         IndexArray(i1, i2));
   }
   PSIndex __PSGridGetOffsetPeriodic3D(__PSGridMPI *g, PSIndex i1,
                                       PSIndex i2, PSIndex i3) {
-    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic<3>(
         IndexArray(i1, i2, i3));
   }
   void *__PSGridGetBaseAddr(__PSGridMPI *g) {

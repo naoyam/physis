@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "runtime/mpi_wrapper.h"
 #include "physis/physis_util.h"
@@ -12,6 +10,26 @@
 
 namespace physis {
 namespace runtime {
+
+int PS_MPI_Init(int *argc, char ***argv) {
+  CHECK_MPI(MPI_Init(argc, argv));
+  return MPI_SUCCESS;
+}
+
+int PS_MPI_Finalize() {
+  CHECK_MPI(MPI_Finalize());
+  return MPI_SUCCESS;
+}
+
+int PS_MPI_Comm_rank(MPI_Comm comm, int *rank) {
+  CHECK_MPI(MPI_Comm_rank(comm, rank));
+  return MPI_SUCCESS;
+}
+
+int PS_MPI_Comm_size(MPI_Comm comm, int *size) {
+  CHECK_MPI(MPI_Comm_size(comm, size));
+  return MPI_SUCCESS;
+}
 
 int PS_MPI_Send( void *buf, int count, MPI_Datatype datatype, int dest, 
                  int tag, MPI_Comm comm ) {
@@ -57,6 +75,21 @@ int PS_MPI_Reduce(void *sendbuf, void *recvbuf, int count,
   return MPI_SUCCESS;
 }
 
+int PS_MPI_Barrier(MPI_Comm comm) {
+  CHECK_MPI(MPI_Barrier(comm));
+  return MPI_SUCCESS;
+}
+
+int PS_MPI_Test(MPI_Request *req) {
+  // TODO
+  //CHECK_MPI(MPI_Test(req));
+  return MPI_SUCCESS;
+}
+
+int PS_MPI_Wait() {
+  // TODO
+  return MPI_SUCCESS;
+}
 } // namespace runtime
 } // namespace physis
 

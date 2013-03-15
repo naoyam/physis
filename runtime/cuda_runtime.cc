@@ -4,29 +4,42 @@
 // This file is distributed under the BSD license. See LICENSE.txt for
 // details.
 
+#include <stdarg.h>
+
+#include <cuda_runtime.h>
+
 #include "runtime/runtime_common.h"
+#include "runtime/runtime_cuda.h"
 #include "runtime/runtime_common_cuda.h"
 #include "runtime/cuda_util.h"
 #include "runtime/reduce.h"
 #include "physis/physis_cuda.h"
 
-#include <stdarg.h>
-#include <cuda_runtime.h>
+using namespace physis::runtime;
+
+namespace {
+RuntimeCUDA *rt;
+}
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    physis::runtime::PSInitCommon(argc, argv);
+    rt = new RuntimeCUDA();
+    va_list vl;
+    va_start(vl, grid_num_dims);
+    rt->Init(argc, argv, grid_num_dims, vl);
     CUDA_DEVICE_INIT(0);
     CUDA_CHECK_ERROR("CUDA initialization");
     if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
       PSAbort(1);
     }
   }
+  
   void PSFinalize() {
     CUDA_SAFE_CALL(cudaThreadExit());
+    delete rt;    
   }
 
   // Id is not used on shared memory 

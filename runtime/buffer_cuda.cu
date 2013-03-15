@@ -1,98 +1,40 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "runtime/buffer_cuda.h"
 #include "runtime/runtime_common_cuda.h"
 
 #include <cuda_runtime.h>
 
+// TODO: This can depend on many things. Need to be refined.
 #define CUDA_MEMCPY_ASYNC_SIZE (64 << 10) // 64KB
 
 namespace physis {
 namespace runtime {
 
-BufferCUDAHost::BufferCUDAHost(size_t elm_size)
-    : Buffer(elm_size) {
-  mpi_buf_ = new BufferHost(elm_size);
-  deleter_ = BufferCUDAHost::DeleteChunk;
-}
-
-BufferCUDAHost::BufferCUDAHost(int num_dims,  size_t elm_size)
-    : Buffer(num_dims, elm_size) {
-  mpi_buf_ = new BufferHost(num_dims, elm_size);
-  deleter_ = BufferCUDAHost::DeleteChunk;  
+BufferCUDAHost::BufferCUDAHost()
+    : Buffer(BufferCUDAHost::FreeChunk) {
 }
 
 BufferCUDAHost::~BufferCUDAHost() {
-  delete mpi_buf_;
 }
 
-void BufferCUDAHost::DeleteChunk(void *ptr) {
+void BufferCUDAHost::FreeChunk(void *ptr) {
   CUDA_SAFE_CALL(cudaFreeHost(ptr));
   return;
 }
 
-void *BufferCUDAHost::GetChunk(const IndexArray &size) {
-  void *ptr = NULL;
-  if (size.accumulate(num_dims_) > 0) {
-    LOG_INFO() << "Trying to allocate host pinned memory of "
-	       << GetLinearSize(size) << " bytes.\n";
-    CUDA_SAFE_CALL(cudaMallocHost(&ptr, GetLinearSize(size)));
-  }
+void *BufferCUDAHost::GetChunk(size_t size) {
+  if (size == 0) return NULL;
+  void *ptr = NULL;  
+  CUDA_SAFE_CALL(cudaMallocHost(&ptr, size));
   return ptr;
 }
 
-void BufferCUDAHost::Copyin(const void *buf, const IndexArray &offset,
-                            const IndexArray &size) {
-  EnsureCapacity(offset+size);
-  // Offset access is not yet supported.
-  PSAssert(offset == 0);
-  memcpy(Get(), buf, GetLinearSize(size));
-}
-
-void BufferCUDAHost::Copyin(const BufferHost &buf, const IndexArray &offset,
-                            const IndexArray &size) {
-  Copyin(buf.Get(), offset, size);
-}
-
-void BufferCUDAHost::Copyout(void *buf, const IndexArray &offset,
-                             const IndexArray &s) {
-  PSAssert(offset + s <= size());
-  // Offset access is not yet supported.
-  PSAssert(offset == 0);
-  memcpy(buf, Get(), GetLinearSize(s));
-}
-
-void BufferCUDAHost::Copyout(BufferHost &buf,
-                             const IndexArray &offset,
-                             const IndexArray &size) {
-  buf.EnsureCapacity(num_dims_, elm_size_, size);
-  Copyout(buf.Get(), offset, size);
-}
-
-
-void BufferCUDAHost::MPIRecv(int src, MPI_Comm comm,
-                             const IndexArray &offset,
-                             const IndexArray &size) {
-  mpi_buf_->MPIRecv(src, comm, IndexArray(), size);
-  Copyin(*mpi_buf_, offset, size);
-  //mpi_buf_->Delete();
-}
-
-void BufferCUDAHost::MPISend(int dst, MPI_Comm comm,
-                             const IndexArray &offset,
-                             const IndexArray &size) {
-  Copyout(*mpi_buf_, offset, size);
-  mpi_buf_->MPISend(dst, comm, IndexArray(), size);
-  //mpi_buf_->Delete();
-}
-
-
+#if 0
 //
 // BufferCUDAHostMapped
 //
@@ -186,116 +128,30 @@ void BufferCUDAHostMapped::MPISend(int dst, MPI_Comm comm,
   mpi_buf_->MPISend(dst, comm, IndexArray(), size);
   //mpi_buf_->Delete();
 }
-
+#endif
 
 //
 // BufferCUDADev
 //
-BufferCUDADev::BufferCUDADev(size_t elm_size)
-    : Buffer(elm_size), strm_(0) {
-  pinned_buf_ = new BufferCUDAHost(elm_size);
-  deleter_ = BufferCUDADev::DeleteChunk;
-}
-
-BufferCUDADev::BufferCUDADev(int num_dims, size_t elm_size)
-    : Buffer(num_dims, elm_size), strm_(0) {
-  pinned_buf_ = new BufferCUDAHost(num_dims, elm_size);
-  deleter_ = BufferCUDADev::DeleteChunk;  
+BufferCUDADev::BufferCUDADev()
+    : Buffer(BufferCUDADev::FreeChunk) {
 }
 
 BufferCUDADev::~BufferCUDADev() {
-  delete pinned_buf_;  
 }
 
-void BufferCUDADev::Copyin(const void *buf, const IndexArray &offset,
-                           const IndexArray &size) {
-  pinned_buf_->Copyin(buf, size);
-  Copyin(*pinned_buf_, offset, size);  
-}
-
-void BufferCUDADev::Copyin(const BufferHost &buf, const IndexArray &offset,
-                           const IndexArray &size) {
-  Copyin(buf.Get(), offset, size);
-}
-
-void BufferCUDADev::Copyin(const BufferCUDAHost &buf,
-                           const IndexArray &offset,
-                           const IndexArray &size) {
-  PSAssert(offset == 0);
-  EnsureCapacity(offset+size);
-  if (strm_) {
-    CUDA_SAFE_CALL(cudaMemcpyAsync(Get(), buf.Get(), GetLinearSize(size),
-                                   cudaMemcpyHostToDevice, strm_));
-    CUDA_SAFE_CALL(cudaStreamSynchronize(strm_));
-  } else {
-    CUDA_SAFE_CALL(cudaMemcpy(Get(), buf.Get(), GetLinearSize(size),
-                              cudaMemcpyHostToDevice));
-    if ((size.accumulate(num_dims_) * elm_size_) <=
-        CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    }
-  }
-}
-
-void BufferCUDADev::Copyout(void *buf, const IndexArray &offset,
-                            const IndexArray &size) {
-  Copyout(*pinned_buf_, offset, size);
-  pinned_buf_->Copyout(buf, size);
-}
-
-void BufferCUDADev::Copyout(BufferHost &buf, const IndexArray &offset,
-                            const IndexArray &size) {
-  Copyin(buf.Get(), offset, size);
-}
-
-void BufferCUDADev::Copyout(BufferCUDAHost &buf, const IndexArray &offset,
-                            const IndexArray &size) {
-  PSAssert(offset == 0);
-  PSAssert(offset + size <= this->size());
-  buf.EnsureCapacity(num_dims_, elm_size_, size);
-  if (strm_) {
-    CUDA_SAFE_CALL(cudaMemcpyAsync(buf.Get(), Get(), GetLinearSize(size),
-                                   cudaMemcpyDeviceToHost, strm_));
-    CUDA_SAFE_CALL(cudaStreamSynchronize(strm_));    
-  } else {
-    CUDA_SAFE_CALL(cudaMemcpy(buf.Get(), Get(), GetLinearSize(size),
-                              cudaMemcpyDeviceToHost));
-    if ((size.accumulate(num_dims_) * elm_size_) <=
-        CUDA_MEMCPY_ASYNC_SIZE) {
-      CUDA_SAFE_CALL(cudaDeviceSynchronize());
-    }
-  }
-}
-
-  
-void BufferCUDADev::MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
-                            const IndexArray &size) {
-  // First, recv with the host pinned buffer (which also performs
-  // internal copying between MPI and CUDA buffers.
-  pinned_buf_->Buffer::MPIRecv(src, comm, size);
-  // Then use cudaMemcpy to copy into the device memory
-  Copyin(*pinned_buf_, offset, size);
-}
-
-void BufferCUDADev::MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
-                            const IndexArray &size) {
-  Copyout(*pinned_buf_, offset, size);
-  pinned_buf_->Buffer::MPISend(dst, comm, size);
-}
-
-void *BufferCUDADev::GetChunk(const IndexArray &size) {
+void *BufferCUDADev::GetChunk(size_t size) {
+  if (size == 0) return NULL;
   void *p = NULL;
-  if (size.accumulate(num_dims_) >0)
-    CUDA_SAFE_CALL(cudaMalloc(&p, GetLinearSize(size)));
+  CUDA_SAFE_CALL(cudaMalloc(&p, size));
   return p;
 }
 
-void BufferCUDADev::DeleteChunk(void *ptr) {
-  if (ptr) {
-    CUDA_SAFE_CALL(cudaFree(ptr));
-  }
+void BufferCUDADev::FreeChunk(void *ptr) {
+  CUDA_SAFE_CALL(cudaFree(ptr));
 }
 
+#if 0
 //
 // BufferCUDADev3D
 // 
@@ -523,7 +379,7 @@ void BufferCUDADev3D::MPISend(int dst, MPI_Comm comm,
   Copyout(*pinned_buf_, offset, size);
   pinned_buf_->Buffer::MPISend(dst, comm, size);
 }
-
+#endif
   
 
 } // namespace runtime

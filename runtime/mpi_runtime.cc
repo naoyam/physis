@@ -18,6 +18,8 @@
 #include "physis/physis_util.h"
 #include "runtime/grid_mpi_debug_util.h"
 #include "runtime/mpi_util.h"
+#include "runtime/ipc_mpi.h"
+#include "runtime/runtime_mpi.h"
 
 using std::map;
 using std::string;
@@ -27,12 +29,8 @@ using namespace physis::runtime;
 namespace physis {
 namespace runtime {
 
-ProcInfo *pinfo;
 Master *master;
-Client *client;
 GridSpaceMPI *gs;
-
-__PSStencilRunClientFunction *__PS_stencils;
 
 } // namespace runtime
 } // namespace physis
@@ -149,67 +147,16 @@ extern "C" {
   // dimensions, and each of the remaining ones is the size of
   // respective dimension.
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    int rank;
-    int num_procs;
-    // by default the number of dimensions of processes and grids is
-    // the same 
-    int proc_num_dims;
+    RuntimeMPI *rt = new RuntimeMPI();
     va_list vl;
-    IndexArray grid_size;
-
-    physis::runtime::PSInitCommon(argc, argv);
-            
     va_start(vl, grid_num_dims);
-    for (int i = 0; i < grid_num_dims; ++i) {
-      grid_size[i] = va_arg(vl, PSIndex);
-    }
-    int num_stencil_run_calls = va_arg(vl, int);
-    __PSStencilRunClientFunction *stencil_funcs
-        = va_arg(vl, __PSStencilRunClientFunction*);
-    va_end(vl);
-    
-    MPI_Init(argc, argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    pinfo = new ProcInfo(rank, num_procs);
-    LOG_INFO() << *pinfo << "\n";
-
-    IntArray proc_size;
-    proc_size.Set(1);
-    proc_num_dims = GetProcessDim(argc, argv, proc_size);
-    if (proc_num_dims < 0) {
-      proc_num_dims = grid_num_dims;
-      // 1-D process decomposition by default
-      LOG_INFO() <<
-          "No process dimension specified; defaulting to 1D decomposition\n";
-      proc_size[proc_num_dims-1] = num_procs;
-    }
-
-    LOG_INFO() << "Process size: " << proc_size << "\n";
-    
-    gs = new GridSpaceMPI(grid_num_dims, grid_size,
-                          proc_num_dims, proc_size, rank);
-
-    LOG_INFO() << "Grid space: " << *gs << "\n";
-
-    // Set the stencil client functions
-    __PS_stencils =
-        (__PSStencilRunClientFunction*)malloc(sizeof(__PSStencilRunClientFunction)
-                                              * num_stencil_run_calls);
-    memcpy(__PS_stencils, stencil_funcs,
-           sizeof(__PSStencilRunClientFunction) * num_stencil_run_calls);
-    if (rank != 0) {
-      LOG_DEBUG() << "I'm a client.\n";
-      client = new Client(*pinfo, gs, MPI_COMM_WORLD);
-      client->Listen();
-      master = NULL;
+    rt->Init(argc, argv, grid_num_dims, vl);
+    gs = rt->gs();
+    if (rt->IsMaster()) {
+      master = static_cast<Master*>(rt->proc());
     } else {
-      LOG_DEBUG() << "I'm the master.\n";        
-      master = new Master(*pinfo, gs, MPI_COMM_WORLD);
-      client = NULL;
+      rt->Listen();
     }
-    
   }
 
   void PSFinalize() {
@@ -282,7 +229,7 @@ extern "C" {
   
   void PSPrintInternalInfo(FILE *out) {
     std::ostringstream ss;
-    ss << *pinfo << "\n";
+    if (master) ss << *master << "\n";
     ss << *gs << "\n";
     fprintf(out, "%s", ss.str().c_str());
   }
@@ -386,10 +333,11 @@ extern "C" {
     return;
   }
 
+#if 0  
   void __PSRegisterStencilRunClient(int id, void *fptr) {
     __PS_stencils[id] = (__PSStencilRunClientFunction)fptr;
   }
-
+#endif
   float *__PSGridGetAddrFloat1D(__PSGridMPI *g, PSIndex x) {
     return __PSGridGetAddr<float>((GridMPI*)g, IndexArray(x));
   }
@@ -523,7 +471,7 @@ extern "C" {
   }
 
   int __PSIsRoot() {
-    return pinfo->IsRoot();
+    return master->IsRoot();
   }
 
   void __PSReduceGridFloat(void *buf, enum PSReduceOp op,

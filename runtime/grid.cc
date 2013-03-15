@@ -17,17 +17,30 @@
 namespace physis {
 namespace runtime {
 
+Grid::Grid(PSType type, int elm_size, int num_dims,
+           const IndexArray &size,
+           bool double_buffering, int attr):
+    type_(type), elm_size_(elm_size), num_dims_(num_dims),
+    size_(size),
+    double_buffering_(double_buffering), attr_(attr) {
+  num_elms_ = size.accumulate(num_dims_);
+  data_[0] = NULL;
+  data_[1] = NULL;
+  data_buffer_[0] = NULL;
+  data_buffer_[1] = NULL;
+}
+
 Grid::~Grid() {
   DeleteBuffers();
 }
 
 void Grid::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
-  data_buffer_[0] = new BufferHost(num_dims_, num_elms_);
-  data_buffer_[0]->Allocate(size_);
+  data_buffer_[0] = new BufferHost();
+  data_buffer_[0]->Allocate(num_elms_ * elm_size_);
   if (double_buffering_) {
-    data_buffer_[1] = new BufferHost(num_dims_, num_elms_);
-    data_buffer_[1]->Allocate(size_);
+    data_buffer_[1] = new BufferHost();
+    data_buffer_[1]->Allocate(num_elms_ * elm_size_);
   } else {
     data_buffer_[1] = data_buffer_[0];
   }
@@ -145,8 +158,16 @@ void GridSpace::DeleteGrid(int id) {
   Grid *g = FindGrid(id);
   assert(g);
   DeleteGrid(g);
-}  
+}
 
+std::ostream &GridSpace::Print(std::ostream &os) const {
+  os << "GridSpace {"
+     << "}";
+  return os;
+}
+
+
+#ifdef CHECKPOINTING_ENABLED
 static string GetPath(size_t id) {
   char *ckpt_dir = getenv("PHYSIS_CHECKPOINT_DIR");
   return (ckpt_dir? string(ckpt_dir) : ".") + "/" + toString(id);
@@ -193,7 +214,7 @@ void GridSpace::Restore() {
     it->second->Restore();
   }
 }
-
+#endif
 } // runtime
 } // physis
 

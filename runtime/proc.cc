@@ -4,20 +4,18 @@
 // This file is distributed under the BSD license. See LICENSE.txt for
 // details.
 
-#ifndef PHYSIS_RUNTIME_MPI_RUNTIME_COMMON_H_
-#define PHYSIS_RUNTIME_MPI_RUNTIME_COMMON_H_
-
-#include "runtime/runtime_common.h"
-#include "runtime/rpc.h"
-#include "runtime/grid_mpi.h"
+#include "runtime/proc.h"
 
 namespace physis {
 namespace runtime {
 
-
+std::ostream &Proc::print(std::ostream &os) const {
+  os << "Proc {"
+     << "rank: " << rank_
+     << ", #procs: " << num_procs_
+     << "}";
+  return os;
+}
 
 } // namespace runtime
 } // namespace physis
-
-
-#endif /* PHYSIS_RUNTIME_MPI_RUNTIME_H_ */

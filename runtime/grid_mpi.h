@@ -1,10 +1,9 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
+
 #ifndef PHYSIS_RUNTIME_GRID_MPI_H_
 #define PHYSIS_RUNTIME_GRID_MPI_H_
 

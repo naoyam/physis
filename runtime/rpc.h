@@ -1,17 +1,15 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
-#ifndef PHYSIS_RUNTIME_RPC_MPI_H_
-#define PHYSIS_RUNTIME_RPC_MPI_H_
+#ifndef PHYSIS_RUNTIME_RPC_H_
+#define PHYSIS_RUNTIME_RPC_H_
 
 #include "runtime/runtime_common.h"
 #include "runtime/grid_mpi.h"
-#include "runtime/ipc.h"
+#include "runtime/proc.h"
 
 namespace physis {
 namespace runtime {
@@ -25,7 +23,6 @@ enum RT_FUNC_KIND {
   FUNC_RUN, FUNC_FINALIZE, FUNC_BARRIER,
   FUNC_GRID_REDUCE
 };
-
 
 struct Request {
   RT_FUNC_KIND kind;
@@ -46,13 +43,14 @@ struct RequestNEW {
   int attr;
 };
 
-class Client {
+class Client: public Proc {
  protected:
-  const ProcInfo &pinfo_;
   GridSpaceMPI *gs_;
-  MPI_Comm comm_;        
+  bool done_;
  public:
-  Client(const ProcInfo &pinfo, GridSpaceMPI *gs, MPI_Comm comm);
+  Client(int rank, int num_procs, InterProcComm *ipc,
+         __PSStencilRunClientFunction *stencil_runs,
+         GridSpaceMPI *gs);
   virtual ~Client() {}
   virtual void Listen();  
   virtual void Finalize();
@@ -65,17 +63,20 @@ class Client {
   virtual void GridGet(int id);  
   virtual void StencilRun(int id);
   virtual void GridReduce(int id);
+  static int GetMasterRank() {
+    return Proc::GetRootRank();
+  }
 };
 
-class Master {
+class Master: public Proc {
  protected:
   Counter gridCounter;
-  const ProcInfo &pinfo_;
   GridSpaceMPI *gs_;  
-  MPI_Comm comm_;
   void NotifyCall(enum RT_FUNC_KIND fkind, int opt=0);
  public:
-  Master(const ProcInfo &pinfo, GridSpaceMPI *gs, MPI_Comm comm);
+  Master(int rank, int num_procs, InterProcComm *ipc,
+         __PSStencilRunClientFunction *stencil_runs,
+         GridSpaceMPI *gs);
   virtual ~Master() {}
   virtual void Finalize();
   virtual void Barrier();
@@ -95,15 +96,13 @@ class Master {
   virtual void StencilRun(int id, int iter, int num_stencils,
                           void **stencils, unsigned *stencil_sizes);
   virtual void GridReduce(void *buf, PSReduceOp op, GridMPI *g);
+  static int GetMasterRank() {
+    return Proc::GetRootRank();
+  }
+  
 };
 
 } // namespace runtime
 } // namespace physis
 
-inline
-std::ostream &operator<<(std::ostream &os, const physis::runtime::ProcInfo &pinfo) {
-  return pinfo.print(os);
-}
-
-
-#endif /* PHYSIS_RUNTIME_RPC_MPI_H_ */
+#endif /* PHYSIS_RUNTIME_RPC_H_ */

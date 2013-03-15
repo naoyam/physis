@@ -11,18 +11,16 @@
 
 #include "runtime/runtime_common.h"
 #include "runtime/grid_mpi.h"
-#include "runtime/rpc_mpi.h"
+#include "runtime/rpc.h"
 
 namespace physis {
 namespace runtime {
 
-typedef void (*__PSStencilRunClientFunction)(int, void **);
-extern __PSStencilRunClientFunction *__PS_stencils;
+//extern __PSStencilRunClientFunction *__PS_stencils;
 
-extern ProcInfo *pinfo;
 extern Master *master;
-extern Client *client;
-extern GridSpaceMPI *gs;
+//extern Client *client;
+//extern GridSpaceMPI *gs;
 
 } // namespace runtime
 } // namespace physis
