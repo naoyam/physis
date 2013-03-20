@@ -83,6 +83,20 @@ extern "C" {
                                              PSIndex y, PSIndex z);
   extern double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, PSIndex x,
                                                PSIndex y, PSIndex z);
+  
+  extern PSIndex __PSGridGetOffset1D(__PSGridMPI *g, PSIndex i1);
+  extern PSIndex __PSGridGetOffset2D(__PSGridMPI *g, PSIndex i1,
+                                     PSIndex i2);
+  extern PSIndex __PSGridGetOffset3D(__PSGridMPI *g, PSIndex i1,
+                                     PSIndex i2, PSIndex i3);
+  extern PSIndex __PSGridGetOffsetPeriodic1D(__PSGridMPI *g, PSIndex i1);
+  extern PSIndex __PSGridGetOffsetPeriodic2D(__PSGridMPI *g, PSIndex i1,
+                                             PSIndex i2);
+  extern PSIndex __PSGridGetOffsetPeriodic3D(__PSGridMPI *g, PSIndex i1,
+                                             PSIndex i2, PSIndex i3);
+
+  extern void *__PSGridGetBaseAddr(__PSGridMPI *g);
+  
   extern float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, PSIndex x);
   extern double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, PSIndex x);
   extern float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);

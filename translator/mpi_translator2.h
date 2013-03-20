@@ -20,6 +20,10 @@ class MPITranslator2: public MPITranslator {
       SgExprListExp *args,
       Grid *g,
       SgVariableDeclaration *dim_decl);
+  virtual bool translateGetKernel(SgFunctionCallExp *node,
+                                  SgInitializedName *gv,
+                                  bool is_periodic);
+  
 };
 
 } // namespace translator

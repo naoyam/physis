@@ -49,6 +49,32 @@ void MPITranslator2::appendNewArgExtra(SgExprListExp *args,
   return;
 }
 
+bool MPITranslator2::translateGetKernel(SgFunctionCallExp *node,
+                                        SgInitializedName *gv,
+                                        bool is_periodic) {
+  GridType *gt = tx_->findGridType(gv->get_type());
+  int nd = gt->getNumDim();
+  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
+  
+  SgExpression *offset = BuildOffset(
+      gv, nd, node->get_args(),
+      true, is_periodic,
+      rose_util::GetASTAttribute<GridGetAttribute>(
+          node)->GetStencilIndexList(),
+      scope);
+  SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
+      si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
+      sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),
+                                              scope)));
+  SgExpression *x = sb::buildPntrArrRefExp(
+      sb::buildCastExp(base_addr,
+                       sb::buildPointerType(gt->getElmType())),
+      offset);
+  rose_util::CopyASTAttribute<GridGetAttribute>(x, node);
+  rose_util::GetASTAttribute<GridGetAttribute>(x)->offset() = offset;
+  si::replaceExpression(node, x);
+  return true;
+}
 
 } // namespace translator
 } // namespace physis

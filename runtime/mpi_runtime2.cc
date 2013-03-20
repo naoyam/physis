@@ -139,6 +139,37 @@ extern "C" {
     return __PSGridGetAddr<double>(g, x, y, z);
   }
 
+  PSIndex __PSGridGetOffset1D(__PSGridMPI *g, PSIndex i1) {
+    return static_cast<GridMPI2*>(g)->CalcOffset(IndexArray(i1));
+  }
+  PSIndex __PSGridGetOffset2D(__PSGridMPI *g, PSIndex i1,
+                              PSIndex i2) {
+    return static_cast<GridMPI2*>(g)->CalcOffset(
+        IndexArray(i1, i2));
+  }
+  PSIndex __PSGridGetOffset3D(__PSGridMPI *g, PSIndex i1,
+                              PSIndex i2, PSIndex i3) {
+    return static_cast<GridMPI2*>(g)->CalcOffset(
+        IndexArray(i1, i2, i3));
+  }
+  PSIndex __PSGridGetOffsetPeriodic1D(__PSGridMPI *g, PSIndex i1) {
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+        IndexArray(i1));
+  }
+  PSIndex __PSGridGetOffsetPeriodic2D(__PSGridMPI *g, PSIndex i1,
+                                      PSIndex i2) {
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+        IndexArray(i1, i2));
+  }
+  PSIndex __PSGridGetOffsetPeriodic3D(__PSGridMPI *g, PSIndex i1,
+                                      PSIndex i2, PSIndex i3) {
+    return static_cast<GridMPI2*>(g)->CalcOffsetPeriodic(
+        IndexArray(i1, i2, i3));
+  }
+  void *__PSGridGetBaseAddr(__PSGridMPI *g) {
+    return static_cast<GridMPI2*>(g)->_data();
+  }
+
   //
   // Emit
   //

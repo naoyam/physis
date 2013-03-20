@@ -136,6 +136,26 @@ void *GridMPI2::GetAddress(const IndexArray &indices_param) {
                  * elm_size());
 }
 
+PSIndex GridMPI2::CalcOffset(const IndexArray &indices_param) {
+  IndexArray indices = indices_param;
+  indices -= local_real_offset_;
+  return GridCalcOffset3D(indices, local_real_size_);
+}
+
+PSIndex GridMPI2::CalcOffsetPeriodic(const IndexArray &indices_param) {
+  IndexArray indices = indices_param;
+  for (int i = 0; i < num_dims_; ++i) {
+    // No halo if no domain decomposition is done for a
+    // dimension. Periodic access must be done by wrap around the offset
+    if (local_size_[i] == size_[i]) {
+      indices[i] = (indices[i] + size_[i]) % size_[i];
+    } else {
+      indices[i] -= local_real_offset_[i];
+    }
+  }
+  return GridCalcOffset3D(indices, local_real_size_);
+}
+
 void GridMPI2::Copyout(void *dst) const {
   const void *src = buffer()->Get();
   if (HasHalo()) {
@@ -272,17 +292,20 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
   size_t bw_size = g2->CalcHaloSize(dim, halo_bw_width)
       * grid->elm_size_;
 
-  LOG_DEBUG() << "Periodic?: " << periodic << "\n";
+  //LOG_DEBUG() << "Periodic?: " << periodic << "\n";
 
   /*
     Send and receive ordering must match. First get the halo for the
     forward access, and then the halo for the backward access.
    */
-  
+
+  // Note: If no decomposition is done for this dimension, periodic
+  // access is implemented without halo buffer, but with wrap-around
+  // offsets. 
   if (halo_fw_width > 0 &&
-      (periodic ||
-       grid->local_offset()[dim] + grid->local_size()[dim]
-       < grid->size_[dim])) {
+      (grid->local_offset()[dim] + grid->local_size()[dim]
+       < grid->size_[dim] ||
+       (periodic && proc_size_[dim] > 1))) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << fw_size
                 << " bytes for fw access from " << fw_peer << "\n";
@@ -296,7 +319,8 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
   }
 
   if (halo_bw_width > 0 &&
-      (periodic || grid->local_offset()[dim] > 0)) {
+      (grid->local_offset()[dim] > 0 ||
+       (periodic && proc_size_[dim] > 1))) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << bw_size
                 << " bytes for bw access from " << bw_peer << "\n";
@@ -313,7 +337,8 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
 
   // Sends out the halo for forward access
   if (halo_fw_width > 0 &&
-      (periodic || grid->local_offset()[dim] > 0)) {
+      (grid->local_offset()[dim] > 0 ||
+       (periodic && proc_size_[dim] > 1))) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Sending halo of " << fw_size << " bytes"
                 << " for fw access to " << bw_peer << "\n";
@@ -331,9 +356,9 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
 
    // Sends out the halo for backward access
   if (halo_bw_width > 0 &&
-      (periodic || 
-       grid->local_offset()[dim] + grid->local_size()[dim]
-       < grid->size_[dim])) {
+      (grid->local_offset()[dim] + grid->local_size()[dim]
+       < grid->size_[dim] ||
+       (periodic && proc_size_[dim] > 1))) {
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Sending halo of " << bw_size << " bytes"
                 << " for bw access to " << fw_peer << "\n";

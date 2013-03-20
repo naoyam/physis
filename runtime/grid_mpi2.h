@@ -67,6 +67,8 @@ class GridMPI2: public GridMPI {
   char *GetHaloPeerBuf(int dim, bool fw, unsigned width);
 
   virtual void *GetAddress(const IndexArray &indices_param);
+  virtual PSIndex CalcOffset(const IndexArray &indices_param);
+  virtual PSIndex CalcOffsetPeriodic(const IndexArray &indices_param);
 
   // Reduction
   virtual int Reduce(PSReduceOp op, void *out);
