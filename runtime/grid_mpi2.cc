@@ -79,6 +79,7 @@ std::ostream &GridMPI2::Print(std::ostream &os) const {
 }
 
 void GridMPI2::InitBuffers() {
+  if (empty_) return;
   data_buffer_[0] = new BufferHost(num_dims_, elm_size_);
   data_buffer_[0]->Allocate(local_real_size_);
   data_buffer_[1] = NULL;
@@ -309,8 +310,6 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << fw_size
                 << " bytes for fw access from " << fw_peer << "\n";
-    //grid->halo_fw_width()[dim] = halo_fw_width;
-    //grid->SetHaloSize(dim, true, halo_fw_width, diagonal);
     MPI_Request req;
     CHECK_MPI(MPI_Irecv(
         g2->GetHaloPeerBuf(dim, true, halo_fw_width),
@@ -324,10 +323,6 @@ void GridSpaceMPI2::ExchangeBoundariesAsync(
     LOG_DEBUG() << "[" << my_rank_ << "] "
                 << "Receiving halo of " << bw_size
                 << " bytes for bw access from " << bw_peer << "\n";
-    // REFACTORING: Necessary?
-    //grid->halo_bw_width()[dim] = halo_bw_width;
-    // REFACTORING: Necessary?    
-    //grid->SetHaloSize(dim, false, halo_bw_width, diagonal);
     MPI_Request req;
     CHECK_MPI(MPI_Irecv(
         g2->GetHaloPeerBuf(dim, false, halo_bw_width),
