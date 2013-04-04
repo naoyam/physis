@@ -48,15 +48,9 @@ extern "C" {
                                      const PSVectorInt size,
                                      int double_buffering,
                                      int attr,
-                                     const PSVectorInt global_offset);
-  extern __PSGridMPI* __PSGridNewMPI2(PSType type, int elm_size,
-                                      int dim,
-                                      const PSVectorInt size,
-                                      int double_buffering,
-                                      int attr,
-                                      const PSVectorInt global_offset,
-                                      const PSVectorInt stencil_offset_min,
-                                      const PSVectorInt stencil_offset_max);
+                                     const PSVectorInt global_offset,
+                                     const PSVectorInt stencil_offset_min,
+                                     const PSVectorInt stencil_offset_max);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

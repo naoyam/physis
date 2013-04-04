@@ -83,8 +83,9 @@ class Master: public Proc {
   virtual GridMPI *GridNew(PSType type, int elm_size,
                            int num_dims,
                            const IndexArray &size,
-                           bool double_buffering,
                            const IndexArray &global_offset,
+                           const IndexArray &stencil_offset_min,
+                           const IndexArray &stencil_offset_max,
                            int attr);
   virtual void GridDelete(GridMPI *g);
   virtual void GridCopyin(GridMPI *g, const void *buf);

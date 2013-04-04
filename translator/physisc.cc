@@ -12,7 +12,7 @@
 #include "translator/reference_translator.h"
 #include "translator/cuda_translator.h"
 #include "translator/mpi_translator.h"
-#include "translator/mpi_translator2.h"
+//#include "translator/mpi_translator2.h"
 #include "translator/mpi_cuda_translator.h"
 #include "translator/opencl_translator.h"
 #include "translator/mpi_opencl_translator.h"
@@ -43,7 +43,7 @@ struct CommandLineOptions {
   bool ref_trans;
   bool cuda_trans;
   bool mpi_trans;
-  bool mpi2_trans;  
+  //bool mpi2_trans;  
   bool mpi_cuda_trans;
   bool opencl_trans;
   bool mpi_opencl_trans;
@@ -51,7 +51,8 @@ struct CommandLineOptions {
   bool mpi_openmp_numa_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
-                        mpi_trans(false), mpi2_trans(false),
+                        mpi_trans(false),
+                        //mpi2_trans(false),
                         mpi_cuda_trans(false),
                         opencl_trans(false),
                         mpi_opencl_trans(false),
@@ -70,7 +71,7 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
                      "read configuration file");  
   desc.add_options()("cuda", "CUDA translation");
   desc.add_options()("mpi", "MPI translation");
-  desc.add_options()("mpi2", "MPI translation v2");
+  //desc.add_options()("mpi2", "MPI translation v2");
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
   desc.add_options()("opencl", "*EXPERIMENTAL* OpenCL translation");
   desc.add_options()("mpi-opencl", "*EXPERIMENTAL* MPI-OpenCL translation");
@@ -120,11 +121,11 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     return;
   }
 
-  if (vm.count("mpi2")) {
-    LOG_DEBUG() << "MPI translation v2.\n";
-    opts.mpi2_trans = true;
-    return;
-  }
+  // if (vm.count("mpi2")) {
+  //   LOG_DEBUG() << "MPI translation v2.\n";
+  //   opts.mpi2_trans = true;
+  //   return;
+  // }
 
   if (vm.count("mpi-cuda")) {
     LOG_DEBUG() << "MPI-CUDA translation.\n";
@@ -164,7 +165,7 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     StringJoin sj(" ");
     sj << "ref";
     sj << "mpi";
-    sj << "mpi2";    
+    //    sj << "mpi2";    
     sj << "cuda";
     sj << "mpi-cuda";
     sj << "opencl";
@@ -202,8 +203,10 @@ static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
     builder = new pt::ReferenceRuntimeBuilder(gs);
   } else if (opts.cuda_trans) {
     builder = new pt::CUDARuntimeBuilder(gs);
-  } else if (opts.mpi_trans || opts.mpi2_trans) {
+  } else if (opts.mpi_trans) {
     builder = new pt::MPIRuntimeBuilder(gs);
+  // } else if (opts.mpi2_trans) {
+  //   builder = new pt::MPIRuntimeBuilder(gs);
   } else if (opts.mpi_cuda_trans) {
     builder = new pt::MPICUDARuntimeBuilder(gs);
   }
@@ -274,11 +277,11 @@ int main(int argc, char *argv[]) {
     argvec.push_back("-DPHYSIS_MPI");
   }
 
-  if (opts.mpi2_trans) {
-    trans = new pt::MPITranslator2(config);
-    filename_suffix = "mpi2.c";
-    argvec.push_back("-DPHYSIS_MPI");
-  }
+  // if (opts.mpi2_trans) {
+  //   trans = new pt::MPITranslator2(config);
+  //   filename_suffix = "mpi2.c";
+  //   argvec.push_back("-DPHYSIS_MPI");
+  // }
 
   if (opts.mpi_cuda_trans) {
     trans = new pt::MPICUDATranslator(config);

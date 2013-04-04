@@ -18,20 +18,13 @@
 namespace physis {
 namespace runtime {
 
-#ifdef MPI_RUNTIME_2
-// TODO
-template <class T> inline
-std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
-  return os;
-}
-#else
 template <class T> inline
 std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
   T *data = (T*)g->_data();
-  T **halo_self_fw = (T**)g->_halo_self_fw();
-  T **halo_self_bw = (T**)g->_halo_self_bw();
-  T **halo_peer_fw = (T**)g->_halo_peer_fw();
-  T **halo_peer_bw = (T**)g->_halo_peer_bw();
+  T **halo_self_fw = (T**)g->halo_self_fw_();
+  T **halo_self_bw = (T**)g->halo_self_bw_();
+  T **halo_peer_fw = (T**)g->halo_peer_fw_();
+  T **halo_peer_bw = (T**)g->halo_peer_bw_();
   IndexArray lsize = g->local_size();
   std::stringstream ss;
   ss << "[rank:" << my_rank << "] ";
@@ -44,35 +37,12 @@ std::ostream& print_grid(GridMPI *g, int my_rank, std::ostream &os) {
       sj << data[i];
     }
     ss << "data {" << sj << "}";
-    for (int i = 0; i < g->num_dims(); ++i) {
-      StringJoin sj_peer_fw, sj_peer_bw, sj_self_fw, sj_self_bw;
-      int num_elms = g->halo_peer_fw_buf_size()[i] / sizeof(T);
-      for (int j = 0; j < num_elms; ++j) {
-        sj_peer_fw << halo_peer_fw[i][j];
-      }
-      num_elms = g->halo_self_fw_buf_size()[i] / sizeof(T);
-      for (int j = 0; j < num_elms; ++j) {
-        sj_self_fw << halo_self_fw[i][j];      
-      }
-      num_elms = g->halo_peer_bw_buf_size()[i] / sizeof(T);
-      for (int j = 0; j < num_elms; ++j) {
-        sj_peer_bw << halo_peer_bw[i][j];
-      }
-      num_elms = g->halo_self_bw_buf_size()[i] / sizeof(T);
-      for (int j = 0; j < num_elms; ++j) {
-        sj_self_bw << halo_self_bw[i][j]; 
-      }
-      ss << ", halo fw peer [" << i << "] {" << sj_peer_fw << "}";    
-      ss << ", halo bw peer [" << i << "] {" << sj_peer_bw << "}";
-      ss << ", halo fw self [" << i << "] {" << sj_self_fw << "}";    
-      ss << ", halo bw self [" << i << "] {" << sj_self_bw << "}";
-    }
   }
   ss << "\n";
   os << ss.str();;
   return os;
 }
-#endif
+
 } // namespace runtime
 } // namespace physis
 

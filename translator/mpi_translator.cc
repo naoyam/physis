@@ -493,10 +493,35 @@ SgExprListExp *MPITranslator::generateNewArg(
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g,
                                       SgVariableDeclaration *dim_decl) {
+  LOG_DEBUG() << "Append New extra arg for "
+              << *g << "\n";
   // attribute
   si::appendExpression(args, sb::buildIntVal(0));
   // global offset
   si::appendExpression(args, rose_util::buildNULL(global_scope_));
+
+  const StencilRange &sr = g->stencil_range();
+  
+  SgExprListExp *stencil_min_val =
+      mpi_rt_builder_->BuildStencilOffsetMin(sr);
+  assert(stencil_min_val);
+  SgVariableDeclaration *stencil_min_var
+      = sb::buildVariableDeclaration(
+          "stencil_offset_min", ivec_type_,
+          sb::buildAggregateInitializer(stencil_min_val, ivec_type_));
+  si::insertStatementAfter(dim_decl, stencil_min_var);
+  si::appendExpression(args, sb::buildVarRefExp(stencil_min_var));
+
+  SgExprListExp *stencil_max_val =
+      mpi_rt_builder_->BuildStencilOffsetMax(sr);
+  assert(stencil_max_val);
+  SgVariableDeclaration *stencil_max_var
+      = sb::buildVariableDeclaration(
+          "stencil_offset_max", ivec_type_,
+          sb::buildAggregateInitializer(stencil_max_val, ivec_type_));
+  si::insertStatementAfter(dim_decl, stencil_max_var);
+  si::appendExpression(args, sb::buildVarRefExp(stencil_max_var));
+  
   return;
 }
 
@@ -525,44 +550,26 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
 bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_periodic) {
-  // 
-  // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
-  SgScopeStatement *scope = getContainingScopeStatement(node);  
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
+  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
   
-  string get_address_name = get_addr_name_ +  GetTypeDimName(gt);
-  string get_address_no_halo_name = get_addr_no_halo_name_ +  GetTypeDimName(gt);
-  SgFunctionRefExp *get_address;
-  const StencilIndexList *sil = tx_->findStencilIndex(node);
-  PSAssert(sil);
-  LOG_DEBUG() << "Stencil index: " << *sil;
-  if (StencilIndexSelf(*sil, nd)) {
-    get_address = sb::buildFunctionRefExp(get_address_no_halo_name,
-                                          global_scope_);
-  } else {
-    get_address = sb::buildFunctionRefExp(get_address_name,
-                                          global_scope_);
-  }
-  SgExprListExp *args = sb::buildExprListExp(g);
-  FOREACH (it, node->get_args()->get_expressions().begin(),
-           node->get_args()->get_expressions().end()) {
-    si::appendExpression(args, si::copyExpression(*it));
-  }
-
-  SgFunctionCallExp *get_address_exp
-      = sb::buildFunctionCallExp(get_address, args);
-  //get_address_exp->addNewAttribute("StencilIndexList",
-  //new StencilIndexAttribute(*sil));
-  get_address_exp->setAttribute("StencilIndexList",
-                                new StencilIndexAttribute(*sil));
-  AstAttributeMechanism *am = get_address_exp->get_attributeMechanism();
-  FOREACH (it, am->begin(), am->end()) {
-    LOG_DEBUG() << it->first << "->" << it->second << "\n";
-  }
-  SgExpression *x = sb::buildPointerDerefExp(get_address_exp);
-  rose_util::CopyASTAttribute<GridGetAttribute>(x, node, false);  
+  SgExpression *offset = BuildOffset(
+      gv, nd, node->get_args(),
+      true, is_periodic,
+      rose_util::GetASTAttribute<GridGetAttribute>(
+          node)->GetStencilIndexList(),
+      scope);
+  SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
+      si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
+      sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),
+                                              scope)));
+  SgExpression *x = sb::buildPntrArrRefExp(
+      sb::buildCastExp(base_addr,
+                       sb::buildPointerType(gt->getElmType())),
+      offset);
+  rose_util::CopyASTAttribute<GridGetAttribute>(x, node);
+  rose_util::GetASTAttribute<GridGetAttribute>(x)->offset() = offset;
   si::replaceExpression(node, x);
   return true;
 }

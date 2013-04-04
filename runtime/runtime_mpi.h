@@ -11,6 +11,7 @@
 
 #include "runtime/runtime.h"
 #include "runtime/grid_mpi.h"
+#include "runtime/grid_space_mpi.h"
 #include "runtime/proc.h"
 #include "runtime/rpc.h"
 

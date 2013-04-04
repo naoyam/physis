@@ -24,6 +24,16 @@
       p = NULL;                                 \
     } } while (0)
 
+#define PS_XDELETE(p) do {                        \
+    delete (p);                                   \
+    p = NULL;                                     \
+  } while (0)
+
+#define PS_XDELETEA(p) do {                         \
+    delete[] (p);                                   \
+    p = NULL;                                       \
+  } while (0)
+
 namespace physis {
 
 template <typename ty>
