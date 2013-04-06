@@ -173,6 +173,19 @@ extern "C" {
                               cudaMemcpyHostToDevice));
   }
 
+  /** check CUDA error
+   * @param[in] message
+   * http://www.visualization.hpc.mil/wiki/Handling_CUDA_error_messages
+   * Example 1
+   */
+  void __PSCheckCudaError(const char *message) {
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+      fprintf(stderr, "ERROR: %s: %s\n", message, cudaGetErrorString(error) );
+      PSAbort(1);
+    }
+  }
+
 #ifdef __cplusplus
 }
 #endif

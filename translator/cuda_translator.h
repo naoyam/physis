@@ -23,6 +23,10 @@ class CUDATranslator : public ReferenceTranslator {
   int block_dim_x_;
   int block_dim_y_;
   int block_dim_z_;
+  /** hold all CUDA_BLOCK_SIZE values */
+  std::vector<SgExpression *> cuda_block_size_vals_;
+  /** hold __cuda_block_size_struct type */
+  SgType *cuda_block_size_type_;
 
   //! An optimization flag on grid address calculations.
   /*!
@@ -176,6 +180,21 @@ class CUDATranslator : public ReferenceTranslator {
   bool flag_pre_calc_grid_address() const {
     return flag_pre_calc_grid_address_;
   }
+
+  /** add dynamic parameter
+   * @param[in/out] parlist ... parameter list
+   */
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
+  /** add dynamic argument
+   * @param[in/out] args ... arguments
+   * @param[in] a_exp ... index expression
+   */
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
+  /** add some code after dlclose()
+   * @param[in] scope
+   */
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope); /* koko: COMMENT!!! for CUDA */
+
 };
 
 } // namespace translator

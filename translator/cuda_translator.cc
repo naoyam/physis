@@ -47,10 +47,31 @@ CUDATranslator::CUDATranslator(const Configuration &config):
     LOG_INFO() << "Optimization of address calculation enabled.\n";
   }
   // Redefine the block size if specified in the configuration file
+  cuda_block_size_vals_.clear();  /* clear */
   lv = config.Lookup(Configuration::CUDA_BLOCK_SIZE);
   if (lv) {
     const pu::LuaTable *tbl = lv->getAsLuaTable();
     PSAssert(tbl);
+    const pu::LuaTable *tbl2 = tbl->lst().begin()->second->getAsLuaTable();
+    if (tbl2) {
+      if (tbl->lst().size() == 1 || !config.auto_tuning()) {
+        tbl = tbl2; /* use first one */
+      } else {
+        block_dim_x_ = block_dim_y_ = block_dim_z_ = 0;
+        /* get all selection from CUDA_BLOCK_SIZE */
+        FOREACH (it, tbl->lst().begin(), tbl->lst().end()) {
+          std::vector<SgExpression *> iv;
+          std::vector<double> v;
+          PSAssert(tbl2 = it->second->getAsLuaTable());
+          PSAssert(tbl2->get(v));
+          iv.push_back(sb::buildIntVal((int)v[0]));
+          iv.push_back(sb::buildIntVal((int)v[1]));
+          iv.push_back(sb::buildIntVal((int)v[2]));
+          cuda_block_size_vals_.push_back(sb::buildAggregateInitializer(sb::buildExprListExp(iv)));
+        }
+        return;
+      }
+    }
     std::vector<double> v;
     PSAssert(tbl->get(v));
     block_dim_x_ = (int)v[0];
@@ -63,6 +84,34 @@ void CUDATranslator::SetUp(SgProject *project,
                            TranslationContext *context) {
   ReferenceTranslator::SetUp(project, context);
   rt_builder_ = new CUDARuntimeBuilder(global_scope_);
+
+  /* auto tuning & has dynamic arguments */
+  if (!(config_.auto_tuning() && config_.ndynamic() > 1)) return;
+  /* build __cuda_block_size_struct */
+  SgClassDeclaration *s =
+      sb::buildStructDeclaration(
+          SgName("__cuda_block_size_struct"), global_scope_);
+  si::appendStatement(
+      sb::buildVariableDeclaration("x", sb::buildIntType()),
+      s->get_definition());
+  si::appendStatement(
+      sb::buildVariableDeclaration("y", sb::buildIntType()),
+      s->get_definition());
+  si::appendStatement(
+      sb::buildVariableDeclaration("z", sb::buildIntType()),
+      s->get_definition());
+  cuda_block_size_type_ = s->get_type();
+  SgVariableDeclaration *cuda_block_size =
+      sb::buildVariableDeclaration(
+          "__cuda_block_size",
+          sb::buildConstType(
+              sb::buildArrayType(cuda_block_size_type_)),
+          sb::buildAggregateInitializer(
+              sb::buildExprListExp(cuda_block_size_vals_)),
+          global_scope_);
+  si::setStatic(cuda_block_size);
+  si::prependStatement(cuda_block_size, si::getFirstGlobalScope(project_));
+  si::prependStatement(s, si::getFirstGlobalScope(project_));
 }
 
 void CUDATranslator::translateKernelDeclaration(
@@ -193,14 +242,26 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
 
 
 SgExpression *CUDATranslator::BuildBlockDimX() {
+  if (block_dim_x_ <= 0) {
+    /* auto tuning & has dynamic arguments */
+    return sb::buildVarRefExp("x");
+  }
   return sb::buildIntVal(block_dim_x_);
 }
 
 SgExpression *CUDATranslator::BuildBlockDimY() {
+  if (block_dim_y_ <= 0) {
+    /* auto tuning & has dynamic arguments */
+    return sb::buildVarRefExp("y");
+  }
   return sb::buildIntVal(block_dim_y_);  
 }
 
 SgExpression *CUDATranslator::BuildBlockDimZ() {
+  if (block_dim_z_ <= 0) {
+    /* auto tuning & has dynamic arguments */
+    return sb::buildVarRefExp("z");
+  }
   return sb::buildIntVal(block_dim_z_);
 }
 
@@ -233,6 +294,20 @@ SgBasicBlock *CUDATranslator::BuildRunBody(Run *run) {
   si::insertStatementAfter(
       loop,
       sb::buildExprStatement(BuildCudaThreadSynchronize()));
+#if 1 /* error handling ... failure of kernel calling */
+  si::insertStatementBefore(
+      loop,
+      sb::buildExprStatement(
+          sb::buildFunctionCallExp(
+              sb::buildFunctionRefExp("cudaGetLastError"), NULL)));
+  si::insertStatementAfter(
+      loop,
+      sb::buildExprStatement(
+          sb::buildFunctionCallExp(
+              sb::buildFunctionRefExp("__PSCheckCudaError"),
+              sb::buildExprListExp(
+                  sb::buildStringVal("Kernel Execution Failed!")))));
+#endif
   
   return block;
 }
@@ -637,6 +712,45 @@ void CUDATranslator::FixGridType() {
     }
   }
   
+}
+
+/** add dynamic parameter
+ * @param[in/out] parlist ... parameter list
+ */
+void CUDATranslator::AddDynamicParameter(
+    SgFunctionParameterList *parlist) {
+  si::appendArg(parlist, sb::buildInitializedName("x", sb::buildIntType()));
+  si::appendArg(parlist, sb::buildInitializedName("y", sb::buildIntType()));
+  si::appendArg(parlist, sb::buildInitializedName("z", sb::buildIntType()));
+}
+/** add dynamic argument
+ * @param[in/out] args ... arguments
+ * @param[in] a_exp ... index expression
+ */
+void CUDATranslator::AddDynamicArgument(
+    SgExprListExp *args, SgExpression *a_exp) {
+  SgExpression *a =
+      sb::buildPntrArrRefExp(
+          sb::buildVarRefExp(
+              sb::buildVariableDeclaration(
+                  "__cuda_block_size",
+                  sb::buildArrayType(cuda_block_size_type_))),
+          a_exp);
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("x")));
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("y")));
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("z")));
+}
+/** add some code after dlclose()
+ * @param[in] scope
+ */
+void CUDATranslator::AddSyncAfterDlclose(
+    SgScopeStatement *scope) {
+  /* adHoc: cudaThreadSynchronize() need after dlclose().
+   * if not, sometimes fail kernel calling.
+   */
+  si::appendStatement(
+      sb::buildExprStatement(BuildCudaThreadSynchronize()),
+      scope);
 }
 
 } // namespace translator

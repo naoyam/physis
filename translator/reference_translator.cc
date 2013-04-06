@@ -747,8 +747,16 @@ void ReferenceTranslator::TraceStencilRun(Run *run,
   si::appendStatement(loop, cur_scope);
 
   // Stop the stopwatch and call the post trace function
+  si::appendStatement(
+      sb::buildVariableDeclaration(
+          "f", sb::buildFloatType(),
+          sb::buildAssignInitializer(
+              BuildStopwatchStop(st_ptr), sb::buildFloatType())),
+      cur_scope);
   rose_util::AppendExprStatement(
-      cur_scope, BuildTraceStencilPost(BuildStopwatchStop(st_ptr)));
+      cur_scope, BuildTraceStencilPost(sb::buildVarRefExp("f")));
+  si::appendStatement(
+      sb::buildReturnStmt(sb::buildVarRefExp("f")), cur_scope); /* return f; */
   return;
 }
 
@@ -757,6 +765,10 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateRun(Run *run) {
   SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
   si::appendArg(parlist, sb::buildInitializedName("iter",
                                                   sb::buildIntType()));
+  /* auto tuning & has dynamic arguments */
+  if (config_.auto_tuning() && config_.ndynamic() > 1) {
+    AddDynamicParameter(parlist);
+  }
   
   ENUMERATE(i, it, run->stencils().begin(), run->stencils().end()) {
     StencilMap *stencil = it->second;
@@ -770,7 +782,7 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateRun(Run *run) {
   // Declare and define the function
   SgFunctionDeclaration *runFunc =
       sb::buildDefiningFunctionDeclaration(run->GetName(),
-                                           sb::buildVoidType(),
+                                           sb::buildFloatType(),
                                            parlist, global_scope_);
   rose_util::SetFunctionStatic(runFunc);
 
@@ -782,11 +794,538 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateRun(Run *run) {
   return runFunc;
 }
 
+#include <float.h> /* for FLT_MAX */
+#include <dlfcn.h> /* for RTLD_NOW */
+/** generate dlopen and dlsym code
+ * @param[in] run
+ * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+ * @param[in] index ... VAR's expression
+ * @param[in] scope
+ * @return    statement like below
+ *  if (l == VAR / N) {
+ *    l = VAR / N;
+ *    if (handle) dlclose(handle);
+ *    <<< AddSyncAfterDlclose(...) >>>
+ *    handle = dlopen(__dl_fname[l], RTLD_NOW);
+ *    if (!handle) { fprintf(stderr, "%s\n", dlerror()); PSAbort(EXIT_FAILURE); }
+ *    dlerror();
+ *    *(void **)(&__PSStencilRun_0) = dlsym(handle, "__PSStencilRun_0");
+ *    if ((error = dlerror()) != NULL) { fprintf(stderr, "%s\n", error); PSAbort(EXIT_FAILURE); }
+ *  }
+ */
+SgStatement *ReferenceTranslator::GenerateDlopenDlsym(
+    Run *run, SgFunctionRefExp *ref,
+    SgExpression *index, SgScopeStatement *scope) {
+  SgBasicBlock *if_true = sb::buildBasicBlock();
+  SgExpression *l_exp = index;
+  if (config_.ndynamic() > 1) {
+    l_exp = sb::buildIntegerDivideOp(
+        l_exp, sb::buildIntVal(config_.ndynamic()));
+  }
+  /* l = VAR / N; */
+  si::appendStatement(
+      sb::buildAssignStatement(sb::buildVarRefExp("l", scope), l_exp),
+      if_true);
+  /* if (handle) dlclose(handle); */
+  si::appendStatement(
+      sb::buildIfStmt(
+          sb::buildVarRefExp("handle", scope),
+          sb::buildExprStatement(
+              sb::buildFunctionCallExp(
+                  sb::buildFunctionRefExp("dlclose"),
+                  sb::buildExprListExp(
+                      sb::buildVarRefExp("handle", scope)))),
+          NULL),
+      if_true);
+  AddSyncAfterDlclose(if_true);
+  /* handle = dlopen(__dl_fname[l], RTLD_NOW); */
+  si::appendStatement(
+      sb::buildAssignStatement(
+          sb::buildVarRefExp("handle", scope),
+          sb::buildFunctionCallExp(
+              sb::buildFunctionRefExp("dlopen"),
+              sb::buildExprListExp(
+                  sb::buildPntrArrRefExp(
+                      sb::buildVarRefExp(
+                          sb::buildVariableDeclaration(
+                              "__dl_fname",
+                              sb::buildArrayType(
+                                  sb::buildPointerType(
+                                      sb::buildCharType())))),
+                      sb::buildVarRefExp("l", scope)),
+                  //sb::buildOpaqueVarRefExp("RTLD_NOW")
+                  sb::buildIntVal(RTLD_NOW)
+                  ))),
+      if_true);
+  /* if (!handle) { fprintf(stderr, "%s\n", dlerror()); PSAbort(EXIT_FAILURE); } */
+  si::appendStatement(
+      sb::buildIfStmt(
+          sb::buildNotOp(sb::buildVarRefExp("handle", scope)),
+          sb::buildBasicBlock(
+              sb::buildExprStatement(
+                  sb::buildFunctionCallExp(
+                      sb::buildFunctionRefExp("fprintf"),
+                      sb::buildExprListExp(
+                          sb::buildOpaqueVarRefExp("stderr"),
+                          sb::buildStringVal("%s\\n"),
+                          sb::buildFunctionCallExp(
+                              sb::buildFunctionRefExp("dlerror"), NULL)))),
+              sb::buildExprStatement(
+                  sb::buildFunctionCallExp(
+                      sb::buildFunctionRefExp("PSAbort"),
+                      sb::buildExprListExp(
+                          sb::buildIntVal(EXIT_FAILURE))))),
+          NULL),
+      if_true);
+  /* dlerror(); */
+  si::appendStatement(
+      sb::buildExprStatement(
+          sb::buildFunctionCallExp(
+              sb::buildFunctionRefExp("dlerror"), NULL)),
+      if_true);
+  /* all stencils */
+  SgFunctionSymbol *func_sym = ref->get_symbol();
+  PSAssert(func_sym);
+  SgName fname = func_sym->get_name();
+  /* *(void **)(&__PSStencilRun_0) = dlsym(handle, "__PSStencilRun_0"); */
+  si::appendStatement(
+      sb::buildAssignStatement(
+          sb::buildPointerDerefExp(
+              sb::buildCastExp(
+                  sb::buildAddressOfOp(
+                      sb::buildOpaqueVarRefExp(
+                          fname.getString() + " ")), /* XXX: fake */
+                  sb::buildPointerType(
+                      sb::buildPointerType(sb::buildVoidType())))),
+          sb::buildFunctionCallExp(
+              sb::buildFunctionRefExp("dlsym"),
+              sb::buildExprListExp(
+                  sb::buildVarRefExp("handle", scope),
+                  sb::buildStringVal(fname)))),
+      if_true);
+  /* if ((error = dlerror()) != NULL) { fprintf(stderr, "%s\n", error); PSAbort(EXIT_FAILURE); } */
+  si::appendStatement(
+      sb::buildIfStmt(
+          sb::buildAssignOp(
+              sb::buildVarRefExp("error", scope),
+              sb::buildFunctionCallExp(
+                  sb::buildFunctionRefExp("dlerror"), NULL)),
+          sb::buildBasicBlock(
+              sb::buildExprStatement(
+                  sb::buildFunctionCallExp(
+                      sb::buildFunctionRefExp("fprintf"),
+                      sb::buildExprListExp(
+                          sb::buildOpaqueVarRefExp("stderr"),
+                          sb::buildStringVal("%s\\n"),
+                          sb::buildVarRefExp("error", scope)))),
+              sb::buildExprStatement(
+                  sb::buildFunctionCallExp(
+                      sb::buildFunctionRefExp("PSAbort"),
+                      sb::buildExprListExp(
+                          sb::buildIntVal(EXIT_FAILURE))))),
+          NULL),
+      if_true);
+
+  /* if (l != VAR / N) */
+  SgStatement *stmt =
+      sb::buildIfStmt(
+          sb::buildNotEqualOp(sb::buildVarRefExp("l", scope), l_exp),
+          if_true, NULL);
+  return stmt;
+}
+/** generate trial code
+ * @param[in] run
+ * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+ * @return    function declaration like below
+ *  static void __PSStencilRun_N_trial(int iter, ...) {
+ *    static int count = 0;
+ *    static int mindex = 0;
+ *    static float mtime = FLT_MAX;
+ *    static void *r = __PSRandomInit(N); // for random
+ *    void *handle = NULL;
+ *    char *error;
+ *    int l = -1;
+ *    while (count < T && iter > 0) {
+ *      float time;
+ *      int index = __PSRandom(r, count); // for random
+ *      int a = index % N;
+ *      <<< GenerateDlopenDlsym(...) >>>
+ *      time = __PSStencilRun_0(1, ...);
+ *      if (mtime > time) { mtime = time; mindex = index; }
+ *      ++count;
+ *      --iter;
+ *      if (count >= T) __PSRandomFini(r); // for random
+ *    }
+ *    if (iter > 0) {
+ *      int a = mindex % N;
+ *      <<< GenerateDlopenDlsym(...) >>>
+ *      __PSStencilRun_0(iter, ...);
+ *    }
+ *    if (handle) dlclose(handle);
+ *    <<< AddSyncAfterDlclose(...) >>>
+ *  }
+ */
+SgFunctionDeclaration *ReferenceTranslator::GenerateTrial(
+    Run *run, SgFunctionRefExp *ref) {
+  // setup the parameter list
+  SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
+  si::appendArg(parlist, sb::buildInitializedName("iter",
+                                                  sb::buildIntType()));
+
+  ENUMERATE(i, it, run->stencils().begin(), run->stencils().end()) {
+    StencilMap *stencil = it->second;
+    //SgType *stencilType = sb::buildPointerType(stencil->getType());
+    SgType *stencilType = stencil->stencil_type();
+    si::appendArg(parlist,
+                  sb::buildInitializedName("s" + toString(i),
+                                           stencilType));
+  }
+
+  // Declare and define the function
+  SgFunctionDeclaration *trialFunc =
+      sb::buildDefiningFunctionDeclaration(run->GetName() + "_trial",
+                                           sb::buildVoidType(),
+                                           parlist);
+  rose_util::SetFunctionStatic(trialFunc);
+
+  // Function body
+  SgFunctionDefinition *fdef = trialFunc->get_definition();
+  SgDeclarationStatement *vd;
+  SgExprListExp *args;
+  SgBasicBlock *funcBlock = sb::buildBasicBlock();
+  /* static int count = 0; */
+  si::setStatic(
+      vd = sb::buildVariableDeclaration(
+          "count", sb::buildIntType(),
+          sb::buildAssignInitializer(sb::buildIntVal(0)), funcBlock));
+  si::appendStatement(vd, funcBlock);
+  /* static int mindex = 0; */
+  si::setStatic(
+      vd = sb::buildVariableDeclaration(
+          "mindex", sb::buildIntType(),
+          sb::buildAssignInitializer(sb::buildIntVal(0)), funcBlock));
+  si::appendStatement(vd, funcBlock);
+  /* static float mtime = FLT_MAX; */
+  si::setStatic(
+      vd = sb::buildVariableDeclaration(
+          "mtime", sb::buildFloatType(),
+          //sb::buildAssignInitializer(sb::buildOpaqueVarRefExp("FLT_MAX")),
+          sb::buildAssignInitializer(sb::buildFloatVal(FLT_MAX)),
+          funcBlock));
+  si::appendStatement(vd, funcBlock);
+  int trial_times = config_.npattern() * config_.ndynamic();
+  bool random_flag = false;
+  double val;
+  if (config_.Lookup("AT_TRIAL_TIMES", val) &&
+      (int)val > 0 && trial_times > (int)val) {
+    /* static void *r = __PSRandomInit(N); */
+    si::setStatic(
+        vd = sb::buildVariableDeclaration(
+            "r", sb::buildPointerType(sb::buildVoidType()),
+            sb::buildAssignInitializer(
+                sb::buildFunctionCallExp(
+                    sb::buildFunctionRefExp("__PSRandomInit"),
+                    sb::buildExprListExp(sb::buildIntVal(trial_times)))),
+            funcBlock));
+    si::appendStatement(vd, funcBlock);
+    random_flag = true;
+    trial_times = (int)val;
+  }
+
+  if (config_.npattern() > 1) {
+    /* void *handle = NULL; */
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "handle", sb::buildPointerType(sb::buildVoidType()),
+            //sb::buildAssignInitializer(sb::buildOpaqueVarRefExp("NULL")),
+            sb::buildAssignInitializer(sb::buildIntVal(NULL)),
+            funcBlock),
+        funcBlock);
+    /* char *error; */
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "error", sb::buildPointerType(sb::buildCharType()), NULL,
+            funcBlock),
+        funcBlock);
+    /* int l = -1; */
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "l", sb::buildIntType(),
+            sb::buildAssignInitializer(sb::buildIntVal(-1)), funcBlock),
+        funcBlock);
+  }
+
+  SgBasicBlock *while_body = sb::buildBasicBlock();
+  /* float time; */
+  si::appendStatement(
+      sb::buildVariableDeclaration(
+          "time", sb::buildFloatType(), NULL, while_body),
+      while_body);
+  if (random_flag) {
+    /* int index = __PSRandom(r, count); */
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "index", sb::buildIntType(),
+            sb::buildAssignInitializer(
+                sb::buildFunctionCallExp(
+                    sb::buildFunctionRefExp("__PSRandom"),
+                    sb::buildExprListExp(
+                        sb::buildVarRefExp("r", funcBlock),
+                        sb::buildVarRefExp("count", funcBlock)))),
+            while_body),
+        while_body);
+  } else {
+    /* int index = count; */
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "index", sb::buildIntType(),
+            sb::buildAssignInitializer(
+                sb::buildVarRefExp("count", funcBlock)),
+            while_body),
+        while_body);
+  }
+  /* int a = index % N; */
+  if (config_.ndynamic() > 1) {
+    SgExpression *e = sb::buildVarRefExp("index", while_body);
+    if (config_.npattern() > 1) {
+      e = sb::buildModOp(e, sb::buildIntVal(config_.ndynamic()));
+    }
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "a", sb::buildIntType(), sb::buildAssignInitializer(e)),
+        while_body);
+  }
+  /* dlopen(), dlsym() */
+  if (config_.npattern() > 1) {
+    si::appendStatement(
+        GenerateDlopenDlsym(
+            run, ref, sb::buildVarRefExp("index", while_body), funcBlock),
+        while_body);
+  }
+  /* time = __PSStencilRun_0(1, ...); */
+  args = sb::buildExprListExp(sb::buildIntVal(1));
+  if (config_.ndynamic() > 1) {
+    AddDynamicArgument(args, sb::buildVarRefExp("a", while_body));
+  }
+  for (unsigned int i = 0; i < run->stencils().size(); ++i) {
+    si::appendExpression(args, sb::buildVarRefExp("s" + toString(i)));
+  }
+  si::appendStatement(
+      sb::buildAssignStatement(
+          sb::buildVarRefExp("time", while_body),
+          sb::buildFunctionCallExp(ref, args)),
+      while_body);
+#if 1 /* debug */
+  if (config_.ndynamic() > 1) {
+    /* fprintf(stderr, "; __PSStencilRun_0_trial: [%05d:%d] time = %f\n", , index/N, index%N, time); */
+    si::appendStatement(
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("fprintf"),
+                sb::buildExprListExp(
+                    sb::buildOpaqueVarRefExp("stderr"),
+                    sb::buildStringVal("; " + run->GetName() + "_trial: [%05d:%d] time = %f\\n"),
+                    sb::buildIntegerDivideOp(
+                        sb::buildVarRefExp("index", funcBlock),
+                        sb::buildIntVal(config_.ndynamic())),
+                    sb::buildModOp(
+                        sb::buildVarRefExp("index", funcBlock),
+                        sb::buildIntVal(config_.ndynamic())),
+                    sb::buildVarRefExp("time", while_body)))),
+        while_body);
+  } else {
+    /* fprintf(stderr, "; __PSStencilRun_0_trial: [%05d] time = %f\n", index, time); */
+    si::appendStatement(
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("fprintf"),
+                sb::buildExprListExp(
+                    sb::buildOpaqueVarRefExp("stderr"),
+                    sb::buildStringVal("; " + run->GetName() + "_trial: [%05d] time = %f\\n"),
+                    sb::buildVarRefExp("index", funcBlock),
+                    sb::buildVarRefExp("time", while_body)))),
+        while_body);
+  }
+#endif
+  /* if (mtime > time) { mtime = time; mindex = index; } */
+  si::appendStatement(
+      sb::buildIfStmt(
+          sb::buildGreaterThanOp(
+              sb::buildVarRefExp("mtime", funcBlock),
+              sb::buildVarRefExp("time", while_body)),
+          sb::buildBasicBlock(
+              sb::buildAssignStatement(
+                  sb::buildVarRefExp("mtime", funcBlock),
+                  sb::buildVarRefExp("time", while_body)),
+              sb::buildAssignStatement(
+                  sb::buildVarRefExp("mindex", funcBlock),
+                  sb::buildVarRefExp("index", while_body))),
+          NULL),
+      while_body);
+  /* ++count; */
+  si::appendStatement(
+      sb::buildExprStatement(
+          sb::buildPlusPlusOp(
+              sb::buildVarRefExp("count", funcBlock), SgUnaryOp::prefix)),
+      while_body);
+  /* --iter; */
+  si::appendStatement(
+      sb::buildExprStatement(
+          sb::buildMinusMinusOp(
+              sb::buildVarRefExp("iter", funcBlock), SgUnaryOp::prefix)),
+      while_body);
+  if (random_flag) {
+    /* if (count >= T) __PSRandomFini(r); */
+    si::appendStatement(
+        sb::buildIfStmt(
+            sb::buildGreaterOrEqualOp(
+                sb::buildVarRefExp("count", funcBlock),
+                sb::buildIntVal(trial_times)),
+            sb::buildExprStatement(
+                sb::buildFunctionCallExp(
+                    sb::buildFunctionRefExp("__PSRandomFini"),
+                    sb::buildExprListExp(sb::buildVarRefExp("r", funcBlock)))),
+            NULL),
+        while_body);
+  }
+  /* while (count < T && iter > 0) */
+  si::appendStatement(
+      sb::buildWhileStmt(
+          sb::buildAndOp(
+              sb::buildLessThanOp(
+                  sb::buildVarRefExp("count", funcBlock),
+                  sb::buildIntVal(trial_times)),
+              sb::buildGreaterThanOp(
+                  sb::buildVarRefExp("iter", funcBlock),
+                  sb::buildIntVal(0))),
+          while_body),
+      funcBlock);
+
+  SgBasicBlock *if_true = sb::buildBasicBlock();
+#if 1 /* debug */
+  if (config_.ndynamic() > 1) {
+    /* fprintf(stderr, "; __PSStencilRun_0_trial: [%05d:%d] mtime = %f\n", mindex/N, mindex%N, mtime); */
+    si::appendStatement(
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("fprintf"),
+                sb::buildExprListExp(
+                    sb::buildOpaqueVarRefExp("stderr"),
+                    sb::buildStringVal("; " + run->GetName() + "_trial: [%05d:%d] mtime = %f\\n"),
+                    sb::buildIntegerDivideOp(
+                        sb::buildVarRefExp("mindex", funcBlock),
+                        sb::buildIntVal(config_.ndynamic())),
+                    sb::buildModOp(
+                        sb::buildVarRefExp("mindex", funcBlock),
+                        sb::buildIntVal(config_.ndynamic())),
+                    sb::buildVarRefExp("mtime", funcBlock)))),
+        if_true);
+  } else {
+    /* fprintf(stderr, "; __PSStencilRun_0_trial: [%05d] mtime = %f\n", mindex, mtime); */
+    si::appendStatement(
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("fprintf"),
+                sb::buildExprListExp(
+                    sb::buildOpaqueVarRefExp("stderr"),
+                    sb::buildStringVal("; " + run->GetName() + "_trial: [%05d] mtime = %f\\n"),
+                    sb::buildVarRefExp("mindex", funcBlock),
+                    sb::buildVarRefExp("mtime", funcBlock)))),
+        if_true);
+  }
+#endif
+  /* int a = mindex % N; */
+  if (config_.ndynamic() > 1) {
+    SgExpression *e = sb::buildVarRefExp("mindex", funcBlock);
+    if (config_.npattern() > 1) {
+      e = sb::buildModOp(e, sb::buildIntVal(config_.ndynamic()));
+    }
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "a", sb::buildIntType(), sb::buildAssignInitializer(e)),
+        if_true);
+  }
+  /* dlopen(), dlsym() */
+  if (config_.npattern() > 1) {
+    si::appendStatement(
+        GenerateDlopenDlsym(
+            run, ref, sb::buildVarRefExp("mindex", funcBlock), funcBlock),
+        if_true);
+  }
+  /* __PSStencilRun_0(iter, ...); */
+  args = sb::buildExprListExp(sb::buildVarRefExp("iter"));
+  if (config_.ndynamic() > 1) {
+    AddDynamicArgument(args, sb::buildVarRefExp("a", if_true));
+  }
+  for (unsigned int i = 0; i < run->stencils().size(); ++i) {
+    si::appendExpression(args, sb::buildVarRefExp("s" + toString(i)));
+  }
+  si::appendStatement(
+      sb::buildExprStatement(sb::buildFunctionCallExp(ref, args)),
+      if_true);
+  /* if (iter > 0) */
+  si::appendStatement(
+      sb::buildIfStmt(
+          sb::buildGreaterThanOp(
+              sb::buildVarRefExp("iter", funcBlock), sb::buildIntVal(0)),
+          if_true, NULL),
+      funcBlock);
+
+  if (config_.npattern() > 1) {
+    /* if (handle) dlclose(handle); */
+    si::appendStatement(
+        sb::buildIfStmt(
+            sb::buildVarRefExp("handle", funcBlock),
+            sb::buildExprStatement(
+                sb::buildFunctionCallExp(
+                    sb::buildFunctionRefExp("dlclose"),
+                    sb::buildExprListExp(
+                        sb::buildVarRefExp("handle", funcBlock)))),
+            NULL),
+        funcBlock);
+    AddSyncAfterDlclose(funcBlock);
+  }
+
+  si::replaceStatement(fdef->get_body(), funcBlock);
+  si::attachComment(trialFunc, "Generated by " + string(__FUNCTION__));
+  return trialFunc;
+}
+/** add dynamic parameter
+ * @param[in/out] parlist ... parameter list
+ */
+void ReferenceTranslator::AddDynamicParameter(
+    SgFunctionParameterList *parlist) {
+  /* do nothing for ReferenceTranslator */
+}
+/** add dynamic argument
+ * @param[in/out] args ... arguments
+ * @param[in] a_exp ... index expression
+ */
+void ReferenceTranslator::AddDynamicArgument(
+    SgExprListExp *args, SgExpression *a_exp) {
+  /* do nothing for ReferenceTranslator */
+}
+/** add some code after dlclose()
+ * @param[in] scope
+ */
+void ReferenceTranslator::AddSyncAfterDlclose(
+    SgScopeStatement *scope) {
+  /* do nothing for ReferenceTranslator */
+}
+
 void ReferenceTranslator::translateRun(SgFunctionCallExp *node,
                                        Run *run) {
   SgFunctionDeclaration *runFunc = GenerateRun(run);
   si::insertStatementBefore(getContainingFunction(node), runFunc);
   SgFunctionRefExp *ref = rose_util::getFunctionRefExp(runFunc);
+
+  /* auto tuning */
+  if (config_.auto_tuning()) {
+    rose_util::AddASTAttribute(runFunc, new RunKernelCallerAttribute());
+    SgFunctionDeclaration *trialFunc = GenerateTrial(run, ref);
+    si::insertStatementBefore(getContainingFunction(node), trialFunc);
+    ref = rose_util::getFunctionRefExp(trialFunc);
+  }
 
   SgExprListExp *args = sb::buildExprListExp();
   SgExpressionPtrList &original_args =

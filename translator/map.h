@@ -200,6 +200,20 @@ class RunKernelIndexVarAttribute: public AstAttribute {
   int dim_;
 };
 
+/** attribute for kernel caller */
+class RunKernelCallerAttribute: public AstAttribute {
+ public:
+  /** constructor */
+  RunKernelCallerAttribute() {}
+  /** destructor */
+  virtual ~RunKernelCallerAttribute() {}
+  /** copy */
+  AstAttribute *copy() {
+    return new RunKernelCallerAttribute();
+  }
+  static const std::string name;
+};
+
 } // namespace translator
 } // namespace physis
 

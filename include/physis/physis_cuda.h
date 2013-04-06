@@ -128,6 +128,10 @@ extern "C" {
   extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
+  /** check CUDA error
+   * @param[in] message
+   */
+  extern void __PSCheckCudaError(const char *message);
 
 #ifdef PHYSIS_USER
 #define CUDA_DEVICE

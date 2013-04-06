@@ -120,7 +120,12 @@ LuaNumber *LuaLoader::LoadNumber(lua_State *L) const {
 // For debugging
 static void print_key(lua_State *L, int index)  {
   if (lua_isstring(L, index)) {
-    string key(lua_tostring(L, index));
+
+    /* you must duplicate! do not lua_tostring(), directly. */
+    lua_pushvalue(L, index);
+    string key(lua_tostring(L, -1));
+    lua_pop(L, 1);
+
     LOG_DEBUG_LUA() << "key (string): " << key << "\n";
   } else if (lua_isnumber(L, index)) {
     int i = lua_tointeger(L, index);
@@ -136,7 +141,12 @@ static bool skip_entry(lua_State *L) {
   int val_index = -1;
   if (lua_istable(L, val_index)) {
     if (lua_isstring(L, key_index)) {
-      string key(lua_tostring(L, key_index));
+
+      /* you must duplicate! do not lua_tostring(), directly. */
+      lua_pushvalue(L, key_index);
+      string key(lua_tostring(L, -1));
+      lua_pop(L, 1);
+
       if (key == "package") return true;
       //if (key == "io") return true;
       //if (key == "os") return true;
@@ -193,7 +203,12 @@ LuaTable *LuaLoader::LoadTable(lua_State *L, bool root) const {
         LOG_DEBUG_LUA() << "key (index): " << index << "\n";
         lt->lst().insert(std::make_pair(index, cv));
       } else if (lua_isstring(L, -2)) {
-        string key(lua_tostring(L, -2));
+
+        /* you must duplicate! do not lua_tostring(), directly. */
+        lua_pushvalue(L, -2);
+        string key(lua_tostring(L, -1));
+        lua_pop(L, 1);
+
         LOG_DEBUG_LUA() << "key (string): " << key << "\n";
         lt->tbl().insert(std::make_pair(key, cv));
       } else {

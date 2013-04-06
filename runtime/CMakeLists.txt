@@ -31,6 +31,7 @@ endif()
 if (CUDA_ENABLED)
   include_directories(${CUDA_INCLUDE_DIR})
   include_directories(${CUDA_CUT_INCLUDE_DIR})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   cuda_add_library(physis_rt_cuda ${RUNTIME_COMMON_SRC}
     cuda_runtime.cc reduce_cuda.cu buffer_cuda.cu)
   install(TARGETS physis_rt_cuda DESTINATION lib)

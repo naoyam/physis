@@ -33,6 +33,26 @@ static inline void __PSTraceStencilPre(const char *msg) {
   return;
 }
 
+  /**  initialize random
+   * @param[in] n ... number of randomized value
+   * @return    random handle
+   */
+  extern void *__PSRandomInit(int n);
+  /** get randomized value
+   * @param[in] handle ... random handle
+   * @param[in] count ... index of randomized value
+   * @return    randomized value
+   */
+  static inline int __PSRandom(void *handle, int count) {
+    return ((int *)handle)[count];
+  }
+  /** finalize random
+   * @param[in] handle ... random handle
+   */
+  static inline void __PSRandomFini(void *handle) {
+    free(handle);
+  }
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
