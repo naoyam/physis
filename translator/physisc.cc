@@ -239,6 +239,151 @@ static pto::Optimizer *GetOptimizer(TranslationContext *tx,
   }
   return optimizer;
 }
+/** get all kernel functions from proj.
+ * @param[in] proj
+ * @return    kernel functions
+ */
+static std::vector<SgFunctionDeclaration *> GetRunKernelFunc(SgProject *proj) {
+  std::vector<SgFunctionDeclaration *> kernel_funcs;
+  Rose_STL_Container<SgNode *> funcs =
+      NodeQuery::querySubTree(proj, V_SgFunctionDeclaration);
+  FOREACH(it, funcs.begin(), funcs.end()) {
+    SgFunctionDeclaration *func = isSgFunctionDeclaration(*it);
+    RunKernelAttribute *run_kernel_attr =
+        rose_util::GetASTAttribute<RunKernelAttribute>(func);
+    if (run_kernel_attr) {
+      kernel_funcs.push_back(run_kernel_attr->stencil_map()->getKernel());
+      //LOG_DEBUG() << "kernel_funcs.push_back: " << run_kernel_attr->stencil_map()->getKernel()->get_name() << "\n";
+      kernel_funcs.push_back(func);
+      //LOG_DEBUG() << "kernel_funcs.push_back: " << func->get_name() << "\n";
+    }
+    if (rose_util::GetASTAttribute<RunKernelCallerAttribute>(func)) {
+      kernel_funcs.push_back(func);
+      //LOG_DEBUG() << "kernel_funcs.push_back: " << func->get_name() << "\n";
+      SgVariableDeclaration *func_pointer =
+          sb::buildVariableDeclaration(
+              func->get_name(),
+              sb::buildPointerType(func->get_type()));
+      si::replaceStatement(func, func_pointer);
+    }
+  }
+  return kernel_funcs;
+}
+/** replace original kernel functions,
+ *  with typedef, enum and struct declarations.
+ * @param[in] proj
+ * @param[in] kernel_funcs ... original kernel functions
+ */
+static void ReplaceCloneRunKernelFunc(
+    SgProject *proj, std::vector<SgFunctionDeclaration *> &kernel_funcs) {
+  SgScopeStatement *sc = si::getFirstGlobalScope(proj);
+  std::vector<SgStatement *> save;
+  /* save typedef declarations */
+  SgNodePtrList typedef_decls =
+      NodeQuery::querySubTree(proj, V_SgTypedefDeclaration);
+  FOREACH(it, typedef_decls.begin(), typedef_decls.end()) {
+    save.push_back(isSgTypedefDeclaration(*it));
+  }
+  /* save enum declarations */
+  SgNodePtrList enum_decls =
+      NodeQuery::querySubTree(proj, V_SgEnumDeclaration);
+  FOREACH(it, enum_decls.begin(), enum_decls.end()) {
+    save.push_back(isSgEnumDeclaration(*it));
+  }
+  /* save struct declarations */
+  SgNodePtrList struct_decls =
+      NodeQuery::querySubTree(proj, V_SgClassDeclaration);
+  FOREACH(it, struct_decls.begin(), struct_decls.end()) {
+    SgClassDeclaration *class_decl = isSgClassDeclaration(*it);
+    if (si::isStructType(class_decl->get_type())) {
+      save.push_back(class_decl);
+    }
+  }
+  /* remove statement (without #include) */
+  SgStatement *s;
+  while ((s = si::getLastStatement(sc))) {
+    si::removeStatement(s);
+  }
+  /* restore saved typedef, enum and struct declarations */
+  FOREACH(it, save.begin(), save.end()) {
+    SgClassDeclaration *class_decl = isSgClassDeclaration(*it);
+    if (class_decl) {
+      si::fixStructDeclaration(class_decl, sc);
+      continue;
+    }
+    si::appendStatement(isSgStatement(*it), sc);
+  }
+  /* replace original kernel functions */
+  FOREACH(it, kernel_funcs.begin(), kernel_funcs.end()) {
+    SgFunctionDeclaration *func = isSgFunctionDeclaration(*it);
+    RunKernelAttribute *run_kernel_attr =
+        rose_util::GetASTAttribute<RunKernelAttribute>(func);
+    SgFunctionDeclaration *f =
+        rose_util::CloneFunction(func, func->get_name(), sc);
+    if (run_kernel_attr) {
+      rose_util::AddASTAttribute(f, run_kernel_attr);
+      f->get_declarationModifier().get_storageModifier().setStatic(); /* static */
+      si::insertStatementAfterLastDeclaration(
+          run_kernel_attr->stencil_map()->GetStencilTypeDefinition()->get_declaration(),
+          sc);  /* stencil struct */
+    } else if (rose_util::GetASTAttribute<RunKernelCallerAttribute>(func)) {
+      f->get_declarationModifier().get_storageModifier().setExtern(); /* extern */
+      f->set_linkage("C"); /* extern "C" */
+    } else {
+      f->get_declarationModifier().get_storageModifier().setStatic(); /* static */
+    }
+    si::insertStatementAfterLastDeclaration(f, sc);
+  }
+  /* replace GridGetAttribute offset() */
+  vector<SgNode*> exps = rose_util::QuerySubTreeAttribute<GridGetAttribute>(proj);
+  FOREACH(it, exps.begin(), exps.end()) {
+    SgExpression *exp = isSgExpression(*it);
+    PSAssert(exp);
+    GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(exp);
+    PSAssert(gga);
+    if (!gga->in_kernel()) continue;
+    //LOG_DEBUG() << "Found: " << exp->unparseToString() << "\n";
+    SgPntrArrRefExp *ar = isSgPntrArrRefExp(exp);
+    if (ar) {
+      //LOG_DEBUG() << "Found: " << ar->get_rhs_operand()->unparseToString() << "\n";
+      gga->offset() = ar->get_rhs_operand();
+    }
+  }
+}
+/** set dynamic link library file name in __dl_fname[],
+ *  and attach '#include <dlfcn.h>'
+ * @param[in] proj
+ * @param[in] n ... number of dynamic link libraries
+ * @param[in] dl_filename_suffix ... dynamic link library source suffix
+ */
+static void SetDynamicLinkLib(
+    SgProject *proj, int n, string &dl_filename_suffix) {
+  SgScopeStatement *sc = si::getFirstGlobalScope(proj);
+  std::vector<SgExpression *> v;
+  string s =
+      dl_filename_suffix.substr(0, dl_filename_suffix.find_last_of('.')) +
+      ".so";  /* '.??' --> '.so' */
+  for (int i = 0; i < n; ++i) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%05d.", i);
+    string name = generate_output_filename(
+        proj->get_fileList()[0]->get_sourceFileNameWithoutPath(),
+        buf + s);
+    v.push_back(sb::buildStringVal(name));
+  }
+  SgVariableDeclaration *vdecl = 
+      sb::buildVariableDeclaration(
+          "__dl_fname",
+          sb::buildConstType(
+              sb::buildArrayType(sb::buildPointerType(sb::buildCharType()))),
+          sb::buildAssignInitializer(
+              sb::buildAggregateInitializer(sb::buildExprListExp(v))),
+          sc);
+  si::setStatic(vdecl);
+  //si::insertStatementBefore(si::findFirstDefiningFunctionDecl(sc), vdecl);
+  si::prependStatement(vdecl, sc);
+  si::attachArbitraryText(vdecl, "#include <dlfcn.h>");
+}
 
 } // namespace translator
 } // namespace physis
@@ -246,6 +391,7 @@ static pto::Optimizer *GetOptimizer(TranslationContext *tx,
 int main(int argc, char *argv[]) {
   pt::Translator *trans = NULL;
   string filename_suffix;
+  string dl_filename_suffix;  /* dynamic link library source suffix */
   string extra_arg;
   pt::CommandLineOptions opts;
   std::vector<std::string> argvec;
@@ -256,7 +402,17 @@ int main(int argc, char *argv[]) {
   
   pt::Configuration config;
   if (opts.config_file_path.first) {
-    config.LoadFile(opts.config_file_path.second);
+    if (opts.cuda_trans) {
+      /* may auto tuning */
+      config.LoadFile(opts.config_file_path.second, true);
+    } else {
+      /* no auto tuning */
+      config.LoadFile(opts.config_file_path.second, false);
+    }
+    //LOG_DEBUG() << config << "\n";
+    //LOG_DEBUG() << "auto_tuning: " << config.auto_tuning() << "\n";
+    //LOG_DEBUG() << "pattern: " << config.npattern() << "\n";
+    //LOG_DEBUG() << "dynamic: " << config.ndynamic() << "\n";
   }
 
   if (opts.ref_trans) {
@@ -269,6 +425,8 @@ int main(int argc, char *argv[]) {
     trans = new pt::CUDATranslator(config);
     filename_suffix = "cuda.cu";
     argvec.push_back("-DPHYSIS_CUDA");
+    /* set dynamic link library source suffix */
+    dl_filename_suffix = "cuda_dl.cu";
   }
 
   if (opts.mpi_trans) {
@@ -364,6 +522,54 @@ int main(int argc, char *argv[]) {
   //trans->Optimize();
   LOG_INFO() << "Translation done\n";
   
+  /* auto tuning & has dynamic link libraries */
+  if (config.auto_tuning() && config.npattern() > 1) {
+    pt::SetDynamicLinkLib(proj, config.npattern(), dl_filename_suffix);
+    std::vector<SgFunctionDeclaration *> orig = pt::GetRunKernelFunc(proj);
+
+    delete optimizer;
+
+    pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
+
+    int b = backend(proj);  /* without kernel function */
+    LOG_INFO() << "Code generation complete.\n";
+    if (b) return b;
+
+    /* output dynamic link libraries */
+    for (int i = 0; i < config.npattern(); ++i) {
+      pt::ReplaceCloneRunKernelFunc(proj, orig);
+      config.SetPat(i);
+
+      optimizer = GetOptimizer(&tx, proj, rt_builder, opts, &config);
+      LOG_INFO() << i << ":Performing optimization Stage 2\n";
+      optimizer->Stage2();
+      LOG_INFO() << i << ":Optimization Stage 2 done\n";
+      delete optimizer;
+
+      char buf[32];
+#if 1 /* add optimize parameter as comment */
+      string debug_comment = "\n";
+      for (int ii = 0; !config.at_params_pattern[ii].empty(); ++ii) {
+        snprintf(buf, sizeof(buf), "  %s = %d\n",
+                 config.at_params_pattern[ii].c_str(),
+                 config.LookupFlag(config.at_params_pattern[ii]));
+        debug_comment += buf;
+      }
+      si::attachComment(si::getLastStatement(si::getFirstGlobalScope(proj)),
+                        debug_comment, PreprocessingInfo::after);
+#endif
+      snprintf(buf, sizeof(buf), "%05d.", i);
+      pt::set_output_filename(proj->get_fileList()[0],
+                              buf + dl_filename_suffix);
+      b = backend(proj);  /* optimized kernel function */
+      LOG_INFO() << i << ":Code generation complete.\n";
+      if (b) return b;
+    }
+    trans->Finish();
+
+    return b;
+  }
+
   LOG_INFO() << "Performing optimization Stage 2\n";
   if (optimizer) optimizer->Stage2();
   LOG_INFO() << "Optimization Stage 2 done\n";

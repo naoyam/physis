@@ -112,6 +112,37 @@ class ReferenceTranslator : public Translator {
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
   virtual void translateRun(SgFunctionCallExp *node, Run *run);
 
+  /** generate dlopen and dlsym code
+   * @param[in] run
+   * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+   * @param[in] index ... VAR's expression
+   * @param[in] scope
+   * @return    statement of dlopen and dlsym
+   */
+  virtual SgStatement *GenerateDlopenDlsym(
+      Run *run, SgFunctionRefExp *ref,
+      SgExpression *index, SgScopeStatement *scope);
+  /** generate trial code
+   * @param[in] run
+   * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+   * @return    function declaration
+   */
+  virtual SgFunctionDeclaration *GenerateTrial(
+      Run *run, SgFunctionRefExp *ref);
+  /** add dynamic parameter
+   * @param[in/out] parlist ... parameter list
+   */
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
+  /** add dynamic argument
+   * @param[in/out] args ... arguments
+   * @param[in] a_exp ... index expression
+   */
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
+  /** add some code after dlclose()
+   * @param[in] scope
+   */
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
+
   virtual void TranslateReduceGrid(Reduce *rd);
   virtual void TranslateReduceKernel(Reduce *rd);
   //! Build a real function for reducing a grid.

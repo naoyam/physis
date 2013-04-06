@@ -23,3 +23,31 @@ namespace runtime {
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  /**  initialize random
+   * @param[in] n ... number of randomized value
+   * @return    random handle
+   */
+  void *__PSRandomInit(int n) {
+    struct timeval tv;
+    int i, *handle = (int *)calloc(n, sizeof(int));
+    gettimeofday(&tv, NULL);
+    srandom(tv.tv_usec);
+    for (i = 0; i < n; ++i) {
+      handle[i] = i;
+    }
+    for (i = 0; i < n; ++i) {
+      int t, r = random() % n;
+      t = handle[r];
+      handle[r] = handle[i];
+      handle[i] = t;
+    }
+    return (void *)handle;
+  }
+
+#ifdef __cplusplus
+}
+#endif

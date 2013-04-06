@@ -73,6 +73,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "VerboseDebug")
 endif ()
 
 set(AUTO_DOUBLE_BUFFERING FALSE)
+
+set (AUTO_TUNING FALSE CACHE BOOL
+  "Flag to enable auto tuning.")
+message (STATUS "Auto tuning: ${AUTO_TUNING}")
   
 find_package(CUDA)
 if (CUDA_FOUND AND

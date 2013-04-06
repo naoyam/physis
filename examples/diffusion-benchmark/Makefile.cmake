@@ -33,6 +33,11 @@ PHYSISC_MPI = @CMAKE_INSTALL_PREFIX@/bin/physisc-mpi --config $(realpath $(PHYSI
 PHYSISC_MPI_CUDA = @CMAKE_INSTALL_PREFIX@/bin/physisc-mpi-cuda --config $(realpath $(PHYSISC_CONFIG))
 PHYSIS_BUILD_DIR_TOP = physis_build
 PHYSIS_BUILD_DIR = physis_build/$(PHYSISC_CONFIG_KEY)
+ifeq (@AUTO_TUNING@, "TRUE")
+PHYSIS_LD_FLAGS_AT = -Xcompiler -rdynamic -ldl
+else
+PHYSIS_LD_FLAGS_AT = 
+endif
 
 # Minimal configuration
 SRC = diffusion3d.cc baseline.cc
@@ -126,6 +131,17 @@ physis-ref: $(PHYSIS_BUILD_DIR) $(PHYSIS_BUILD_DIR)/diffusion3d_physis.ref.exe
 
 .PHONY: physis-cuda
 physis-cuda: $(PHYSIS_BUILD_DIR) $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.exe
+.PHONY: physis-cuda_at
+physis-cuda_at: physis-cuda
+	$(MAKE) physis-cuda_at_dynamiclinklibraries
+CUDA_DL:= $(patsubst %.cu,%.so,$(wildcard $(PHYSIS_BUILD_DIR)/diffusion3d_physis.*.cuda_dl.cu))
+.PHONY: physis-cuda_at_dynamiclinklibraries
+physis-cuda_at_dynamiclinklibraries:
+	[ "" = "$(CUDA_DL)" ] || $(MAKE) $(CUDA_DL)
+%.cuda_dl.o: %.cuda_dl.cu 
+	$(NVCC) -c $< $(NVCC_CFLAGS) -I@CMAKE_INSTALL_PREFIX@/include -o $@ -Xcompiler -fPIC
+%.cuda_dl.so: %.cuda_dl.o
+	$(CXX) -o $@ $^ -shared $(LDFLAGS) $(CUDA_LDFLAGS) @CUDA_CUT_LIBRARIES@
 
 .PHONY: physis-mpi
 physis-mpi: $(PHYSIS_BUILD_DIR) $(PHYSIS_BUILD_DIR)/diffusion3d_physis.mpi.exe
@@ -151,7 +167,7 @@ $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.cu: diffusion3d_physis.c $(PHYSISC_C
 $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.o: NVCC_CFLAGS += -I@CMAKE_INSTALL_PREFIX@/include
 $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.exe: $(PHYSIS_BUILD_DIR)/diffusion3d_physis.cuda.o \
 	main_physis.o baseline.o diffusion3d.o @CMAKE_INSTALL_PREFIX@/lib/libphysis_rt_cuda.a
-	$(CXX) -o $@ $^ $(LDFLAGS) $(CUDA_LDFLAGS)
+	$(CXX) -o $@ $^ $(LDFLAGS) $(CUDA_LDFLAGS) $(PHYSIS_LD_FLAGS_AT)
 
 # mpi
 $(PHYSIS_BUILD_DIR)/diffusion3d_physis.mpi.c: diffusion3d_physis.c $(PHYSISC_CONFIG)

@@ -114,6 +114,7 @@ void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {
 
 const std::string RunKernelLoopAttribute::name = "RunKernelLoop";
 const std::string RunKernelIndexVarAttribute::name = "RunKernelIndexVar";
+const std::string RunKernelCallerAttribute::name = "RunKernelCaller";
 
 
 bool StencilMap::IsGridPeriodic(SgInitializedName *gv) const {
