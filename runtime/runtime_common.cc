@@ -27,9 +27,10 @@ namespace runtime {
 extern "C" {
 #endif
 
-  /**  initialize random
-   * @param[in] n ... number of randomized value
-   * @return    random handle
+  //! Initialize random numbers.
+  /*!  
+   * \param[in] n ... number of random values
+   * \return    random handle
    */
   void *__PSRandomInit(int n) {
     struct timeval tv;

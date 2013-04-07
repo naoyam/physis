@@ -140,7 +140,7 @@ static bool skip_entry(lua_State *L) {
   if (lua_istable(L, val_index)) {
     if (lua_isstring(L, key_index) &&
         !lua_isnumber(L, key_index)) {
-      string key(lua_tostring(L, -1));
+      string key(lua_tostring(L, key_index));
       if (key == "package") return true;
       //if (key == "io") return true;
       //if (key == "os") return true;

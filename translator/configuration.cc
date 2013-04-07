@@ -30,10 +30,6 @@ const std::string Configuration::at_params_dynamic[] = {
   ""
 };
 
-/** load configuration file, no auto tuning
- * @param[in] path ... configuration filename
- * @return    0
- */
 int Configuration::LoadFile(const std::string &path, bool at) {
   int r = pu::Configuration::LoadFile(path);
   auto_tuning_ = false;
@@ -50,7 +46,7 @@ int Configuration::LoadFile(const std::string &path, bool at) {
     for (int i = 0; !at_params_dynamic[i].empty(); ++i) {
       if (it->first == at_params_dynamic[i]) {
         if (it->first == "CUDA_BLOCK_SIZE") {
-          /* check nest */
+          /* Check nesting, e.g., "{{32, 4, 1}, {64, 4 , 1}} */
           if (!t->lst().begin()->second->getAsLuaTable()) {
             break;
           }

@@ -117,7 +117,7 @@ void MPITranslator::Translate() {
     SgFunctionDeclaration *prototype =
       sb::buildNondefiningFunctionDeclaration(
           r->GetName(),
-          sb::buildVoidType(),
+          sb::buildFloatType(),
           sb::buildFunctionParameterList(client_func_params), global_scope_);
     rose_util::SetFunctionStatic(prototype);
     si::insertStatementBefore(
@@ -143,7 +143,7 @@ void MPITranslator::translateInit(SgFunctionCallExp *node) {
       = sb::buildFunctionParameterTypeList
       (sb::buildIntType(),
        sb::buildPointerType(sb::buildPointerType(sb::buildVoidType())));
-  SgFunctionType *client_func_type = sb::buildFunctionType(sb::buildVoidType(),
+  SgFunctionType *client_func_type = sb::buildFunctionType(sb::buildFloatType(),
                                                            client_func_params);
   vector<SgExpression*> client_func_exprs;
   client_func_exprs.resize(num_runs, NULL);
@@ -464,7 +464,7 @@ SgFunctionDeclaration *MPITranslator::GenerateRun(Run *run) {
   // Declare and define the function
   SgFunctionDeclaration *runFunc =
       sb::buildDefiningFunctionDeclaration(run->GetName(),
-                                           sb::buildVoidType(),
+                                           sb::buildFloatType(),
                                            parlist, global_scope_);
   rose_util::SetFunctionStatic(runFunc);
 

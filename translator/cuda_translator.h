@@ -195,7 +195,7 @@ class CUDATranslator : public ReferenceTranslator {
   /** add some code after dlclose()
    * @param[in] scope
    */
-  virtual void AddSyncAfterDlclose(SgScopeStatement *scope); /* koko: COMMENT!!! for CUDA */
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
 
 };
 

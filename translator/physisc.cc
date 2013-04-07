@@ -524,6 +524,8 @@ int main(int argc, char *argv[]) {
   
   /* auto tuning & has dynamic link libraries */
   if (config.auto_tuning() && config.npattern() > 1) {
+    LOG_INFO() << "Generating AT version.\n";
+    
     pt::SetDynamicLinkLib(proj, config.npattern(), dl_filename_suffix);
     std::vector<SgFunctionDeclaration *> orig = pt::GetRunKernelFunc(proj);
 
@@ -532,8 +534,12 @@ int main(int argc, char *argv[]) {
     pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
 
     int b = backend(proj);  /* without kernel function */
-    LOG_INFO() << "Code generation complete.\n";
-    if (b) return b;
+    LOG_INFO() << "Base code generation complete.\n";
+    if (b) {
+      LOG_ERROR() << "Backend failure.\n";
+      trans->Finish();
+      return b;
+    }
 
     /* output dynamic link libraries */
     for (int i = 0; i < config.npattern(); ++i) {
@@ -562,11 +568,15 @@ int main(int argc, char *argv[]) {
       pt::set_output_filename(proj->get_fileList()[0],
                               buf + dl_filename_suffix);
       b = backend(proj);  /* optimized kernel function */
-      LOG_INFO() << i << ":Code generation complete.\n";
-      if (b) return b;
+      LOG_INFO() << i << ": Code generation complete.\n";
+      if (b) {
+        LOG_ERROR() << i << ": Backend failure.\n";
+        trans->Finish();
+        return b;
+      }
     }
+    LOG_DEBUG() << "AT code generation done.\n";
     trans->Finish();
-
     return b;
   }
 

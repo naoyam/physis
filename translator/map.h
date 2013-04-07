@@ -203,11 +203,8 @@ class RunKernelIndexVarAttribute: public AstAttribute {
 /** attribute for kernel caller */
 class RunKernelCallerAttribute: public AstAttribute {
  public:
-  /** constructor */
   RunKernelCallerAttribute() {}
-  /** destructor */
   virtual ~RunKernelCallerAttribute() {}
-  /** copy */
   AstAttribute *copy() {
     return new RunKernelCallerAttribute();
   }

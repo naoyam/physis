@@ -76,6 +76,14 @@ set(AUTO_DOUBLE_BUFFERING FALSE)
 
 set (AUTO_TUNING FALSE CACHE BOOL
   "Flag to enable auto tuning.")
+# Ensure the actual value is either TRUE or FALSE so that variable
+# replacement with configure_file can be assumed to be either "TRUE"
+# or "FALSE", rather than "ON" or "OFF".
+if (AUTO_TUNING)
+  set (AUTO_TUNING TRUE)
+else ()
+  set (AUTO_TUNING FALSE)  
+endif ()
 message (STATUS "Auto tuning: ${AUTO_TUNING}")
   
 find_package(CUDA)

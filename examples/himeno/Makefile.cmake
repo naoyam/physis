@@ -5,7 +5,7 @@ CFLAGS = -Wall -g $(PHYSIS_INCLUDE) -O2 -DENABLE_DUMP
 NVCC_CFLAGS = -g -Xcompiler -Wall $(PHYSIS_INCLUDE) -arch sm_20 -DENABLE_DUMP --ptxas-options -v
 MPI_INCLUDE = $(shell for mpiinc in $(shell echo "@MPI_INCLUDE_PATH@" | sed 's/;/ /g'); do echo -n "-I$$mpiinc "; done)
 NVCC_LDFLAGS= -lcudart -L@CUDA_RT_DIR@
-ifeq (@AUTO_TUNING@, "TRUE")
+ifeq ("@AUTO_TUNING@", "TRUE")
 NVCC_LD_FLAGS_AT = -Xcompiler -rdynamic -ldl
 else
 NVCC_LD_FLAGS_AT =

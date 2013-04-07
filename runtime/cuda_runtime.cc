@@ -184,10 +184,9 @@ extern "C" {
                               cudaMemcpyHostToDevice));
   }
 
-  /** check CUDA error
-   * @param[in] message
-   * http://www.visualization.hpc.mil/wiki/Handling_CUDA_error_messages
-   * Example 1
+  //! Check CUDA error
+  /*!
+   * \param message Additional message to display upon errors.
    */
   void __PSCheckCudaError(const char *message) {
     cudaError_t error = cudaGetLastError();

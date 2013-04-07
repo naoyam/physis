@@ -33,7 +33,7 @@ PHYSISC_MPI = @CMAKE_INSTALL_PREFIX@/bin/physisc-mpi --config $(realpath $(PHYSI
 PHYSISC_MPI_CUDA = @CMAKE_INSTALL_PREFIX@/bin/physisc-mpi-cuda --config $(realpath $(PHYSISC_CONFIG))
 PHYSIS_BUILD_DIR_TOP = physis_build
 PHYSIS_BUILD_DIR = physis_build/$(PHYSISC_CONFIG_KEY)
-ifeq (@AUTO_TUNING@, "TRUE")
+ifeq ("@AUTO_TUNING@", "TRUE")
 PHYSIS_LD_FLAGS_AT = -Xcompiler -rdynamic -ldl
 else
 PHYSIS_LD_FLAGS_AT = 

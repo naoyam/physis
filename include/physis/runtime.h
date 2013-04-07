@@ -33,6 +33,7 @@ static inline void __PSTraceStencilPre(const char *msg) {
   return;
 }
 
+#ifdef AUTO_TUNING  
   /**  initialize random
    * @param[in] n ... number of randomized value
    * @return    random handle
@@ -52,7 +53,8 @@ static inline void __PSTraceStencilPre(const char *msg) {
   static inline void __PSRandomFini(void *handle) {
     free(handle);
   }
-
+#endif
+  
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

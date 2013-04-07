@@ -8,6 +8,9 @@
 
 #include "translator/reference_translator.h"
 
+#include <float.h> /* for FLT_MAX */
+
+
 #include "translator/rose_util.h"
 #include "translator/translation_context.h"
 #include "translator/reference_runtime_builder.h"
@@ -795,8 +798,6 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateRun(Run *run) {
   return runFunc;
 }
 
-#include <float.h> /* for FLT_MAX */
-#include <dlfcn.h> /* for RTLD_NOW */
 /** generate dlopen and dlsym code
  * @param[in] run
  * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
@@ -854,8 +855,8 @@ SgStatement *ReferenceTranslator::GenerateDlopenDlsym(
                                   sb::buildPointerType(
                                       sb::buildCharType())))),
                       sb::buildVarRefExp("l", scope)),
-                  //sb::buildOpaqueVarRefExp("RTLD_NOW")
-                  sb::buildIntVal(RTLD_NOW)
+                  sb::buildOpaqueVarRefExp("RTLD_NOW")
+                  //sb::buildIntVal(RTLD_NOW)
                   ))),
       if_true);
   /* if (!handle) { fprintf(stderr, "%s\n", dlerror()); PSAbort(EXIT_FAILURE); } */

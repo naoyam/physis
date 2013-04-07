@@ -83,5 +83,5 @@ See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
     scope? 
 
 # Misc
-* frontend
+* frontend and backend functions
   * Declared in roseSupport/utility_functions.h
