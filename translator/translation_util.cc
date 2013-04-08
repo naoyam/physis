@@ -180,6 +180,7 @@ SgExpression *BuildFunctionCall(const std::string &name,
   return call;
 }
 
+#if 0
 std::string GetTypeName(SgType *ty) {
   if (isSgTypeFloat(ty)) {
     return string("Float");
@@ -196,6 +197,7 @@ std::string GetTypeDimName(GridType *gt) {
   return GetTypeName(gt->getElmType())
       + toString(gt->getNumDim()) + "D";
 }
+#endif
 
 SgType *GetBaseType(SgType *ty) {
   if (si::isPointerType(ty)) {

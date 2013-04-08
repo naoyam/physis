@@ -190,7 +190,8 @@ SgExpression *GridType::BuildElementTypeExpr() {
   } else if (isSgTypeDouble(elm_type_)) {
     e = sb::buildIntVal(PS_DOUBLE);
   } else {
-    PSAbort(1);
+    // Assumes user-defined type
+    e = sb::buildIntVal(PS_USER);
   }
   return e;
 }
