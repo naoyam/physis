@@ -67,9 +67,9 @@ extern "C" {
   DeclareGrid3D(Float, float);
   DeclareGrid3D(Double, double);
 
-#undef DeclareGrid1D  
-#undef DeclareGrid2D  
-#undef DeclareGrid3D
+  //#undef DeclareGrid1D  
+  //#undef DeclareGrid2D  
+  //#undef DeclareGrid3D
   
 #define PSGridGet(g, ...) g->get(__VA_ARGS__)
 #define PSGridGetPeriodic(g, ...) g->get_periodic(__VA_ARGS__)  

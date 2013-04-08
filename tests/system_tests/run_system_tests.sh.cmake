@@ -902,7 +902,6 @@ function get_module_base()
 				;;
 			-s|--source)
 				TESTS=$(get_test_cases $2)
-				echo $TESTS
 				shift 2
 				;;
 			--translate)
