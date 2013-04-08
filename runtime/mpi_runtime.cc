@@ -239,53 +239,6 @@ extern "C" {
     //((GridMPI *)p)->Swap();
     return;
   }
-  
-  float *__PSGridGetAddrFloat1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<float>(g, x);
-  }
-  float *__PSGridGetAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<float>(g, x, y);
-  }
-  float *__PSGridGetAddrFloat3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<float>(g, x, y, z);
-  }
-  double *__PSGridGetAddrDouble1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<double>(g, x);
-  }
-
-  double *__PSGridGetAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<double>(g, x, y);
-  }
-  
-  double *__PSGridGetAddrDouble3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<double>(g, x, y, z);
-  }
-
-  //
-  // Get No Halo
-  // These routines are in fact the same as the above routines. Should
-  // be removed.
-  //
-  float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<float>(g, x);
-  }
-  double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<double>(g, x);
-  }
-  float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<float>(g, x, y);
-  }
-  double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<double>(g, x, y);
-  }
-  float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, PSIndex x,
-                                PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<float>(g, x, y, z);
-  }
-  double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, PSIndex x,
-                                 PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<double>(g, x, y, z);
-  }
 
   PSIndex __PSGridGetOffset1D(__PSGridMPI *g, PSIndex i1) {
     return static_cast<GridMPI*>(g)->CalcOffset<1>(IndexArray(i1));
@@ -316,30 +269,6 @@ extern "C" {
   }
   void *__PSGridGetBaseAddr(__PSGridMPI *g) {
     return static_cast<GridMPI*>(g)->_data();
-  }
-
-  //
-  // Emit
-  //
-  float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<float>(g, x);
-  }
-  double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, PSIndex x) {
-    return __PSGridGetAddr<double>(g, x);
-  }
-  float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<float>(g, x, y);
-  }
-  double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y) {
-    return __PSGridGetAddr<double>(g, x, y);
-  }
-  float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, PSIndex x,
-                                 PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<float>(g, x, y, z);
-  }
-  double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, PSIndex x,
-                                   PSIndex y, PSIndex z) {
-    return __PSGridGetAddr<double>(g, x, y, z);
   }
 
   void __PSLoadNeighbor(__PSGridMPI *g,

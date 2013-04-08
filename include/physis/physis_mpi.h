@@ -62,21 +62,6 @@ extern "C" {
   extern void __PSStencilRun(int id, int iter, int num_stencils, ...);
 
   extern int __PSBcast(void *buf, size_t size);
-
-  extern float *__PSGridGetAddrFloat1D(__PSGridMPI *g, PSIndex x);
-  extern float *__PSGridGetAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern float *__PSGridGetAddrFloat3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z);
-  extern double *__PSGridGetAddrDouble1D(__PSGridMPI *g, PSIndex x);
-  extern double *__PSGridGetAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern double *__PSGridGetAddrDouble3D(__PSGridMPI *g, PSIndex x, PSIndex y, PSIndex z);
-  extern float *__PSGridGetAddrNoHaloFloat1D(__PSGridMPI *g, PSIndex x);
-  extern double *__PSGridGetAddrNoHaloDouble1D(__PSGridMPI *g, PSIndex x);
-  extern float *__PSGridGetAddrNoHaloFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern double *__PSGridGetAddrNoHaloDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern float *__PSGridGetAddrNoHaloFloat3D(__PSGridMPI *g, PSIndex x,
-                                             PSIndex y, PSIndex z);
-  extern double *__PSGridGetAddrNoHaloDouble3D(__PSGridMPI *g, PSIndex x,
-                                               PSIndex y, PSIndex z);
   
   extern PSIndex __PSGridGetOffset1D(__PSGridMPI *g, PSIndex i1);
   extern PSIndex __PSGridGetOffset2D(__PSGridMPI *g, PSIndex i1,
@@ -90,17 +75,6 @@ extern "C" {
                                              PSIndex i2, PSIndex i3);
 
   extern void *__PSGridGetBaseAddr(__PSGridMPI *g);
-  
-  extern float *__PSGridEmitAddrFloat1D(__PSGridMPI *g, PSIndex x);
-  extern double *__PSGridEmitAddrDouble1D(__PSGridMPI *g, PSIndex x);
-  extern float *__PSGridEmitAddrFloat2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern double *__PSGridEmitAddrDouble2D(__PSGridMPI *g, PSIndex x, PSIndex y);
-  extern float *__PSGridEmitAddrFloat3D(__PSGridMPI *g, PSIndex x,
-                                        PSIndex y, PSIndex z);
-  extern double *__PSGridEmitAddrDouble3D(__PSGridMPI *g, PSIndex x,
-                                          PSIndex y, PSIndex z);
-
-
   
   extern void __PSLoadNeighbor(__PSGridMPI *g,
                                const PSVectorInt offset_min,
