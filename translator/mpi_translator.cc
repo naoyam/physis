@@ -580,27 +580,31 @@ void MPITranslator::translateEmit(SgFunctionCallExp *node,
 
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
-  SgScopeStatement *scope = getContainingScopeStatement(node);  
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
-
-  string get_address_name = emit_addr_name_ +  GetTypeDimName(gt);  
-  SgFunctionRefExp *get_address = sb::buildFunctionRefExp(get_address_name,
-                                                          global_scope_);
-  SgExprListExp *args = sb::buildExprListExp(g);
-  SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
-  FOREACH(it, params.begin(), params.begin() + nd) {
-    SgInitializedName *p = *it;
+  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
+  
+  SgInitializedNamePtrList &params =
+      getContainingFunction(node)->get_args();
+  SgExprListExp *args = sb::buildExprListExp();
+  for (int i = 0; i < nd; ++i) {
+    SgInitializedName *p = params[i];
     si::appendExpression(
         args,
-        sb::buildVarRefExp(p,
-                           getContainingScopeStatement(node)));
+        sb::buildVarRefExp(p, scope));
   }
 
-  SgFunctionCallExp *get_address_exp
-      = sb::buildFunctionCallExp(get_address, args);
-  
-  SgExpression *lhs =
-      sb::buildPointerDerefExp(get_address_exp);
+  StencilIndexList sil;
+  StencilIndexListInitSelf(sil, nd);
+  SgExpression *offset = BuildOffset(
+      gv, nd, args, true, false, &sil, scope);
+  SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
+      si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
+      sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),
+                                              scope)));
+  SgExpression *lhs = sb::buildPntrArrRefExp(
+      sb::buildCastExp(base_addr,
+                       sb::buildPointerType(gt->getElmType())),
+      offset);
+
   SgExpression *rhs =
       si::copyExpression(node->get_args()->get_expressions()[0]);
 
