@@ -90,7 +90,6 @@ find_package(CUDA)
 if (CUDA_FOUND AND
     (CUDA_VERSION VERSION_EQUAL "4.0") OR
     (CUDA_VERSION VERSION_GREATER "4.0"))
-  set(CUDA_ENABLED TRUE)
   set (CUDA_NVCC_FLAGS -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
   foreach(i ${CUDA_LIBRARIES})
@@ -103,53 +102,26 @@ if (CUDA_FOUND AND
 else()
   message(WARNING "Compatible CUDA toolkit (4.0 or higher) not found.")
   message(WARNING "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")
-  set(CUDA_ENABLED FALSE)
 endif()
 
 find_package(MPI)
+
 if (MPI_FOUND)
-  set(MPI_ENABLED TRUE)
   set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
-  set(MPI_OPENMP_ENABLED TRUE)
   message(STATUS "MPI found")
   message(STATUS "MPIEXEC=${MPIEXEC}")
   message(STATUS "MPI_INCLUDE_PATH=${MPI_INCLUDE_PATH}")
   message(STATUS "MPI_LIBRARIES=${MPI_LIBRARIES}")
-else()
-  set(MPI_ENABLED FALSE)
-  set(MPI_OPENMP_ENABLED FALSE)
-endif()
-find_library(NUMA_LIBRARY numa)
-if (NUMA_LIBRARY)
-  set(NUMA_ENABLED TRUE)
-else()
-  set(NUMA_ENABLED FALSE)
 endif()
 
-set(OPENCL_FOUND FALSE)
-if (TRUE)
-  find_path(OPENCL_INCLUDE_PATH
-    NAMES CL/cl.h
-    PATHS ${CUDA_INCLUDE_DIRS}
-  )
-  message(STATUS "OPENCL_INCLUDE_PATH=${OPENCL_INCLUDE_PATH}")
-endif()
-if (OPENCL_INCLUDE_PATH)
-  find_library(OPENCL_LIBRARY
-    NAMES OpenCL
-    PATHS env LD_LIBRARY_PATH
-    )
-  message(STATUS "OPENCL_LIBRARY=${OPENCL_LIBRARY}")
-  #TODO: How to set include directory?
-endif()
-if (OPENCL_LIBRARY)
-  set(OPENCL_FOUND TRUE)
-endif()
-if (OPENCL_FOUND)
-  set(OPENCL_ENABLED TRUE)
+find_library(NUMA_LIBRARY numa)
+if (NUMA_LIBRARY)
+  set(NUMA_FOUND TRUE)
 else()
-  set(OPENCL_ENABLED FALSE)
+  set(NUMA_FOUND FALSE)
 endif()
+
+find_package (OpenCL)
 
 # http://www.cmake.org/Wiki/CMake_RPATH_handling
 # use, i.e. don't skip the full RPATH for the build tree

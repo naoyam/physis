@@ -13,23 +13,32 @@
 #include "translator/cuda_translator.h"
 #include "translator/mpi_translator.h"
 //#include "translator/mpi_translator2.h"
-#include "translator/mpi_cuda_translator.h"
-#include "translator/opencl_translator.h"
-#include "translator/mpi_opencl_translator.h"
-#include "translator/mpi_openmp_translator.h"
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
 #include "translator/runtime_builder.h"
 #include "translator/cuda_runtime_builder.h"
 #include "translator/mpi_runtime_builder.h"
-#include "translator/mpi_cuda_runtime_builder.h"
 #include "translator/configuration.h"
 #include "translator/optimizer/optimizer.h"
 #include "translator/optimizer/reference_optimizer.h"
 #include "translator/optimizer/cuda_optimizer.h"
 #include "translator/optimizer/mpi_optimizer.h"
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED
+#include "translator/mpi_cuda_translator.h"
+#include "translator/mpi_cuda_runtime_builder.h"
 #include "translator/optimizer/mpi_cuda_optimizer.h"
+#endif
+#ifdef OPENCL_TRANSLATOR_ENABLED
+#include "translator/opencl_translator.h"
+#endif
+#ifdef MPI_OPENCL_TRANSLATOR_ENABLED
+#include "translator/mpi_opencl_translator.h"
+#endif
+#ifdef MPI_OPENMP_TRANSLATOR_ENABLED
+#include "translator/mpi_openmp_translator.h"
+#endif
+
 
 using std::string;
 namespace bpo = boost::program_options;
@@ -167,11 +176,19 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     sj << "mpi";
     //    sj << "mpi2";    
     sj << "cuda";
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED    
     sj << "mpi-cuda";
+#endif
+#ifdef OPENCL_TRANSLATOR_ENABLED
     sj << "opencl";
+#endif
+#ifdef MPI_OPENCL_TRANSLATOR_ENABLED
     sj << "mpi-opencl";
+#endif
+#ifdef MPI_OPENMP_TRANSLATOR_ENABLED
     sj << "mpi-openmp";
     sj << "mpi-openmp-numa";
+#endif
     std::cout << sj << "\n";
     exit(0);
   }
@@ -207,8 +224,10 @@ static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
     builder = new pt::MPIRuntimeBuilder(gs);
   // } else if (opts.mpi2_trans) {
   //   builder = new pt::MPIRuntimeBuilder(gs);
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED    
   } else if (opts.mpi_cuda_trans) {
     builder = new pt::MPICUDARuntimeBuilder(gs);
+#endif    
   }
   if (builder == NULL) {
     LOG_WARNING() << "No runtime builder found for this target\n";
@@ -229,10 +248,12 @@ static pto::Optimizer *GetOptimizer(TranslationContext *tx,
                                        builder, cfg);
   } else if (opts.mpi_trans) {
     optimizer = new pto::MPIOptimizer(proj, tx,
-                                      builder, cfg);    
+                                      builder, cfg);
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED    
   } else if (opts.mpi_cuda_trans) {
     optimizer = new pto::MPICUDAOptimizer(proj, tx,
-                                          builder, cfg);        
+                                          builder, cfg);
+#endif    
   }
   if (optimizer == NULL) {
     LOG_WARNING() << "No optimizer found for this target\n";
@@ -441,24 +462,31 @@ int main(int argc, char *argv[]) {
   //   argvec.push_back("-DPHYSIS_MPI");
   // }
 
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED
   if (opts.mpi_cuda_trans) {
     trans = new pt::MPICUDATranslator(config);
     filename_suffix = "mpi-cuda.cu";
     argvec.push_back("-DPHYSIS_MPI_CUDA");
   }
+#endif
 
+#ifdef OPENCL_TRANSLATOR_ENABLED
   if (opts.opencl_trans) {
     trans = new pt::OpenCLTranslator(config);
     filename_suffix = "opencl.c";
     argvec.push_back("-DPHYSIS_OPENCL");
   }
+#endif
 
+#ifdef MPI_OPENCL_TRANSLATOR_ENABLED
   if (opts.mpi_opencl_trans) {
     trans = new pt::MPIOpenCLTranslator(config);
     filename_suffix = "mpi-opencl.c";
     argvec.push_back("-DPHYSIS_MPI_OPENCL");
   }
+#endif
 
+#ifdef MPI_OPENMP_TRANSLATOR_ENABLED
   if (opts.mpi_openmp_trans) {
     trans = new pt::MPIOpenMPTranslator(config);
     filename_suffix = "mpi-openmp.c";
@@ -472,7 +500,8 @@ int main(int argc, char *argv[]) {
     argvec.push_back("-DPHYSIS_MPI_OPENMP");
     argvec.push_back("-DPHYSIS_MPI_OPENMP_NUMA");
   }
-
+#endif
+  
   if (trans == NULL) {
     LOG_INFO() << "No translation done.\n";
     exit(0);
