@@ -132,87 +132,15 @@ void CUDATranslator::translateKernelDeclaration(
     SgType *new_type = sb::buildPointerType(BuildOnDeviceGridType(gt));
     exp->set_type(new_type);
   }
-
-  // This is unnecessary because PSGridDim is defined as a macro that
-  // work both in host and device.
-  /*
-  Rose_STL_Container<SgNode*> gdim_calls =
-      NodeQuery::querySubTree(node, V_SgFunctionCallExp);
-  SgFunctionSymbol *gdim_dev =
-      si::lookupFunctionSymbolInParentScopes("__PSGridDimDev");
-  FOREACH (it, gdim_calls.begin(), gdim_calls.end()) {
-    SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
-    PSAssert(fc);
-    if (fc->getAssociatedFunctionSymbol() != grid_dim_get_func_)
-      continue;
-    SgFunctionCallExp *new_call =
-        sb::buildFunctionCallExp(
-            sb::buildFunctionRefExp(gdim_dev),
-            isSgExprListExp(si::copyExpression(
-                fc->get_args())));
-    si::replaceExpression(fc, new_call);
-  }
-  */
   return;
 }
 
 void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
                                   SgInitializedName *grid_arg,
                                   bool is_kernel, bool is_periodic) {
-#if 0
-  if (!(is_kernel && flag_pre_calc_grid_address_)) {
-    ReferenceTranslator::translateGet(func_call_exp,
-                                      grid_arg,
-                                      is_kernel, is_periodic);
-    return;
-  }
-  PSAssert(func_call_exp);
-  PSAssert(grid_arg);
-
-  SgFunctionDefinition *func_def =
-      si::getEnclosingFunctionDefinition(func_call_exp);
-  PSAssert(func_def);
-  SgBasicBlock *func_body = func_def->get_body();
-  PSAssert(func_body);
-
-  GridType *grid_type =
-      tx_->findGridType(grid_arg->get_type());
-  int num_dim = grid_type->getNumDim();
-
-  SgVariableDeclaration *var_ptr =
-      sb::buildVariableDeclaration(
-          rose_util::generateUniqueName(func_body),
-          sb::buildPointerType(grid_type->getElmType()),
-          NULL,
-          func_body);
-
-  SgVarRefExp *grid_var = sb::buildVarRefExp(grid_arg, func_body);
-  var_ptr->reset_initializer(
-      sb::buildAssignInitializer(
-          sb::buildAddOp(
-              sb::buildCastExp(
-                  sb::buildArrowExp(
-                      grid_var,
-                      sb::buildVarRefExp("p0",
-                                         grid_decl_->get_definition())),
-                  sb::buildPointerType(grid_type->getElmType())),
-              BuildOffset(grid_arg,
-                          num_dim,
-                          si::copyExpression(func_call_exp->get_args()),
-                          is_kernel,
-                          is_periodic,
-                          tx_->findStencilIndex(func_call_exp),                          
-                          getContainingScopeStatement(func_call_exp)))));
-  si::prependStatement(var_ptr, func_body);
-  SgExpression *grid_get_exp =
-      sb::buildPointerDerefExp(sb::buildVarRefExp(var_ptr));
-
-  si::replaceExpression(func_call_exp, grid_get_exp);
-#else
   ReferenceTranslator::translateGet(func_call_exp,
                                     grid_arg,
                                     is_kernel, is_periodic);
-#endif  
 }
 
 SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
@@ -642,34 +570,6 @@ SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
       sb::buildIfStmt(test_all, sb::buildReturnStmt(), NULL);
   return ifstmt;
 }
-
-// void CUDATranslator::translateSet(SgFunctionCallExp *node,
-//                                   SgInitializedName *gv) {
-//   GridType *gt = tx_->findGridType(gv->get_type());
-//   int nd = gt->getNumDim();
-//   SgScopeStatement *scope = getContainingScopeStatement(node);    
-//   SgExpression *offset = BuildOffset(gv, scope, nd,
-//                                      node->get_args()->get_expressions());
-//   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
-//   SgExpression *p1 =
-//       sb::buildArrowExp(g, sb::buildVarRefExp("p0",
-//                                               grid_decl_->get_definition()));
-//   p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->getElmType()));
-//   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
-//   LOG_DEBUG() << "set lhs: " << lhs->unparseToString() << "\n";
-
-//   SgExpression *rhs =
-//       si::copyExpression(node->get_args()->get_expressions()[nd]);
-  
-//   LOG_DEBUG() << "set rhs: " << rhs->unparseToString() << "\n";
-
-//   SgExpression *set = sb::buildAssignOp(lhs, rhs);
-//   LOG_DEBUG() << "set: " << set->unparseToString() << "\n";
-
-//   si::replaceExpression(node, set, false);
-// }
-
-
 
 void CUDATranslator::FixAST() {
   // Change the dummy grid type to the actual one even if AST

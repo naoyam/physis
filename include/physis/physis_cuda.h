@@ -17,90 +17,57 @@ extern "C" {
 
   typedef struct {
     void *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    void *p1;
-#endif    
     int dim[1];
   } __PSGridDev1D;
 
   typedef struct {
     float *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    float *p1;
-#endif    
     int dim[1];    
   } __PSGridDev1DFloat;
 
   typedef struct {
     double *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    double *p1;
-#endif        
     int dim[1];    
   } __PSGridDev1DDouble;
 
   // Note: int may not be enough for dim
   typedef struct {
     void *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    void *p1;
-#endif        
     int dim[2];
   } __PSGridDev2D;
 
   typedef struct {
     float *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    float *p1;
-#endif    
     int dim[2];
   } __PSGridDev2DFloat;
 
   typedef struct {
     double *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    double *p1;
-#endif    
     int dim[2];
   } __PSGridDev2DDouble;
 
   typedef struct {
     void *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    void *p1;
-#endif    
     int dim[3];
   } __PSGridDev3D;
 
   typedef struct {
     float *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    float *p1;
-#endif    
     int dim[3];
   } __PSGridDev3DFloat;
 
   typedef struct {
     double *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    double *p1;
-#endif    
     int dim[3];
   } __PSGridDev3DDouble;
 
   typedef struct {
     void *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    void *p1;
-#endif    
     int dim[3];
   } __PSGridDev;
 
   typedef struct {
     char *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    char *p1;
-#endif
     PSVectorInt dim;    
     int elm_size;
     int num_dims;
