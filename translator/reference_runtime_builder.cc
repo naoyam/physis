@@ -74,7 +74,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
       si::copyExpression(gvref), sb::buildVarRefExp("p0"));
   si::fixVariableReferences(p0);
   //GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
-  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->elm_type()));
+  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->point_type()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
   GridGetAttribute *gga = new GridGetAttribute(NULL, gt->num_dim(), is_kernel,
                                                sil);

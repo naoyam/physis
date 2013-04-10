@@ -26,8 +26,7 @@ ReferenceTranslator::ReferenceTranslator(const Configuration &config):
     Translator(config),
     flag_constant_grid_size_optimization_(true),
     validate_ast_(true),
-    grid_create_name_("__PSGridNew"),
-    rt_builder_(NULL) {
+    grid_create_name_("__PSGridNew") {
   target_specific_macro_ = "PHYSIS_REF";
 }
 
@@ -93,9 +92,9 @@ void ReferenceTranslator::ValidateASTConsistency() {
 }
 
 void ReferenceTranslator::SetUp(SgProject *project,
-                                TranslationContext *context) {
-  Translator::SetUp(project, context);
-  rt_builder_ = new ReferenceRuntimeBuilder(global_scope_);  
+                                TranslationContext *context,
+                                RuntimeBuilder *rt_builder) {
+  Translator::SetUp(project, context, rt_builder);
 }
 
 void ReferenceTranslator::Finish() {
@@ -157,13 +156,13 @@ SgExprListExp *ReferenceTranslator::generateNewArg(
     GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
 #ifdef UNUSED_CODE
   SgExprListExp *new_args
-      = sb::buildExprListExp(sb::buildSizeOfOp(gt->getElmType()),
+      = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
                              sb::buildIntVal(gt->getNumDim()),
                              sb::buildVarRefExp(dim_decl),
                              sb::buildBoolValExp(g->isReadWrite()));
 #else
   SgExprListExp *new_args
-      = sb::buildExprListExp(sb::buildSizeOfOp(gt->getElmType()),
+      = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
                              sb::buildIntVal(gt->getNumDim()),
                              sb::buildVarRefExp(dim_decl),
                              sb::buildBoolValExp(false));
@@ -311,7 +310,7 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpression *p0 = sb::buildArrowExp(
       g, sb::buildVarRefExp("p0", grid_decl_->get_definition()));
-  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->getElmType()));
+  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->point_type()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
   rose_util::GetASTAttribute<GridGetAttribute>(p0)->offset() = offset;
@@ -352,7 +351,7 @@ void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
       sb::buildArrowExp(g,
                         sb::buildVarRefExp(dst_buf_name,
                                            grid_decl_->get_definition()));
-  p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->getElmType()));
+  p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->point_type()));
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
 
@@ -1530,7 +1529,7 @@ void ReferenceTranslator::TranslateReduceGrid(Reduce *rd) {
   PSAssert(gv);
   //SgInitializedName *gin = gv->get_symbol()->get_declaration();
   GridType *gt = tx_->findGridType(gv);
-  SgType *elm_type = gt->getElmType();
+  SgType *elm_type = gt->point_type();
   
   SgFunctionSymbol *reduce_grid_func;
 

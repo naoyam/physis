@@ -27,44 +27,47 @@ class GridType: public AstAttribute {
   SgClassType *struct_type_;
   SgTypedefType *user_type_;
   unsigned num_dim_;
-  string name_;
-  SgType *elm_type_;
+  string type_name_;
+  SgType *point_type_;
+  SgClassDefinition *point_def_;
+  //! Used, e.g., to hold its corresponding device type
+  SgType *aux_type_;
 
  public:
   GridType(SgClassType *struct_type, SgTypedefType *user_type)
-      : struct_type_(struct_type), user_type_(user_type) {
-    name_ = user_type_->get_name().getString();
-    LOG_DEBUG() << "grid type name: " << name_ << "\n";
+      : struct_type_(struct_type), user_type_(user_type),
+        point_type_(NULL), point_def_(NULL),
+        aux_type_(NULL) {
+    type_name_ = user_type_->get_name().getString();
+    LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
     string realName = struct_type_->get_name().getString();
     num_dim_ = getNumDimFromTypeName(realName);
     LOG_DEBUG() << "grid dimension: " << num_dim_ << "\n";
-    findElementType();
-    LOG_DEBUG() << "grid element type: "
-                << elm_type_->class_name() << "\n";
+    FindPointType();
   }
 
   unsigned getNumDim() const {
     return num_dim_;
   }
   unsigned num_dim() const { return num_dim_; }
-  const string& getName() const {
-    return name_;
-  }
-  SgType *getElmType() const {
-    return elm_type_;
-  }
-  SgType *elm_type() const { return elm_type_; }
+  const string& type_name() const { return type_name_; };  
+  SgType *point_type() const { return point_type_; }
+  SgClassDefinition *point_def() const { return point_def_; }  
+  SgType *aux_type() const { return aux_type_; }      
+  SgType *&aux_type() { return aux_type_; }
+  bool IsPrimitivePointType() const;
+  bool IsUserDefinedPointType() const;
   
   string getRealFuncName(const string &funcName) const;
   
   string getRealFuncName(const string &funcName,
                          const string &kernelName) const;
   string toString() const {
-    return name_;
+    return type_name_;
   }
 
   string getNewName() const {
-    return name_ + "New";
+    return type_name_ + "New";
   }
 
   static string getTypeNameFromFuncName(const string &funcName);
@@ -82,7 +85,7 @@ class GridType: public AstAttribute {
   static const string emit_name;
   static const string set_name;  
  private:
-  void findElementType();
+  void FindPointType();
 };
 
 class Grid {

@@ -14,6 +14,7 @@
 #include "translator/configuration.h"
 #include "translator/reduce.h"
 
+
 namespace physis {
 namespace translator {
 
@@ -22,12 +23,14 @@ class GridType;
 class StencilMap;
 class Run;
 class Grid;
+class RuntimeBuilder;
 
 class Translator: public rose_util::RoseASTTraversal {
  public:
   Translator(const Configuration &config);
   virtual ~Translator() {}
-  virtual void SetUp(SgProject *project, TranslationContext *context);  
+  virtual void SetUp(SgProject *project, TranslationContext *context,
+                     RuntimeBuilder *rt_builder);  
   //! Translate the AST given by the SetUp function.
   /*!
     Call SetUp before calling this. Translator instances can be reused
@@ -63,7 +66,11 @@ class Translator: public rose_util::RoseASTTraversal {
   string grid_type_name_;
   string target_specific_macro_;
 
+  RuntimeBuilder *rt_builder_;
+
   virtual void buildGridDecl();
+  virtual void ProcessUserDefinedPointType(
+      SgClassDeclaration *grid_decl, GridType *gt) {}
   virtual void Visit(SgFunctionCallExp *node);
   virtual void Visit(SgFunctionDeclaration *node);
 

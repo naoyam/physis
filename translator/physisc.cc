@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include <boost/program_options.hpp>
 
@@ -532,13 +530,11 @@ int main(int argc, char *argv[]) {
   LOG_INFO() << "AST validated successfully.\n";
 
   pt::TranslationContext tx(proj);
-
-  trans->SetUp(proj, &tx);
-
-  // TODO: reuse this builder with the translator
   pt::RuntimeBuilder *rt_builder = GetRTBuilder(proj, opts);
   pto::Optimizer *optimizer =
       GetOptimizer(&tx, proj, rt_builder, opts, &config);
+  
+  trans->SetUp(proj, &tx, rt_builder);
 
   LOG_INFO() << "Performing optimization Stage 1\n";
   // optimizer is null if not defined for this target

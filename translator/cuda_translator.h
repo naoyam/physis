@@ -61,8 +61,9 @@ class CUDATranslator : public ReferenceTranslator {
   
  public:
 
-  virtual void SetUp(SgProject *project, TranslationContext *context);
-  
+  virtual void SetUp(SgProject *project, TranslationContext *context,
+                     RuntimeBuilder *rt_builder);  
+
   //! Generates a CUDA grid declaration for a stencil.
   /*!
     The x and y dimensions are decomposed by the thread block, whereas
@@ -85,10 +86,16 @@ class CUDATranslator : public ReferenceTranslator {
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) const;
 
+  virtual void ProcessUserDefinedPointType(SgClassDeclaration *grid_decl,
+                                           GridType *gt);
+
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void translateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel, bool is_periodic);
+  virtual void translateEmit(SgFunctionCallExp *node,
+                             SgInitializedName *gv);
+  
   //virtual void translateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.

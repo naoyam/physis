@@ -50,7 +50,7 @@ void TranslationContext::analyzeGridTypes() {
     if (!GridType::isGridType((typeName))) continue;
 
     SgPointerType *gridPtr = type->get_ptr_to();
-
+    
     SgTypedefType *utype =
         isSgTypedefType(*(gridPtr->get_typedefs()->get_typedefs().begin()));
     const string utypeName = utype->get_name().getString();
@@ -62,6 +62,7 @@ void TranslationContext::analyzeGridTypes() {
     GridType *gt = new GridType(type, utype);
     LOG_DEBUG() << gt->toString() << "\n";
     registerGridType(utype, gt);
+    rose_util::AddASTAttribute<GridType>(decl, gt);
   }
 }
 

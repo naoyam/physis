@@ -33,10 +33,12 @@ Translator::Translator(const Configuration &config):
     dom_ptr_type_(NULL),
     grid_swap_(NULL),
     grid_dim_get_func_(NULL),
-    grid_type_name_("__PSGrid") {
+    grid_type_name_("__PSGrid"),
+    rt_builder_(NULL) {
 }
 
-void Translator::SetUp(SgProject *project, TranslationContext *context) {
+void Translator::SetUp(SgProject *project, TranslationContext *context,
+                       RuntimeBuilder *rt_builder) {
   assert(project);
   project_ = project;
   src_ = isSgSourceFile((*project_)[0]);
@@ -46,6 +48,8 @@ void Translator::SetUp(SgProject *project, TranslationContext *context) {
   global_scope_ = src_->get_globalScope();
   PSAssert(global_scope_);
   sb::pushScopeStack(global_scope_);
+
+  rt_builder_ = rt_builder;
 
   ivec_type_ = sb::buildArrayType(sb::buildIntType(),
                                   sb::buildIntVal(PS_MAX_DIM));
@@ -67,6 +71,18 @@ void Translator::SetUp(SgProject *project, TranslationContext *context) {
   PSAssert(grid_dim_get_func_ =
            si::lookupFunctionSymbolInParentScopes("PSGridDim",
                                                 global_scope_));
+
+  // Visit each of user-defined grid element types
+  NodeQuerySynthesizedAttributeType struct_decls =
+      NodeQuery::querySubTree(project_, NodeQuery::StructDeclarations);
+  FOREACH(it, struct_decls.begin(), struct_decls.end()) {
+    SgClassDeclaration *decl = isSgClassDeclaration(*it);
+    GridType *gt = rose_util::GetASTAttribute<GridType>(decl);
+    if (gt == NULL) continue;
+    if (!gt->IsUserDefinedPointType()) continue;
+    LOG_DEBUG() << "User-defined point type found.\n";
+    ProcessUserDefinedPointType(decl, gt);
+  }
 }
 
 void Translator::Finish() {

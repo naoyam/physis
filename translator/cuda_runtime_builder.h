@@ -30,6 +30,9 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       bool is_kernel,
       bool is_periodic,
       const StencilIndexList *sil);
+  virtual SgClassDeclaration *BuildGridDevType(
+      SgClassDeclaration *grid_decl,
+      GridType *gt);
 
   
 };

@@ -71,6 +71,47 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
   return offset_fc;
 }
 
+SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevType(
+    SgClassDeclaration *grid_decl, GridType *gt) {
+  /*
+    Let X be the user type name, N be the number of dimension,
+    
+    struct __PSGridNDX_dev {
+      PSIndex dim[N];
+      [list of struct member arrays];
+    };
+   */
+  string dev_type_name = "___" + gt->type_name() + "_dev";
+  SgClassDeclaration *decl =
+      sb::buildStructDeclaration(dev_type_name, gs_);
+  SgClassDefinition *dev_def = decl->get_definition();
+
+  // Add member dim
+  SgType *dim_type = 
+      sb::buildArrayType(BuildIndexType2(gs_),
+                         sb::buildIntVal(gt->num_dim()));
+  si::appendStatement(sb::buildVariableDeclaration("dim", dim_type),
+                      dev_def);
+                               
+  // Add a pointer for each struct member
+  SgClassDefinition *def = gt->point_def();
+  const SgDeclarationStatementPtrList &members =
+      def->get_members();
+  FOREACH (member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    const SgInitializedNamePtrList &vars = member_decl->get_variables();
+    SgName member_name = vars[0]->get_name();
+    SgType *member_type = vars[0]->get_type();
+    SgVariableDeclaration *dev_type_member =
+        sb::buildVariableDeclaration(member_name,
+                                     sb::buildPointerType(member_type));
+    si::appendStatement(dev_type_member, dev_def);
+  }
+
+  return decl;
+}
+
 
 } // namespace translator
 } // namespace physis

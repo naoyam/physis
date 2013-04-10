@@ -21,44 +21,47 @@ extern "C" {
     is not possible. Such functions need to be declared in the context
     of the grid type declcaration.
   */
-#define DeclareGrid1D(name, type)                                       \
-  struct __PSGrid1D##name {                                             \
-      void (*set)(PSIndex, type);                                   \
-      type (*get)(PSIndex);                                         \
-      type (*get_periodic)(PSIndex);                                \
-      type (*emit)(type);                                               \
-      type (*emitDirichlet)(type);                                      \
-      type (*emitNeumann)(type, int);                                   \
-      type (*reduce)(void *dom, type (*kernel)(type, type));            \
-  };                                                                    \
-    typedef struct __PSGrid1D##name *PSGrid1D##name;                    \
-    extern PSGrid1D##name PSGrid1D##name##New(PSIndex, ...);
+#define DeclareGrid1D(name, type)                               \
+  struct __PSGrid1D##name {                                     \
+    type _type_indicator;                                       \
+    void (*set)(PSIndex, type);                                 \
+    type (*get)(PSIndex);                                       \
+    type (*get_periodic)(PSIndex);                              \
+    type (*emit)(type);                                         \
+    type (*emitDirichlet)(type);                                \
+    type (*emitNeumann)(type, int);                             \
+    type (*reduce)(void *dom, type (*kernel)(type, type));      \
+  };                                                            \
+  typedef struct __PSGrid1D##name *PSGrid1D##name;              \
+  extern PSGrid1D##name PSGrid1D##name##New(PSIndex, ...);
 
 #define DeclareGrid2D(name, type)                                       \
   struct __PSGrid2D##name {                                             \
-      void (*set)(PSIndex, PSIndex, type);                      \
-      type (*get)(PSIndex, PSIndex);                            \
-      type (*get_periodic)(PSIndex, PSIndex);                   \
-      type (*emit)(type);                                               \
-      type (*emitDirichlet)(type);                                      \
-      type (*emitNeumann)(type, int);                                   \
-      type (*reduce)(void *dom, type (*kernel)(type, type));            \
+    type _type_indicator;                                               \
+    void (*set)(PSIndex, PSIndex, type);                                \
+    type (*get)(PSIndex, PSIndex);                                      \
+    type (*get_periodic)(PSIndex, PSIndex);                             \
+    type (*emit)(type);                                                 \
+    type (*emitDirichlet)(type);                                        \
+    type (*emitNeumann)(type, int);                                     \
+    type (*reduce)(void *dom, type (*kernel)(type, type));              \
   };                                                                    \
-    typedef struct __PSGrid2D##name *PSGrid2D##name;                    \
-    extern PSGrid2D##name PSGrid2D##name##New(PSIndex, PSIndex, ...);
+  typedef struct __PSGrid2D##name *PSGrid2D##name;                      \
+  extern PSGrid2D##name PSGrid2D##name##New(PSIndex, PSIndex, ...);
 
 #define DeclareGrid3D(name, type)                                       \
   struct __PSGrid3D##name {                                             \
-      void (*set)(PSIndex, PSIndex, PSIndex, type);         \
-      type (*get)(PSIndex, PSIndex, PSIndex);               \
-      type (*get_periodic)(PSIndex, PSIndex, PSIndex);      \
-      type (*emit)(type);                                               \
-      type (*emitDirichlet)(type);                                      \
-      type (*emitNeumann)(type, int);                                   \
-      type (*reduce)(void *dom, type (*kernel)(type, type));            \
+    type _type_indicator;                                               \
+    void (*set)(PSIndex, PSIndex, PSIndex, type);                       \
+    type (*get)(PSIndex, PSIndex, PSIndex);                             \
+    type (*get_periodic)(PSIndex, PSIndex, PSIndex);                    \
+    type (*emit)(type);                                                 \
+    type (*emitDirichlet)(type);                                        \
+    type (*emitNeumann)(type, int);                                     \
+    type (*reduce)(void *dom, type (*kernel)(type, type));              \
   };                                                                    \
-    typedef struct __PSGrid3D##name *PSGrid3D##name;                    \
-    extern PSGrid3D##name PSGrid3D##name##New(PSIndex, PSIndex, PSIndex, ...);
+  typedef struct __PSGrid3D##name *PSGrid3D##name;                      \
+  extern PSGrid3D##name PSGrid3D##name##New(PSIndex, PSIndex, PSIndex, ...);
   
   DeclareGrid1D(Float, float);
   DeclareGrid1D(Double, double);
@@ -70,11 +73,14 @@ extern "C" {
   //#undef DeclareGrid1D  
   //#undef DeclareGrid2D  
   //#undef DeclareGrid3D
+
+  extern void *__PSGridEmit2(char *s, ...);
   
 #define PSGridGet(g, ...) g->get(__VA_ARGS__)
 #define PSGridGetPeriodic(g, ...) g->get_periodic(__VA_ARGS__)  
 #define PSGridSet(g, ...) g->set(__VA_ARGS__)  
-#define PSGridEmit(g, v) g->emit(v)  
+#define PSGridEmit(g, v) g->emit(v)
+#define PSGridEmit2(g, v) (*(typeof(v)*)(__PSGridEmit2(#g, v)))
 #define PSGridEmitDirichlet(g, v) g->emitDirichlet(v)  
 #define PSGridEmitNeumann(g, v, grad) g->emitNeumann(v, grad)
   //#define grid_map(d, k, g, ...) g.map(&d, #(void*)k,###__VA_ARGS__)

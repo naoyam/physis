@@ -26,11 +26,11 @@ const string GridType::emit_name = "emit";
 const string GridType::set_name = "set";
 
 unsigned GridType::getNumDimFromTypeName(const string &tname) {
-  if (tname.find(grid1dTypeKey) != string::npos) {
+  if (tname.find(grid1dTypeKey) == 0) {
     return 1;
-  } else if (tname.find(grid2dTypeKey) != string::npos) {
+  } else if (tname.find(grid2dTypeKey) == 0) {
     return 2;
-  } else if (tname.find(grid3dTypeKey) != string::npos) {
+  } else if (tname.find(grid3dTypeKey) == 0) {
     return 3;
   } else {
     return 0;
@@ -102,37 +102,78 @@ bool GridType::isGridTypeSpecificCall(SgFunctionCallExp *ce) {
   return GridType::getGridVarUsedInFuncCall(ce) != NULL;
 }
 
-void GridType::findElementType() {
-  SgName emit("emit");
+bool ValidatePointType(SgClassDefinition *point_def) {
+  const SgDeclarationStatementPtrList &members =
+      point_def->get_members();
+  if (members.size() == 0) {
+    LOG_ERROR() << "No struct member found.\n";
+    return false;
+  }
+  FOREACH (member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    if (!member_decl) {
+      LOG_ERROR() << "Unknown member val: "
+                  << member_decl->unparseToString() << "\n";
+      return false;
+    }
+    const SgInitializedNamePtrList &vars = member_decl->get_variables();
+    PSAssert(vars.size() == 1);
+    SgType *member_type = vars[0]->get_type();
+    if (!(isSgTypeFloat(member_type) ||
+          isSgTypeDouble(member_type))) {
+      LOG_ERROR() << "Invalid point struct member: "
+                  << member_decl->unparseToString() << "\n";
+      return false;
+    }
+  }
+  // Success
+  return true;
+}
+
+void GridType::FindPointType() {
   const SgClassDefinition *sdef =
       isSgClassDeclaration(struct_type_->get_declaration()
                            ->get_definingDeclaration())->get_definition();
   assert(sdef);
   const SgDeclarationStatementPtrList &members =
       sdef->get_members();
-  elm_type_ = NULL;
+  SgType *pt = NULL;
   FOREACH(it, members.begin(), members.end()) {
     SgVariableDeclaration *m = isSgVariableDeclaration(*it);
     assert(m);
     SgInitializedName *v = m->get_variables().front();
-    if (v->get_name() == "emit") {
-      LOG_DEBUG() << "emit found\n";
-    } else {
-      continue;
-    }
-    // OG_DEBUG() << "class: " << v->get_type()->class_name() << "\n";
-    SgPointerType *t = isSgPointerType(v->get_type());
-    assert(t);
-    SgFunctionType *emit_func_type
-        = isSgFunctionType(t->get_base_type());
-    SgType *emit_param_type =
-        emit_func_type->get_arguments().front();
-    LOG_DEBUG() << emit_param_type->class_name() << "\n";
-    elm_type_ = emit_param_type;
-    break;
+    if (v->get_name() != "_type_indicator") continue;
+    pt = v->get_type();
+    LOG_DEBUG() << "Grid point type: "
+                << pt->unparseToString() << "\n";
   }
-  assert(elm_type_);
+  if (pt == NULL) {
+    LOG_ERROR() << "Point type not found.\n";
+    PSAbort(1);
+  }
+  point_type_ = pt;
+  point_def_ = NULL;
+  if (!isSgClassType(point_type_)) return;
+  
+  SgClassDeclaration *point_decl =
+      isSgClassDeclaration(
+          isSgClassType(point_type_)->get_declaration());
+  point_decl = isSgClassDeclaration(
+      point_decl->get_definingDeclaration());
+  point_def_ = point_decl->get_definition();
+  PSAssert(ValidatePointType(point_def_));
   return;
+}
+
+bool GridType::IsPrimitivePointType() const {
+  PSAssert(point_type_ != NULL);
+  return (isSgTypeFloat(point_type_) ||
+          isSgTypeDouble(point_type_));
+}
+
+bool GridType::IsUserDefinedPointType() const {
+  return !IsPrimitivePointType();
 }
 
 bool GridType::isGridCall(SgFunctionCallExp *ce) {
@@ -169,7 +210,7 @@ string GridType::getRealFuncName(const string &funcName) const {
     ss << "grid" << num_dim_
        << "d_" << funcName;
   } else {
-    ss << name_ << "_" << funcName;
+    ss << type_name_ << "_" << funcName;
   }
   return ss.str();
 }
@@ -177,7 +218,7 @@ string GridType::getRealFuncName(const string &funcName) const {
 string GridType::getRealFuncName(const string &funcName,
                                  const string &kernelName) const {
   ostringstream ss;
-  ss << name_
+  ss << type_name_
      << "_" << funcName
      << "_" << kernelName;
   return ss.str();
@@ -185,9 +226,9 @@ string GridType::getRealFuncName(const string &funcName,
 
 SgExpression *GridType::BuildElementTypeExpr() {
   SgExpression *e = NULL;
-  if (isSgTypeFloat(elm_type_)) {
+  if (isSgTypeFloat(point_type_)) {
     e = sb::buildIntVal(PS_FLOAT);
-  } else if (isSgTypeDouble(elm_type_)) {
+  } else if (isSgTypeDouble(point_type_)) {
     e = sb::buildIntVal(PS_DOUBLE);
   } else {
     // Assumes user-defined type

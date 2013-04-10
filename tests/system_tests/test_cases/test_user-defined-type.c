@@ -31,6 +31,7 @@ void kernel1(const int x, const int y, const int z,
              PSGridGet(g1, x, y, z-1).z) / 3.0f;
   struct Point v = {p, q, r};
   PSGridEmit(g2, v);
+  //PSGridEmit2(g2.r, r);
   return;
 }
 

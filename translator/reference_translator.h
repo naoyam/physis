@@ -31,7 +31,8 @@ class ReferenceTranslator : public Translator {
   virtual ~ReferenceTranslator();
   virtual void Translate();
   virtual void Optimize();
-  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void SetUp(SgProject *project, TranslationContext *context,
+                     RuntimeBuilder *rt_builder);  
   virtual void Finish();  
 
   bool flag_constant_grid_size_optimization() const {
@@ -154,8 +155,6 @@ class ReferenceTranslator : public Translator {
 
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
-  //ReferenceRuntimeBuilder *ref_rt_builder_;
-  RuntimeBuilder *rt_builder_;
   virtual std::string GetStencilDomName() const;
   virtual SgExpression *BuildDomMaxRef(SgExpression *domain) const;
   virtual SgExpression *BuildDomMinRef(SgExpression *domain) const;

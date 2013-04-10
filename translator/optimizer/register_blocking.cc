@@ -129,7 +129,7 @@ static SgVariableDeclaration *BuildNewLocalVar(
     SgScopeStatement *scope) {
   PSAssert(tx);
   PSAssert(scope);
-  SgType *ty = gt->getElmType();
+  SgType *ty = gt->point_type();
   string name = rose_util::generateUniqueName(scope);
   return sb::buildVariableDeclaration(name, ty, NULL, scope);
 }

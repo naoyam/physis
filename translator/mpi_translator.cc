@@ -566,7 +566,7 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
                                               scope)));
   SgExpression *x = sb::buildPntrArrRefExp(
       sb::buildCastExp(base_addr,
-                       sb::buildPointerType(gt->getElmType())),
+                       sb::buildPointerType(gt->point_type())),
       offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(x, node);
   rose_util::GetASTAttribute<GridGetAttribute>(x)->offset() = offset;
@@ -602,7 +602,7 @@ void MPITranslator::translateEmit(SgFunctionCallExp *node,
                                               scope)));
   SgExpression *lhs = sb::buildPntrArrRefExp(
       sb::buildCastExp(base_addr,
-                       sb::buildPointerType(gt->getElmType())),
+                       sb::buildPointerType(gt->point_type())),
       offset);
 
   SgExpression *rhs =
