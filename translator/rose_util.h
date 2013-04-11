@@ -240,6 +240,8 @@ void ReplaceFuncBody(SgFunctionDeclaration *func,
 SgGlobal *GetGlobalScope();
 
 SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
+SgType *GetType(SgVariableDeclaration *decl);
+SgName GetName(SgVariableDeclaration *decl);
 
 }  // namespace rose_util
 }  // namespace translator

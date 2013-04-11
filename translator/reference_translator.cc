@@ -154,19 +154,10 @@ void ReferenceTranslator::translateKernelDeclaration(
 
 SgExprListExp *ReferenceTranslator::generateNewArg(
     GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
-#ifdef UNUSED_CODE
   SgExprListExp *new_args
       = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
                              sb::buildIntVal(gt->getNumDim()),
-                             sb::buildVarRefExp(dim_decl),
-                             sb::buildBoolValExp(g->isReadWrite()));
-#else
-  SgExprListExp *new_args
-      = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
-                             sb::buildIntVal(gt->getNumDim()),
-                             sb::buildVarRefExp(dim_decl),
-                             sb::buildBoolValExp(false));
-#endif
+                             sb::buildVarRefExp(dim_decl));
   //SgExpression *attr = g->BuildAttributeExpr();
   //if (!attr) attr = sb::buildIntVal(0);
   //si::appendExpression(new_args, attr);

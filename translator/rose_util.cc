@@ -364,6 +364,13 @@ SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl) {
   return rhs;
 }
 
+SgType *GetType(SgVariableDeclaration *decl) {
+  return decl->get_variables()[0]->get_type();
+}
+SgName GetName(SgVariableDeclaration *decl) {
+  return decl->get_variables()[0]->get_name();
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

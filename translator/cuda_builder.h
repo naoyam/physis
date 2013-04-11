@@ -18,6 +18,10 @@ SgFunctionCallExp *BuildCudaThreadSynchronize(void);
 SgFunctionCallExp *BuildCudaStreamSynchronize(SgExpression *strm);
 SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y=NULL,
                                  SgExpression *z=NULL);
+SgType *BuildCudaErrorType();
+SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size,
+                                   SgScopeStatement *scope);
+
 
 } // namespace translator
 } // namespace physis

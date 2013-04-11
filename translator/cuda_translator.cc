@@ -357,14 +357,21 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
 void CUDATranslator::ProcessUserDefinedPointType(
     SgClassDeclaration *grid_decl, GridType *gt) {
   LOG_DEBUG() << "Define grid data type for device.\n";
-  SgClassDeclaration *decl =
+  SgClassDeclaration *type_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
       BuildGridDevType(grid_decl, gt);
-  si::insertStatementAfter(grid_decl, decl);
+  si::insertStatementAfter(grid_decl, type_decl);
   LOG_DEBUG() << "GridDevType: "
-              << decl->unparseToString() << "\n";
+              << type_decl->unparseToString() << "\n";
   PSAssert(gt->aux_type() == NULL);
-  gt->aux_type() = decl->get_type();
+  gt->aux_type() = type_decl->get_type();
+  gt->aux_decl() = type_decl;
+
+  // Build GridNew for this type
+  SgFunctionDeclaration *new_decl =
+      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
+      BuildGridNew(gt);
+  si::insertStatementAfter(type_decl, new_decl);
   return;
 }
 
@@ -375,7 +382,7 @@ SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
   // gt->aux_type when building the type definition.
   if (gt->aux_type()) return gt->aux_type();
   
-  string ondev_type_name = "___" + gt->type_name() + "_dev";
+  string ondev_type_name = "__" + gt->type_name() + "_dev";
   LOG_DEBUG() << "On device grid type name: "
               << ondev_type_name << "\n";
   SgType *t =
@@ -618,7 +625,7 @@ void CUDATranslator::FixGridType() {
   SgNodePtrList vdecls =
       NodeQuery::querySubTree(project_, V_SgVariableDeclaration);
   SgType *real_grid_type =
-      si::lookupNamedTypeInParentScopes("___PSGrid");
+      si::lookupNamedTypeInParentScopes("__PSGrid");
   PSAssert(real_grid_type);
   FOREACH (it, vdecls.begin(), vdecls.end()) {
     SgVariableDeclaration *vdecl = isSgVariableDeclaration(*it);

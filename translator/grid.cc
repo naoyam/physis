@@ -53,7 +53,11 @@ bool GridType::isGridType(SgType *ty) {
 }
 
 bool GridType::isGridType(const string &t) {
-  return getNumDimFromTypeName(t) > 0;
+  if (getNumDimFromTypeName(t) == 0) return false;
+  // If an underscore is used other than in the first two characters,
+  // this type is not the user grid type.
+  if (t.rfind("_") != 1) return false;
+  return true;
 }
 
 void Grid::identifySize(SgExpressionPtrList::const_iterator size_begin,

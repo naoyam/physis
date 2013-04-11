@@ -32,12 +32,14 @@ class GridType: public AstAttribute {
   SgClassDefinition *point_def_;
   //! Used, e.g., to hold its corresponding device type
   SgType *aux_type_;
+  //! The decl of aux_type_
+  SgDeclarationStatement *aux_decl_;
 
  public:
   GridType(SgClassType *struct_type, SgTypedefType *user_type)
       : struct_type_(struct_type), user_type_(user_type),
         point_type_(NULL), point_def_(NULL),
-        aux_type_(NULL) {
+        aux_type_(NULL), aux_decl_(NULL) {
     type_name_ = user_type_->get_name().getString();
     LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
     string realName = struct_type_->get_name().getString();
@@ -55,6 +57,8 @@ class GridType: public AstAttribute {
   SgClassDefinition *point_def() const { return point_def_; }  
   SgType *aux_type() const { return aux_type_; }      
   SgType *&aux_type() { return aux_type_; }
+  SgDeclarationStatement *aux_decl() const { return aux_decl_; }
+  SgDeclarationStatement *&aux_decl() { return aux_decl_; }    
   bool IsPrimitivePointType() const;
   bool IsUserDefinedPointType() const;
   

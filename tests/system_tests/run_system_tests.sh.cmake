@@ -548,7 +548,7 @@ function compile()
 			fi
 			;;
 		cuda)
-			if [ "@CUDA_ENABLED@" != "TRUE" ]; then
+			if [ "@CUDA_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping CUDA compilation (not supported)"
 				return 0
 			fi
@@ -571,7 +571,7 @@ function compile()
 			fi
 			;;
 		mpi|mpi2)
-			if [ "@MPI_ENABLED@" != "TRUE" ]; then
+			if [ "@MPI_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI compilation (not supported)"
 				return 0
 			fi
@@ -582,7 +582,7 @@ function compile()
 			mpic++ "$src_file_base".o -l$lib_name $LDFLAGS -o $exe_name
 			;;
 		mpi-cuda)
-			if [ "@MPI_ENABLED@" != "TRUE" -o "@CUDA_ENABLED@" != "TRUE" ]; then
+			if [ "@MPI_FOUND@" != "TRUE" -o "@CUDA_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI-CUDA compilation (not supported)"
 				return 0
 			fi
@@ -602,7 +602,7 @@ function compile()
 			;;
 		opencl)
 			OPENCL_LDFLAGS=-lOpenCL
-			if [ "@OPENCL_ENABLED@" != "TRUE" ]; then
+			if [ "@OPENCL_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping OpenCL compilation (not supported)"
 				return 0
 			fi
@@ -612,7 +612,7 @@ function compile()
 			;;
 		mpi-opencl)
 			OPENCL_LDFLAGS=-lOpenCL
-			if [ "@MPI_ENABLED@" != "TRUE" -o "@OPENCL_ENABLED@" != "TRUE" ]; then
+			if [ "@MPI_FOUND@" != "TRUE" -o "@OPENCL_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI-OpenCL compilation (not supported)"
 				return 0
 			fi
@@ -621,7 +621,7 @@ function compile()
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o $exe_name
 			;;
 		mpi-openmp | mpi-openmp-numa )
-			if [ "@MPI_ENABLED@" != "TRUE" ]; then
+			if [ "@MPI_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping MPI-OPENMP compilation (not supported)"
 				return 0
 			fi

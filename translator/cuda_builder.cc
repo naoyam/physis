@@ -35,8 +35,24 @@ SgFunctionCallExp *BuildCudaStreamSynchronize(SgExpression *strm) {
                                                      sb::buildVoidType(),
                                                      args);
   return call;
-}  
+}
 
+SgType *BuildCudaErrorType(SgScopeStatement *scope) {
+  return sb::buildOpaqueType("cudaError_t", scope);
+}
+
+SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size,
+                                   SgScopeStatement *scope) {
+  SgExprListExp *args = sb::buildExprListExp(
+      sb::buildCastExp(sb::buildAddressOfOp(buf),
+                       sb::buildPointerType(sb::buildVoidType())),
+      size);
+  SgFunctionCallExp *call = sb::buildFunctionCallExp(
+      "cudaMalloc",
+      BuildCudaErrorType(scope),
+      args);
+  return call;
+}
 
 } // namespace translator
 } // namespace physis

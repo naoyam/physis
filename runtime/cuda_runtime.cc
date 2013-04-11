@@ -43,13 +43,12 @@ extern "C" {
   }
 
   // Id is not used on shared memory 
-  int __PSGridGetID(___PSGrid *g) {
+  int __PSGridGetID(__PSGrid *g) {
     return 0;
   }
 
-  ___PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
-                        int double_buffering) {
-    ___PSGrid *g = (___PSGrid*)malloc(sizeof(___PSGrid));
+  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim) {
+    __PSGrid *g = (__PSGrid*)malloc(sizeof(__PSGrid));
     g->elm_size = elm_size;    
     g->num_dims = num_dims;
     PSVectorIntCopy(g->dim, dim);
@@ -58,51 +57,31 @@ extern "C" {
     for (i = 0; i < num_dims; i++) {
       g->num_elms *= dim[i];
     }
-    CUDA_SAFE_CALL(cudaMalloc(&g->p0, g->num_elms * g->elm_size));
-    if (!g->p0) return INVALID_GRID;
-    CUDA_SAFE_CALL(cudaMemset(g->p0, 0, g->num_elms * g->elm_size));
-
-#if ! defined(AUTO_DOUBLE_BUFFERING)
-    PSAssert(!double_buffering);
-#else
-    if (double_buffering) {
-      CUDA_SAFE_CALL(cudaMalloc(&g->p1, g->num_elms * g->elm_size));
-      if (!g->p1) return INVALID_GRID;
-      CUDA_SAFE_CALL(cudaMemset(g->p1, 0, g->num_elms * g->elm_size));      
-    } else {
-      g->p1 = g->p0;
-    }
-#endif
+    void *buf = NULL;
+    CUDA_SAFE_CALL(cudaMalloc(&buf, g->num_elms * g->elm_size));
+    if (!buf) return INVALID_GRID;
+    CUDA_SAFE_CALL(cudaMemset(buf, 0, g->num_elms * g->elm_size));
 
     // Set the on-device data. g->dev data will be copied when calling
     // CUDA global functions.
     switch (g->num_dims) {
       case 1:
-        g->dev = malloc(sizeof(___PSGrid1D_dev));
-        ((___PSGrid1D_dev*)g->dev)->p0 = g->p0;
-#ifdef AUTO_DOUBLE_BUFFERING        
-        ((___PSGrid1D_dev*)g->dev)->p1 = g->p1;
-#endif        
-        ((___PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
+        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid1D_dev));
+        ((__PSGrid1D_dev*)g->dev)->p0 = buf;
+        ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
         break;
       case 2:
-        g->dev = malloc(sizeof(___PSGrid2D_dev));
-        ((___PSGrid2D_dev*)g->dev)->p0 = g->p0;
-#ifdef AUTO_DOUBLE_BUFFERING        
-        ((___PSGrid1D_dev*)g->dev)->p1 = g->p1;
-#endif        
-        ((___PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
-        ((___PSGrid2D_dev*)g->dev)->dim[1] = g->dim[1];        
+        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid2D_dev));
+        ((__PSGrid2D_dev*)g->dev)->p0 = buf;
+        ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
+        ((__PSGrid2D_dev*)g->dev)->dim[1] = g->dim[1];        
         break;
       case 3:
-        g->dev = malloc(sizeof(___PSGrid3D_dev));
-        ((___PSGrid3D_dev*)g->dev)->p0 = g->p0;
-#ifdef AUTO_DOUBLE_BUFFERING        
-        ((___PSGrid1D_dev*)g->dev)->p1 = g->p1;
-#endif        
-        ((___PSGrid3D_dev*)g->dev)->dim[0] = g->dim[0];
-        ((___PSGrid3D_dev*)g->dev)->dim[1] = g->dim[1];
-        ((___PSGrid3D_dev*)g->dev)->dim[2] = g->dim[2];        
+        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid3D_dev));
+        ((__PSGrid3D_dev*)g->dev)->p0 = buf;
+        ((__PSGrid3D_dev*)g->dev)->dim[0] = g->dim[0];
+        ((__PSGrid3D_dev*)g->dev)->dim[1] = g->dim[1];
+        ((__PSGrid3D_dev*)g->dev)->dim[2] = g->dim[2];        
         break;
       default:
         LOG_ERROR() << "Unsupported dimension: " << g->num_dims << "\n";
@@ -113,37 +92,31 @@ extern "C" {
   }
 
   void PSGridFree(void *p) {
-    ___PSGrid *g = (___PSGrid *)p;
-    if (g->p0) {
-      CUDA_SAFE_CALL(cudaFree(g->p0));
+    __PSGrid *g = (__PSGrid *)p;
+    if (g->dev->p0) {
+      CUDA_SAFE_CALL(cudaFree(g->dev->p0));
     }
-#if defined(AUTO_DOUBLE_BUFFERING)    
-    if (g->p1 != NULL && g->p0 != g->p1) {
-      CUDA_SAFE_CALL(cudaFree(g->p1));
-    }
-    g->p0 = g->p1 = NULL;
-#else
-    g->p0 = NULL;
-#endif    
+    free(g->dev);
+    g->dev = NULL;
   }
 
   void PSGridCopyin(void *p, const void *src_array) {
-    ___PSGrid *g = (___PSGrid *)p;
-    CUDA_SAFE_CALL(cudaMemcpy(g->p0, src_array, g->num_elms*g->elm_size,
+    __PSGrid *g = (__PSGrid *)p;
+    CUDA_SAFE_CALL(cudaMemcpy(g->dev->p0, src_array, g->num_elms*g->elm_size,
                               cudaMemcpyHostToDevice));
   }
 
   void PSGridCopyout(void *p, void *dst_array) {
-    ___PSGrid *g = (___PSGrid *)p;
-    CUDA_SAFE_CALL(cudaMemcpy(dst_array, g->p0, g->elm_size * g->num_elms,
+    __PSGrid *g = (__PSGrid *)p;
+    CUDA_SAFE_CALL(cudaMemcpy(dst_array, g->dev->p0, g->elm_size * g->num_elms,
                               cudaMemcpyDeviceToHost));
   }
 
-  void __PSGridSwap(___PSGrid *g) {
+  void __PSGridSwap(__PSGrid *g) {
 #if defined(AUTO_DOUBLE_BUFFERING)
-    std::swap(g->p0, g->p1);
-    std::swap(((___PSGrid1D_dev*)g->dev)->p0,
-              ((___PSGrid1D_dev*)g->dev)->p1);
+    std::swap(g->dev->p0, g->p1);
+    std::swap(((__PSGrid1D_dev*)g->dev)->p0,
+              ((__PSGrid1D_dev*)g->dev)->p1);
 #endif    
   }
 
@@ -167,7 +140,7 @@ extern "C" {
     return d;
   }
 
-  void __PSGridSet(___PSGrid *g, void *buf, ...) {
+  void __PSGridSet(__PSGrid *g, void *buf, ...) {
     int nd = g->num_dims;
     va_list vl;
     va_start(vl, buf);
@@ -180,7 +153,7 @@ extern "C" {
     }
     va_end(vl);
     offset *= g->elm_size;
-    CUDA_SAFE_CALL(cudaMemcpy(((char *)g->p0) + offset, buf, g->elm_size,
+    CUDA_SAFE_CALL(cudaMemcpy(((char *)g->dev->p0) + offset, buf, g->elm_size,
                               cudaMemcpyHostToDevice));
   }
 

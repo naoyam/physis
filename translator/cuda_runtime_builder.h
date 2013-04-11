@@ -33,6 +33,9 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
   virtual SgClassDeclaration *BuildGridDevType(
       SgClassDeclaration *grid_decl,
       GridType *gt);
+  virtual SgFunctionDeclaration *BuildGridNew(
+      GridType *gt);
+  
 
   
 };
