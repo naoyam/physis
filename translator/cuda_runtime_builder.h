@@ -39,9 +39,11 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       GridType *gt);
   virtual SgFunctionDeclaration *BuildGridCopyin(
       GridType *gt);
-  
-
-  
+  virtual SgFunctionDeclaration *BuildGridCopyout(
+      GridType *gt);
+ protected:
+  virtual SgFunctionDeclaration *BuildGridCopy(
+      GridType *gt, bool is_copyout);
 };
 
 } // namespace translator

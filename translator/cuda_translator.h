@@ -104,7 +104,9 @@ class CUDATranslator : public ReferenceTranslator {
                              GridType *gt);
   virtual void TranslateCopyin(SgFunctionCallExp *node,
                                GridType *gt);
-  
+  virtual void TranslateCopyout(SgFunctionCallExp *node,
+                                GridType *gt);
+
   //virtual void TranslateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.

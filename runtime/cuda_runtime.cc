@@ -115,15 +115,23 @@ extern "C" {
     if (func) {
       func(g->dev, src_array);
     } else {
-      CUDA_SAFE_CALL(cudaMemcpy(g->dev->p0, src_array, g->num_elms*g->elm_size,
-                                cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(cudaMemcpy(
+          g->dev->p0, src_array, g->num_elms*g->elm_size,
+          cudaMemcpyHostToDevice));
     }
   }
 
-  void PSGridCopyout(void *p, void *dst_array) {
+  void __PSGridCopyout(void *p, void *dst_array,
+                       __PSGrid_devCopyoutFunc func) {
     __PSGrid *g = (__PSGrid *)p;
-    CUDA_SAFE_CALL(cudaMemcpy(dst_array, g->dev->p0, g->elm_size * g->num_elms,
-                              cudaMemcpyDeviceToHost));
+    if (func) {
+      func(g->dev, dst_array);
+    } else {
+      CUDA_SAFE_CALL(cudaMemcpy(
+              dst_array, g->dev->p0,
+              g->elm_size * g->num_elms,
+              cudaMemcpyDeviceToHost));
+    }
   }
 
   void __PSGridSwap(__PSGrid *g) {

@@ -144,6 +144,8 @@ void Translator::Visit(SgFunctionDeclaration *node) {
 }
 
 void Translator::Visit(SgFunctionCallExp *node) {
+  SgVarRefExp *gexp = NULL;
+  
   if (tx_->isNewCall(node)) {
     LOG_DEBUG() << "call to grid new found\n";
     const string name = rose_util::getFuncName(node);
@@ -235,29 +237,27 @@ void Translator::Visit(SgFunctionCallExp *node) {
     return;
   }
 
-  if (tx_->IsFree(node)) {
+  if (gexp = tx_->IsFree(node)) {
     LOG_DEBUG() << "Translating Free\n";
-    SgVarRefExp *gexp =
-        isSgVarRefExp(
-            rose_util::removeCasts(
-                node->get_args()->get_expressions()[0]));
-    PSAssert(gexp);
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);
     TranslateFree(node, gt);
     setSkipChildren();
   }
 
-  if (tx_->IsCopyin(node)) {
+  if (gexp = tx_->IsCopyin(node)) {
     LOG_DEBUG() << "Translating Copyin\n";
-    SgVarRefExp *gexp =
-        isSgVarRefExp(
-            rose_util::removeCasts(
-                node->get_args()->get_expressions()[0]));
-    PSAssert(gexp);
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);
     TranslateCopyin(node, gt);
+    setSkipChildren();
+  }
+
+  if (gexp = tx_->IsCopyout(node)) {
+    LOG_DEBUG() << "Translating Copyout\n";
+    GridType *gt = tx_->findGridType(gexp);
+    PSAssert(gt);
+    TranslateCopyout(node, gt);
     setSkipChildren();
   }
 
