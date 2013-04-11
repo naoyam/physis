@@ -34,6 +34,8 @@ class GridType: public AstAttribute {
   SgType *aux_type_;
   //! The decl of aux_type_
   SgDeclarationStatement *aux_decl_;
+  SgFunctionDeclaration *aux_free_decl_;
+  SgFunctionDeclaration *aux_new_decl_;    
 
  public:
   GridType(SgClassType *struct_type, SgTypedefType *user_type)
@@ -59,6 +61,10 @@ class GridType: public AstAttribute {
   SgType *&aux_type() { return aux_type_; }
   SgDeclarationStatement *aux_decl() const { return aux_decl_; }
   SgDeclarationStatement *&aux_decl() { return aux_decl_; }    
+  SgFunctionDeclaration *aux_new_decl() const { return aux_new_decl_; }
+  SgFunctionDeclaration *&aux_new_decl() { return aux_new_decl_; }    
+  SgFunctionDeclaration *aux_free_decl() const { return aux_free_decl_; }
+  SgFunctionDeclaration *&aux_free_decl() { return aux_free_decl_; }    
   bool IsPrimitivePointType() const;
   bool IsUserDefinedPointType() const;
   

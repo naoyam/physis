@@ -454,6 +454,16 @@ bool TranslationContext::isNewCall(SgFunctionCallExp *ce) {
   return isNewFunc(name);
 }
 
+bool TranslationContext::IsFreeCall(SgFunctionCallExp *ce) {
+  SgFunctionRefExp *fref = isSgFunctionRefExp(ce->get_function());
+  if (!fref) return false;
+  SgFunctionSymbol *fs = fref->get_symbol();
+  PSAssert(fs);
+  const string name = fs->get_name().getString();
+  // OG_DEBUG() << "new call? name: " << name << "\n";
+  return name == "PSGridFree";
+}
+
 static bool IsBuiltInFunction(const string &func_name) {
   // TODO: more complete support for builtin math functions
   string buildin_functions[] = {

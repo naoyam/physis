@@ -101,25 +101,24 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevType(
   FOREACH (member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgName member_name = vars[0]->get_name();
-    SgType *member_type = vars[0]->get_type();
+    SgName member_name = rose_util::GetName(member_decl);
+    SgType *member_type = rose_util::GetType(member_decl);
     SgVariableDeclaration *dev_type_member =
-        sb::buildVariableDeclaration(member_name,
-                                     sb::buildPointerType(member_type));
+        sb::buildVariableDeclaration(
+            member_name,
+            sb::buildPointerType(member_type));
     si::appendStatement(dev_type_member, dev_def);
   }
 
   return decl;
 }
 
-
+// Build a "new" function.
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
     GridType *gt) {
-  // Build a "new" function.
   /*
     Example:
-  __PSGridType_dev* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
+  void* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
     __PSGridType_dev *p = malloc(sizeof(__PSGridType_dev));
     for (int i = 0; i < num_dim; ++i) {
       p->dim[i]  = dim[i];
@@ -199,9 +198,11 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
   FOREACH (member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
     SgName member_name = rose_util::GetName(member_decl);
     if (member_name == "dim") continue;
+    SgType *member_type =
+        isSgPointerType(rose_util::GetType(member_decl))
+        ->get_base_type();
     SgExpression *size_exp =
         sb::buildMultiplyOp(
             sb::buildSizeOfOp(member_type),
@@ -209,7 +210,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
     SgFunctionCallExp *malloc_call = BuildCudaMalloc(
         sb::buildArrowExp(sb::buildVarRefExp(p_decl),
                           sb::buildVarRefExp(member_decl)),
-        size_exp, gs_);  
+        size_exp);
     si::appendStatement(sb::buildExprStatement(malloc_call),
                         body);
   }
@@ -220,11 +221,75 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
                       body);
   
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name, sb::buildPointerType(sb::buildVoidType()), pl);
+  rose_util::ReplaceFuncBody(fdecl, body);
+  return fdecl;
+}
+
+
+SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFree(
+    GridType *gt) {
+  /*
+    Example:
+  void __PSGridType_devFree(void *v) {
+    __PSGridType_dev *p = (__PSGridType_dev*)v;
+    cudaFree(p->x);
+    cudaFree(p->y);
+    cudaFree(p->z);
+    free(p);
+  }
+  */
+  SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
+  string func_name = dev_type->get_name() + "Free";
+  SgType *ret_type = sb::buildVoidType();
+  SgType *dev_ptr_type = sb::buildPointerType(dev_type);
+  
+  // Build a parameter list
+  SgFunctionParameterList *pl = sb::buildFunctionParameterList();
+  // void *v
+  SgInitializedName *v_p =
+      sb::buildInitializedName("v", sb::buildPointerType(sb::buildVoidType()));
+  si::appendArg(pl, v_p);
+
+  SgBasicBlock *body = sb::buildBasicBlock();
+  // __PSGridType_dev *p = (__PSGridType_dev*)v;
+  SgVariableDeclaration *p_decl =
+      sb::buildVariableDeclaration(
+          "p", dev_ptr_type,
+          sb::buildAssignInitializer(
+              sb::buildCastExp(sb::buildVarRefExp(v_p),
+                               dev_ptr_type)));
+  si::appendStatement(p_decl, body);
+
+  // cudaFree(p->x);
+  const SgDeclarationStatementPtrList &members =
+      ((SgClassDeclaration*)gt->aux_decl())->
+      get_definition()->get_members();
+  FOREACH (member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    SgName member_name = rose_util::GetName(member_decl);
+    if (member_name == "dim") continue;
+    SgFunctionCallExp *call = BuildCudaFree(
+        sb::buildArrowExp(sb::buildVarRefExp(p_decl),
+                          sb::buildVarRefExp(member_decl)));
+    si::appendStatement(sb::buildExprStatement(call),
+                        body);
+  }
+
+  // free(p);
+  si::appendStatement(
+      sb::buildExprStatement(
+          sb::buildFunctionCallExp(
+              "free", sb::buildVoidType(),
+              sb::buildExprListExp(sb::buildVarRefExp(p_decl)))),
+      body);
+  
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, ret_type, pl);
   rose_util::ReplaceFuncBody(fdecl, body);
   return fdecl;
 }
-  
 
 } // namespace translator
 } // namespace physis

@@ -146,7 +146,7 @@ void ReferenceTranslator::optimizeConstantSizedGrids() {
 #endif  
 }
 
-void ReferenceTranslator::translateKernelDeclaration(
+void ReferenceTranslator::TranslateKernelDeclaration(
     SgFunctionDeclaration *node) {
   SgFunctionModifier &modifier = node->get_functionModifier();
   modifier.setInline();
@@ -171,7 +171,7 @@ void ReferenceTranslator::appendNewArgExtra(SgExprListExp *args,
   return;
 }
 
-void ReferenceTranslator::translateNew(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
                                        GridType *gt) {
   Grid *g = tx_->findGrid(node);
   PSAssert(g);
@@ -282,7 +282,7 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
   return offset;
 }
 
-void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_kernel,
                                        bool is_periodic) {
@@ -308,7 +308,7 @@ void ReferenceTranslator::translateGet(SgFunctionCallExp *node,
   si::replaceExpression(node, p0);
 }
 
-void ReferenceTranslator::translateEmit(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
                                         SgInitializedName *gv) {
   /*
     g->p1[offset] = value;
@@ -397,7 +397,7 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {
   return mapFunc;
 }
 
-void ReferenceTranslator::translateMap(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateMap(SgFunctionCallExp *node,
                                        StencilMap *stencil) {
   // gFunctionDeclaration *mapFunc = GenerateMap(stencil);
   // nsertStatement(getContainingFunction(node), mapFunc);
@@ -1305,7 +1305,7 @@ void ReferenceTranslator::AddSyncAfterDlclose(
   /* do nothing for ReferenceTranslator */
 }
 
-void ReferenceTranslator::translateRun(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateRun(SgFunctionCallExp *node,
                                        Run *run) {
   SgFunctionDeclaration *runFunc = GenerateRun(run);
   si::insertStatementBefore(getContainingFunction(node), runFunc);
@@ -1490,7 +1490,7 @@ SgExpression *ReferenceTranslator::BuildStencilFieldRef(
   return BuildStencilFieldRef(stencil_ref, field);
 }
 
-void ReferenceTranslator::translateSet(SgFunctionCallExp *node,
+void ReferenceTranslator::TranslateSet(SgFunctionCallExp *node,
                                        SgInitializedName *gv) {
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();

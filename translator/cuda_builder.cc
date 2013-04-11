@@ -37,20 +37,28 @@ SgFunctionCallExp *BuildCudaStreamSynchronize(SgExpression *strm) {
   return call;
 }
 
-SgType *BuildCudaErrorType(SgScopeStatement *scope) {
-  return sb::buildOpaqueType("cudaError_t", scope);
+SgType *BuildCudaErrorType() {
+  return si::lookupNamedTypeInParentScopes("cudaError_t");
 }
 
-SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size,
-                                   SgScopeStatement *scope) {
+SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size) {
   SgExprListExp *args = sb::buildExprListExp(
       sb::buildCastExp(sb::buildAddressOfOp(buf),
-                       sb::buildPointerType(sb::buildVoidType())),
+                       sb::buildPointerType(
+                           sb::buildPointerType(sb::buildVoidType()))),
       size);
   SgFunctionCallExp *call = sb::buildFunctionCallExp(
       "cudaMalloc",
-      BuildCudaErrorType(scope),
+      BuildCudaErrorType(),
       args);
+  return call;
+}
+
+SgFunctionCallExp *BuildCudaFree(SgExpression *p) {
+  SgFunctionCallExp *call = sb::buildFunctionCallExp(
+      "cudaFree",
+      BuildCudaErrorType(),
+      sb::buildExprListExp(p));
   return call;
 }
 

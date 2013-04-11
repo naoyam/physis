@@ -47,7 +47,8 @@ extern "C" {
     return 0;
   }
 
-  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim) {
+  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
+                        __PSGrid_devNewFunc func) {
     __PSGrid *g = (__PSGrid*)malloc(sizeof(__PSGrid));
     g->elm_size = elm_size;    
     g->num_dims = num_dims;
@@ -57,47 +58,55 @@ extern "C" {
     for (i = 0; i < num_dims; i++) {
       g->num_elms *= dim[i];
     }
-    void *buf = NULL;
-    CUDA_SAFE_CALL(cudaMalloc(&buf, g->num_elms * g->elm_size));
-    if (!buf) return INVALID_GRID;
-    CUDA_SAFE_CALL(cudaMemset(buf, 0, g->num_elms * g->elm_size));
+    
+    if (func) {
+      g->dev = (__PSGrid_dev*)func(num_dims, dim);
+    } else {
+      void *buf = NULL;
+      CUDA_SAFE_CALL(cudaMalloc(&buf, g->num_elms * g->elm_size));
+      if (!buf) return INVALID_GRID;
+      CUDA_SAFE_CALL(cudaMemset(buf, 0, g->num_elms * g->elm_size));
 
-    // Set the on-device data. g->dev data will be copied when calling
-    // CUDA global functions.
-    switch (g->num_dims) {
-      case 1:
-        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid1D_dev));
-        ((__PSGrid1D_dev*)g->dev)->p0 = buf;
-        ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
-        break;
-      case 2:
-        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid2D_dev));
-        ((__PSGrid2D_dev*)g->dev)->p0 = buf;
-        ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
-        ((__PSGrid2D_dev*)g->dev)->dim[1] = g->dim[1];        
-        break;
-      case 3:
-        g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid3D_dev));
-        ((__PSGrid3D_dev*)g->dev)->p0 = buf;
-        ((__PSGrid3D_dev*)g->dev)->dim[0] = g->dim[0];
-        ((__PSGrid3D_dev*)g->dev)->dim[1] = g->dim[1];
-        ((__PSGrid3D_dev*)g->dev)->dim[2] = g->dim[2];        
-        break;
-      default:
-        LOG_ERROR() << "Unsupported dimension: " << g->num_dims << "\n";
-        PSAbort(1);
+      // Set the on-device data. g->dev data will be copied when calling
+      // CUDA global functions.
+      switch (g->num_dims) {
+        case 1:
+          g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid1D_dev));
+          ((__PSGrid1D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
+          break;
+        case 2:
+          g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid2D_dev));
+          ((__PSGrid2D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
+          ((__PSGrid2D_dev*)g->dev)->dim[1] = g->dim[1];        
+          break;
+        case 3:
+          g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid3D_dev));
+          ((__PSGrid3D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid3D_dev*)g->dev)->dim[0] = g->dim[0];
+          ((__PSGrid3D_dev*)g->dev)->dim[1] = g->dim[1];
+          ((__PSGrid3D_dev*)g->dev)->dim[2] = g->dim[2];        
+          break;
+        default:
+          LOG_ERROR() << "Unsupported dimension: " << g->num_dims << "\n";
+          PSAbort(1);
+      }
     }
         
     return g;
   }
-
-  void PSGridFree(void *p) {
-    __PSGrid *g = (__PSGrid *)p;
-    if (g->dev->p0) {
-      CUDA_SAFE_CALL(cudaFree(g->dev->p0));
+  
+  void __PSGridFree(__PSGrid *g, __PSGrid_devFreeFunc func) {
+    if (g->dev) {
+      if (func) {
+        func(g->dev);
+      } else {
+        CUDA_SAFE_CALL(cudaFree(g->dev->p0));
+        free(g->dev);              
+      }
+      g->dev = NULL;
     }
-    free(g->dev);
-    g->dev = NULL;
   }
 
   void PSGridCopyin(void *p, const void *src_array) {

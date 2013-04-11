@@ -88,12 +88,16 @@ extern "C" {
 #else
   extern __PSGridDimDev(void *p, int);
 #endif
-
-  extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim);
+  
+  typedef void * (*__PSGrid_devNewFunc)(int num_dims, PSVectorInt dim);
+  extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
+                               __PSGrid_devNewFunc func);
   extern void __PSGridSwap(__PSGrid *g);
   extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
+  typedef void (*__PSGrid_devFreeFunc)(void *);
+  extern void __PSGridFree(__PSGrid *g, __PSGrid_devFreeFunc func);
   /** check CUDA error
    * @param[in] message
    */

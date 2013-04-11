@@ -74,16 +74,18 @@ class Translator: public rose_util::RoseASTTraversal {
   virtual void Visit(SgFunctionCallExp *node);
   virtual void Visit(SgFunctionDeclaration *node);
 
-  virtual void translateKernelDeclaration(SgFunctionDeclaration *node) {}
-  virtual void translateInit(SgFunctionCallExp *node) {}
-  virtual void translateNew(SgFunctionCallExp *node,
+  virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node) {}
+  virtual void TranslateInit(SgFunctionCallExp *node) {}
+  virtual void TranslateNew(SgFunctionCallExp *node,
                             GridType *gt) {}
-  virtual void translateGet(SgFunctionCallExp *node,
+  virtual void TranslateFree(SgFunctionCallExp *node,
+                             GridType *gt) {}
+  virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool isKernel, bool is_periodic) {}
   // Returns true if translation is done. If this function returns
-  // false, translateGet is used.
-  virtual bool translateGetHost(SgFunctionCallExp *node,
+  // false, TranslateGet is used.
+  virtual bool TranslateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv) {
     return false;
   }
@@ -91,20 +93,20 @@ class Translator: public rose_util::RoseASTTraversal {
   /*!
     If this function returns false, translateGet is used.
   */
-  virtual bool translateGetKernel(SgFunctionCallExp *node,
+  virtual bool TranslateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic) {
     return false;
   }
-  virtual void translateEmit(SgFunctionCallExp *node,
+  virtual void TranslateEmit(SgFunctionCallExp *node,
                              SgInitializedName *gv) {}
-  virtual void translateSet(SgFunctionCallExp *node,
+  virtual void TranslateSet(SgFunctionCallExp *node,
                             SgInitializedName *gv) {}
-  virtual void translateGridCall(SgFunctionCallExp *node,
+  virtual void TranslateGridCall(SgFunctionCallExp *node,
                                  SgInitializedName *gv) {}
-  virtual void translateMap(SgFunctionCallExp *node,
+  virtual void TranslateMap(SgFunctionCallExp *node,
                             StencilMap *s) {}
-  virtual void translateRun(SgFunctionCallExp *node,
+  virtual void TranslateRun(SgFunctionCallExp *node,
                             Run *run) {}
   //! Handler for a call to reduce grids.
   /*!

@@ -139,7 +139,7 @@ void Translator::buildGridDecl() {
 void Translator::Visit(SgFunctionDeclaration *node) {      
   if (tx_->isKernel(node)) {
     LOG_DEBUG() << "translate kernel declaration\n";
-    translateKernelDeclaration(node);
+    TranslateKernelDeclaration(node);
   }
 }
 
@@ -149,7 +149,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     const string name = rose_util::getFuncName(node);
     GridType *gt = tx_->findGridTypeByNew(name);
     assert(gt);
-    translateNew(node, gt);
+    TranslateNew(node, gt);
     return;
   }
 
@@ -179,21 +179,21 @@ void Translator::Visit(SgFunctionCallExp *node) {
       }
       // Call getkernel first if it's used in kernel; if true
       // returned, done. otherwise, try gethost if it's used in host;
-      // the final fallback is translateget.
+      // the final fallback is Translateget.
       if (!((tx_->isKernel(caller) &&
-             translateGetKernel(node, gv, is_periodic)) ||
-            (!tx_->isKernel(caller) && translateGetHost(node, gv)))) {
-        translateGet(node, gv, tx_->isKernel(caller), is_periodic);
+             TranslateGetKernel(node, gv, is_periodic)) ||
+            (!tx_->isKernel(caller) && TranslateGetHost(node, gv)))) {
+        TranslateGet(node, gv, tx_->isKernel(caller), is_periodic);
       }
     } else if (methodName == GridType::emit_name) {
       LOG_DEBUG() << "translating emit\n";
       node->addNewAttribute(GridCallAttribute::name,
                             new GridCallAttribute(
                                 gv, GridCallAttribute::EMIT));
-      translateEmit(node, gv);
+      TranslateEmit(node, gv);
     } else if (methodName == GridType::set_name) {
       LOG_DEBUG() << "translating set\n";
-      translateSet(node, gv);
+      TranslateSet(node, gv);
     } else {
       throw PhysisException("Unsupported grid call");
     }
@@ -204,7 +204,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   if (tx_->isMap(node)) {
     LOG_DEBUG() << "Translating map\n";
     LOG_DEBUG() << node->unparseToString() << "\n";
-    translateMap(node, tx_->findMap(node));
+    TranslateMap(node, tx_->findMap(node));
     setSkipChildren();
     return;
   }
@@ -212,7 +212,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   if (tx_->isRun(node)) {
     LOG_DEBUG() << "Translating run\n";
     LOG_DEBUG() << node->unparseToString() << "\n";
-    translateRun(node, tx_->findRun(node));
+    TranslateRun(node, tx_->findRun(node));
     setSkipChildren();
     return;
   }
@@ -220,7 +220,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   if (tx_->IsInit(node)) {
     LOG_DEBUG() << "Translating Init\n";
     LOG_DEBUG() << node->unparseToString() << "\n";
-    translateInit(node);
+    TranslateInit(node);
     setSkipChildren();    
     return;
   }
@@ -233,6 +233,19 @@ void Translator::Visit(SgFunctionCallExp *node) {
     else TranslateReduceKernel(rd);
     setSkipChildren();
     return;
+  }
+
+  if (tx_->IsFreeCall(node)) {
+    LOG_DEBUG() << "Translating Free\n";
+    SgVarRefExp *gexp =
+        isSgVarRefExp(
+            rose_util::removeCasts(
+                node->get_args()->get_expressions()[0]));
+    PSAssert(gexp);
+    GridType *gt = tx_->findGridType(gexp);
+    PSAssert(gt);
+    TranslateFree(node, gt);
+    setSkipChildren();
   }
 
   // This is not related to physis grids; leave it as is

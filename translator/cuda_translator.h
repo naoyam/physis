@@ -62,7 +62,12 @@ class CUDATranslator : public ReferenceTranslator {
  public:
 
   virtual void SetUp(SgProject *project, TranslationContext *context,
-                     RuntimeBuilder *rt_builder);  
+                     RuntimeBuilder *rt_builder);
+
+  virtual void appendNewArgExtra(SgExprListExp *args,
+                                 Grid *g,
+                                 SgVariableDeclaration *dim_decl);
+  
 
   //! Generates a CUDA grid declaration for a stencil.
   /*!
@@ -89,14 +94,16 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void ProcessUserDefinedPointType(SgClassDeclaration *grid_decl,
                                            GridType *gt);
 
-  virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
-  virtual void translateGet(SgFunctionCallExp *node,
+  virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
+  virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel, bool is_periodic);
-  virtual void translateEmit(SgFunctionCallExp *node,
+  virtual void TranslateEmit(SgFunctionCallExp *node,
                              SgInitializedName *gv);
+  virtual void TranslateFree(SgFunctionCallExp *node,
+                             GridType *gt);
   
-  //virtual void translateSet(SgFunctionCallExp *node,
+  //virtual void TranslateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);
   //! Generates a basic block of the stencil run function.
   /*!

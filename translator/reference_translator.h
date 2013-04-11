@@ -52,18 +52,18 @@ class ReferenceTranslator : public Translator {
     variable validate_ast_.
    */
   virtual void ValidateASTConsistency();
-  virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
-  virtual void translateNew(SgFunctionCallExp *node, GridType *gt);
+  virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
+  virtual void TranslateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
                                  SgVariableDeclaration *dim_decl);
-  virtual void translateGet(SgFunctionCallExp *node,
+  virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel,
                             bool is_periodic);
-  virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
-  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv);  
+  virtual void TranslateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
+  virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);  
   //! Build an offset expression.
   /*!
     @param gv The grid to get a offset.
@@ -82,7 +82,7 @@ class ReferenceTranslator : public Translator {
                                     bool is_periodic,                                    
                                     const StencilIndexList *sil,
                                     SgScopeStatement *scope);
-  virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
+  virtual void TranslateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s) {
@@ -111,7 +111,7 @@ class ReferenceTranslator : public Translator {
   virtual void GenerateRunBody(
       SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   virtual SgFunctionDeclaration *GenerateRun(Run *run);
-  virtual void translateRun(SgFunctionCallExp *node, Run *run);
+  virtual void TranslateRun(SgFunctionCallExp *node, Run *run);
 
   /** generate dlopen and dlsym code
    * @param[in] run

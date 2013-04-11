@@ -19,8 +19,8 @@ SgFunctionCallExp *BuildCudaStreamSynchronize(SgExpression *strm);
 SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y=NULL,
                                  SgExpression *z=NULL);
 SgType *BuildCudaErrorType();
-SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size,
-                                   SgScopeStatement *scope);
+SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size);
+SgFunctionCallExp *BuildCudaFree(SgExpression *p);
 
 
 } // namespace translator

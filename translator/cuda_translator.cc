@@ -114,7 +114,22 @@ void CUDATranslator::SetUp(SgProject *project,
   si::prependStatement(s, si::getFirstGlobalScope(project_));
 }
 
-void CUDATranslator::translateKernelDeclaration(
+
+void CUDATranslator::appendNewArgExtra(SgExprListExp *args,
+                                       Grid *g,
+                                       SgVariableDeclaration *dim_decl) {
+  GridType *gt = g->getType();
+  SgExpression *extra_arg = NULL;
+  if (gt->IsPrimitivePointType()) {
+    extra_arg = rose_util::buildNULL(global_scope_);
+  } else {
+    extra_arg = sb::buildFunctionRefExp(gt->aux_new_decl());
+  }
+  si::appendExpression(args, extra_arg);
+  return;
+}
+
+void CUDATranslator::TranslateKernelDeclaration(
     SgFunctionDeclaration *node) {
   SgFunctionModifier &modifier = node->get_functionModifier();
   modifier.setCudaDevice();
@@ -135,12 +150,12 @@ void CUDATranslator::translateKernelDeclaration(
   return;
 }
 
-void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
+void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
                                   SgInitializedName *grid_arg,
                                   bool is_kernel, bool is_periodic) {
   GridType *gt = tx_->findGridType(grid_arg->get_type());
   if (gt->IsPrimitivePointType()) {
-    ReferenceTranslator::translateGet(func_call_exp,
+    ReferenceTranslator::TranslateGet(func_call_exp,
                                       grid_arg,
                                       is_kernel, is_periodic);
     return;
@@ -148,11 +163,11 @@ void CUDATranslator::translateGet(SgFunctionCallExp *func_call_exp,
   // TODO
 }
 
-void CUDATranslator::translateEmit(SgFunctionCallExp *node,
+void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
                                    SgInitializedName *gv) {
   GridType *gt = tx_->findGridType(gv->get_type());
   if (gt->IsPrimitivePointType()) {
-    ReferenceTranslator::translateEmit(node, gv);
+    ReferenceTranslator::TranslateEmit(node, gv);
     return;
   }
   // TODO
@@ -372,6 +387,13 @@ void CUDATranslator::ProcessUserDefinedPointType(
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
       BuildGridNew(gt);
   si::insertStatementAfter(type_decl, new_decl);
+  gt->aux_new_decl() = new_decl;
+  // Build GridFree for this type
+  SgFunctionDeclaration *free_decl =
+      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
+      BuildGridFree(gt);
+  si::insertStatementAfter(type_decl, free_decl);
+  gt->aux_free_decl() = free_decl;
   return;
 }
 
@@ -689,6 +711,30 @@ void CUDATranslator::AddSyncAfterDlclose(
   si::appendStatement(
       sb::buildExprStatement(BuildCudaThreadSynchronize()),
       scope);
+}
+
+void CUDATranslator::TranslateFree(SgFunctionCallExp *node,
+                                   GridType *gt) {
+  LOG_DEBUG() << "Translating Free for CUDA\n";
+  
+  // Translate to __PSGridFree. Pass the specific free function for
+  // user-defined point type
+  SgExpression *free_func = NULL;
+  if (gt->IsPrimitivePointType()) {
+    free_func = rose_util::buildNULL(global_scope_);
+  } else {
+    free_func = sb::buildFunctionRefExp(gt->aux_free_decl());
+  }
+
+  SgExprListExp *args = isSgExprListExp(
+      si::copyExpression(node->get_args()));
+  si::appendExpression(args, free_func);
+  SgFunctionCallExp *target = sb::buildFunctionCallExp(
+      "__PSGridFree", sb::buildVoidType(),
+      args);
+
+  si::replaceExpression(node, target);
+  return;
 }
 
 } // namespace translator

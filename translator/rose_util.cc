@@ -161,6 +161,7 @@ void SetFunctionStatic(SgFunctionDeclaration *fdecl) {
 }
 
 SgExpression *buildNULL(SgScopeStatement *global_scope) {
+#if 0  
   static SgVariableDeclaration *dummy_null = NULL;
   if (!dummy_null) {
     dummy_null =
@@ -170,6 +171,9 @@ SgExpression *buildNULL(SgScopeStatement *global_scope) {
             NULL, global_scope);
   }
   return sb::buildVarRefExp(dummy_null);
+#else
+  return sb::buildOpaqueVarRefExp("NULL");
+#endif
 }
 
 SgVariableDeclaration *buildVarDecl(const string &name,

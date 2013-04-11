@@ -25,8 +25,8 @@ class MPITranslator: public ReferenceTranslator {
  protected:
   MPIRuntimeBuilder *mpi_rt_builder_;
   bool flag_mpi_overlap_;
-  virtual void translateInit(SgFunctionCallExp *node);
-  virtual void translateRun(SgFunctionCallExp *node,
+  virtual void TranslateInit(SgFunctionCallExp *node);
+  virtual void TranslateRun(SgFunctionCallExp *node,
                             Run *run);
   virtual void GenerateRunBody(
       SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
@@ -35,12 +35,12 @@ class MPITranslator: public ReferenceTranslator {
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
                                  SgVariableDeclaration *dim_decl);
-  virtual bool translateGetKernel(SgFunctionCallExp *node,
+  virtual bool TranslateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic);
-  virtual bool translateGetHost(SgFunctionCallExp *node,
+  virtual bool TranslateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv);
-  virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
+  virtual void TranslateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
   virtual void GenerateLoadRemoteGridRegion(
       StencilMap *smap,
       SgVariableDeclaration *stencil_decl,

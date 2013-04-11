@@ -130,7 +130,7 @@ void MPITranslator::Translate() {
   mpi_rt_builder_ = NULL;
 }
 
-void MPITranslator::translateInit(SgFunctionCallExp *node) {
+void MPITranslator::TranslateInit(SgFunctionCallExp *node) {
   LOG_DEBUG() << "Translating Init call\n";
 
   // Append the number of run calls
@@ -179,7 +179,7 @@ void MPITranslator::translateInit(SgFunctionCallExp *node) {
   return;
 }
 
-void MPITranslator::translateRun(SgFunctionCallExp *node,
+void MPITranslator::TranslateRun(SgFunctionCallExp *node,
                                  Run *run) {
   SgFunctionDeclaration *runFunc = GenerateRun(run);
   si::insertStatementBefore(getContainingFunction(node), runFunc);
@@ -526,7 +526,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
 }
 
 // REFACTORING: This should be common among all translators.
-bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
+bool MPITranslator::TranslateGetHost(SgFunctionCallExp *node,
                                      SgInitializedName *gv) {
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
@@ -547,7 +547,7 @@ bool MPITranslator::translateGetHost(SgFunctionCallExp *node,
   return true;
 }
 
-bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
+bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_periodic) {
   GridType *gt = tx_->findGridType(gv->get_type());
@@ -574,7 +574,7 @@ bool MPITranslator::translateGetKernel(SgFunctionCallExp *node,
   return true;
 }
 
-void MPITranslator::translateEmit(SgFunctionCallExp *node,
+void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
                                   SgInitializedName *gv) {
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z)) = v
 
