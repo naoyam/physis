@@ -102,6 +102,8 @@ class CUDATranslator : public ReferenceTranslator {
                              SgInitializedName *gv);
   virtual void TranslateFree(SgFunctionCallExp *node,
                              GridType *gt);
+  virtual void TranslateCopyin(SgFunctionCallExp *node,
+                               GridType *gt);
   
   //virtual void TranslateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);

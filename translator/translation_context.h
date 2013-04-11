@@ -206,7 +206,8 @@ class TranslationContext {
 
   bool isNewCall(SgFunctionCallExp *ce);
   bool isNewFunc(const string &funcName);
-  bool IsFreeCall(SgFunctionCallExp *ce);
+  bool IsFree(SgFunctionCallExp *ce);
+  bool IsCopyin(SgFunctionCallExp *ce);  
 
   // ool isGridTypeSpecificCall(SgFunctionCallExp *ce);
   // gInitializedName* getGridVarUsedInFuncCall(SgFunctionCallExp *call);

@@ -454,7 +454,7 @@ bool TranslationContext::isNewCall(SgFunctionCallExp *ce) {
   return isNewFunc(name);
 }
 
-bool TranslationContext::IsFreeCall(SgFunctionCallExp *ce) {
+bool TranslationContext::IsFree(SgFunctionCallExp *ce) {
   SgFunctionRefExp *fref = isSgFunctionRefExp(ce->get_function());
   if (!fref) return false;
   SgFunctionSymbol *fs = fref->get_symbol();
@@ -462,6 +462,15 @@ bool TranslationContext::IsFreeCall(SgFunctionCallExp *ce) {
   const string name = fs->get_name().getString();
   // OG_DEBUG() << "new call? name: " << name << "\n";
   return name == "PSGridFree";
+}
+
+bool TranslationContext::IsCopyin(SgFunctionCallExp *ce) {
+  SgFunctionRefExp *fref = isSgFunctionRefExp(ce->get_function());
+  if (!fref) return false;
+  SgFunctionSymbol *fs = fref->get_symbol();
+  PSAssert(fs);
+  const string name = fs->get_name().getString();
+  return name == "PSGridCopyin";
 }
 
 static bool IsBuiltInFunction(const string &func_name) {

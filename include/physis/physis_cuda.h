@@ -98,6 +98,10 @@ extern "C" {
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   typedef void (*__PSGrid_devFreeFunc)(void *);
   extern void __PSGridFree(__PSGrid *g, __PSGrid_devFreeFunc func);
+  typedef void (*__PSGrid_devCopyinFunc)(void *g, const void *src);
+  extern void __PSGridCopyin(void *p, const void *src_array,
+                             __PSGrid_devCopyinFunc func);
+  
   /** check CUDA error
    * @param[in] message
    */

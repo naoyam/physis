@@ -392,8 +392,15 @@ void CUDATranslator::ProcessUserDefinedPointType(
   SgFunctionDeclaration *free_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
       BuildGridFree(gt);
-  si::insertStatementAfter(type_decl, free_decl);
+  si::insertStatementAfter(new_decl, free_decl);
   gt->aux_free_decl() = free_decl;
+
+  // Build GridCopyin for this type
+  SgFunctionDeclaration *copyin_decl =
+      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
+      BuildGridCopyin(gt);
+  si::insertStatementAfter(free_decl, copyin_decl);
+  gt->aux_copyin_decl() = copyin_decl;
   return;
 }
 
@@ -731,6 +738,30 @@ void CUDATranslator::TranslateFree(SgFunctionCallExp *node,
   si::appendExpression(args, free_func);
   SgFunctionCallExp *target = sb::buildFunctionCallExp(
       "__PSGridFree", sb::buildVoidType(),
+      args);
+
+  si::replaceExpression(node, target);
+  return;
+}
+
+void CUDATranslator::TranslateCopyin(SgFunctionCallExp *node,
+                                     GridType *gt) {
+  LOG_DEBUG() << "Translating Copyin for CUDA\n";
+  
+  // Translate to __PSGridCopyin. Pass the specific copyin function for
+  // user-defined point type
+  SgExpression *func = NULL;
+  if (gt->IsPrimitivePointType()) {
+    func = rose_util::buildNULL(global_scope_);
+  } else {
+    func = sb::buildFunctionRefExp(gt->aux_copyin_decl());
+  }
+
+  SgExprListExp *args = isSgExprListExp(
+      si::copyExpression(node->get_args()));
+  si::appendExpression(args, func);
+  SgFunctionCallExp *target = sb::buildFunctionCallExp(
+      "__PSGridCopyin", sb::buildVoidType(),
       args);
 
   si::replaceExpression(node, target);

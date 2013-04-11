@@ -80,6 +80,9 @@ class Translator: public rose_util::RoseASTTraversal {
                             GridType *gt) {}
   virtual void TranslateFree(SgFunctionCallExp *node,
                              GridType *gt) {}
+  virtual void TranslateCopyin(SgFunctionCallExp *node,
+                               GridType *gt) {}
+  
   virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool isKernel, bool is_periodic) {}

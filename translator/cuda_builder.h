@@ -21,7 +21,14 @@ SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y=NULL,
 SgType *BuildCudaErrorType();
 SgFunctionCallExp *BuildCudaMalloc(SgExpression *buf, SgExpression *size);
 SgFunctionCallExp *BuildCudaFree(SgExpression *p);
-
+SgFunctionCallExp *BuildCudaMallocHost(SgExpression *buf, SgExpression *size);
+SgFunctionCallExp *BuildCudaFreeHost(SgExpression *p);
+SgFunctionCallExp *BuildCudaMemcpyHostToDevice(SgExpression *dst,
+                                               SgExpression *src,
+                                               SgExpression *size);
+SgFunctionCallExp *BuildCudaMemcpyDeviceToHost(SgExpression *dst,
+                                               SgExpression *src,
+                                               SgExpression *size);
 
 } // namespace translator
 } // namespace physis

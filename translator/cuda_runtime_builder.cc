@@ -113,6 +113,26 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevType(
   return decl;
 }
 
+SgVariableDeclaration *BuildNumElmsDecl(SgExpression *dim,
+                                        int num_dims) {
+  SgExpression *num_elms_rhs =
+      sb::buildPntrArrRefExp(dim, sb::buildIntVal(0));
+  for (int i = 1; i < num_dims; ++i) {
+    num_elms_rhs =
+        sb::buildMultiplyOp(
+            num_elms_rhs,
+            sb::buildPntrArrRefExp(
+                si::copyExpression(dim),
+                sb::buildIntVal(i)));
+  }
+
+  SgVariableDeclaration *num_elms_decl =
+      sb::buildVariableDeclaration(
+          "num_elms", si::lookupNamedTypeInParentScopes("size_t"),
+          sb::buildAssignInitializer(num_elms_rhs));
+  return num_elms_decl;
+}
+
 // Build a "new" function.
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
     GridType *gt) {
@@ -175,20 +195,9 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNew(
   }
 
   // size_t num_elms = dim[0] * ...;
-  SgExpression *num_elms_rhs =
-      sb::buildPntrArrRefExp(sb::buildVarRefExp(dim_p),
-                             sb::buildIntVal(0));
-  for (unsigned i = 1; i < gt->num_dim(); ++i) {
-    num_elms_rhs =
-        sb::buildMultiplyOp(
-            num_elms_rhs,
-            sb::buildPntrArrRefExp(sb::buildVarRefExp(dim_p),
-                                   sb::buildIntVal(i)));
-  }
   SgVariableDeclaration *num_elms_decl =
-      sb::buildVariableDeclaration(
-          "num_elms", si::lookupNamedTypeInParentScopes("size_t"),
-          sb::buildAssignInitializer(num_elms_rhs));
+      BuildNumElmsDecl(sb::buildVarRefExp(dim_p),
+                       gt->num_dim());
   si::appendStatement(num_elms_decl, body);
   
   // cudaMalloc(&(p->x), sizeof(typeof(p->x)) * dim[i]);
@@ -291,6 +300,190 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFree(
   return fdecl;
 }
 
+SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyin(
+    GridType *gt) {
+  /*
+    Transpose AoS data to SoA for CUDA.
+    
+  void __PSGridType_devCopyin(void *v, const void *src) {
+    __PSGridType_dev *p = (__PSGridType_dev*)v;
+    const Type *srcp = (const Type *)src;
+    void *tbuf[3];
+    cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
+    ...;
+    for (int i = 0; i < num_elms; ++i) {
+      Type v = srcp[i];
+      ((float *)tbuf[0])[i] = v.x;
+      ...;
+    }
+    cudaMemcpy(p->x, tbuf[0], cudaMemcpyHostToDevice);
+    cudaFreeHost(tbuf[0]);
+    ...;
+  }
+  */
+  
+  SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
+  string func_name = dev_type->get_name() + "Copyin";
+  SgType *ret_type = sb::buildVoidType();
+  SgType *dev_ptr_type = sb::buildPointerType(dev_type);
+  int num_point_elms = gt->point_def()->get_members().size();
+  const SgDeclarationStatementPtrList &members =
+      ((SgClassDeclaration*)gt->aux_decl())->
+      get_definition()->get_members();
+  
+  // Build a parameter list
+  SgFunctionParameterList *pl = sb::buildFunctionParameterList();
+
+  // void *v
+  SgInitializedName *v_p =
+      sb::buildInitializedName("v", sb::buildPointerType(sb::buildVoidType()));
+  si::appendArg(pl, v_p);
+  // const void *src
+  SgInitializedName *src_p =
+      sb::buildInitializedName(
+          "src",
+          sb::buildPointerType(sb::buildConstType(sb::buildVoidType())));
+  si::appendArg(pl, src_p);
+
+  // Function body
+  SgBasicBlock *body = sb::buildBasicBlock();
+  
+  SgVariableDeclaration *p_decl =
+      sb::buildVariableDeclaration(
+          "p", dev_ptr_type,
+          sb::buildAssignInitializer(
+              sb::buildCastExp(sb::buildVarRefExp(v_p),
+                               dev_ptr_type)));
+  si::appendStatement(p_decl, body);
+  //const Type *srcp = (const Type *)src;
+  SgType *srcp_type =
+      sb::buildPointerType(sb::buildConstType(gt->point_type()));
+  SgVariableDeclaration *srcp_decl =
+      sb::buildVariableDeclaration(
+          "srcp", srcp_type,
+          sb::buildAssignInitializer(
+              sb::buildCastExp(sb::buildVarRefExp(src_p),
+                               srcp_type)));
+  si::appendStatement(srcp_decl, body);
+
+  SgExpression *dim_expr =
+      sb::buildArrowExp(
+          sb::buildVarRefExp(p_decl),
+          sb::buildVarRefExp(
+              isSgVariableDeclaration(members[0])));
+
+  // void *tbuf[3];
+  SgVariableDeclaration *tbuf_decl =
+      sb::buildVariableDeclaration(
+          "tbuf",
+          sb::buildArrayType(sb::buildPointerType(sb::buildVoidType()),
+                             sb::buildIntVal(num_point_elms)));
+  si::appendStatement(tbuf_decl, body);
+
+
+  // size_t num_elms = dim[0] * ...;
+  SgVariableDeclaration *num_elms_decl =
+      BuildNumElmsDecl(
+          si::copyExpression(dim_expr),
+          gt->num_dim());
+  si::appendStatement(num_elms_decl, body);
+
+  // cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
+  ENUMERATE (i, member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    SgName member_name = rose_util::GetName(member_decl);
+    if (member_name == "dim") continue;
+    SgType *member_type =
+        isSgPointerType(rose_util::GetType(member_decl))
+        ->get_base_type();
+    SgExpression *size_exp =
+        sb::buildMultiplyOp(
+            sb::buildSizeOfOp(member_type),
+            sb::buildVarRefExp(num_elms_decl));
+    SgFunctionCallExp *malloc_call = BuildCudaMallocHost(
+        sb::buildPntrArrRefExp(
+            sb::buildVarRefExp(tbuf_decl),
+            sb::buildIntVal(i-1)),
+        size_exp);
+    si::appendStatement(sb::buildExprStatement(malloc_call),
+                        body);
+    
+  }
+  
+
+  // for (size_t i = 0; i < num_elms; ++i) {
+  SgVariableDeclaration *init =
+      sb::buildVariableDeclaration(
+          "i", 
+          si::lookupNamedTypeInParentScopes("size_t"),
+          sb::buildAssignInitializer(sb::buildIntVal(0)));
+  SgExpression *cond =
+      sb::buildLessThanOp(
+          sb::buildVarRefExp(init),
+          sb::buildVarRefExp(num_elms_decl));
+  SgExpression *incr = sb::buildPlusPlusOp(sb::buildVarRefExp(init));
+  SgBasicBlock *loop_body = sb::buildBasicBlock();
+  SgForStatement *trans_loop =
+      sb::buildForStatement(init, sb::buildExprStatement(cond),
+                            incr, loop_body);
+  si::appendStatement(trans_loop, body);
+
+  // Type v = srcp[i];
+  SgExpression *srcpi =
+      sb::buildPntrArrRefExp(sb::buildVarRefExp(srcp_decl),
+                             sb::buildVarRefExp(init));
+  ENUMERATE (i, member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    SgName member_name = rose_util::GetName(member_decl);
+    if (member_name == "dim") continue;
+    // tbuf[i] = srcp[i].member
+    si::appendStatement(
+        sb::buildAssignStatement(
+            sb::buildPntrArrRefExp(
+                sb::buildPntrArrRefExp(
+                    sb::buildVarRefExp(tbuf_decl),
+                    sb::buildIntVal(i-1)),
+                sb::buildVarRefExp(init)),
+            sb::buildDotExp(si::copyExpression(srcpi),
+                            sb::buildVarRefExp(member_decl))),
+        loop_body);
+  }
+    
+  ENUMERATE (i, member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl =
+        isSgVariableDeclaration(*member);
+    SgName member_name = rose_util::GetName(member_decl);
+    SgType *member_type = rose_util::GetType(member_decl);    
+    if (member_name == "dim") continue;
+    SgExpression *dst =
+        sb::buildArrowExp(sb::buildVarRefExp(p_decl),
+                          sb::buildVarRefExp(member_decl));
+    SgExpression *src =
+        sb::buildPntrArrRefExp(
+            sb::buildVarRefExp(tbuf_decl),
+            sb::buildIntVal(i-1));
+    SgExpression *size_exp =
+        sb::buildMultiplyOp(
+            sb::buildSizeOfOp(member_type),
+            sb::buildVarRefExp(num_elms_decl));
+    si::appendStatement(
+        sb::buildExprStatement(
+            BuildCudaMemcpyHostToDevice(dst, src,
+                                        size_exp)),
+        body);
+    si::appendStatement(
+        sb::buildExprStatement(
+            BuildCudaFreeHost(si::copyExpression(src))),
+        body);
+  }
+  
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name, ret_type, pl);
+  rose_util::ReplaceFuncBody(fdecl, body);
+  return fdecl;
+}
 } // namespace translator
 } // namespace physis
 

@@ -35,13 +35,17 @@ class GridType: public AstAttribute {
   //! The decl of aux_type_
   SgDeclarationStatement *aux_decl_;
   SgFunctionDeclaration *aux_free_decl_;
-  SgFunctionDeclaration *aux_new_decl_;    
+  SgFunctionDeclaration *aux_new_decl_;
+  SgFunctionDeclaration *aux_copyin_decl_;
+  SgFunctionDeclaration *aux_copyout_decl_;
 
  public:
   GridType(SgClassType *struct_type, SgTypedefType *user_type)
       : struct_type_(struct_type), user_type_(user_type),
         point_type_(NULL), point_def_(NULL),
-        aux_type_(NULL), aux_decl_(NULL) {
+        aux_type_(NULL), aux_decl_(NULL),
+        aux_free_decl_(NULL), aux_new_decl_(NULL),
+        aux_copyin_decl_(NULL), aux_copyout_decl_(NULL) {
     type_name_ = user_type_->get_name().getString();
     LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
     string realName = struct_type_->get_name().getString();
@@ -65,6 +69,10 @@ class GridType: public AstAttribute {
   SgFunctionDeclaration *&aux_new_decl() { return aux_new_decl_; }    
   SgFunctionDeclaration *aux_free_decl() const { return aux_free_decl_; }
   SgFunctionDeclaration *&aux_free_decl() { return aux_free_decl_; }    
+  SgFunctionDeclaration *aux_copyin_decl() const { return aux_copyin_decl_; }
+  SgFunctionDeclaration *&aux_copyin_decl() { return aux_copyin_decl_; }    
+  SgFunctionDeclaration *aux_copyout_decl() const { return aux_copyout_decl_; }
+  SgFunctionDeclaration *&aux_copyout_decl() { return aux_copyout_decl_; }    
   bool IsPrimitivePointType() const;
   bool IsUserDefinedPointType() const;
   

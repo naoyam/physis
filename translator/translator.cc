@@ -235,7 +235,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     return;
   }
 
-  if (tx_->IsFreeCall(node)) {
+  if (tx_->IsFree(node)) {
     LOG_DEBUG() << "Translating Free\n";
     SgVarRefExp *gexp =
         isSgVarRefExp(
@@ -245,6 +245,19 @@ void Translator::Visit(SgFunctionCallExp *node) {
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);
     TranslateFree(node, gt);
+    setSkipChildren();
+  }
+
+  if (tx_->IsCopyin(node)) {
+    LOG_DEBUG() << "Translating Copyin\n";
+    SgVarRefExp *gexp =
+        isSgVarRefExp(
+            rose_util::removeCasts(
+                node->get_args()->get_expressions()[0]));
+    PSAssert(gexp);
+    GridType *gt = tx_->findGridType(gexp);
+    PSAssert(gt);
+    TranslateCopyin(node, gt);
     setSkipChildren();
   }
 
