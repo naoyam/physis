@@ -53,16 +53,21 @@ class RuntimeBuilder {
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
 
-  //!
+  //! Build an offset expression.
   /*!
-    \param offset_exprs Free AST node of offset expressions
-    
-    Parameter offset_exprs will be used in the returned offset
+    Parameter offset_exprs will be used in the returned offset 
     expression without cloning.
+
+    @param num_dim Number of dimensions.
+    @param offset_exprs Index argument list.
+    @param is_kernel True if the expression is used in a stencil
+    kernel. 
+    @param is_periodic True if it is a periodic access.
+    @param sil The stencil index list of this access.
    */
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      const SgExpressionPtrList *offset_exprs, bool is_kernel,
       bool is_periodic,
       const StencilIndexList *sil) = 0;
   //!
@@ -84,10 +89,18 @@ class RuntimeBuilder {
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,      
       GridType *gt,
-      SgExpressionPtrList *offset_exprs,
+      const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,
       bool is_kernel,
       bool is_periodic) = 0;
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name) = 0;
 
   virtual SgBasicBlock *BuildGridSet(
       SgExpression *grid_var, int num_dims,

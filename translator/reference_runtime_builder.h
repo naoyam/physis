@@ -33,17 +33,27 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
       GridType *gt,      
-      SgExpressionPtrList *offset_exprs,
+      const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,      
       bool is_kernel,
       bool is_periodic);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name);
+  
   
   //!
   /*!
    */
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      const SgExpressionPtrList *offset_exprs, bool is_kernel,
       bool is_periodic, const StencilIndexList *sil);
 
   /*

@@ -25,7 +25,9 @@ void kernel(Point *g1, Point *g2) {
                    g1[OFFSET(x-1, y, z)].x) / 3.0f;
         float q = (g1[OFFSET(x, y, z)].y +
                    g1[OFFSET(x, y+1, z)].y +
-                   g1[OFFSET(x, y-1, z)].y) / 3.0f;
+                   g1[OFFSET(x, y-1, z)].y +
+                   g1[OFFSET(x, y, z+1)].y +
+                   g1[OFFSET(x, y, z-1)].y) / 5.0f;
         float r = (g1[OFFSET(x, y, z)].z +
                    g1[OFFSET(x, y, z+1)].z +
                    g1[OFFSET(x, y, z-1)].z) / 3.0f;

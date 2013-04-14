@@ -506,7 +506,7 @@ function compile()
     local src=$1
     local target=$2
     local src_file_base=${src%.c}.$target
-    if [ "@MPI_ENABLED@" = "TRUE" ]; then
+    if [ "@MPI_FOUND@" = "TRUE" ]; then
 		MPI_CFLAGS="-pthread"
 		OPENMP_CFLAGS="-fopenmp"
 		for mpiinc in $(echo "@MPI_INCLUDE_PATH@" | sed 's/;/ /g'); do

@@ -77,16 +77,19 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   if (isSgBinaryOp(get_exp)) {
     new_offset = isSgBinaryOp(get_exp)->get_rhs_operand();
     new_grid = isSgVarRefExp(isSgBinaryOp(
-        rose_util::removeCasts(isSgBinaryOp(get_exp)->get_lhs_operand()))
+        rose_util::removeCasts(
+            isSgBinaryOp(get_exp)->get_lhs_operand()))
                              ->get_lhs_operand());
     PSAssert(new_offset);    
     PSAssert(new_grid);
   } else if (isSgFunctionCallExp(get_exp)) {
-    // TODO: offset is not a single expression in mpi and mpi-cuda
-    // yet.
-    new_offset = NULL;
+    new_offset =
+        isSgFunctionCallExp(get_exp)->
+        get_args()->get_expressions()[1];
     new_grid = isSgVarRefExp(
-        isSgFunctionCallExp(get_exp)->get_args()->get_expressions()[0]);
+        isSgFunctionCallExp(get_exp)->
+        get_args()->get_expressions()[0]);
+    PSAssert(new_offset);    
     PSAssert(new_grid);
   } else {
     
@@ -96,7 +99,8 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   }
 
   gga->offset() = new_offset;
-  gga->gv() = new_grid->get_symbol()->get_declaration();
+  gga->UpdateGridVar(
+      new_grid->get_symbol()->get_declaration());
   
   // NOTE: new_offset does not have offset attribute if it is, for
   // example, a reference to a variable.

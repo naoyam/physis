@@ -27,13 +27,32 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-/*
+typedef vector<StencilRegularIndexList> IndexListVector;
+
+//! Struct to represent a grid variable and a member to access.
+struct GridData {
+  SgInitializedName *gv_;
+  bool member_access_;
+  string member_;
+  GridData(SgInitializedName *gv,
+           string member):
+      gv_(gv), member_access_(true),
+      member_(member) {}
+  explicit GridData(SgInitializedName *gv):
+      gv_(gv), member_access_(false) {}
+  GridData(const GridData &gd):
+      gv_(gd.gv_),
+      member_access_(gd.member_access_),
+      member_(gd.member_) {}
+};
+
+/*!
   Find groups of multiple indices that only differ at the loop
   dimension.  
  */
-static vector<vector<StencilRegularIndexList> > FindCandidateIndices(
+static vector<IndexListVector> FindCandidateIndices(
     const vector<StencilIndexList> &indices, int loop_dim) {
-  map<StencilRegularIndexList, vector<StencilRegularIndexList> >
+  map<StencilRegularIndexList, IndexListVector>
       grouped_indices;
   FOREACH (indices_it, indices.begin(), indices.end()) {
     StencilIndexList si = *indices_it;
@@ -41,20 +60,20 @@ static vector<vector<StencilRegularIndexList> > FindCandidateIndices(
     StencilRegularIndexList base_sim(si);
     base_sim.SetIndex(loop_dim, 0);
     if (!isContained(grouped_indices, base_sim)) {
-      vector<StencilRegularIndexList> sv;
+      IndexListVector sv;
       grouped_indices.insert(make_pair(base_sim, sv));
     }
-    vector<StencilRegularIndexList> &sim_vector =
+    IndexListVector &sim_vector =
         grouped_indices[base_sim];
     StencilRegularIndexList sim(si);
     if (!isContained(sim_vector, sim)) {
       sim_vector.push_back(sim);
     }
   }
-  vector<vector<StencilRegularIndexList> > candidates;
+  vector<IndexListVector> candidates;
   FOREACH (it, grouped_indices.begin(), grouped_indices.end()) {
     if (it->second.size() > 1) {
-      vector<StencilRegularIndexList> x = it->second;
+      IndexListVector x = it->second;
       std::sort(x.begin(), x.end());
       candidates.push_back(x);
 #ifdef PS_DEBUG
@@ -84,12 +103,13 @@ struct sri_comp {
   }
 };
 
-static void FillStencilHole(vector<vector<StencilRegularIndexList> >
-                            &blocked_indices, int blocked_dim) {
+static void FillStencilHole(
+    vector<IndexListVector> &blocked_indices,
+    int blocked_dim) {
   LOG_DEBUG() << "Blocked dim: " << blocked_dim << "\n";
   FOREACH (blocked_indices_it, blocked_indices.begin(),
            blocked_indices.end()) {
-    vector<StencilRegularIndexList> &bil = *blocked_indices_it;
+    IndexListVector &bil = *blocked_indices_it;
     int min_idx = INT_MAX, max_idx = INT_MIN;
     set<int> idx_set;
     FOREACH (bil_it, bil.begin(), bil.end()) {
@@ -121,39 +141,14 @@ static void FillStencilHole(vector<vector<StencilRegularIndexList> >
   return;
 }
 
-
-
-
 static SgVariableDeclaration *BuildNewLocalVar(
-    GridType *gt, TranslationContext *tx,
+    SgType *ty, TranslationContext *tx,
     SgScopeStatement *scope) {
   PSAssert(tx);
   PSAssert(scope);
-  SgType *ty = gt->point_type();
   string name = rose_util::generateUniqueName(scope);
-  return sb::buildVariableDeclaration(name, ty, NULL, scope);
-}
-
-static bool IsSameGrid(SgName name, SgInitializedName *grid) {
-  // grid is a variable renamed when inlined. Assignment form varies
-  // depending on the target.
-  SgExpression *asini = isSgAssignInitializer(
-      grid->get_initptr())->get_operand();
-  SgVarRefExp *gv = NULL;
-  if (isSgBinaryOp(asini)) {
-    gv = isSgVarRefExp(
-        isSgBinaryOp(asini)->get_rhs_operand());
-    PSAssert(gv);
-  } else if (isSgAddressOfOp(asini)) {
-    gv = isSgVarRefExp(isSgAddressOfOp(asini)->get_operand());
-    PSAssert(gv);    
-  } else {
-    LOG_ERROR() << "Unsupported grid representation: "
-                << asini->unparseToString() << "\n";
-    PSAbort(1);
-  }
-    
-  return name == gv->get_symbol()->get_name();
+  //return sb::buildVariableDeclaration(name, ty, NULL, scope);
+  return sb::buildVariableDeclaration(name, ty);
 }
 
 static SgExpression *FindGetAtIndex(SgForStatement *loop,
@@ -172,8 +167,16 @@ static SgExpression *FindGetAtIndex(SgForStatement *loop,
   return NULL;
 }
 
+//!
+/*!
+  \param loop
+  \param gd
+  \param index_list
+  \param reg 
+  \return one of replaced get expression.
+ */
 static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
-                                       SgInitializedName *gv,
+                                       const GridData &gd,
                                        StencilRegularIndexList *index_list,
                                        SgVariableDeclaration *reg) {
   std::vector<SgNode*> gets =
@@ -187,8 +190,23 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
     if (get_attr->GetStencilIndexList() == NULL) continue;
     if (*index_list != *get_attr->GetStencilIndexList())
       continue;
-    // TODO: gv needs to be replaced with GridObject
-    if (!IsSameGrid(gv->get_name(), get_attr->gv())) continue;
+    //if (!IsSameGrid(gd.gv_->get_name(), get_attr->gv())) continue;
+    if (gd.gv_ != get_attr->original_gv()) {
+      LOG_DEBUG() << "NOT Same grid: "
+                  << gd.gv_->get_name()
+                  << " != "
+                  << get_attr->original_gv() << "\n";
+      continue;
+    }
+    // Ensure the get access is to the same member if its member
+    // access 
+    if (gd.member_access_) {
+      if (get_attr->member_name() != gd.member_) continue;
+    } else {
+      // Ignore a get with a member access.
+      // NOTE: Not handled because this shouldn't occur.
+      if (get_attr->member_name() != "") continue;
+    }
     if (!replaced_get) replaced_get = get;
     SgVarRefExp *reg_ref = sb::buildVarRefExp(reg);
     rose_util::CopyASTAttribute<GridGetAttribute>(reg_ref, get);    
@@ -269,29 +287,6 @@ static void ReplaceGetIndices(SgExpression *get,
   return;
 }
 
-// Find the inner-most basic block of a given FOR body, which may have
-// nested basic blocks.
-// TODO: This does not work probably because of the incorrect AST
-// manipulation. 
-static SgBasicBlock *FindBasicBlock(SgStatement *for_body) {
-  PSAssert(isSgBasicBlock(for_body));
-  SgBasicBlock *bb = isSgBasicBlock(for_body);
-  while (true) {
-    // Assertion failure. This should not happen. Due to the incorrect
-    // AST manipulation?
-    PSAssert(si::getFirstStatement(bb));
-    LOG_DEBUG() << "FIRST: " <<
-        si::getFirstStatement(bb)->unparseToString() << "\n";
-    if (isSgBasicBlock(si::getFirstStatement(bb))) {
-      bb = isSgBasicBlock(si::getFirstStatement(bb));
-    } else {
-      break;
-    }
-  }
-  LOG_DEBUG() << "bb: " << bb->unparseToString() << "\n";
-  return bb;
-}
-
 static SgExpression *ReplaceGridInGet(SgExpression *original_get,
                                       SgExpression *gvref) {
   SgExpression *get = si::copyExpression(original_get);
@@ -307,20 +302,8 @@ static SgExpression *ReplaceGridInGet(SgExpression *original_get,
   return get;
 }
 
-#if 0
-static SgExpression *GetOffsetFromGridGet(SgExpression *grid_get) {
-  if (isSgPntrArrRefExp(grid_get)) {
-    return isSgPntrArrRefExp(grid_get)->get_rhs_operand();
-  }
-  
-  LOG_ERROR() << "Unsupported: " << grid_get->unparseToString() << "\n";
-  PSAbort(1);
-  return NULL;
-}
-#endif
-
 static bool ShouldGetPeriodic(SgForStatement *loop,
-                              vector<StencilRegularIndexList> &bil,
+                              IndexListVector &bil,
                               int dim, int index) {
   if (index == 0) return false;
   FOREACH (bil_it, bil.begin(), bil.end()) {
@@ -347,46 +330,128 @@ static void SetStencilIndexList(StencilIndexList &sil,
   }
 }
 
-static void DoRegisterBlockingOneLine(
+//! Get type of a grid data.
+/*!
+  If it's an access to member, returns its member type; otherwise, the
+  grid point type, which may be a struct type.
+  
+  \param gt
+  \param gd
+ */
+static SgType *GetType(GridType *gt, const GridData &gd) {
+  if (gt->IsPrimitivePointType() || !gd.member_access_) {
+    return gt->point_type();
+  } else {
+    SgClassDefinition *utdef = gt->point_def();
+    vector<SgVariableDeclaration*> mdecls =
+        si::querySubTree<SgVariableDeclaration>(
+            utdef, V_SgVariableDeclaration);
+    FOREACH (it, mdecls.begin(), mdecls.end()) {
+      SgVariableDeclaration *mdecl = *it;
+      if (rose_util::GetName(mdecl) == gd.member_) {
+        return mdecl->get_definition()->get_type();
+      }
+    }
+    LOG_ERROR() << "No such member found: " << gd.member_
+                << "\n";
+    return NULL;
+  }
+}
+
+SgExpression *BuildGet(const GridData &gd,
+                       SgFunctionDeclaration *run_kernel_func,
+                       GridType *gt,
+                       const SgExpressionPtrList &indices,
+                       const StencilIndexList &sil,
+                       bool is_periodic,
+                       RuntimeBuilder *builder) {
+  SgInitializedName *gv = gd.gv_;
+  SgExpression *grid_ref =
+      builder->BuildGridRefInRunKernel(
+          gv, run_kernel_func);
+  return gd.member_access_? 
+      builder->BuildGridGet(grid_ref, gt, &indices,
+                            &sil, true, is_periodic,
+                            gd.member_) :
+      builder->BuildGridGet(grid_ref, gt, &indices,
+                            &sil, true, is_periodic);
+}
+
+//! Apply register blocking along one line of accesses.
+/*!
+  For example, suppose a stencil:
+  
+  PSGridGet(x,0,0,-1)+PSGridGet(x,0,0,0)+PSGridGet(x,0,0,1)
+
+  In this case, if the innner most loop is for the last dimension,
+  they are replaced with local variable accesses. Parameter bil will
+  contain a list, {(0, 0, -1), (0, 0, 0), (0, 0, +1)}, in this case.
+  
+  \param tx
+  \param builder
+  \param gd Accessed grid
+  \param run_kernel_func Target function
+  \param loop Target loop
+  \param bil List of target access indices
+ */
+static bool DoRegisterBlockingOneLine(
     TranslationContext *tx, RuntimeBuilder *builder,    
-    SgInitializedName *gv, SgFunctionDeclaration *run_kernel_func,
-    SgForStatement *loop, vector<StencilRegularIndexList> &bil) {
+    const GridData &gd, SgFunctionDeclaration *run_kernel_func,
+    SgForStatement *loop, IndexListVector &bil) {
+  /*
+    Steps:
+    1. Declare local variables to hold loaded grid elements
+    2. Find and replace target grid accessses
+    3. If replaced, insert the local variable declarations and their
+    corresponding copy statements.
+
+    Note that replacement may not necessarily happen. For example,
+    suppose G be a grid with a user-defined point type, and the
+    translator generates code with the AoS data layout. If gd
+    specifies a member in the user-defined point type, no replacement
+    is performed since all accesses grid data struct by struct rather
+    than element by element.
+   */
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
+  SgInitializedName *gv = gd.gv_;
   GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
   int dim = loop_attr->dim();
+  // Flag to indicate access replacement 
+  bool replaced = false;
+  // Local variables
   vector<SgVariableDeclaration*> registers;
   // Declare local variables for register blocking
   for (int i = 0; i < (int)bil.size(); ++i) {
+    SgType *ty = GetType(gt, gd);
+    // Do not insert the declarations yet since they may not be used.
     SgVariableDeclaration *reg = BuildNewLocalVar(
-        gt, tx, si::getEnclosingFunctionDefinition(loop));
+        ty, tx, si::getEnclosingFunctionDefinition(loop));
     registers.push_back(reg);
-    si::insertStatementBefore(loop, reg);
   }
   vector<SgStatement*> move_stmts;
-  //bool backward_periodic = false, forward_periodic = false;
+  // Loop for each of the target stencil offset
   ENUMERATE (i, bil_it, bil.begin(), bil.end()) {
+    // Replace all accesses with il offset by reg1
     StencilRegularIndexList il = *bil_it;
     SgVariableDeclaration *reg1 = registers[i];
+    // Attempt to replace
     SgExpression *original_get =
-        ReplaceGetWithReg(loop, gv, &il, reg1);
+        ReplaceGetWithReg(loop, gd, &il, reg1);
+    // Track if any replacement is done
+    replaced |= original_get != NULL;
     // There can be no get for this index. The element at that index
     // is still needed to be loaded for blocking.
-    //PSAssert(original_get);
+    
     // Whether this index should be accessed with the periodic
     // boundary condition can't be determined if this index is
     // originally a stencil hole. Conservatively determine whether it
     // should be periodic or not.
     bool is_periodic;
     if (original_get) {
-#if 0
-      is_periodic = rose_util::GetASTAttribute<GridOffsetAttribute>(
-          GetOffsetFromGridGet(original_get))->periodic();
-#else
       is_periodic = rose_util::GetASTAttribute<GridOffsetAttribute>(
         rose_util::GetASTAttribute<GridGetAttribute>(
             original_get)->offset())->periodic();
-#endif      
     } else {
       is_periodic = ShouldGetPeriodic(loop, bil, dim, il.GetIndex(dim));
     }
@@ -399,52 +464,70 @@ static void DoRegisterBlockingOneLine(
       si::deleteAST(init_indices[dim-1]);
       init_indices[dim-1] = si::copyExpression(loop_attr->begin());
       OffsetIndices(init_indices, il);
-      SgExpression *init_get = builder->BuildGridGet(
-          builder->BuildGridRefInRunKernel(gv, run_kernel_func),
-          gt, &init_indices, &sil,
-          true, is_periodic);
+      SgExpression *init_get = BuildGet(
+          gd, run_kernel_func, gt, init_indices,
+          sil, is_periodic, builder);
       registers[i+1]->reset_initializer(
           sb::buildAssignInitializer(init_get));
+      si::fixVariableReferences(registers[i+1]);
     }
     // Insert move statements and a grid get statement for
     // the next point
     if (i < (int)bil.size() - 1) {
-      SgStatement *reg_move =
+      move_stmts.push_back(
           sb::buildAssignStatement(
               sb::buildVarRefExp(reg1),
-              sb::buildVarRefExp(registers[i+1]));
-      move_stmts.push_back(reg_move);
+              sb::buildVarRefExp(registers[i+1])));
     } else {
       // Load a new value to reg
       SgExpressionVector indices_next =
           GetLoopIndices(run_kernel_func, loop);
       OffsetIndices(indices_next, il);
-      SgExpression *get_next = builder->BuildGridGet(
-          builder->BuildGridRefInRunKernel(gv, run_kernel_func),
-          gt, &indices_next, &sil,
-          true, is_periodic);
+      SgExpression *get_next = BuildGet(
+          gd, run_kernel_func, gt, indices_next,
+          sil, is_periodic, builder);
       SgExprStatement *asn_stmt =
           sb::buildAssignStatement(sb::buildVarRefExp(reg1),
                                    get_next);
+      si::fixVariableReferences(asn_stmt);
       move_stmts.push_back(asn_stmt);
     }
   }
-#if 0        
-  SgBasicBlock *loop_body =
-      FindBasicBlock(loop->get_loop_body());
-#else
-  SgScopeStatement *loop_body =
-      isSgScopeStatement(loop->get_loop_body());
-#endif        
-  PSAssert(loop_body);
-  FOREACH (move_stmts_it, move_stmts.rbegin(),
-           move_stmts.rend()) {
-    si::prependStatement(*move_stmts_it, loop_body);
-    LOG_DEBUG() << "Prepending "
-                << (*move_stmts_it)->unparseToString() << "\n";
+  // If replaced, insert the relevant variable declarations
+  // and move statements. If not, delete the ASTs.
+  if (replaced) {
+    FOREACH (it, registers.begin(), registers.end()) {
+      si::insertStatementBefore(loop, *it);
+    }
+    SgScopeStatement *loop_body =
+        isSgScopeStatement(loop->get_loop_body());
+    PSAssert(loop_body);
+    FOREACH (move_stmts_it, move_stmts.rbegin(),
+             move_stmts.rend()) {
+      si::prependStatement(*move_stmts_it, loop_body);
+      LOG_DEBUG() << "Prepending "
+                  << (*move_stmts_it)->unparseToString() << "\n";
+    }
+  } else {
+    FOREACH (move_stmts_it, move_stmts.rbegin(),
+             move_stmts.rend()) {
+      si::deleteAST(*move_stmts_it);
+    }
+    FOREACH (it, registers.begin(), registers.end()) {
+      si::deleteAST(*it);
+    }
   }
+  return replaced;
 }
-    
+
+//! Apply register blocking to a kernel call.
+/*!
+  \param proj
+  \param tx 
+  \param builder
+  \param run_kernel_func RunKernel function for the kernel call
+  \param loop Stencil loop to apply the optimization
+ */
 static void DoRegisterBlocking(
     SgProject *proj,
     TranslationContext *tx, RuntimeBuilder *builder,
@@ -457,17 +540,41 @@ static void DoRegisterBlocking(
   int dim = loop_attr->dim();
   GridRangeMap &gr = run_kernel_attr->stencil_map()
       ->grid_stencil_range_map();
-  FOREACH (gr_it, gr.begin(), gr.end()) {
-    SgInitializedName *gv = gr_it->first;
+  GridMemberRangeMap &gmr = run_kernel_attr->stencil_map()
+      ->grid_member_range_map();
+  set<SgInitializedName *> gv_set;
+  FOREACH (gr_it, gmr.begin(), gmr.end()) {
+    SgInitializedName *gv = gr_it->first.first;
+    string member = gr_it->first.second;
     const vector<StencilIndexList> &indices = gr_it->second.all_indices();
-    vector<vector<StencilRegularIndexList> > blocked_indices =
+    vector<IndexListVector> blocked_indices =
         FindCandidateIndices(indices, dim);
     FillStencilHole(blocked_indices, dim);
     FOREACH (blocked_indices_it, blocked_indices.begin(),
              blocked_indices.end()) {
-      vector<StencilRegularIndexList> bil = *blocked_indices_it;
-      DoRegisterBlockingOneLine(tx, builder, gv, run_kernel_func,
-                                loop, bil);
+      IndexListVector bil = *blocked_indices_it;
+      if (DoRegisterBlockingOneLine(
+              tx, builder, GridData(gv, member),
+              run_kernel_func, loop, bil)) {
+        // Do not apply transformation for non-member access once the
+        // grid is applied for member accesses
+        gv_set.insert(gv);
+      }
+    }
+  }
+  FOREACH (gr_it, gr.begin(), gr.end()) {
+    SgInitializedName *gv = gr_it->first;
+    if (gv_set.find(gv) != gv_set.end()) continue;
+    const vector<StencilIndexList> &indices = gr_it->second.all_indices();
+    vector<IndexListVector> blocked_indices =
+        FindCandidateIndices(indices, dim);
+    FillStencilHole(blocked_indices, dim);
+    FOREACH (blocked_indices_it, blocked_indices.begin(),
+             blocked_indices.end()) {
+      IndexListVector bil = *blocked_indices_it;
+      DoRegisterBlockingOneLine(
+          tx, builder, GridData(gv), run_kernel_func,
+          loop, bil);
     }
   }
 }

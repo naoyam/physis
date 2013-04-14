@@ -56,8 +56,7 @@ extern "C" {
     return 0;
   }
 
-  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
-                        int double_buffering) {
+  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim) {
     __PSGrid *g = (__PSGrid*)malloc(sizeof(__PSGrid));
     g->elm_size = elm_size;    
     g->num_dims = num_dims;
@@ -73,18 +72,7 @@ extern "C" {
       return INVALID_GRID;
     }
 
-    // All writes in kernels go to p1; if a grid is both read and
-    // modified in a single update, double buffering is
-    // necessary. Otherwise, both p0 and p1 can point to the same
-    // address, i.e., both reads and writes go to the same buffer. 
-    if (double_buffering) {
-      g->p1 = calloc(g->num_elms, g->elm_size);
-      if (!g->p1) {
-        return INVALID_GRID;
-      }
-    } else {
-      g->p1 = g->p0;
-    }
+    g->p1 = g->p0;
     
     return g;
   }

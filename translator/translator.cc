@@ -237,7 +237,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     return;
   }
 
-  if (gexp = tx_->IsFree(node)) {
+  if ((gexp = tx_->IsFree(node))) {
     LOG_DEBUG() << "Translating Free\n";
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);
@@ -245,7 +245,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     setSkipChildren();
   }
 
-  if (gexp = tx_->IsCopyin(node)) {
+  if ((gexp = tx_->IsCopyin(node))) {
     LOG_DEBUG() << "Translating Copyin\n";
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);
@@ -253,7 +253,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     setSkipChildren();
   }
 
-  if (gexp = tx_->IsCopyout(node)) {
+  if ((gexp = tx_->IsCopyout(node))) {
     LOG_DEBUG() << "Translating Copyout\n";
     GridType *gt = tx_->findGridType(gexp);
     PSAssert(gt);

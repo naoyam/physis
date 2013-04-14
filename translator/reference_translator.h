@@ -63,7 +63,8 @@ class ReferenceTranslator : public Translator {
                             bool is_kernel,
                             bool is_periodic);
   virtual void TranslateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
-  virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);  
+  virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);
+#if 0  
   //! Build an offset expression.
   /*!
     @param gv The grid to get a offset.
@@ -82,6 +83,7 @@ class ReferenceTranslator : public Translator {
                                     bool is_periodic,                                    
                                     const StencilIndexList *sil,
                                     SgScopeStatement *scope);
+#endif  
   virtual void TranslateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);

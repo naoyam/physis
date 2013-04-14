@@ -61,11 +61,14 @@ extern "C" {
     
     if (func) {
       g->dev = (__PSGrid_dev*)func(num_dims, dim);
+      g->p0 = NULL;
     } else {
       void *buf = NULL;
       CUDA_SAFE_CALL(cudaMalloc(&buf, g->num_elms * g->elm_size));
       if (!buf) return INVALID_GRID;
       CUDA_SAFE_CALL(cudaMemset(buf, 0, g->num_elms * g->elm_size));
+
+      g->p0 = buf;
 
       // Set the on-device data. g->dev data will be copied when calling
       // CUDA global functions.
@@ -102,7 +105,7 @@ extern "C" {
       if (func) {
         func(g->dev);
       } else {
-        CUDA_SAFE_CALL(cudaFree(g->dev->p0));
+        CUDA_SAFE_CALL(cudaFree(g->p0));
         free(g->dev);              
       }
       g->dev = NULL;
@@ -116,7 +119,7 @@ extern "C" {
       func(g->dev, src_array);
     } else {
       CUDA_SAFE_CALL(cudaMemcpy(
-          g->dev->p0, src_array, g->num_elms*g->elm_size,
+          g->p0, src_array, g->num_elms*g->elm_size,
           cudaMemcpyHostToDevice));
     }
   }
@@ -128,18 +131,13 @@ extern "C" {
       func(g->dev, dst_array);
     } else {
       CUDA_SAFE_CALL(cudaMemcpy(
-              dst_array, g->dev->p0,
+              dst_array, g->p0,
               g->elm_size * g->num_elms,
               cudaMemcpyDeviceToHost));
     }
   }
 
   void __PSGridSwap(__PSGrid *g) {
-#if defined(AUTO_DOUBLE_BUFFERING)
-    std::swap(g->dev->p0, g->p1);
-    std::swap(((__PSGrid1D_dev*)g->dev)->p0,
-              ((__PSGrid1D_dev*)g->dev)->p1);
-#endif    
   }
 
   PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
@@ -175,7 +173,7 @@ extern "C" {
     }
     va_end(vl);
     offset *= g->elm_size;
-    CUDA_SAFE_CALL(cudaMemcpy(((char *)g->dev->p0) + offset, buf, g->elm_size,
+    CUDA_SAFE_CALL(cudaMemcpy(((char *)g->p0) + offset, buf, g->elm_size,
                               cudaMemcpyHostToDevice));
   }
 

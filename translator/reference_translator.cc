@@ -217,56 +217,19 @@ void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
       tmpBlock);
   return;
 }
-
+#if 0
 // TODO: Change args type to SgExpressionPtrList
-SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
-                                               int num_dim,
-                                               SgExprListExp *args,
-                                               bool is_kernel,
-                                               bool is_periodic,
-                                               const StencilIndexList *sil,
-                                               SgScopeStatement *scope) {
-
+SgExpression *ReferenceTranslator::BuildOffset(
+    SgInitializedName *gv,
+    int num_dim,
+    SgExprListExp *args,
+    bool is_kernel,
+    bool is_periodic,
+    const StencilIndexList *sil,
+    SgScopeStatement *scope) {
   /*
     __PSGridGetOffsetND(g, i)
   */
-  SgExpression *offset = NULL;
-#if 0  
-  for (int i = 1; i <= num_dim; i++) {
-    SgExpression *dim_offset = si::copyExpression(
-        args->get_expressions()[i-1]);
-    goa->AppendIndex(dim_offset);
-    if (is_periodic) {
-      const StencilIndex &si = sil->at(i-1);
-      // si.dim is assumed to be equal to i, i.e., the i'th index
-      // variable is always used for the i'th index when accessing
-      // grids. This assumption is made to simplify the implementation
-      // of MPI versions, and is actually possible to be relaxed in
-      // shared-memory verions such as reference and cuda. Here we
-      // assume si.dim can actually be different from i.
-      if (si.dim != i || si.offset != 0) {
-        dim_offset = sb::buildModOp(
-            sb::buildAddOp(
-                dim_offset,
-                rt_builder_->BuildGridDim(
-                    sb::buildVarRefExp(gv->get_name()), i)),
-            rt_builder_->BuildGridDim(
-                sb::buildVarRefExp(gv->get_name()), i));
-      }
-    }
-    for (int j = 1; j < i; j++) {
-      dim_offset = sb::buildMultiplyOp(
-          dim_offset,
-          rt_builder_->BuildGridDim(
-              sb::buildVarRefExp(gv->get_name()), j));
-    }
-    if (offset) {
-      offset = sb::buildAddOp(offset, dim_offset);
-    } else {
-      offset = dim_offset;
-    }
-  }
-#else
   // Use the getoffset function
   SgExpressionPtrList offset_args;
   for (int i = 1; i <= num_dim; i++) {
@@ -275,13 +238,11 @@ SgExpression *ReferenceTranslator::BuildOffset(SgInitializedName *gv,
     offset_args.push_back(dim_offset);    
   }
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);  
-  offset = rt_builder_->BuildGridOffset(g, num_dim,
-                                        &offset_args,
-                                        is_kernel, is_periodic, sil);
-#endif
-  return offset;
+  return rt_builder_->BuildGridOffset(g, num_dim,
+                                      &offset_args,
+                                      is_kernel, is_periodic, sil);
 }
-
+#endif
 void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_kernel,
@@ -290,21 +251,16 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
     (type*)(g->p0)[offset]
   */
   GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
-  SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
-  
-  SgExpression *offset = BuildOffset(
-      gv, nd, node->get_args(),
-      is_kernel, is_periodic,
-      rose_util::GetASTAttribute<GridGetAttribute>(node)->GetStencilIndexList(),
-      scope);
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
-  SgExpression *p0 = sb::buildArrowExp(
-      g, sb::buildVarRefExp("p0", grid_decl_->get_definition()));
-  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->point_type()));
-  p0 = sb::buildPntrArrRefExp(p0, offset);
-  rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
-  rose_util::GetASTAttribute<GridGetAttribute>(p0)->offset() = offset;
+  const StencilIndexList *sil =
+      rose_util::GetASTAttribute<GridGetAttribute>(node)->GetStencilIndexList();
+  SgExpressionPtrList args;
+  rose_util::CopyExpressionPtrList(
+      node->get_args()->get_expressions(), args);
+  SgExpression *p0 = rt_builder_->BuildGridGet(
+      sb::buildVarRefExp(gv->get_name()), gt, 
+      &args, sil, is_kernel, is_periodic);
+  rose_util::GetASTAttribute<GridGetAttribute>(p0)->
+      SetGridVar(gv);  
   si::replaceExpression(node, p0);
 }
 
@@ -316,28 +272,23 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
-  //SgExpressionPtrList args;
-  SgExprListExp *args = sb::buildExprListExp();
+  SgExpressionPtrList args;
   for (int i = 0; i < nd; ++i) {
     SgInitializedName *p = params[i];
-    si::appendExpression(
-        args,
+    args.push_back(
         sb::buildVarRefExp(p, getContainingScopeStatement(node)));
   }
 
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
-  SgExpression *offset = BuildOffset(gv, nd, args, true, false, &sil,
-                                     getContainingScopeStatement(node));
+  SgExpression *offset = rt_builder_->BuildGridOffset(
+      sb::buildVarRefExp(gv->get_name()),
+      nd, &args, true, false, &sil);
   SgVarRefExp *g =
       sb::buildVarRefExp(gv->get_name(),
                          getContainingScopeStatement(node));
 
-#if defined(AUTO_DOUBLE_BUFFERING)
-  string dst_buf_name = "p1";
-#else
   string dst_buf_name = "p0";
-#endif
   SgExpression *p1 =
       sb::buildArrowExp(g,
                         sb::buildVarRefExp(dst_buf_name,
@@ -363,7 +314,8 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {
   SgInitializedNamePtrList::iterator arg_begin = args.begin();
   arg_begin += tx_->findDomain(stencil->getDom())->num_dims();
   FOREACH(it, arg_begin, args.end()) {
-    si::appendArg(parlist, rose_util::copySgNode(*it));
+    si::appendArg(parlist,
+                  isSgInitializedName(si::deepCopyNode(*it)));
   }
 
   SgFunctionDeclaration *mapFunc =

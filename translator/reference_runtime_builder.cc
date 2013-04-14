@@ -63,7 +63,7 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
 SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
     SgExpression *gvref,
     GridType *gt,
-    SgExpressionPtrList *offset_exprs,
+    const SgExpressionPtrList *offset_exprs,
     const StencilIndexList *sil,    
     bool is_kernel,
     bool is_periodic) {
@@ -72,14 +72,35 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
                       is_kernel, is_periodic, sil);
   SgExpression *p0 = sb::buildArrowExp(
       si::copyExpression(gvref), sb::buildVarRefExp("p0"));
-  si::fixVariableReferences(p0);
+  //si::fixVariableReferences(p0);
   //GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
   p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->point_type()));
   p0 = sb::buildPntrArrRefExp(p0, offset);
-  GridGetAttribute *gga = new GridGetAttribute(NULL, gt->num_dim(), is_kernel,
-                                               sil);
+  GridGetAttribute *gga = new GridGetAttribute(
+      NULL, gt->num_dim(), is_kernel,
+      is_periodic, sil, offset);
   rose_util::AddASTAttribute<GridGetAttribute>(p0, gga);
   return p0;
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,      
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
+    bool is_kernel,
+    bool is_periodic,
+    const string &member_name) {
+  SgExpression *x = BuildGridGet(gvref, gt, offset_exprs,
+                                 sil, is_kernel,
+                                 is_periodic);
+  SgExpression *xm = sb::buildDotExp(
+      x, sb::buildVarRefExp(member_name));
+  rose_util::CopyASTAttribute<GridGetAttribute>(xm, x);
+  rose_util::RemoveASTAttribute<GridGetAttribute>(x);
+  rose_util::GetASTAttribute<GridGetAttribute>(
+      xm)->member_name() = member_name;
+  return xm;
 }
 
 SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
@@ -125,7 +146,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
 SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
     SgExpression *gvref,
     int num_dim,
-    SgExpressionPtrList *offset_exprs,
+    const SgExpressionPtrList *offset_exprs,
     bool is_kernel,
     bool is_periodic,
     const StencilIndexList *sil) {
@@ -161,32 +182,6 @@ SgClassDeclaration *ReferenceRuntimeBuilder::GetGridDecl() {
   PSAssert(anont);
   return isSgClassDeclaration(anont->get_declaration());
 }
-
-/*
-SgExpression *ReferenceRuntimeBuilder::BuildGet(
-    SgInitializedName *gv,
-    SgExprListExp *offset_exprs,
-    SgScopeStatement *scope,
-    TranslationContext *tx, bool is_kernel,
-    bool is_periodic) {
-  GridType *gt = tx->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
-  SgExpression *offset = BuildOffset(
-      gv, nd, offset_exprs, is_kernel, is_periodic, scope);
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
-  SgClassDeclaration *grid_decl = GetGridDecl();
-  SgExpression *buf =
-      sb::buildArrowExp(g,
-                        sb::buildVarRefExp("p0",
-                                           grid_decl->get_definition()));
-  SgExpression *elm_val = sb::buildPntrArrRefExp(
-      sb::buildCastExp(buf, sb::buildPointerType(gt->getElmType())),
-      offset);
-  //rose_util::CopyASTAttribute<GridGetAttribute>(p0, node);
-  return elm_val;
-}
-*/
-
 
 } // namespace translator
 } // namespace physis

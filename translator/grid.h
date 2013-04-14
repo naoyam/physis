@@ -38,6 +38,8 @@ class GridType: public AstAttribute {
   SgFunctionDeclaration *aux_new_decl_;
   SgFunctionDeclaration *aux_copyin_decl_;
   SgFunctionDeclaration *aux_copyout_decl_;
+  SgFunctionDeclaration *aux_get_decl_;
+  SgFunctionDeclaration *aux_emit_decl_;
 
  public:
   GridType(SgClassType *struct_type, SgTypedefType *user_type)
@@ -45,7 +47,8 @@ class GridType: public AstAttribute {
         point_type_(NULL), point_def_(NULL),
         aux_type_(NULL), aux_decl_(NULL),
         aux_free_decl_(NULL), aux_new_decl_(NULL),
-        aux_copyin_decl_(NULL), aux_copyout_decl_(NULL) {
+        aux_copyin_decl_(NULL), aux_copyout_decl_(NULL),
+        aux_get_decl_(NULL), aux_emit_decl_(NULL) {
     type_name_ = user_type_->get_name().getString();
     LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
     string realName = struct_type_->get_name().getString();
@@ -73,6 +76,10 @@ class GridType: public AstAttribute {
   SgFunctionDeclaration *&aux_copyin_decl() { return aux_copyin_decl_; }    
   SgFunctionDeclaration *aux_copyout_decl() const { return aux_copyout_decl_; }
   SgFunctionDeclaration *&aux_copyout_decl() { return aux_copyout_decl_; }    
+  SgFunctionDeclaration *aux_get_decl() const { return aux_get_decl_; }
+  SgFunctionDeclaration *&aux_get_decl() { return aux_get_decl_; }    
+  SgFunctionDeclaration *aux_emit_decl() const { return aux_emit_decl_; }
+  SgFunctionDeclaration *&aux_emit_decl() { return aux_emit_decl_; }    
   bool IsPrimitivePointType() const;
   bool IsUserDefinedPointType() const;
   
@@ -256,62 +263,62 @@ class GridOffsetAttribute: public AstAttribute {
   SgExpression *gvexpr_;  
 };
 
-
 class GridGetAttribute: public AstAttribute {
  public:
   GridGetAttribute(SgInitializedName *gv,
                    int num_dim,
                    bool in_kernel,
+                   bool is_periodic,
                    const StencilIndexList *sil,
-                   SgExpression *offset=NULL):
-      gv_(gv), num_dim_(num_dim), in_kernel_(in_kernel),
-      sil_(NULL), offset_(offset) {
-    if (sil) {
-      sil_ = new StencilIndexList();
-      *sil_ = *sil;
-    }
-  }
-  virtual ~GridGetAttribute() {
-    if (sil_) {
-      delete sil_;
-    }
-  }
-  AstAttribute *copy() {
-    GridGetAttribute *a= new GridGetAttribute(gv_, num_dim_,
-                                              in_kernel_, sil_,
-                                              offset_);
-    return a;
-  }
+                   SgExpression *offset=NULL,
+                   const string &member_name="");
+  GridGetAttribute(const GridGetAttribute &x);
+  virtual ~GridGetAttribute();
+  GridGetAttribute *copy();
   static const std::string name;
   bool in_kernel() const { return in_kernel_; }
   void SetInKernel(bool t) { in_kernel_ = t; };
+  bool is_periodic() const { return is_periodic_; }
+  bool &is_periodic() { return is_periodic_; }
   SgInitializedName *gv() const { return gv_; }
-  SgInitializedName *&gv() { return gv_; }
-  void SetStencilIndexList(const StencilIndexList *sil) {
-    if (sil) {
-      if (sil_ == NULL) {
-        sil_ = new StencilIndexList();
-      }
-      *sil_ = *sil;
-    } else {
-      if (sil_) {
-        delete sil_;
-        sil_ = NULL;
-      }
-    }
+  //SgInitializedName *&gv() { return gv_; }
+  void SetGridVar(SgInitializedName *gv) {
+    original_gv_ = gv_ = gv;
   }
+  SgInitializedName *original_gv() const { return original_gv_; }
+  void UpdateGridVar(SgInitializedName *gv) { gv_ = gv; }
+  void SetStencilIndexList(const StencilIndexList *sil);
   const StencilIndexList *GetStencilIndexList() { return sil_; }
   int num_dim() const { return num_dim_; }
   void SetOffset(SgExpression *offset) { offset_ = offset; }
   SgExpression *offset() const { return offset_; }
   SgExpression *&offset() { return offset_; }
+  const string &member_name() const { return member_name_; }
+  string &member_name() { return member_name_; }
+  bool IsUserDefinedType() const;
   
  protected:
+  //! Referenced grid variable.
+  /*!
+    This variable can change when code transformation is applied. For
+    example, the kernel inlining optimization will change the
+    referenced grid variable from the kernel parameter to a normal
+    variable. 
+   */
   SgInitializedName *gv_;
+  //! Grid variable referenced in the original user code.
+  /*!
+    gv can change when code transformation such as optimization is
+    applied. 
+   */
+  SgInitializedName *original_gv_;  
   int num_dim_;  
   bool in_kernel_;
+  bool is_periodic_;
   StencilIndexList *sil_;
   SgExpression *offset_;
+  bool is_user_type_;
+  string member_name_;
 
 };
 

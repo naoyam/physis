@@ -20,9 +20,13 @@
 namespace physis {
 namespace translator {
 
+using std::pair;
+
 class TranslationContext;
 //typedef map<Grid*, StencilRange> GridRangeMap;
 typedef map<SgInitializedName*, StencilRange> GridRangeMap;
+typedef pair<SgInitializedName*, string> GridMember;
+typedef map<GridMember, StencilRange> GridMemberRangeMap;
 
 std::string GridRangeMapToString(GridRangeMap &gr);
 // StencilRange AggregateStencilRange(GridRangeMap &gr,
@@ -78,6 +82,18 @@ class StencilMap {
       PSAssert(false);
     }
     return grid_stencil_range_map().find(gv)->second;
+  }
+
+  GridMemberRangeMap &grid_member_range_map() { return grid_member_range_map_; }
+  const GridMemberRangeMap &grid_member_range_map() const {
+    return grid_member_range_map_; }  
+  StencilRange &GetStencilRange(SgInitializedName *gv,
+                                const string &member) {
+    if (!isContained<GridMember, StencilRange>(
+            grid_member_range_map(), GridMember(gv, member))) {
+      PSAssert(false);
+    }
+    return grid_member_range_map().find(GridMember(gv, member))->second;
   }  
 
   // Use Kernel::isGridParamWritten and Kernel::isGridParamRead
@@ -116,7 +132,8 @@ class StencilMap {
   // function to run boundary stencil
   SgFunctionDeclaration *run_boundary_;
   //GridRangeMap gr_;
-  GridRangeMap grid_stencil_range_map_;  
+  GridRangeMap grid_stencil_range_map_;
+  GridMemberRangeMap grid_member_range_map_;    
   SgInitializedNamePtrList grid_args_;
   SgInitializedNamePtrList grid_params_;  
   SgFunctionCallExp *fc_;

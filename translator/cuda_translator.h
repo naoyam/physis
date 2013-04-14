@@ -98,6 +98,8 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel, bool is_periodic);
+  virtual void TranslateGetForUserDefinedType(
+      SgDotExp *node);
   virtual void TranslateEmit(SgFunctionCallExp *node,
                              SgInitializedName *gv);
   virtual void TranslateFree(SgFunctionCallExp *node,
@@ -106,6 +108,8 @@ class CUDATranslator : public ReferenceTranslator {
                                GridType *gt);
   virtual void TranslateCopyout(SgFunctionCallExp *node,
                                 GridType *gt);
+
+  virtual void Visit(SgExpression *node);
 
   //virtual void TranslateSet(SgFunctionCallExp *node,
   //SgInitializedName *gv);

@@ -163,51 +163,38 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
   }
 }
 
-#if 0
-void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
-  SgFunctionDeclaration *kernel = sm.getKernel();
-  SgFunctionCallExpPtrList get_calls
-      = tx.getGridGetCalls(kernel->get_definition());
-  GridRangeMap &gr = sm.gr();
-  FOREACH (it, get_calls.begin(), get_calls.end()) {
-    SgFunctionCallExp *get_call = *it;
-    LOG_DEBUG() << "Get call detected: "
-                << get_call->unparseToString() << "\n";
-    const GridSet *gs
-        = tx.findGrid(GridType::getGridVarUsedInFuncCall(get_call));
-    assert(gs);
-    SgExpressionPtrList &args = get_call->get_args()->get_expressions();
-    int nd = args.size();
-    StencilIndexList stencil_indices;
-    ENUMERATE (dim, ait, args.begin(), args.end()) {
-      LOG_DEBUG() << "get argument: " <<
-          dim << ", " << (*ait)->unparseToString() << "\n";
-      StencilIndex si;
-      SgExpression *arg = *ait;
-      // Simplify the analysis
-      LOG_DEBUG() << "Analyzing " << arg->unparseToString() << "\n";
-      si::constantFolding(arg->get_parent());
-      LOG_VERBOSE() << "Constant folded: " << arg->unparseToString() << "\n";
-      
-      if (!AnalyzeStencilIndex(arg, si, kernel)) {
-        PSAbort(1);
-      }
-      stencil_indices.push_back(si);
-    }
-    FOREACH (git, gs->begin(), gs->end()) {
-      Grid *g = *git;
-      if (!isContained<Grid*, StencilRange>(gr, g)) {
-        gr.insert(make_pair(g, StencilRange(nd)));
-      }
-      StencilRange &sr = gr.find(g)->second;
-      sr.insert(stencil_indices);
-    }
-  }
-  LOG_DEBUG() << "Stencil access: "
-              << GridRangeMapToString(gr)
-              << std::endl;
+static bool GetGridMember(SgFunctionCallExp *get_call,
+                          string &member) {
+  SgDotExp *dot = isSgDotExp(get_call->get_parent());
+  if (dot == NULL) return false;
+  SgVarRefExp *rhs = isSgVarRefExp(dot->get_rhs_operand());
+  PSAssert(rhs);
+  member = rose_util::GetName(rhs);
+  return true;
 }
-#else
+
+static void AddIndex(SgFunctionCallExp *get_call,
+                     GridRangeMap &gr,
+                     GridMemberRangeMap &gmr,
+                     SgInitializedName *gv,
+                     StencilIndexList &sil, int nd) {
+  string member;
+  if (GetGridMember(get_call, member)) {
+    LOG_DEBUG() << "Access to member: " << member << "\n";
+    if (!isContained<GridMember, StencilRange>(gmr, GridMember(gv, member))) {
+      gmr.insert(make_pair(GridMember(gv, member), StencilRange(nd)));
+    }
+    StencilRange &sr = gmr.find(GridMember(gv, member))->second;
+    sr.insert(sil);
+  }    
+  if (!isContained<SgInitializedName*, StencilRange>(gr, gv)) {
+    gr.insert(make_pair(gv, StencilRange(nd)));
+  }
+  StencilRange &sr = gr.find(gv)->second;
+  sr.insert(sil);
+  return;
+}
+
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   SgFunctionDeclaration *kernel = sm.getKernel();
   SgFunctionCallExpPtrList get_calls
@@ -217,6 +204,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
   get_calls.insert(get_calls.end(), get_periodic_calls.begin(),
                    get_periodic_calls.end());
   GridRangeMap &gr = sm.grid_stencil_range_map();
+  GridMemberRangeMap &gmr = sm.grid_member_range_map();  
   FOREACH (it, get_calls.begin(), get_calls.end()) {
     SgFunctionCallExp *get_call = *it;
     LOG_DEBUG() << "Get call detected: "
@@ -240,31 +228,27 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       }
       stencil_indices.push_back(si);
     }
-    if (!isContained<SgInitializedName*, StencilRange>(gr, gv)) {
-      gr.insert(make_pair(gv, StencilRange(nd)));
-    }
-    StencilRange &sr = gr.find(gv)->second;
-    sr.insert(stencil_indices);
+    AddIndex(get_call, gr, gmr, gv, stencil_indices, nd);    
     tx.registerStencilIndex(get_call, stencil_indices);
     LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
+    bool is_periodic = tx.getGridFuncName(get_call) ==
+        GridType::get_periodic_name;
     // A kernel function is analyzed multiple times if it appears
     // multiple times in use at stencil_map.
-    if (rose_util::GetASTAttribute<GridGetAttribute>(get_call) == NULL) {
-      rose_util::AddASTAttribute(
-          get_call,
-          new GridGetAttribute(gv, nd, tx.isKernel(kernel),
-                               &stencil_indices));
+    if (rose_util::GetASTAttribute<GridGetAttribute>(
+            get_call) == NULL) {
+      GridGetAttribute *gga = new GridGetAttribute(
+          gv, nd, tx.isKernel(kernel),
+          is_periodic, &stencil_indices);
+      rose_util::AddASTAttribute(get_call, gga);
     }
-    if (tx.getGridFuncName(get_call) == GridType::get_periodic_name) {
-      sm.SetGridPeriodic(gv);
-    }
+    if (is_periodic) sm.SetGridPeriodic(gv);
   }
   LOG_DEBUG() << "Stencil access: "
               << GridRangeMapToString(gr)
               << std::endl;
   PropagateStencilRangeToGrid(sm, tx);
 }
-#endif
 
 } // namespace translator
 } // namespace physis

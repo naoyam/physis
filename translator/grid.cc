@@ -273,6 +273,69 @@ void Grid::SetStencilRange(const StencilRange &sr) {
 
 const std::string GridOffsetAttribute::name = "PSGridOffset";
 const std::string GridGetAttribute::name = "PSGridGet";
+
+GridGetAttribute::GridGetAttribute(
+    SgInitializedName *gv,
+    int num_dim,
+    bool in_kernel,
+    bool is_periodic,
+    const StencilIndexList *sil,
+    SgExpression *offset,
+    const string &member_name):
+      gv_(gv), original_gv_(gv),
+      num_dim_(num_dim), in_kernel_(in_kernel),
+      is_periodic_(is_periodic),
+      sil_(NULL), offset_(offset),
+      member_name_(member_name) {
+  if (sil) {
+    sil_ = new StencilIndexList(*sil);
+  }
+}
+
+GridGetAttribute::GridGetAttribute(const GridGetAttribute &x):
+    gv_(x.gv_), original_gv_(x.original_gv_),
+    num_dim_(x.num_dim_), in_kernel_(x.in_kernel_),
+    is_periodic_(x.is_periodic_),
+    sil_(NULL), offset_(x.offset_),
+    member_name_(x.member_name_) {
+  if (x.sil_) {
+    sil_ = new StencilIndexList(*x.sil_);
+  }
+}
+
+GridGetAttribute::~GridGetAttribute() {
+  if (sil_) {
+    delete sil_;
+  }
+}
+
+GridGetAttribute *GridGetAttribute::copy() {
+  GridGetAttribute *a= new GridGetAttribute(*this);
+  return a;
+}
+
+void GridGetAttribute::SetStencilIndexList(
+    const StencilIndexList *sil) {
+  if (sil) {
+    if (sil_ == NULL) {
+      sil_ = new StencilIndexList();
+    }
+    *sil_ = *sil;
+  } else {
+    if (sil_) {
+      delete sil_;
+      sil_ = NULL;
+    }
+  }
+}
+
+bool GridGetAttribute::IsUserDefinedType() const {
+  GridType *g = rose_util::GetASTAttribute<GridType>(gv_);
+  PSAssert(g);
+  return g->IsUserDefinedPointType();
+}
+
+
 const std::string GridEmitAttr::name = "PSGridEmit";
 
 } // namespace translator

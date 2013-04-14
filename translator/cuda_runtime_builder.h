@@ -26,23 +26,44 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
   virtual SgExpression *BuildGridOffset(
       SgExpression *gv,
       int num_dim,
-      SgExpressionPtrList *offset_exprs,
+      const SgExpressionPtrList *offset_exprs,
       bool is_kernel,
       bool is_periodic,
       const StencilIndexList *sil);
-  virtual SgClassDeclaration *BuildGridDevType(
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridType *gt,      
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,      
+      bool is_kernel,
+      bool is_periodic);
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name);
+  
+  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridNew(
+  virtual SgFunctionDeclaration *BuildGridNewForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridFree(
+  virtual SgFunctionDeclaration *BuildGridFreeForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyin(
+  virtual SgFunctionDeclaration *BuildGridCopyinForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyout(
+  virtual SgFunctionDeclaration *BuildGridCopyoutForUserType(
       GridType *gt);
+  virtual SgFunctionDeclaration *BuildGridGetForUserType(
+      GridType *gt);
+  virtual SgFunctionDeclaration *BuildGridEmitForUserType(
+      GridType *gt);
+  
  protected:
-  virtual SgFunctionDeclaration *BuildGridCopy(
+  virtual SgFunctionDeclaration *BuildGridCopyForUserType(
       GridType *gt, bool is_copyout);
 };
 

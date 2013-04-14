@@ -97,6 +97,7 @@ int Configuration::SetPat(int pat) {
 
 /** print configuration */
 std::ostream &Configuration::print(std::ostream &os) const {
+  pu::Configuration::print(os);
   StringJoin sj;
   FOREACH (it, key_desc_map_.begin(), key_desc_map_.end()) {
     const KeyDesc &key = it->second;
@@ -104,7 +105,7 @@ std::ostream &Configuration::print(std::ostream &os) const {
       tmptbl_.Find(key)->second->print(sj << key << ": ");
     }
   }
-  return os << "{" << sj.str() << "}";
+  return os << ", AT: {" << sj.str() << "}";
 }
 
 } // namespace translator

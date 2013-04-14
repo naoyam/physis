@@ -90,18 +90,12 @@ string getFuncName(SgFunctionCallExp *call) {
   return getFuncName(fref);
 }
 
-SgExpression *copyExpr(const SgExpression *expr) {
-  SgTreeCopy tc;
-  SgExpression *c = isSgExpression(expr->copy(tc));
-  assert(c);
-  return c;
-}
-
-SgInitializedName *copySgNode(const SgInitializedName *expr) {
-  SgTreeCopy tc;
-  SgInitializedName *c = isSgInitializedName(expr->copy(tc));
-  assert(c);
-  return c;
+void CopyExpressionPtrList(const SgExpressionPtrList &src,
+                           SgExpressionPtrList &dst) {
+  dst.clear();
+  FOREACH (it, src.begin(), src.end()) {
+    dst.push_back(si::copyExpression(*it));
+  }
 }
 
 SgFunctionSymbol *getFunctionSymbol(SgFunctionDeclaration *f) {
@@ -373,6 +367,10 @@ SgType *GetType(SgVariableDeclaration *decl) {
 }
 SgName GetName(SgVariableDeclaration *decl) {
   return decl->get_variables()[0]->get_name();
+}
+
+SgName GetName(const SgVarRefExp *x) {
+  return x->get_symbol()->get_name();
 }
 
 }  // namespace rose_util

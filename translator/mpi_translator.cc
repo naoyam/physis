@@ -553,13 +553,15 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
-  
-  SgExpression *offset = BuildOffset(
-      gv, nd, node->get_args(),
+  SgExpressionPtrList args;
+  rose_util::CopyExpressionPtrList(
+      node->get_args()->get_expressions(), args);
+  SgExpression *offset = rt_builder_->BuildGridOffset(
+      sb::buildVarRefExp(gv->get_name()), nd, &args,
       true, is_periodic,
       rose_util::GetASTAttribute<GridGetAttribute>(
-          node)->GetStencilIndexList(),
-      scope);
+          node)->GetStencilIndexList());
+
   SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
       si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
       sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),
@@ -584,18 +586,17 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
   
   SgInitializedNamePtrList &params =
       getContainingFunction(node)->get_args();
-  SgExprListExp *args = sb::buildExprListExp();
+  SgExpressionPtrList args;
   for (int i = 0; i < nd; ++i) {
     SgInitializedName *p = params[i];
-    si::appendExpression(
-        args,
-        sb::buildVarRefExp(p, scope));
+    args.push_back(sb::buildVarRefExp(p));
   }
 
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
-  SgExpression *offset = BuildOffset(
-      gv, nd, args, true, false, &sil, scope);
+  SgExpression *offset = rt_builder_->BuildGridOffset(
+      sb::buildVarRefExp(gv->get_name()),
+      nd, &args, true, false, &sil);
   SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
       si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
       sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),

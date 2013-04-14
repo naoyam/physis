@@ -102,8 +102,8 @@ SgClassDefinition *getDefinition(SgClassType *t);
 SgFunctionDeclaration *getContainingFunction(SgNode *node);
 string getFuncName(SgFunctionRefExp *fref);
 string getFuncName(SgFunctionCallExp *call);
-SgExpression *copyExpr(const SgExpression *expr);
-SgInitializedName *copySgNode(const SgInitializedName *expr);
+void CopyExpressionPtrList(const SgExpressionPtrList &src,
+                           SgExpressionPtrList &dst);
 SgFunctionSymbol *getFunctionSymbol(SgFunctionDeclaration *f);
 SgFunctionRefExp *getFunctionRefExp(SgFunctionDeclaration *decl);
 SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name);
@@ -187,6 +187,16 @@ void CopyASTAttribute(SgNode *dst_node,
 }
 
 template <class T>
+void RemoveASTAttribute(SgNode *node) {
+  if (!GetASTAttribute<T>(node)) {
+    LOG_ERROR() << "No such attribute: " << T::name << "\n";
+    PSAbort(1);
+  }
+  node->removeAttribute(T::name);
+  return;
+}
+
+template <class T>
 class QueryASTNodeVisitor: public AstSimpleProcessing {
  public:
   QueryASTNodeVisitor() {}
@@ -242,6 +252,7 @@ SgGlobal *GetGlobalScope();
 SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
 SgType *GetType(SgVariableDeclaration *decl);
 SgName GetName(SgVariableDeclaration *decl);
+SgName GetName(const SgVarRefExp *decl);
 
 }  // namespace rose_util
 }  // namespace translator

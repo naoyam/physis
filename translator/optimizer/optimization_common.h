@@ -16,7 +16,7 @@ namespace optimizer {
 //! Fix references to index variables.
 extern void FixGridOffsetAttribute(SgExpression *offset_exp);
 
-//! Fix references to the offset expression.
+//! Fix references to the grid and offset expression.
 extern void FixGridGetAttribute(SgExpression *get_exp);
 
 
