@@ -229,11 +229,6 @@ void LuaTable::Merge(const LuaTable &tbl) {
   return;
 }
 
-const LuaTable *LuaValue::getAsLuaTable() const {
-  if (type_ != LUA_TABLE) return NULL;
-  return static_cast<const LuaTable*>(this);
-}
-
 bool LuaTable::get(std::vector<double> &v) const {
   FOREACH (it, lst_.begin(), lst_.end()) {
     double x;
