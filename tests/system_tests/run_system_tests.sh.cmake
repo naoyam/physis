@@ -52,6 +52,8 @@ EXECUTE_WITH_VALGRIND=0
 PRIORITY=1
 CONFIG_ARG=""
 
+EMAIL_TO=""
+
 function print_error()
 {
     echo "ERROR!: $1" >&2
@@ -84,15 +86,42 @@ function print_results_short()
     echo  ", [EXECUTE] #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
 }
 
+function email_results()
+{
+	local subject="Tests report: "
+	if [ "x" = "x$FAILED_TESTS" ]; then
+		subject+="Completed successfully"
+	else
+		subject+="$(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
+	fi
+	mail -r 'Physis testing <nmaruyama@riken.jp>' -s "$subject" $EMAIL_TO <<EOF
+At $TIMESTAMP on `hostname`:
+
+$1
+EOF
+}
+
 function print_results()
 {
-    echo  "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
-    echo  "[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
-    echo  "[EXECUTE]   #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
-    if [ "x" != "x$FAILED_TESTS" ]; then echo  "Failed tests: $FAILED_TESTS"; fi
-    if [ $NUM_WARNING -gt 0 ]; then
-		echo "$NUM_WARNING warning(s)"
-    fi
+	local msg=""
+	msg+="[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
+	msg+="\n[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
+	msg+="\n[EXECUTE]   #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+	msg+="\n"
+	if [ "x" != "x$FAILED_TESTS" ]; then
+		msg+="\n!!! $(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
+		msg+="\nFailed tests: $FAILED_TESTS"
+	else
+		msg+="\nAll tests completed successfully."
+	fi
+	if [ $NUM_WARNING -gt 0 ]; then
+		msg+="$NUM_WARNING warning(s)"
+	fi
+	echo -e "$msg"
+	msg=$(echo -e "$msg")
+	if [ "$EMAIL_TO" != "" ]; then
+		email_results "$msg"
+	fi
 }
 
 function finish()
@@ -818,6 +847,8 @@ function print_usage()
     echo -e "\t\tExecute the test cases with priority higher than or equal\n\t\tto the given level."
 	echo -e "\t--config <config-file-path>"
 	echo -e "\t\tRead configuration option from the file."
+	echo -e "\t--email <email-address>"
+	echo -e "\t\tEmail test result"
 	echo -e "\t-q, --quit"
 	echo -e "\t\tQuit immediately upon error."
 	echo -e "\t--clear"
@@ -885,7 +916,7 @@ function get_module_base()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email: -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
@@ -950,6 +981,10 @@ function get_module_base()
 				;;
 			--config)
 				CONFIG_ARG=$(abs_path $2)
+				shift 2
+				;;
+			--email)
+				EMAIL_TO=$2
 				shift 2
 				;;
 			-h|--help)
@@ -1051,11 +1086,11 @@ function get_module_base()
 						echo "[EXECUTE] FAIL"
 						NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
 						fail $SHORTNAME $TARGET execute $cfg $np
-						rm $(get_exe_name $SHORTNAME $TARGET)
+						rm -f $(get_exe_name $SHORTNAME $TARGET)
 						continue
 					fi
 				done
-				rm $(get_exe_name $SHORTNAME $TARGET)				
+				rm -f $(get_exe_name $SHORTNAME $TARGET)				
 				print_results_short			
 			done
 		done
