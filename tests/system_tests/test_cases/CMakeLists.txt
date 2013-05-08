@@ -20,6 +20,10 @@ add_executable(test_7-pt-neumann-cond.manual.ref.exe
   test_7-pt-neumann-cond.manual.ref.c)
 add_executable(test_user-defined-type.manual.ref.exe
   test_user-defined-type.manual.ref.c)
+add_executable(test_user-defined-type2.manual.ref.exe
+  test_user-defined-type2.manual.ref.c)
+add_executable(test_user-defined-type3.manual.ref.exe
+  test_user-defined-type3.manual.ref.c)
 
 if (CUDA_ENABLED)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
