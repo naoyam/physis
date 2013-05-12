@@ -187,18 +187,30 @@ void Translator::Visit(SgFunctionCallExp *node) {
             (!tx_->isKernel(caller) && TranslateGetHost(node, gv)))) {
         TranslateGet(node, gv, tx_->isKernel(caller), is_periodic);
       }
+#if 0      
     } else if (methodName == GridType::emit_name) {
       LOG_DEBUG() << "translating emit\n";
       node->addNewAttribute(GridCallAttribute::name,
                             new GridCallAttribute(
                                 gv, GridCallAttribute::EMIT));
-      TranslateEmit(node, gv);
+#endif    
     } else if (methodName == GridType::set_name) {
       LOG_DEBUG() << "translating set\n";
       TranslateSet(node, gv);
     } else {
       throw PhysisException("Unsupported grid call");
     }
+    setSkipChildren();
+    return;
+  }
+
+  GridEmitAttribute *emit_attr = rose_util::GetASTAttribute<GridEmitAttribute>(node);
+  if (emit_attr) {
+    LOG_DEBUG() << "translating emit\n";
+    // TODO: dont' pass gv; use emit_attr
+    SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(node);
+    assert(gv); 
+    TranslateEmit(node, gv);    
     setSkipChildren();
     return;
   }

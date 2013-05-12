@@ -106,6 +106,24 @@ bool GridType::isGridTypeSpecificCall(SgFunctionCallExp *ce) {
   return GridType::getGridVarUsedInFuncCall(ce) != NULL;
 }
 
+string GridType::GetGridFuncName(SgFunctionCallExp *call) {
+  if (!GridType::isGridTypeSpecificCall(call)) {
+    throw PhysisException("Not a grid function call");
+  }
+  SgPointerDerefExp *pdref =
+      isSgPointerDerefExp(call->get_function());
+  SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
+
+  SgVarRefExp *rhs = isSgVarRefExp(exp->get_rhs_operand());
+  assert(rhs);
+  const string name = rhs->get_symbol()->get_name().getString();
+  LOG_VERBOSE() << "method name: " << name << "\n";
+
+  return name;
+}
+
+
+
 bool ValidatePointType(SgClassDefinition *point_def) {
   const SgDeclarationStatementPtrList &members =
       point_def->get_members();
@@ -336,7 +354,22 @@ bool GridGetAttribute::IsUserDefinedType() const {
 }
 
 
-const std::string GridEmitAttr::name = "PSGridEmit";
+const std::string GridEmitAttribute::name = "PSGridEmit";
+
+GridEmitAttribute::GridEmitAttribute() {
+  LOG_DEBUG() << "GridEmit\n";
+}
+
+GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x) {}
+
+GridEmitAttribute::~GridEmitAttribute() {}
+
+GridEmitAttribute *GridEmitAttribute::copy() {
+  return new GridEmitAttribute(*this);
+}
+
+
+
 
 } // namespace translator
 } // namespace physis

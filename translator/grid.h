@@ -100,6 +100,7 @@ class GridType: public AstAttribute {
   static bool isGridType(SgType *ty);
   static bool isGridType(const string &t);
   static bool isGridTypeSpecificCall(SgFunctionCallExp *ce);
+  static string GetGridFuncName(SgFunctionCallExp *ce);  
   static SgInitializedName*
   getGridVarUsedInFuncCall(SgFunctionCallExp *call);
   static bool isGridCall(SgFunctionCallExp *ce);
@@ -322,9 +323,16 @@ class GridGetAttribute: public AstAttribute {
 
 };
 
-class GridEmitAttr: public AstAttribute {
+class GridEmitAttribute: public AstAttribute {
  public:
   static const std::string name;
+  GridEmitAttribute();
+  GridEmitAttribute(const GridEmitAttribute &x);
+  virtual ~GridEmitAttribute();  
+  GridEmitAttribute *copy();
+ protected:
+  bool is_user_type_;
+  string member_name_;
 };
 
 } // namespace translator

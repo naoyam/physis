@@ -8,6 +8,7 @@
 
 #include "translator/stencil_analysis.h"
 #include "translator/translation_context.h"
+#include "translator/physis_names.h"
 
 using namespace std;
 namespace si = SageInterface;
@@ -248,6 +249,36 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
               << GridRangeMapToString(gr)
               << std::endl;
   PropagateStencilRangeToGrid(sm, tx);
+}
+
+static void AnalyzeEmitArg(const string &arg,
+                           SgVarRefExp *&gv,
+                           bool &user_type,
+                           string &member_name) {
+  // "g.v" -> gv: g, user_type: true, member_name: "v"
+  // "g" -> gv: g, user_type: false
+  // TODO
+}
+
+void AnalyzeEmit(SgFunctionDeclaration *func) {
+  LOG_DEBUG() << "AnalyzeEmit\n";
+  SgNodePtrList calls =
+      NodeQuery::querySubTree(func, V_SgFunctionCallExp);
+  FOREACH (it, calls.begin(), calls.end()) {
+    SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
+    PSAssert(fc);
+    bool is_user_type = false;
+    if (GridType::isGridTypeSpecificCall(fc) &&
+        GridType::GetGridFuncName(fc) == PS_GRID_EMIT_NAME) {
+    } else if (isSgFunctionRefExp(fc->get_function()) &&
+               rose_util::getFuncName(fc) == PS_GRID_EMIT_UTYPE_NAME) {
+      
+    } else {
+      continue;
+    }
+    GridEmitAttribute *attr = new GridEmitAttribute();
+    rose_util::AddASTAttribute(fc, attr);
+  }
 }
 
 } // namespace translator
