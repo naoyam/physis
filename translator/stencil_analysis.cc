@@ -8,6 +8,7 @@
 
 #include "translator/stencil_analysis.h"
 #include "translator/translation_context.h"
+#include "translator/physis_names.h"
 
 using namespace std;
 namespace si = SageInterface;
@@ -248,6 +249,73 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
               << GridRangeMapToString(gr)
               << std::endl;
   PropagateStencilRangeToGrid(sm, tx);
+}
+
+static SgInitializedName *FindInitializedName(const string &name,
+                                              SgScopeStatement *scope) {
+  SgVariableSymbol *vs = si::lookupVariableSymbolInParentScopes(
+      name, scope);
+  if (vs == NULL) return NULL;
+  if (vs->get_scope() != scope) {
+    LOG_DEBUG() << "InitializedName found, but not in the given scope.\n";
+    return NULL;
+  }
+  return vs->get_declaration();
+}
+
+static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
+  SgExpression *emit_arg = fc->get_args()->get_expressions()[0];
+  LOG_DEBUG() << "Emit arg: " << emit_arg->unparseToString() << "\n";
+  string emit_str = isSgStringVal(emit_arg)->get_value();
+  SgFunctionDefinition *kernel = si::getEnclosingFunctionDefinition(fc);
+  PSAssert(kernel);
+  // "g.v" -> gv: g, user_type: true, member_name: "v"
+  // "g" -> gv: g, user_type: false
+  size_t dot_pos = emit_str.find_first_of('.');
+  GridEmitAttribute *attr = NULL;
+  if (dot_pos == string::npos) {
+    // No dot operator found
+    SgInitializedName *gv = FindInitializedName(emit_str, kernel);
+    PSAssert(gv);
+    attr = new GridEmitAttribute(gv);
+  } else {
+    if (dot_pos != emit_str.find_last_of('.')) {
+      LOG_ERROR() << "Multiple dot operators found: "
+                  << emit_str << "\n";
+      PSAbort(1);
+    }
+    LOG_DEBUG() << "User type emit\n";
+    string member_name = emit_str.substr(dot_pos+1);
+    LOG_DEBUG() << "member name: " << member_name << "\n";
+    SgInitializedName *gv = FindInitializedName(
+        emit_str.substr(0, dot_pos), kernel);
+    PSAssert(gv);
+    attr = new GridEmitAttribute(gv, member_name);
+  }
+  return attr;
+}
+
+void AnalyzeEmit(SgFunctionDeclaration *func) {
+  LOG_DEBUG() << "AnalyzeEmit\n";
+  SgNodePtrList calls =
+      NodeQuery::querySubTree(func, V_SgFunctionCallExp);
+  FOREACH (it, calls.begin(), calls.end()) {
+    SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
+    PSAssert(fc);
+    GridEmitAttribute *attr = NULL;
+    if (GridType::isGridTypeSpecificCall(fc) &&
+        GridType::GetGridFuncName(fc) == PS_GRID_EMIT_NAME) {
+      attr = new GridEmitAttribute(GridType::getGridVarUsedInFuncCall(fc));
+    } else if (isSgFunctionRefExp(fc->get_function()) &&
+               rose_util::getFuncName(fc) == PS_GRID_EMIT_UTYPE_NAME) {
+      attr = AnalyzeEmitCall(fc);
+    } else {
+      continue;
+    }
+    LOG_DEBUG() << "Emit call detected: "
+                << fc->unparseToString() << "\n";
+    rose_util::AddASTAttribute(fc, attr);
+  }
 }
 
 } // namespace translator

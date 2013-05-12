@@ -155,6 +155,15 @@ void Translator::Visit(SgFunctionCallExp *node) {
     return;
   }
 
+  GridEmitAttribute *emit_attr=
+      rose_util::GetASTAttribute<GridEmitAttribute>(node);
+  if (emit_attr) {
+    LOG_DEBUG() << "Translating emit\n";
+    TranslateEmit(node, emit_attr);
+    setSkipChildren();
+    return;
+  }
+
   if (GridType::isGridTypeSpecificCall(node)) {
     SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(node);
     assert(gv);
@@ -188,11 +197,8 @@ void Translator::Visit(SgFunctionCallExp *node) {
         TranslateGet(node, gv, tx_->isKernel(caller), is_periodic);
       }
     } else if (methodName == GridType::emit_name) {
-      LOG_DEBUG() << "translating emit\n";
-      node->addNewAttribute(GridCallAttribute::name,
-                            new GridCallAttribute(
-                                gv, GridCallAttribute::EMIT));
-      TranslateEmit(node, gv);
+      LOG_ERROR() << "Emit should be handled above with EmitAttribute\n";
+      PSAbort(1);
     } else if (methodName == GridType::set_name) {
       LOG_DEBUG() << "translating set\n";
       TranslateSet(node, gv);
@@ -202,6 +208,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
     setSkipChildren();
     return;
   }
+
 
   if (tx_->isMap(node)) {
     LOG_DEBUG() << "Translating map\n";

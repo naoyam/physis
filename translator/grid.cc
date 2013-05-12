@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/grid.h"
+#include "translator/physis_names.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -106,6 +107,24 @@ bool GridType::isGridTypeSpecificCall(SgFunctionCallExp *ce) {
   return GridType::getGridVarUsedInFuncCall(ce) != NULL;
 }
 
+string GridType::GetGridFuncName(SgFunctionCallExp *call) {
+  if (!GridType::isGridTypeSpecificCall(call)) {
+    throw PhysisException("Not a grid function call");
+  }
+  SgPointerDerefExp *pdref =
+      isSgPointerDerefExp(call->get_function());
+  SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
+
+  SgVarRefExp *rhs = isSgVarRefExp(exp->get_rhs_operand());
+  assert(rhs);
+  const string name = rhs->get_symbol()->get_name().getString();
+  LOG_VERBOSE() << "method name: " << name << "\n";
+
+  return name;
+}
+
+
+
 bool ValidatePointType(SgClassDefinition *point_def) {
   const SgDeclarationStatementPtrList &members =
       point_def->get_members();
@@ -180,31 +199,6 @@ bool GridType::IsUserDefinedPointType() const {
   return !IsPrimitivePointType();
 }
 
-bool GridType::isGridCall(SgFunctionCallExp *ce) {
-  if (GridType::isGridTypeSpecificCall(ce)) return true;
-  string funcNames[] = {
-    //"grid_dimx", "grid_dimy", "grid_dimz",
-    //"grid_copyin", "grid_copyout", "grid_free",
-    "PSGridDim"
-  };
-  SgFunctionRefExp *callee = isSgFunctionRefExp(ce->get_function());
-  if (!callee) {
-    // this is a indirect call, which cannot be a call to grid
-    // functions other than those catched by
-    // isGridTypeSpecificCall.
-    return false;
-  }
-  string calleeName = rose_util::getFuncName(callee);
-  for (unsigned i = 0; i < sizeof(funcNames) / sizeof(string); i++) {
-    if (calleeName == funcNames[i]) {
-      LOG_DEBUG() << ce->unparseToString()
-                  << " is a grid call.\n";
-      return true;
-    }
-  }
-  return false;
-}
-
 string GridType::getRealFuncName(const string &funcName) const {
   ostringstream ss;
   // element-type-independent functions
@@ -269,6 +263,31 @@ SgExpression *Grid::BuildAttributeExpr() {
 void Grid::SetStencilRange(const StencilRange &sr) {
   stencil_range_.merge(sr);
   return;
+}
+
+bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
+  if (GridType::isGridTypeSpecificCall(ce)) return true;
+  string funcNames[] = {
+    //"grid_dimx", "grid_dimy", "grid_dimz",
+    //"grid_copyin", "grid_copyout", "grid_free",
+    "PSGridDim", PS_GRID_EMIT_UTYPE_NAME
+  };
+  SgFunctionRefExp *callee = isSgFunctionRefExp(ce->get_function());
+  if (!callee) {
+    // this is a indirect call, which cannot be a call to grid
+    // functions other than those catched by
+    // isGridTypeSpecificCall.
+    return false;
+  }
+  string calleeName = rose_util::getFuncName(callee);
+  for (unsigned i = 0; i < sizeof(funcNames) / sizeof(string); i++) {
+    if (calleeName == funcNames[i]) {
+      LOG_DEBUG() << ce->unparseToString()
+                  << " is an intrinsic call.\n";
+      return true;
+    }
+  }
+  return false;
 }
 
 const std::string GridOffsetAttribute::name = "PSGridOffset";
@@ -336,7 +355,29 @@ bool GridGetAttribute::IsUserDefinedType() const {
 }
 
 
-const std::string GridEmitAttr::name = "PSGridEmit";
+const std::string GridEmitAttribute::name = "PSGridEmit";
+
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv):
+    gv_(gv), is_member_access_(false) {
+}
+
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
+                                     const string &member_name):
+    gv_(gv), is_member_access_(true), member_name_(member_name) {
+}
+
+GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
+    gv_(x.gv_), is_member_access_(x.is_member_access_), member_name_(x.member_name_) {
+}
+
+GridEmitAttribute::~GridEmitAttribute() {}
+
+GridEmitAttribute *GridEmitAttribute::copy() {
+  return new GridEmitAttribute(*this);
+}
+
+
+
 
 } // namespace translator
 } // namespace physis

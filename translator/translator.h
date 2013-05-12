@@ -104,7 +104,7 @@ class Translator: public rose_util::RoseASTTraversal {
     return false;
   }
   virtual void TranslateEmit(SgFunctionCallExp *node,
-                             SgInitializedName *gv) {}
+                             GridEmitAttribute *attr) {}
   virtual void TranslateSet(SgFunctionCallExp *node,
                             SgInitializedName *gv) {}
   virtual void TranslateGridCall(SgFunctionCallExp *node,

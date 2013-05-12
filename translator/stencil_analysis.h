@@ -19,6 +19,8 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
                          SgFunctionDeclaration *kernel);
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx);
 
+void AnalyzeEmit(SgFunctionDeclaration *func);
+
 } // namespace translator
 } // namespace physis
 

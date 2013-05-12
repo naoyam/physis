@@ -101,7 +101,7 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void TranslateGetForUserDefinedType(
       SgDotExp *node);
   virtual void TranslateEmit(SgFunctionCallExp *node,
-                             SgInitializedName *gv);
+                             GridEmitAttribute *attr);
   virtual void TranslateFree(SgFunctionCallExp *node,
                              GridType *gt);
   virtual void TranslateCopyin(SgFunctionCallExp *node,

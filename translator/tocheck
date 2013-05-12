@@ -1,0 +1,3 @@
+kernel.cc: analyzeGridWrites -> tx.getGridEmitCalls
+translation_context.cc: getGridCalls, getGridEmits 
+grid.cc: isGridCall, typespecificcall

@@ -524,6 +524,7 @@ void TranslationContext::analyzeKernelFunctions(void) {
       if (m) {
         if (registerEntryKernel(m->getKernel())) {
           done = false;
+          AnalyzeEmit(m->getKernel());
         }
         continue;
       }
@@ -536,8 +537,8 @@ void TranslationContext::analyzeKernelFunctions(void) {
       Kernel *parentKernel = findKernel(callerFunc);
       if (!parentKernel) continue;
 
-      // Grid functions are special functions.
-      if (GridType::isGridCall(call)) continue;
+      // Intrinsic functions are special functions.
+      if (Grid::IsIntrinsicCall(call)) continue;
 
       SgFunctionRefExp *calleeExp =
           isSgFunctionRefExp(call->get_function());
@@ -556,7 +557,7 @@ void TranslationContext::analyzeKernelFunctions(void) {
         continue;
       }
 
-        if (registerInnerKernel(calleeFunc, call, parentKernel)) {
+      if (registerInnerKernel(calleeFunc, call, parentKernel)) {
         done = false;
       }
     }
@@ -631,7 +632,7 @@ TranslationContext::getGridCalls(SgScopeStatement *scope,
     if (!GridType::isGridTypeSpecificCall(call)) continue;
     SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(call);
     assert(gv);
-    if (methodName != getGridFuncName(call)) continue;
+    if (methodName != GridType::GetGridFuncName(call)) continue;
     // Now find a get call
     targets.push_back(call);
   }

@@ -100,9 +100,9 @@ class GridType: public AstAttribute {
   static bool isGridType(SgType *ty);
   static bool isGridType(const string &t);
   static bool isGridTypeSpecificCall(SgFunctionCallExp *ce);
+  static string GetGridFuncName(SgFunctionCallExp *ce);  
   static SgInitializedName*
   getGridVarUsedInFuncCall(SgFunctionCallExp *call);
-  static bool isGridCall(SgFunctionCallExp *ce);
   SgExpression *BuildElementTypeExpr();
   static const string name;
   static const string get_name;
@@ -205,6 +205,8 @@ class Grid {
     return stencil_range_;
   }
   virtual void SetStencilRange(const StencilRange &sr);
+
+  static bool IsIntrinsicCall(SgFunctionCallExp *call);
 };
 
 typedef std::set<Grid*> GridSet;
@@ -322,9 +324,21 @@ class GridGetAttribute: public AstAttribute {
 
 };
 
-class GridEmitAttr: public AstAttribute {
+class GridEmitAttribute: public AstAttribute {
  public:
   static const std::string name;
+  GridEmitAttribute(SgInitializedName *gv);
+  GridEmitAttribute(SgInitializedName *gv, const string &member_name);
+  GridEmitAttribute(const GridEmitAttribute &x);
+  virtual ~GridEmitAttribute();  
+  GridEmitAttribute *copy();
+  SgInitializedName *gv() const { return gv_; }
+  bool is_member_access() const { return is_member_access_; }
+  const string &member_name() const { return member_name_; }
+ protected:
+  SgInitializedName *gv_;
+  bool is_member_access_;
+  string member_name_;
 };
 
 } // namespace translator

@@ -33,7 +33,7 @@ void kernel1(const int x, const int y, const int z,
              PSGridGet(g, x, y+1, z).q +
              PSGridGet(g, x, y-1, z).q +
              PSGridGet(g, x, y, z+1).q +
-             PSGridGet(g, x, y, z-1).q) / 14.0;
+             PSGridGet(g, x, y, z-1).q) / 14.3;
   PSGridEmitUtype(g.r, v);
   return;
 }
