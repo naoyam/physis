@@ -214,10 +214,11 @@ void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
 }
 
 void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
-                                   SgInitializedName *gv) {
+                                   GridEmitAttribute *attr) {
+  SgInitializedName *gv = attr->gv();  
   GridType *gt = tx_->findGridType(gv->get_type());
   if (gt->IsPrimitivePointType()) {
-    ReferenceTranslator::TranslateEmit(node, gv);
+    ReferenceTranslator::TranslateEmit(node, attr);
     return;
   }
 

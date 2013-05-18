@@ -80,7 +80,7 @@ extern "C" {
 #define PSGridGetPeriodic(g, ...) g->get_periodic(__VA_ARGS__)  
 #define PSGridSet(g, ...) g->set(__VA_ARGS__)  
 #define PSGridEmit(g, v) g->emit(v)
-#define PSGridEmitUtype(g, v) (*(typeof(v)*)(__PSGridEmit2(#g, v)))
+#define PSGridEmitUtype(g, v) (*(typeof(v)*)(__PSGridEmitUtype(#g, v)))  
 #define PSGridEmitDirichlet(g, v) g->emitDirichlet(v)  
 #define PSGridEmitNeumann(g, v, grad) g->emitNeumann(v, grad)
   //#define grid_map(d, k, g, ...) g.map(&d, #(void*)k,###__VA_ARGS__)

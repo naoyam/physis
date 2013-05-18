@@ -62,7 +62,8 @@ class ReferenceTranslator : public Translator {
                             SgInitializedName *gv,
                             bool is_kernel,
                             bool is_periodic);
-  virtual void TranslateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
+  virtual void TranslateEmit(SgFunctionCallExp *node,
+                             GridEmitAttribute *attr);
   virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);
 #if 0  
   //! Build an offset expression.

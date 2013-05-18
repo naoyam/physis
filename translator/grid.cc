@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/grid.h"
+#include "translator/physis_names.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -198,31 +199,6 @@ bool GridType::IsUserDefinedPointType() const {
   return !IsPrimitivePointType();
 }
 
-bool GridType::isGridCall(SgFunctionCallExp *ce) {
-  if (GridType::isGridTypeSpecificCall(ce)) return true;
-  string funcNames[] = {
-    //"grid_dimx", "grid_dimy", "grid_dimz",
-    //"grid_copyin", "grid_copyout", "grid_free",
-    "PSGridDim"
-  };
-  SgFunctionRefExp *callee = isSgFunctionRefExp(ce->get_function());
-  if (!callee) {
-    // this is a indirect call, which cannot be a call to grid
-    // functions other than those catched by
-    // isGridTypeSpecificCall.
-    return false;
-  }
-  string calleeName = rose_util::getFuncName(callee);
-  for (unsigned i = 0; i < sizeof(funcNames) / sizeof(string); i++) {
-    if (calleeName == funcNames[i]) {
-      LOG_DEBUG() << ce->unparseToString()
-                  << " is a grid call.\n";
-      return true;
-    }
-  }
-  return false;
-}
-
 string GridType::getRealFuncName(const string &funcName) const {
   ostringstream ss;
   // element-type-independent functions
@@ -287,6 +263,31 @@ SgExpression *Grid::BuildAttributeExpr() {
 void Grid::SetStencilRange(const StencilRange &sr) {
   stencil_range_.merge(sr);
   return;
+}
+
+bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
+  if (GridType::isGridTypeSpecificCall(ce)) return true;
+  string funcNames[] = {
+    //"grid_dimx", "grid_dimy", "grid_dimz",
+    //"grid_copyin", "grid_copyout", "grid_free",
+    "PSGridDim", PS_GRID_EMIT_UTYPE_NAME
+  };
+  SgFunctionRefExp *callee = isSgFunctionRefExp(ce->get_function());
+  if (!callee) {
+    // this is a indirect call, which cannot be a call to grid
+    // functions other than those catched by
+    // isGridTypeSpecificCall.
+    return false;
+  }
+  string calleeName = rose_util::getFuncName(callee);
+  for (unsigned i = 0; i < sizeof(funcNames) / sizeof(string); i++) {
+    if (calleeName == funcNames[i]) {
+      LOG_DEBUG() << ce->unparseToString()
+                  << " is an intrinsic call.\n";
+      return true;
+    }
+  }
+  return false;
 }
 
 const std::string GridOffsetAttribute::name = "PSGridOffset";
@@ -356,11 +357,18 @@ bool GridGetAttribute::IsUserDefinedType() const {
 
 const std::string GridEmitAttribute::name = "PSGridEmit";
 
-GridEmitAttribute::GridEmitAttribute() {
-  LOG_DEBUG() << "GridEmit\n";
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv):
+    gv_(gv), is_user_type_(false) {
 }
 
-GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x) {}
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
+                                     const string &member_name):
+    gv_(gv), is_user_type_(true), member_name_(member_name) {
+}
+
+GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
+    gv_(x.gv_), is_user_type_(x.is_user_type_), member_name_(x.member_name_) {
+}
 
 GridEmitAttribute::~GridEmitAttribute() {}
 

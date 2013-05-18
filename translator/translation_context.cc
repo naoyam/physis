@@ -537,8 +537,8 @@ void TranslationContext::analyzeKernelFunctions(void) {
       Kernel *parentKernel = findKernel(callerFunc);
       if (!parentKernel) continue;
 
-      // Grid functions are special functions.
-      if (GridType::isGridCall(call)) continue;
+      // Intrinsic functions are special functions.
+      if (Grid::IsIntrinsicCall(call)) continue;
 
       SgFunctionRefExp *calleeExp =
           isSgFunctionRefExp(call->get_function());
