@@ -22,18 +22,17 @@ void kernel1(const int x, const int y, const int z,
              PSGrid3DPoint g1, PSGrid3DPoint g2) {
   float p = (PSGridGet(g1, x, y, z).x +
              PSGridGet(g1, x+1, y, z).x +
-             PSGridGet(g1, x-1, y, z).x) / 3.0f;
+             PSGridGet(g1, x-1, y, z).x) / 3.3f;
   float q = (PSGridGet(g1, x, y, z).y +
              PSGridGet(g1, x, y+1, z).y +
              PSGridGet(g1, x, y-1, z).y +
              PSGridGet(g1, x, y, z+1).y +
-             PSGridGet(g1, x, y, z-1).y) / 5.0f;
+             PSGridGet(g1, x, y, z-1).y) / 5.5f;
   float r = (PSGridGet(g1, x, y, z).z +
              PSGridGet(g1, x, y, z+1).z +
-             PSGridGet(g1, x, y, z-1).z) / 3.0f;
+             PSGridGet(g1, x, y, z-1).z) / 3.3f;
   struct Point v = {p, q, r};
   PSGridEmit(g2, v);
-  //PSGridEmit2(g2.r, r);
   return;
 }
 
