@@ -33,7 +33,7 @@ void kernel1(Point *g) {
                    g[OFFSET(x, y+1, z)].q +
                    g[OFFSET(x, y-1, z)].q +
                    g[OFFSET(x, y, z+1)].q +
-                   g[OFFSET(x, y, z-1)].q) / 14.0;
+                   g[OFFSET(x, y, z-1)].q) / 14.3;
         g[OFFSET(x, y, z)].r = v;
       }
     }
