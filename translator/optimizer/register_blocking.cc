@@ -204,6 +204,13 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
       if (get_attr->member_name() != gd.member_) continue;
     } else {
       // Ignore a get with a member access.
+      // This happens when a set of grid accesses have a line of
+      // accesses that can be register blocked, but each access is
+      // actually a member access. In that case, no register blocking
+      // is applied, unless the each member access reads the same
+      // member. If the same member is accessed, that case is handled
+      // with the true case of this branch (i.e., when
+      // gd.member_access_ == true).
       if (get_attr->member_name() != "") continue;
     }
     if (!replaced_get) replaced_get = get;
