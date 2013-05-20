@@ -14,7 +14,7 @@ typedef struct {
 
 #define OFFSET(x, y, z) ((x) + (y) * N + (z) * N * N)
 
- __global__ void kernel(Point *g1, Point *g2) {
+__global__ void kernel(Point *g1, Point *g2) {
    int x = threadIdx.x + blockIdx.x * blockDim.x;
    int y = threadIdx.y + blockIdx.y * blockDim.y;
    int z = threadIdx.z + blockIdx.z * blockDim.z;
@@ -75,14 +75,17 @@ int main(int argc, char *argv[]) {
     kernel<<<grid_dim, block_dim>>>(g1d, g2d);
     kernel<<<grid_dim, block_dim>>>(g2d, g1d);
   }
-  cudaMemcpy(g1, g1d, sizeof(Point) * nelms, cudaMemcpyDeviceToHost);
-
+  
   cudaError_t e = cudaGetLastError();
   if (e != cudaSuccess) {
     fprintf(stderr, "CUDA error: %s\n",
             cudaGetErrorString(e));
     exit(1);
   }
+
+  assert(cudaSuccess ==
+         cudaMemcpy(g1, g1d, sizeof(Point) * nelms,
+                    cudaMemcpyDeviceToHost));
 
   dump(g1);
 

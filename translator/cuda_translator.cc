@@ -216,6 +216,9 @@ void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
 void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
                                    GridEmitAttribute *attr) {
   SgInitializedName *gv = attr->gv();  
+  bool is_grid_type_specific_call =
+      GridType::isGridTypeSpecificCall(node);
+
   GridType *gt = tx_->findGridType(gv->get_type());
   if (gt->IsPrimitivePointType()) {
     ReferenceTranslator::TranslateEmit(node, attr);
@@ -258,9 +261,10 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
   }
   si::replaceExpression(node, real_exp);
 
-  if (!GridType::isGridTypeSpecificCall(node)) {
+  if (!is_grid_type_specific_call) {
     RemoveEmitDummyExp(real_exp);
   }
+  
 }
 
 SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(

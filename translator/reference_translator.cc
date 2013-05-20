@@ -277,6 +277,9 @@ void ReferenceTranslator::RemoveEmitDummyExp(SgExpression *emit) {
 void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
                                         GridEmitAttribute *attr) {
   SgInitializedName *gv = attr->gv();
+  bool is_grid_type_specific_call =
+      GridType::isGridTypeSpecificCall(node);
+  
   /*
     g->p1[offset] = value;
   */
@@ -320,9 +323,10 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
 
   si::replaceExpression(node, emit);
   
-  if (!GridType::isGridTypeSpecificCall(node)) {
+  if (!is_grid_type_specific_call) {
     RemoveEmitDummyExp(emit);
   }
+
 }
 
 SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {
