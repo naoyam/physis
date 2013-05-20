@@ -204,7 +204,6 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
       if (get_attr->member_name() != gd.member_) continue;
     } else {
       // Ignore a get with a member access.
-      // NOTE: Not handled because this shouldn't occur.
       if (get_attr->member_name() != "") continue;
     }
     if (!replaced_get) replaced_get = get;
@@ -509,6 +508,7 @@ static bool DoRegisterBlockingOneLine(
                   << (*move_stmts_it)->unparseToString() << "\n";
     }
   } else {
+    LOG_DEBUG() << "No replacement performed.\n";
     FOREACH (move_stmts_it, move_stmts.rbegin(),
              move_stmts.rend()) {
       si::deleteAST(*move_stmts_it);
@@ -543,6 +543,7 @@ static void DoRegisterBlocking(
   GridMemberRangeMap &gmr = run_kernel_attr->stencil_map()
       ->grid_member_range_map();
   set<SgInitializedName *> gv_set;
+  LOG_DEBUG() << "Checking member accesses\n";
   FOREACH (gr_it, gmr.begin(), gmr.end()) {
     SgInitializedName *gv = gr_it->first.first;
     string member = gr_it->first.second;
@@ -562,9 +563,14 @@ static void DoRegisterBlocking(
       }
     }
   }
+  LOG_DEBUG() << "Checking non-member accesses\n";
   FOREACH (gr_it, gr.begin(), gr.end()) {
     SgInitializedName *gv = gr_it->first;
-    if (gv_set.find(gv) != gv_set.end()) continue;
+    if (gv_set.find(gv) != gv_set.end()) {
+      LOG_DEBUG() << gv->unparseToString()
+                  << " is already processed in member-access blocking.\n";
+      continue;
+    }
     const vector<StencilIndexList> &indices = gr_it->second.all_indices();
     vector<IndexListVector> blocked_indices =
         FindCandidateIndices(indices, dim);
