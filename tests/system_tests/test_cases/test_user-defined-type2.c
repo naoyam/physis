@@ -17,10 +17,17 @@ struct Point {
 
 DeclareGrid3D(Point, struct Point);
 
-void kernel(const int x, const int y, const int z,
-            PSGrid3DPoint g) {
+static void kernel1(const int x, const int y, const int z,
+                    PSGrid3DPoint g) {
   float v = PSGridGet(g, x, y, z).p;
   PSGridEmitUtype(g.q, v);
+  return;
+}
+
+static void kernel2(const int x, const int y, const int z,
+                    PSGrid3DPoint g1,
+                    PSGrid3DPoint g2) {
+  PSGridEmitUtype(g2, PSGridGet(g1, x, y, z));
   return;
 }
 
@@ -37,7 +44,8 @@ void check(struct Point *p) {
 
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 3, N, N, N);
-  PSGrid3DPoint g = PSGrid3DPointNew(N, N, N);
+  PSGrid3DPoint g1 = PSGrid3DPointNew(N, N, N);
+  PSGrid3DPoint g2 = PSGrid3DPointNew(N, N, N);
 
   PSDomain3D d = PSDomain3DNew(0, N, 0, N, 0, N);
   size_t nelms = N*N*N;
@@ -50,15 +58,18 @@ int main(int argc, char *argv[]) {
     indata[i].q = 0;
   }
     
-  PSGridCopyin(g, indata);
+  PSGridCopyin(g1, indata);
 
-  PSStencilRun(PSStencilMap(kernel, d, g));
+  PSStencilRun(PSStencilMap(kernel1, d, g1));
+  PSStencilRun(PSStencilMap(kernel2, d, g1, g2));  
     
-  PSGridCopyout(g, indata);
-
+  PSGridCopyout(g1, indata);
+  check(indata);
+  PSGridCopyout(g2, indata);
   check(indata);
 
-  PSGridFree(g);
+  PSGridFree(g1);
+  PSGridFree(g2);  
   PSFinalize();
   free(indata);
   return 0;

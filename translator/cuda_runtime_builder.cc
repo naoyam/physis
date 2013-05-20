@@ -739,7 +739,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitForUserType(
   // point_type v;
   SgInitializedName *v_p =
       sb::buildInitializedName(
-          "v", sb::buildReferenceType(gt->point_type()));
+          "v", sb::buildConstType(gt->point_type()));
   si::appendArg(pl, v_p);
 
   // Function body
