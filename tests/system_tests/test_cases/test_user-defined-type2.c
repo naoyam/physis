@@ -17,8 +17,8 @@ struct Point {
 
 DeclareGrid3D(Point, struct Point);
 
-void kernel1(const int x, const int y, const int z,
-             PSGrid3DPoint g) {
+void kernel(const int x, const int y, const int z,
+            PSGrid3DPoint g) {
   float v = PSGridGet(g, x, y, z).p;
   PSGridEmitUtype(g.q, v);
   return;
@@ -27,9 +27,9 @@ void kernel1(const int x, const int y, const int z,
 void check(struct Point *p) {
   int i;
   for (i = 0; i < N*N*N; ++i) {
-    if (p->p[i] != p->q[i]) {
+    if (p[i].p != p[i].q) {
       fprintf(stderr, "Error: mismatch at %d, in: %f, out: %f\n",
-              i, p->p[i], p->q[i]);
+              i, p[i].p, p[i].q);
       exit(1);
     }
   }
@@ -52,11 +52,11 @@ int main(int argc, char *argv[]) {
     
   PSGridCopyin(g, indata);
 
-  PSStencilRun(PSStencilMap(kernel1, d, g));
+  PSStencilRun(PSStencilMap(kernel, d, g));
     
-  PSGridCopyout(g, outdata_ps);
+  PSGridCopyout(g, indata);
 
-  check(g);
+  check(indata);
 
   PSGridFree(g);
   PSFinalize();
