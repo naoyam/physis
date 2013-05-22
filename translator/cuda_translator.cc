@@ -238,14 +238,29 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
       nd, &args, true, false, &sil);
 
   SgExpression *v =
-      si::copyExpression(node->get_args()->get_expressions()[0]);
+      si::copyExpression(node->get_args()->get_expressions().back());
   
-  SgFunctionCallExp *real_exp =
-      sb::buildFunctionCallExp(
-          sb::buildFunctionRefExp(gt->aux_emit_decl()),
-          sb::buildExprListExp(sb::buildVarRefExp(gv->get_name()),
-                               offset, v));
+  SgExpression *real_exp = NULL;
+  if (attr->is_member_access()) {
+    real_exp =
+        sb::buildAssignOp(
+            sb::buildPntrArrRefExp(
+                sb::buildArrowExp(sb::buildVarRefExp(gv->get_name()),
+                                  sb::buildVarRefExp(attr->member_name())),
+                offset),
+            v);
+  } else {
+    real_exp =
+        sb::buildFunctionCallExp(
+            sb::buildFunctionRefExp(gt->aux_emit_decl()),
+            sb::buildExprListExp(sb::buildVarRefExp(gv->get_name()),
+                                 offset, v));
+  }
   si::replaceExpression(node, real_exp);
+
+  if (!GridType::isGridTypeSpecificCall(node)) {
+    RemoveEmitDummyExp(real_exp);
+  }
 }
 
 SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(

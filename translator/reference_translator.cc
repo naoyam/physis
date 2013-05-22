@@ -264,6 +264,16 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
   si::replaceExpression(node, p0);
 }
 
+void ReferenceTranslator::RemoveEmitDummyExp(SgExpression *emit) {
+  // For EmitUtype, dummy pointer dereference needs to be removed,
+  // i.e., (*(type *)emit_exp) -> emit_exp
+  PSAssert(isSgCastExp(emit->get_parent()));
+  SgPointerDerefExp *deref_exp = isSgPointerDerefExp(
+      emit->get_parent()->get_parent());
+  PSAssert(deref_exp);
+  si::replaceExpression(deref_exp, si::copyExpression(emit));
+}
+
 void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
                                         GridEmitAttribute *attr) {
   SgInitializedName *gv = attr->gv();
@@ -296,7 +306,7 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
                                            grid_decl_->get_definition()));
   p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->point_type()));
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
-  if (attr->is_user_type()) {
+  if (attr->is_member_access()) {
     lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
   }
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
@@ -310,16 +320,9 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
 
   si::replaceExpression(node, emit);
   
-  // For EmitUtype, dummy pointer dereference needs to be removed,
-  // i.e., (*(type *)emit_exp) -> emit_exp
-  if (attr->is_user_type()) {
-    PSAssert(isSgCastExp(emit->get_parent()));
-    SgPointerDerefExp *deref_exp = isSgPointerDerefExp(
-        emit->get_parent()->get_parent());
-    PSAssert(deref_exp);
-    si::replaceExpression(deref_exp, si::copyExpression(emit));
+  if (!GridType::isGridTypeSpecificCall(node)) {
+    RemoveEmitDummyExp(emit);
   }
-  
 }
 
 SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {

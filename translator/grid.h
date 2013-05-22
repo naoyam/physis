@@ -333,11 +333,11 @@ class GridEmitAttribute: public AstAttribute {
   virtual ~GridEmitAttribute();  
   GridEmitAttribute *copy();
   SgInitializedName *gv() const { return gv_; }
-  bool is_user_type() const { return is_user_type_; }
+  bool is_member_access() const { return is_member_access_; }
   const string &member_name() const { return member_name_; }
  protected:
   SgInitializedName *gv_;
-  bool is_user_type_;
+  bool is_member_access_;
   string member_name_;
 };
 

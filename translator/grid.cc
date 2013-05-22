@@ -358,16 +358,16 @@ bool GridGetAttribute::IsUserDefinedType() const {
 const std::string GridEmitAttribute::name = "PSGridEmit";
 
 GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv):
-    gv_(gv), is_user_type_(false) {
+    gv_(gv), is_member_access_(false) {
 }
 
 GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
                                      const string &member_name):
-    gv_(gv), is_user_type_(true), member_name_(member_name) {
+    gv_(gv), is_member_access_(true), member_name_(member_name) {
 }
 
 GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
-    gv_(x.gv_), is_user_type_(x.is_user_type_), member_name_(x.member_name_) {
+    gv_(x.gv_), is_member_access_(x.is_member_access_), member_name_(x.member_name_) {
 }
 
 GridEmitAttribute::~GridEmitAttribute() {}
