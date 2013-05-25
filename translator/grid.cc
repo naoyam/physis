@@ -123,7 +123,16 @@ string GridType::GetGridFuncName(SgFunctionCallExp *call) {
   return name;
 }
 
-
+bool ValidatePointMemberType(SgType *t) {
+  if (isSgArrayType(t)) {
+    return ValidatePointMemberType(isSgArrayType(t)->get_base_type());
+  }
+  if (!(isSgTypeFloat(t) ||
+        isSgTypeDouble(t))) {
+    return false;
+  }
+  return true;
+}
 
 bool ValidatePointType(SgClassDefinition *point_def) {
   const SgDeclarationStatementPtrList &members =
@@ -143,8 +152,7 @@ bool ValidatePointType(SgClassDefinition *point_def) {
     const SgInitializedNamePtrList &vars = member_decl->get_variables();
     PSAssert(vars.size() == 1);
     SgType *member_type = vars[0]->get_type();
-    if (!(isSgTypeFloat(member_type) ||
-          isSgTypeDouble(member_type))) {
+    if (!ValidatePointMemberType(member_type)) {
       LOG_ERROR() << "Invalid point struct member: "
                   << member_decl->unparseToString() << "\n";
       return false;
@@ -366,8 +374,16 @@ GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
     gv_(gv), is_member_access_(true), member_name_(member_name) {
 }
 
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
+                                     const string &member_name,
+                                     const vector<string> &array_offsets):
+    gv_(gv), is_member_access_(true), member_name_(member_name),
+    array_offsets_(array_offsets) {
+}
+
 GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
-    gv_(x.gv_), is_member_access_(x.is_member_access_), member_name_(x.member_name_) {
+    gv_(x.gv_), is_member_access_(x.is_member_access_),
+    member_name_(x.member_name_), array_offsets_(x.array_offsets_) {
 }
 
 GridEmitAttribute::~GridEmitAttribute() {}

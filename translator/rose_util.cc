@@ -8,6 +8,8 @@
 
 #include "translator/rose_util.h"
 
+#include <cctype>
+
 namespace sb = SageBuilder;
 namespace si = SageInterface;
 
@@ -15,6 +17,7 @@ namespace physis {
 namespace translator {
 namespace rose_util {
 
+// TODO: Rename to FindType
 SgType *getType(SgNode *topLevelNode, const string &typeName) {
   SgName typeNameNode(typeName);
   Rose_STL_Container<SgNode*> types =
@@ -371,6 +374,33 @@ SgName GetName(SgVariableDeclaration *decl) {
 
 SgName GetName(const SgVarRefExp *x) {
   return x->get_symbol()->get_name();
+}
+
+// TODO: Complete string parsing
+// Currently only limited string value is supported.
+// - just an integer
+// - just a variable reference
+SgExpression *ParseString(const string &s) {
+  bool is_numeric = true;
+  FOREACH (it, s.begin(), s.end()) {
+    if (!isdigit(*it)) {
+      is_numeric = false;
+      break;
+    }
+  }
+  if (is_numeric) {
+    int x = toInteger(s);
+    return sb::buildIntVal(x);
+  }
+  // NOTE: assume variable reference
+  return sb::buildVarRefExp(s);
+}
+
+void ReplaceWithCopy(SgExpressionVector &ev) {
+  FOREACH (it, ev.begin(), ev.end()) {
+    SgExpression *e = si::copyExpression(*it);
+    *it = e;
+  }
 }
 
 }  // namespace rose_util

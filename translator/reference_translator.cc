@@ -217,32 +217,7 @@ void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
       tmpBlock);
   return;
 }
-#if 0
-// TODO: Change args type to SgExpressionPtrList
-SgExpression *ReferenceTranslator::BuildOffset(
-    SgInitializedName *gv,
-    int num_dim,
-    SgExprListExp *args,
-    bool is_kernel,
-    bool is_periodic,
-    const StencilIndexList *sil,
-    SgScopeStatement *scope) {
-  /*
-    __PSGridGetOffsetND(g, i)
-  */
-  // Use the getoffset function
-  SgExpressionPtrList offset_args;
-  for (int i = 1; i <= num_dim; i++) {
-    SgExpression *dim_offset = si::copyExpression(
-        args->get_expressions()[i-1]);
-    offset_args.push_back(dim_offset);    
-  }
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);  
-  return rt_builder_->BuildGridOffset(g, num_dim,
-                                      &offset_args,
-                                      is_kernel, is_periodic, sil);
-}
-#endif
+
 void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_kernel,
@@ -279,10 +254,7 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
   SgInitializedName *gv = attr->gv();
   bool is_grid_type_specific_call =
       GridType::isGridTypeSpecificCall(node);
-  
-  /*
-    g->p1[offset] = value;
-  */
+
   GridType *gt = tx_->findGridType(gv->get_type());
   int nd = gt->getNumDim();
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
@@ -293,33 +265,11 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
         sb::buildVarRefExp(p, getContainingScopeStatement(node)));
   }
 
-  StencilIndexList sil;
-  StencilIndexListInitSelf(sil, nd);
-  SgExpression *offset = rt_builder_->BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()),
-      nd, &args, true, false, &sil);
-  SgVarRefExp *g =
-      sb::buildVarRefExp(gv->get_name(),
-                         getContainingScopeStatement(node));
-
-  string dst_buf_name = "p0";
-  SgExpression *p1 =
-      sb::buildArrowExp(g,
-                        sb::buildVarRefExp(dst_buf_name,
-                                           grid_decl_->get_definition()));
-  p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->point_type()));
-  SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
-  if (attr->is_member_access()) {
-    lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
-  }
-  LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
-
-  SgExpression *rhs =
+  SgExpression *emit_val =
       si::copyExpression(node->get_args()->get_expressions().back());
-  LOG_DEBUG() << "emit rhs: " << rhs->unparseToString() << "\n";
 
-  SgExpression *emit = sb::buildAssignOp(lhs, rhs);
-  LOG_DEBUG() << "emit: " << emit->unparseToString() << "\n";
+  SgExpression *emit =
+      rt_builder_->BuildGridEmit(attr, gt, &args, emit_val);
 
   si::replaceExpression(node, emit);
   

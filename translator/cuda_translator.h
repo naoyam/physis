@@ -99,7 +99,7 @@ class CUDATranslator : public ReferenceTranslator {
                             SgInitializedName *gv,
                             bool is_kernel, bool is_periodic);
   virtual void TranslateGetForUserDefinedType(
-      SgDotExp *node);
+      SgDotExp *node, SgPntrArrRefExp *array_top);
   virtual void TranslateEmit(SgFunctionCallExp *node,
                              GridEmitAttribute *attr);
   virtual void TranslateFree(SgFunctionCallExp *node,

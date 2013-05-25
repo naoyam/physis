@@ -103,6 +103,65 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
   return xm;
 }
 
+SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,      
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
+    bool is_kernel,
+    bool is_periodic,
+    const string &member_name,
+    const SgExpressionVector &array_indices) {
+  SgExpression *get = BuildGridGet(gvref, gt, offset_exprs,
+                                   sil, is_kernel,
+                                   is_periodic,
+                                   member_name);
+  FOREACH (it, array_indices.begin(), array_indices.end()) {
+    get = sb::buildPntrArrRefExp(get, *it);
+  }
+  return get;
+}
+
+
+SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
+    GridEmitAttribute *attr,
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    SgExpression *emit_val) {
+  
+  /*
+    g->p1[offset] = value;
+  */
+  SgInitializedName *gv = attr->gv();
+  int nd = gt->getNumDim();
+  StencilIndexList sil;
+  StencilIndexListInitSelf(sil, nd);
+  string dst_buf_name = "p0";
+  SgExpression *p1 =
+      sb::buildArrowExp(sb::buildVarRefExp(gv->get_name()),
+                        sb::buildVarRefExp(dst_buf_name));
+  p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->point_type()));
+  SgExpression *offset = BuildGridOffset(
+      sb::buildVarRefExp(gv->get_name()),
+      nd, offset_exprs, true, false, &sil);
+  SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
+  
+  if (attr->is_member_access()) {
+    lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
+    const vector<string> &array_offsets = attr->array_offsets();
+    FOREACH (it, array_offsets.begin(), array_offsets.end()) {
+      SgExpression *e = rose_util::ParseString(*it);
+      lhs = sb::buildPntrArrRefExp(lhs, e);
+    }
+  }
+  LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
+
+
+  SgExpression *emit = sb::buildAssignOp(lhs, emit_val);
+  LOG_DEBUG() << "emit: " << emit->unparseToString() << "\n";
+  return emit;
+}
+
 SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
     SgExpression *grid_ref, int dim) {
   // PSGridDim accepts an integer parameter designating dimension,

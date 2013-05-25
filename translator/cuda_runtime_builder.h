@@ -30,6 +30,13 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       bool is_kernel,
       bool is_periodic,
       const StencilIndexList *sil);
+
+  virtual SgExpression *BuildGridArrayMemberOffset(
+    SgExpression *gvref,
+    GridType *gt,
+    const string &member_name,
+    const SgExpressionVector &array_indices);
+
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
       GridType *gt,      
@@ -45,25 +52,48 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       bool is_kernel,
       bool is_periodic,
       const string &member_name);
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name,
+      const SgExpressionVector &array_indices);
+
+  //! Build code for grid emit.
+  /*!
+    \param attr GridEmit attribute
+    \param gt GridType of the grid
+    \param offset_exprs offset expressions
+    \param emit_val Value to emit
+    \return Expression implementing the emit.
+   */
+  virtual SgExpression *BuildGridEmit(
+      GridEmitAttribute *attr,
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val);
   
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridNewForUserType(
+  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridFreeForUserType(
+  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyinForUserType(
+  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyoutForUserType(
+  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridGetForUserType(
+  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
       GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridEmitForUserType(
+  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
       GridType *gt);
   
  protected:
-  virtual SgFunctionDeclaration *BuildGridCopyForUserType(
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       GridType *gt, bool is_copyout);
 };
 

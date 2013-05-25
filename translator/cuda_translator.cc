@@ -16,6 +16,7 @@
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"
 #include "translator/cuda_builder.h"
+#include "translator/stencil_analysis.h"
 
 namespace pu = physis::util;
 namespace sb = SageBuilder;
@@ -152,21 +153,46 @@ void CUDATranslator::TranslateKernelDeclaration(
 
 void CUDATranslator::Visit(SgExpression *node) {
   // Replace get(g, offset).x with g->x[offset]
-  SgDotExp *dot = isSgDotExp(node);
-  if (dot == NULL) return;
-  SgExpression *lhs = dot->get_lhs_operand();
-  GridGetAttribute *gga =
-      rose_util::GetASTAttribute<GridGetAttribute>(lhs);
-  if (gga == NULL) return;
-  TranslateGetForUserDefinedType(dot);
+  if (isSgDotExp(node)) {
+    SgDotExp *dot = isSgDotExp(node);
+    SgExpression *lhs = dot->get_lhs_operand();
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(lhs);
+    if (gga == NULL) return;
+    TranslateGetForUserDefinedType(dot, NULL);
+  }
+  SgPntrArrRefExp *par = isSgPntrArrRefExp(node);
+  while (par) {
+    if (isSgPntrArrRefExp(par->get_parent())) return;
+    SgExpression *lhs = par->get_lhs_operand();
+    if (isSgPntrArrRefExp(lhs)) {
+      par = isSgPntrArrRefExp(lhs);
+      continue;
+    }
+    if (isSgDotExp(lhs)) {
+      SgDotExp *dot = isSgDotExp(lhs);
+      SgExpression *dot_lhs = dot->get_lhs_operand();
+      GridGetAttribute *gga =
+          rose_util::GetASTAttribute<GridGetAttribute>(dot_lhs);
+      if (gga == NULL) return;
+      TranslateGetForUserDefinedType(dot, isSgPntrArrRefExp(node));
+      return;
+    }
+    break;
+  }
+  
   return;
 }
 
 void CUDATranslator::TranslateGetForUserDefinedType(
-    SgDotExp *node) {
+    SgDotExp *node, SgPntrArrRefExp *array_top) {
   SgVarRefExp *mem_ref =
       isSgVarRefExp(node->get_rhs_operand());
   PSAssert(mem_ref);
+  if (isSgPntrArrRefExp(node->get_parent()) &&
+      array_top == NULL) {
+    return;
+  }
   GridGetAttribute *gga =
       rose_util::GetASTAttribute<GridGetAttribute>(
           node->get_lhs_operand());
@@ -180,17 +206,37 @@ void CUDATranslator::TranslateGetForUserDefinedType(
   }
   GridType *gt = rose_util::GetASTAttribute<GridType>(
       gga->gv());
-  SgExpression *get =
-      rt_builder_->BuildGridGet(
-          sb::buildVarRefExp(gga->gv()->get_name()),
-          gt, &args,
-          gga->GetStencilIndexList(),
-          gga->in_kernel(), gga->is_periodic(),
-          mem_name);
-  rose_util::GetASTAttribute<GridGetAttribute>(get)->
+  SgExpression *original = node;
+  SgExpression *new_get = NULL;
+  // Member is an array
+  if (array_top == NULL) {
+    new_get = 
+        rt_builder_->BuildGridGet(
+            sb::buildVarRefExp(gga->gv()->get_name()),
+            gt, &args,
+            gga->GetStencilIndexList(),
+            gga->in_kernel(), gga->is_periodic(),
+            mem_name);
+  } else {    
+    SgExpressionVector indices;
+    SgExpression *parent;
+    PSAssert(AnalyzeGetArrayMember(node, indices, parent));
+    rose_util::ReplaceWithCopy(indices);
+    PSAssert(array_top == parent);
+    original = parent;
+    new_get = 
+        rt_builder_->BuildGridGet(
+            sb::buildVarRefExp(gga->gv()->get_name()),
+            gt, &args,
+            gga->GetStencilIndexList(),
+            gga->in_kernel(), gga->is_periodic(),
+            mem_name,
+            indices);
+  }
+  rose_util::GetASTAttribute<GridGetAttribute>(new_get)->
       SetGridVar(gga->gv());
   // Replace the parent expression
-  si::replaceExpression(node, get);
+  si::replaceExpression(original, new_get);
   return;  
 }
 
@@ -227,8 +273,6 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
 
   // build a function call to gt->aux_emit_decl(g, offset, v)
   int nd = gt->getNumDim();
-  StencilIndexList sil;
-  StencilIndexListInitSelf(sil, nd);  
   SgExpressionPtrList args;
   SgInitializedNamePtrList &params =
       getContainingFunction(node)->get_args();  
@@ -236,29 +280,13 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
     SgInitializedName *p = params[i];
     args.push_back(sb::buildVarRefExp(p));
   }
-  SgExpression *offset = rt_builder_->BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()),
-      nd, &args, true, false, &sil);
 
   SgExpression *v =
       si::copyExpression(node->get_args()->get_expressions().back());
   
-  SgExpression *real_exp = NULL;
-  if (attr->is_member_access()) {
-    real_exp =
-        sb::buildAssignOp(
-            sb::buildPntrArrRefExp(
-                sb::buildArrowExp(sb::buildVarRefExp(gv->get_name()),
-                                  sb::buildVarRefExp(attr->member_name())),
-                offset),
-            v);
-  } else {
-    real_exp =
-        sb::buildFunctionCallExp(
-            sb::buildFunctionRefExp(gt->aux_emit_decl()),
-            sb::buildExprListExp(sb::buildVarRefExp(gv->get_name()),
-                                 offset, v));
-  }
+  SgExpression *real_exp = 
+      rt_builder_->BuildGridEmit(attr, gt, &args, v);
+  
   si::replaceExpression(node, real_exp);
 
   if (!is_grid_type_specific_call) {
@@ -479,40 +507,40 @@ void CUDATranslator::ProcessUserDefinedPointType(
   // Build GridNew for this type
   SgFunctionDeclaration *new_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridNewForUserType(gt);
+      BuildGridNewFuncForUserType(gt);
   si::insertStatementAfter(type_decl, new_decl);
   gt->aux_new_decl() = new_decl;
   // Build GridFree for this type
   SgFunctionDeclaration *free_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridFreeForUserType(gt);
+      BuildGridFreeFuncForUserType(gt);
   si::insertStatementAfter(new_decl, free_decl);
   gt->aux_free_decl() = free_decl;
 
   // Build GridCopyin for this type
   SgFunctionDeclaration *copyin_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridCopyinForUserType(gt);
+      BuildGridCopyinFuncForUserType(gt);
   si::insertStatementAfter(free_decl, copyin_decl);
   gt->aux_copyin_decl() = copyin_decl;
 
   // Build GridCopyout for this type
   SgFunctionDeclaration *copyout_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridCopyoutForUserType(gt);
+      BuildGridCopyoutFuncForUserType(gt);
   si::insertStatementAfter(copyin_decl, copyout_decl);
   gt->aux_copyout_decl() = copyout_decl;
 
   // Build GridGet for this type
   SgFunctionDeclaration *get_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridGetForUserType(gt);
+      BuildGridGetFuncForUserType(gt);
   si::insertStatementAfter(copyout_decl, get_decl);
   gt->aux_get_decl() = get_decl;
 
   SgFunctionDeclaration *emit_decl =
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridEmitForUserType(gt);
+      BuildGridEmitFuncForUserType(gt);
   si::insertStatementAfter(get_decl, emit_decl);
   gt->aux_emit_decl() = emit_decl;
   return;

@@ -46,6 +46,30 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       bool is_kernel,
       bool is_periodic,
       const string &member_name);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name,
+      const SgExpressionVector &array_indices);
+
+  //! Build code for grid emit.
+  /*!
+    \param attr GridEmit attribute
+    \param gt GridType of the grid
+    \param offset_exprs offset expressions
+    \param emit_val Value to emit
+    \return Expression implementing the emit.
+   */
+  virtual SgExpression *BuildGridEmit(
+      GridEmitAttribute *attr,
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val);
   
   
   //!

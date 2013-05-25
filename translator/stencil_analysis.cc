@@ -263,6 +263,20 @@ static SgInitializedName *FindInitializedName(const string &name,
   return vs->get_declaration();
 }
 
+static void AnalyzeArrayOffsets(string s,
+                                vector<string> &offsets) {
+  LOG_DEBUG() << "Anayzing offset string: " << s << "\n";
+  size_t i = 0;
+  while (s[i] == '[') {
+    size_t p = s.find_first_of(']', i);
+    string x = s.substr(i+1, p-i-1);
+    offsets.push_back(x);
+    LOG_DEBUG() << "offset: " << x << "\n";
+    i = p+1;
+  }
+  return;
+}
+
 static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
   SgExpression *emit_arg = fc->get_args()->get_expressions()[0];
   LOG_DEBUG() << "Emit arg: " << emit_arg->unparseToString() << "\n";
@@ -285,12 +299,24 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
       PSAbort(1);
     }
     LOG_DEBUG() << "User type emit\n";
-    string member_name = emit_str.substr(dot_pos+1);
-    LOG_DEBUG() << "member name: " << member_name << "\n";
     SgInitializedName *gv = FindInitializedName(
         emit_str.substr(0, dot_pos), kernel);
     PSAssert(gv);
-    attr = new GridEmitAttribute(gv, member_name);
+    string member_name = emit_str.substr(dot_pos+1);
+    size_t array_offset_pos = member_name.find_first_of('[');
+    if (array_offset_pos != string::npos) {
+      LOG_DEBUG() << "Element is an array\n";
+      string offset_str = member_name.substr(array_offset_pos);
+      member_name = member_name.substr(0, array_offset_pos);
+      LOG_DEBUG() << "member name: " << member_name << "\n";
+      vector<string> offsets;
+      AnalyzeArrayOffsets(offset_str, offsets);
+      attr = new GridEmitAttribute(gv, member_name, offsets);
+      LOG_DEBUG() << "Number of dimensions: " << offsets.size() << "\n";
+    } else {
+      LOG_DEBUG() << "member name: " << member_name << "\n";
+      attr = new GridEmitAttribute(gv, member_name);
+    }
   }
   return attr;
 }
@@ -316,6 +342,23 @@ void AnalyzeEmit(SgFunctionDeclaration *func) {
                 << fc->unparseToString() << "\n";
     rose_util::AddASTAttribute(fc, attr);
   }
+}
+
+bool AnalyzeGetArrayMember(SgDotExp *get, SgExpressionVector &indices,
+                           SgExpression *&parent) {
+  bool ret = false;
+  SgNode *p = get->get_parent();
+  while (isSgPntrArrRefExp(p)) {
+    ret = true;
+    parent = isSgExpression(p);
+    SgExpression *idx = isSgPntrArrRefExp(p)->get_rhs_operand();
+    LOG_DEBUG() << "Array member index: "
+                << idx->unparseToString() << "\n";
+    indices.push_back(idx);
+    p = p->get_parent();
+  }
+  
+  return ret;
 }
 
 } // namespace translator

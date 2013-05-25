@@ -254,6 +254,33 @@ SgType *GetType(SgVariableDeclaration *decl);
 SgName GetName(SgVariableDeclaration *decl);
 SgName GetName(const SgVarRefExp *decl);
 
+SgExpression *ParseString(const string &s);
+
+template <class T>
+bool GetIntLikeVal(SgExpression *v, T &x) {
+  if (isSgIntVal(v)) {
+    x = (T)(isSgIntVal(v)->get_value());
+  } else if (isSgUnsignedIntVal(v)) {
+    x = (T)(isSgUnsignedIntVal(v)->get_value());
+  } else if (isSgLongIntVal(v)) {
+    x = (T)(isSgLongIntVal(v)->get_value());
+  } else if (isSgUnsignedLongVal(v)) {
+    x = (T)(isSgUnsignedLongVal(v)->get_value());
+  } else if (isSgLongLongIntVal(v)) {
+    x = (T)(isSgLongLongIntVal(v)->get_value());
+  } else if (isSgUnsignedLongLongIntVal(v)) {
+    x = (T)(isSgUnsignedLongLongIntVal(v)->get_value());
+  } else {
+    LOG_DEBUG() << "Not an int like value: "
+                << v->unparseToString() << "\n";
+    return false;
+  }
+  return true;
+}
+
+void ReplaceWithCopy(SgExpressionVector &ev);
+  
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis
