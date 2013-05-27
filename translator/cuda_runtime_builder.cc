@@ -642,11 +642,8 @@ void AppendArrayTranspose(
             sb::buildMultiplyOp(sb::buildVarRefExp(num_elms_decl),
                                 sb::buildIntVal(i)));
     SgExpression *soa_elm =
-        sb::buildPntrArrRefExp(
-            sb::buildCastExp(
-                si::copyExpression(soa_exp),
-                sb::buildPointerType(elm_type)),
-            soa_index);
+        sb::buildPntrArrRefExp(si::copyExpression(soa_exp),
+                               soa_index);
     si::appendStatement(
           sb::buildAssignStatement(
               soa_to_aos ? aos_elm : soa_elm,
@@ -671,30 +668,26 @@ void AppendTranspose(SgBasicBlock *scope,
         isSgVariableDeclaration(*member);
     SgType *member_type = rose_util::GetType(member_decl);
     const string member_name = rose_util::GetName(member_decl);
+    // si::getArrayElementType returns type T if T is non-array type.
+    SgExpression *soa_elm =
+        sb::buildCastExp(
+            sb::buildPntrArrRefExp(
+                sb::buildVarRefExp(soa_decl),
+                sb::buildIntVal(i)),
+            sb::buildPointerType(si::getArrayElementType(member_type)));
+    SgExpression *aos_elm = sb::buildDotExp(
+        sb::buildPntrArrRefExp(
+            sb::buildVarRefExp(aos_decl),
+            sb::buildVarRefExp(loop_counter)),
+        sb::buildVarRefExp(member_name));
     if (isSgArrayType(member_type)) {
-      AppendArrayTranspose(scope,
-                           sb::buildPntrArrRefExp(
-                               sb::buildVarRefExp(soa_decl),
-                               sb::buildIntVal(i)),
-                           sb::buildDotExp(
-                               sb::buildPntrArrRefExp(
-                                   sb::buildVarRefExp(aos_decl),
-                                   sb::buildVarRefExp(loop_counter)),
-                               sb::buildVarRefExp(member_name)),
+      AppendArrayTranspose(scope, soa_elm,  aos_elm,
                            soa_to_aos, loop_counter,
                            num_elms_decl, isSgArrayType(member_type));
     } else {
-      SgExpression *aos_elm =
-          sb::buildDotExp(
-              sb::buildVarRefExp(aos_decl),
-              sb::buildVarRefExp(member_name));
-      SgExpression *soa_elm =
+      soa_elm =
           sb::buildPntrArrRefExp(
-              sb::buildCastExp(
-                  sb::buildPntrArrRefExp(
-                      sb::buildVarRefExp(soa_decl),
-                      sb::buildIntVal(i)),
-                  member_type),
+              soa_elm,
               sb::buildVarRefExp(loop_counter));
       si::appendStatement(
           sb::buildAssignStatement(
@@ -929,7 +922,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
   if (has_array_type) {
     si::insertStatementAfter(v_decl, num_elms_decl);
   } else {
-    si::removeStatement(num_elms_decl);
+    si::deleteAST(num_elms_decl);
   }
   
   // return v;
@@ -1016,7 +1009,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
   if (has_array_type) {
     si::prependStatement(num_elms_decl, body);
   } else {
-    si::removeStatement(num_elms_decl);
+    si::deleteAST(num_elms_decl);
   }
 
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
