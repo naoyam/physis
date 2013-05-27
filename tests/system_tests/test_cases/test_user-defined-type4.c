@@ -1,7 +1,7 @@
 /*
  * TEST: Run stencil on a user-defined type
  * DIM: 3
- * PRIORITY: 2
+ * PRIORITY: 1
  */
 
 #include <stdio.h>
