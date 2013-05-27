@@ -625,7 +625,6 @@ void AppendArrayTranspose(
     SgInitializedName *loop_counter,
     SgVariableDeclaration *num_elms_decl,
     SgArrayType *member_type) {
-
   
   int len = si::getArrayElementCount(member_type);
   SgType *elm_type = si::getArrayElementType(member_type);
@@ -671,21 +670,24 @@ void AppendTranspose(SgBasicBlock *scope,
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
     SgType *member_type = rose_util::GetType(member_decl);
+    const string member_name = rose_util::GetName(member_decl);
     if (isSgArrayType(member_type)) {
       AppendArrayTranspose(scope,
                            sb::buildPntrArrRefExp(
                                sb::buildVarRefExp(soa_decl),
                                sb::buildIntVal(i)),
-                           sb::buildArrowExp(
-                               sb::buildVarRefExp(aos_decl),
-                               sb::buildVarRefExp(rose_util::GetName(member_decl))),
+                           sb::buildDotExp(
+                               sb::buildPntrArrRefExp(
+                                   sb::buildVarRefExp(aos_decl),
+                                   sb::buildVarRefExp(loop_counter)),
+                               sb::buildVarRefExp(member_name)),
                            soa_to_aos, loop_counter,
                            num_elms_decl, isSgArrayType(member_type));
     } else {
       SgExpression *aos_elm =
           sb::buildDotExp(
               sb::buildVarRefExp(aos_decl),
-              sb::buildVarRefExp(rose_util::GetName(member_decl)));
+              sb::buildVarRefExp(member_name));
       SgExpression *soa_elm =
           sb::buildPntrArrRefExp(
               sb::buildCastExp(
@@ -1030,6 +1032,11 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
     SgExpression *emit_val) {
+
+  if (gt->IsPrimitivePointType()) {
+    return ReferenceRuntimeBuilder::BuildGridEmit(
+        attr, gt, offset_exprs, emit_val);
+  }
 
   SgInitializedName *gv = attr->gv();  
   
