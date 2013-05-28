@@ -82,6 +82,10 @@ static void insert_base_offset(SgBasicBlock *loop_body,
       decls.push_back(d);
     }
   }
+
+  FOREACH (it, decls.begin(), decls.end()) {
+    LOG_DEBUG() << "Decl: " << (*it)->unparseToString() << "\n";
+  }
   
   // Advance all variables are found
   SgStatement *loop_body_stmt = loop_body->get_statements()[0];
@@ -284,6 +288,7 @@ static GridOffsetMap find_candidates(SgForStatement *loop) {
         rose_util::GetASTAttribute<GridOffsetAttribute>(offset_expr);
     PSAssert(attr);
     string gv = attr->gvexpr()->unparseToString();
+    LOG_DEBUG() << "gv: " << gv << "\n";
     if (!isContained(ggm, gv)) {
       ggm.insert(std::make_pair(gv, SgExpressionVector()));
     }

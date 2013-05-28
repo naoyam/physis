@@ -42,6 +42,8 @@ static void FixGridOffsetAttributeInlined(SgBinaryOp *offset_exp,
 }
 
 void FixGridOffsetAttribute(SgExpression *offset_exp) {
+  LOG_DEBUG() << "Fix grid offset attribute: "
+              << offset_exp->unparseToString() << "\n";
   GridOffsetAttribute *goa =
       rose_util::GetASTAttribute<GridOffsetAttribute>(offset_exp);
   if (!goa) {
@@ -102,12 +104,6 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   gga->UpdateGridVar(
       new_grid->get_symbol()->get_declaration());
   
-  // NOTE: new_offset does not have offset attribute if it is, for
-  // example, a reference to a variable.
-  if (new_offset != NULL &&
-      rose_util::GetASTAttribute<GridOffsetAttribute>(new_offset)) {
-    FixGridOffsetAttribute(new_offset);
-  }
   //LOG_DEBUG() << "Fixed GridGetAttribute\n";
   return;
 }
@@ -119,12 +115,18 @@ void FixGridAttributes(
   FOREACH(it, exps.begin(), exps.end()) {
     SgExpression *exp = isSgExpression(*it);
     PSAssert(exp);
-    
-    // Traverse only GridGet
     GridGetAttribute *gga =
         rose_util::GetASTAttribute<GridGetAttribute>(exp);
-    if (!gga) continue;
-    FixGridGetAttribute(exp);
+    if (gga) {
+      FixGridGetAttribute(exp);
+      continue;
+    }
+    GridOffsetAttribute *goa =
+        rose_util::GetASTAttribute<GridOffsetAttribute>(exp);
+    if (goa) {
+      FixGridOffsetAttribute(exp);
+      continue;
+    }
   }
  
   return;
