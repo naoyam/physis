@@ -127,8 +127,12 @@ bool ValidatePointMemberType(SgType *t) {
   if (isSgArrayType(t)) {
     return ValidatePointMemberType(isSgArrayType(t)->get_base_type());
   }
+  if (isSgTypedefType(t)) {
+    return ValidatePointMemberType(isSgTypedefType(t)->get_base_type());
+  }
   if (!(isSgTypeFloat(t) ||
         isSgTypeDouble(t))) {
+    LOG_DEBUG() << "Invalid member type: " << t->unparseToString() << "\n";
     return false;
   }
   return true;
