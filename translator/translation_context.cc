@@ -494,8 +494,8 @@ SgVarRefExp *TranslationContext::IsCopyout(
 static bool IsBuiltInFunction(const string &func_name) {
   // TODO: more complete support for builtin math functions
   string buildin_functions[] = {
-    "exp", "expf", "log", "pow", "sqrt", "cos", "cosf",
-    "sin", "sinf", "acos", "acosf"};
+    "exp", "expf", "log", "powf", "pow", "sqrtf", "sqrt", "cos", "cosf",
+    "sin", "sinf", "acos", "acosf", "fabs", "fabsf"};
   int num_functions = sizeof(buildin_functions) / sizeof(string);
   LOG_DEBUG() << "num_functions: " << num_functions << "\n";
   return std::find(buildin_functions, buildin_functions + num_functions,
