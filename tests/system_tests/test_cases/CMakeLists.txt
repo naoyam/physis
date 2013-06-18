@@ -23,7 +23,7 @@ add_executable(test_user-defined-type1.manual.ref.exe
 add_executable(test_user-defined-type3.manual.ref.exe
   test_user-defined-type3.manual.ref.c)
 
-if (CUDA_RUNTIME_ENABLED)
+if (CUDA_FOUND)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
   cuda_add_executable(test_05.manual.cuda.exe test_05.manual.cuda.cu)  
   cuda_add_executable(test_07.manual.cuda.exe test_07.manual.cuda.cu)
