@@ -51,4 +51,6 @@ if (CUDA_FOUND)
     test_user-defined-type1.manual.cuda.cu)
   cuda_add_executable(test_user-defined-type3.manual.cuda.exe
     test_user-defined-type3.manual.cuda.cu)
+  cuda_add_executable(test_redblack.manual.cuda.exe
+    test_redblack.manual.cuda.cu)
 endif ()

@@ -8,21 +8,21 @@
 #define OFFSET(x, y, z) ((x) + (y) * N + (z) * N * N)
 
 __global__ void kernel(REAL *g, int rb) {
-   int x = threadIdx.x + blockIdx.x * blockDim.x;
-   int y = threadIdx.y + blockIdx.y * blockDim.y;
-   int z = threadIdx.z + blockIdx.z * blockDim.z;
+  int x = threadIdx.x + blockIdx.x * blockDim.x;
+  int y = threadIdx.y + blockIdx.y * blockDim.y;
+  int z = threadIdx.z + blockIdx.z * blockDim.z;
 
-   x = x * 2 + (y + z + rb) % 2;
+  x = x * 2 + (y + z + rb) % 2;
 
-   if (x == 0 || x == N-1 || y == 0 || y == N-1 ||
-       z == 0 || z == N-1) return;
+  if (x == 0 || x == N-1 || y == 0 || y == N-1 ||
+      z == 0 || z == N-1) return;
   
-   float v = g[OFFSET(x, y, z)] +
-       g[OFFSET(x+1, y, z)] + g[OFFSET(x-1, y, z)] +
-       g[OFFSET(x, y+1, z)] + g[OFFSET(x, y-1, z)] +
-       g[OFFSET(x, y, z-1)] + g[OFFSET(x, y, z+1)];
-   g[OFFSET(x, y, z)] = v;
-   return;
+  float v = g[OFFSET(x, y, z)] +
+      g[OFFSET(x+1, y, z)] + g[OFFSET(x-1, y, z)] +
+      g[OFFSET(x, y+1, z)] + g[OFFSET(x, y-1, z)] +
+      g[OFFSET(x, y, z-1)] + g[OFFSET(x, y, z+1)];
+  g[OFFSET(x, y, z)] = v;
+  return;
 }
 
 void dump(float *input) {
