@@ -17,7 +17,7 @@ namespace translator {
 
 // BuildRunBody:
 // Genereate the skeleton of loop for iteration
-void OpenCLTranslator::GenerateRunBody(
+void OpenCLTranslator::BuildRunBody(
     SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func)
 {
   // declare "int i" in the block;

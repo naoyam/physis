@@ -119,7 +119,7 @@ class CUDATranslator : public ReferenceTranslator {
     \param run The stencil run object.
     \param run_func The run function.
    */
-  virtual void GenerateRunBody(
+  virtual void BuildRunBody(
       SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   //! Generates a basic block of the run loop body.
   /*!

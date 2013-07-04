@@ -54,8 +54,8 @@ class MPIOpenCLTranslator: public MPITranslator {
                                  SgVariableDeclaration *dec_local_size,
                                  SgVariableDeclaration *argc_idx
                                  );
-  virtual void GenerateRunBody(SgBasicBlock *block, Run *run,
-                               SgFunctionDeclaration *run_func);
+  virtual void BuildRunBody(SgBasicBlock *block, Run *run,
+                            SgFunctionDeclaration *run_func);
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   //! Generates a OpenCL function declaration that runs a stencil map. 
   /*!

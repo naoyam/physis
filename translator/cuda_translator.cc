@@ -345,7 +345,7 @@ SgExpression *CUDATranslator::BuildBlockDimZ() {
   return sb::buildIntVal(block_dim_z_);
 }
 
-void CUDATranslator::GenerateRunBody(
+void CUDATranslator::BuildRunBody(
     SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func) {
   // int i;
   SgVariableDeclaration *loop_index =

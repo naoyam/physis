@@ -78,8 +78,8 @@ class OpenCLTranslator : public ReferenceTranslator {
 
 
  protected:
-  virtual void GenerateRunBody(SgBasicBlock *block, Run *run,
-                               SgFunctionDeclaration *run_func);
+  virtual void BuildRunBody(SgBasicBlock *block, Run *run,
+                            SgFunctionDeclaration *run_func);
  public:
   virtual SgBasicBlock *block_setkernelarg(
       SgVariableDeclaration *argc_idx,
