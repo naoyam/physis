@@ -196,6 +196,11 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
       rose_util::GetASTAttribute<GridOffsetAttribute>(rhs);
   const StencilIndexList *sil = offset_attr->GetStencilIndexList();
   PSAssert(sil);
+  RunKernelAttribute *rk_attr =
+      rose_util::GetASTAttribute<RunKernelAttribute>(
+          si::getEnclosingFunctionDeclaration(loop));
+  PSAssert(rk_attr);
+  bool rb = rk_attr->stencil_map()->IsRedBlack() && loop_attr->dim() == 1;
   // if the access is periodic, the offset is:
   // (i + 1 + n) % n - ((i + n)% n)
   if (offset_attr->periodic()) {
@@ -210,7 +215,8 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
     SgExpression *e =
         sb::buildModOp(
             sb::buildAddOp(
-                sb::buildAddOp(offset_expr, sb::buildIntVal(1)),
+                sb::buildAddOp(offset_expr,
+                               sb::buildIntVal(rb? 2 : 1)),
                 builder->BuildGridDim(
                     si::copyExpression(grid_ref), loop_attr->dim())),
             builder->BuildGridDim(
@@ -226,7 +232,10 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
                 si::copyExpression(grid_ref), loop_attr->dim())));
     increment = increment? sb::buildMultiplyOp(increment, e) : e;
   }
-  if (!increment) increment = sb::buildIntVal(1);  
+  // loop over the unit-stride dimension
+  if (!increment) {
+    increment = sb::buildIntVal(rb ? 2: 1);
+  }
   PSAssert(offset_attr);
   SgStatement *stmt =
       sb::buildExprStatement(

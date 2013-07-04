@@ -609,6 +609,16 @@ void register_blocking(
     LOG_DEBUG() << "Loop dimension: " << loop_attr->dim() << "\n";
     SgFunctionDeclaration *run_kernel_func =
         si::getEnclosingFunctionDeclaration(target_loop);
+    RunKernelAttribute *run_kernel_attr =
+        rose_util::GetASTAttribute<RunKernelAttribute>(run_kernel_func);
+    // Do not apply the optimization if this loop is the dimension
+    // with stride-1 access for the red-black ordering
+    if (loop_attr->dim() == 1 &&
+        run_kernel_attr->stencil_map()->IsRedBlack()) {
+      LOG_DEBUG() << "Register blocking not applied for the red-black stride access loop\n";
+      continue;
+    }
+        
     DoRegisterBlocking(proj, tx, builder, run_kernel_func,
                        target_loop);
   }

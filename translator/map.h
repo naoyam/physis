@@ -113,7 +113,12 @@ class StencilMap {
   /*!
     \param gv Grid param name.
   */
-  void SetGridPeriodic(SgInitializedName *gv);  
+  void SetGridPeriodic(SgInitializedName *gv);
+
+  //! Returns true if red-black stencil is used.
+  bool IsRedBlack() const {
+    return type_ == kRedBlack;
+  }
 
  protected:
   Type type_;

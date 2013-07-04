@@ -22,6 +22,8 @@ add_executable(test_user-defined-type1.manual.ref.exe
   test_user-defined-type1.manual.ref.c)
 add_executable(test_user-defined-type3.manual.ref.exe
   test_user-defined-type3.manual.ref.c)
+add_executable(test_redblack.manual.ref.exe
+  test_redblack.manual.ref.c)
 
 if (CUDA_FOUND)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  

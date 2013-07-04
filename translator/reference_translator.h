@@ -100,11 +100,11 @@ class ReferenceTranslator : public Translator {
   //! A helper function for BuildRunKernel.
   /*!
     \param s The stencil map object.
-    \param stencil_param 
+    \param param Parameter list of the run function
     \return The body of the run function.
    */
   virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *s, SgInitializedName *stencil_param);
+      StencilMap *s, SgFunctionParameterList *param);
   virtual void appendGridSwap(StencilMap *mc, const string &stencil,
                               bool is_stencil_ptr,
                               SgScopeStatement *scope);
