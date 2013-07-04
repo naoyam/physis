@@ -94,6 +94,7 @@ extern "C" {
   extern PSIndex PSGridDim(void *g, int d);
   typedef int PSStencil;
   extern PSStencil PSStencilMap(void *, ...);
+  extern PSStencil PSStencilMapRB(void *, ...);  
   extern void PSStencilRun(PSStencil, ...);
 
   extern void PSReduce(void *v, ...);

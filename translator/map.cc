@@ -10,6 +10,7 @@
 #include "translator/rose_util.h"
 #include "translator/grid.h"
 #include "translator/translation_context.h"
+#include "translator/physis_names.h"
 
 namespace physis {
 namespace translator {
@@ -17,7 +18,8 @@ namespace translator {
 Counter StencilMap::c;
 
 StencilMap::StencilMap(SgFunctionCallExp *call, TranslationContext *tx)
-    :id(StencilMap::c.next()) , stencil_type_(NULL), func(NULL),
+    : id(StencilMap::c.next()) , stencil_type_(NULL),
+      func(NULL),
      run_(NULL), run_inner_(NULL), run_boundary_(NULL),
      fc_(call) {
   kernel = StencilMap::getKernelFromMapCall(fc_);
@@ -40,8 +42,17 @@ StencilMap::StencilMap(SgFunctionCallExp *call, TranslationContext *tx)
     }
     ++param_index;
   }
+  type_ = AnalyzeType(call);
 }
 
+StencilMap::Type StencilMap::AnalyzeType(SgFunctionCallExp *call) {
+  string map_name = rose_util::getFuncName(call);
+  if (map_name == PS_STENCIL_MAP_RB_NAME) {
+    return StencilMap::kRedBlack;
+  } else {
+    return StencilMap::kNormal;
+  }
+}
 
 SgExpression *StencilMap::getDomFromMapCall(SgFunctionCallExp *call) {
   SgExpressionPtrList &args = call->get_args()->get_expressions();
@@ -79,7 +90,8 @@ bool StencilMap::isMap(SgFunctionCallExp *call) {
   SgFunctionRefExp *f = isSgFunctionRefExp(call->get_function());
   if (!f) return false;
   SgName name = f->get_symbol()->get_name();
-  return name == MAP_NAME;
+  return name == PS_STENCIL_MAP_NAME ||
+      name == PS_STENCIL_MAP_RB_NAME;
 }
 
 std::string GridRangeMapToString(GridRangeMap &gr) {

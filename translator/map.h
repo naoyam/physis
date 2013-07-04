@@ -15,8 +15,6 @@
 #include "translator/grid.h"
 #include "physis/physis_util.h"
 
-#define MAP_NAME ("PSStencilMap")
-
 namespace physis {
 namespace translator {
 
@@ -34,9 +32,12 @@ std::string GridRangeMapToString(GridRangeMap &gr);
 
 class StencilMap {
  public:
+  enum Type {kNormal, kRedBlack};
+  
   StencilMap(SgFunctionCallExp *call, TranslationContext *tx);
 
   static bool isMap(SgFunctionCallExp *call);
+  static Type AnalyzeType(SgFunctionCallExp *call);
   static SgFunctionDeclaration *getKernelFromMapCall(SgFunctionCallExp *call);
   static SgExpression *getDomFromMapCall(SgFunctionCallExp *call);
 
@@ -115,6 +116,7 @@ class StencilMap {
   void SetGridPeriodic(SgInitializedName *gv);  
 
  protected:
+  Type type_;
   SgExpression *dom;
   int numDim;
   int id;
@@ -138,6 +140,7 @@ class StencilMap {
   SgInitializedNamePtrList grid_params_;  
   SgFunctionCallExp *fc_;
   std::set<SgInitializedName*> grid_periodic_set_;
+  
 
  private:
   // NOTE: originally dimenstion is added to names, but it is probably

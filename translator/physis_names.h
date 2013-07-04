@@ -8,6 +8,8 @@
 
 #define PS_GRID_EMIT_NAME "emit"
 #define PS_GRID_EMIT_UTYPE_NAME "__PSGridEmitUtype"
+#define PS_STENCIL_MAP_NAME "PSStencilMap"
+#define PS_STENCIL_MAP_RB_NAME "PSStencilMapRB"
 
 #endif /* PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_ */
 
