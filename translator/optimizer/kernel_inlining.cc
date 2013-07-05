@@ -52,19 +52,21 @@ static void RemoveUnusedLabel(SgProject *proj) {
   \param vref Variable reference
   \param loop_body Target loop 
  */
-static void replace_var_ref(SgVarRefExp *vref, SgBasicBlock *loop_body) {
+static SgVarRefExp *replace_var_ref(SgVarRefExp *vref, SgBasicBlock *loop_body) {
+  LOG_DEBUG() << "Replacing " << vref->unparseToString() << "\n";
   SgVariableDeclaration *vdecl = isSgVariableDeclaration(
       vref->get_symbol()->get_declaration()->get_declaration());
   vector<SgVariableDeclaration*> decls =
       si::querySubTree<SgVariableDeclaration>(loop_body, V_SgVariableDeclaration);
-  if (!isContained(decls, vdecl)) return;
-  if (!vdecl) return;
+  if (!isContained(decls, vdecl)) return NULL;
+  if (!vdecl) return NULL;
   SgAssignInitializer *init =
       isSgAssignInitializer(
           vdecl->get_definition()->get_vardefn()->get_initializer());
-  if (!init) return;
+  if (!init) return NULL;
   SgExpression *rhs = init->get_operand();
   LOG_DEBUG() << "RHS: " << rhs->unparseToString() << "\n";
+  PSAssert(isSgVarRefExp(rhs));
   std::vector<SgVarRefExp*> vref_exprs =
       si::querySubTree<SgVarRefExp>(loop_body, V_SgVarRefExp);
   FOREACH (it, vref_exprs.begin(), vref_exprs.end()) {
@@ -74,7 +76,7 @@ static void replace_var_ref(SgVarRefExp *vref, SgBasicBlock *loop_body) {
     }
   }
   si::removeStatement(vdecl);
-  return;
+  return isSgVarRefExp(rhs);
 }
 
 /*! Fix variable references in offset expression.
@@ -87,13 +89,15 @@ static void replace_var_ref(SgVarRefExp *vref, SgBasicBlock *loop_body) {
   \param loop_body Target loop body
 */
 static void replace_arg_defined_in_loop(SgExpression *offset_expr,
-                                        SgBasicBlock *loop_body) {
+                                        SgBasicBlock *loop_body,
+                                        set<SgName> &original_names) {
   LOG_DEBUG() << "Replacing undef var in "
               << offset_expr->unparseToString() << "\n";
   PSAssert(offset_expr != NULL && loop_body != NULL);
   SgFunctionCallExp *offset_call = isSgFunctionCallExp(offset_expr);
   PSAssert(offset_call);
   SgExpressionPtrList &args = offset_call->get_args()->get_expressions();
+
   //if (isSgVarRefExp(args[0])) {
   //replace_var_ref(isSgVarRefExp(args[0]), loop_body);
   //}
@@ -103,9 +107,20 @@ static void replace_arg_defined_in_loop(SgExpression *offset_expr,
         NodeQuery::querySubTree(arg, V_SgVarRefExp);
     if (vref_list.size() == 0) continue;
     PSAssert(vref_list.size() == 1);
-    replace_var_ref(isSgVarRefExp(vref_list[0]), loop_body);
+    if (isContained(
+            original_names,
+            rose_util::GetName(isSgVarRefExp(vref_list[0])))) {
+      // Already replaced. This is a reference to a variable that is
+      // defined in the loop instead of the kernel function.
+      continue;
+    }
+    SgVarRefExp *vr = replace_var_ref(isSgVarRefExp(vref_list[0]), loop_body);
+    if (vr) {
+      LOG_DEBUG() << "Replaced with " << vr->unparseToString() << "\n";
+      original_names.insert(rose_util::GetName(vr));
+    }
   }
-  LOG_DEBUG() << "Replaced: " << offset_expr->unparseToString() << "\n";
+  LOG_DEBUG() << "Result: " << offset_expr->unparseToString() << "\n";
   return;
 }
 
@@ -125,10 +140,12 @@ static void cleanup(SgFunctionCallExp *call_exp,
   std::vector<SgNode*> offset_exprs =
       rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
           loop);
+  set<SgName> original_names;  
   FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
     SgExpression *offset_expr = isSgExpression(*it);
     replace_arg_defined_in_loop(offset_expr,
-                                isSgBasicBlock(loop->get_loop_body()));
+                                isSgBasicBlock(loop->get_loop_body()),
+                                original_names);
   }
 }
 
