@@ -162,12 +162,16 @@ function clear_output()
 
 function abs_path()
 {
-    local path=$1
-    if [ $(expr substr $path 1 1) = '/' ]; then
-		echo $path
-    else
-		echo $ORIGINAL_WD/$path
-    fi
+    local paths=$1
+	local ap=""
+	for path in $paths; do 
+		if [ $(expr substr $path 1 1) = '/' ]; then
+			ap="$ap $path"
+		else
+			ap="$ap $ORIGINAL_WD/$path"
+		fi
+    done
+	echo $ap
 }
 
 function generate_empty_translation_configuration()
@@ -980,7 +984,7 @@ function get_module_base()
 				shift
 				;;
 			--config)
-				CONFIG_ARG=$(abs_path $2)
+				CONFIG_ARG=$(abs_path "$2")
 				shift 2
 				;;
 			--email)
