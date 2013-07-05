@@ -204,7 +204,7 @@ extern "C" {
   typedef void* cudaStream_t;
   typedef int cudaError_t;
   extern cudaError_t cudaThreadSynchronize(void);
-  extern cudaError_t cudaStreamSynchronize(cudaStream);
+  extern cudaError_t cudaStreamSynchronize(cudaStream_t);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
 #endif

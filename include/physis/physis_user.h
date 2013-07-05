@@ -93,10 +93,16 @@ extern "C" {
 
   extern PSIndex PSGridDim(void *g, int d);
   typedef int PSStencil;
-  extern PSStencil PSStencilMap(void *, ...);
-  extern PSStencil PSStencilMapRedBlack(void *, ...);
-  extern PSStencil PSStencilMapRed(void *, ...);
-  extern PSStencil PSStencilMapBlack(void *, ...);    
+  // explicit cast to void* is necessary to suppress compiler type
+  // mismatch warning in C++
+#define PSStencilMap(k, ...) __PSStencilMap((void*)k, __VA_ARGS__)
+  extern PSStencil __PSStencilMap(void *, ...);
+#define PSStencilMapRedBlack(k, ...) __PSStencilMapRedBlack((void*)k, __VA_ARGS__)
+  extern PSStencil __PSStencilMapRedBlack(void *, ...);
+#define PSStencilMapRed(k, ...) __PSStencilMapRed((void*)k, __VA_ARGS__)  
+  extern PSStencil __PSStencilMapRed(void *, ...);
+#define PSStencilMapBlack(k, ...) __PSStencilMapBlack((void*)k, __VA_ARGS__)  
+  extern PSStencil __PSStencilMapBlack(void *, ...);    
   extern void PSStencilRun(PSStencil, ...);
 
   extern void PSReduce(void *v, ...);

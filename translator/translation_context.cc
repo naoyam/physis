@@ -15,6 +15,7 @@
 #include "translator/rose_util.h"
 #include "translator/def_analysis.h"
 #include "translator/stencil_analysis.h"
+#include "translator/physis_names.h"
 
 using std::vector;
 using std::auto_ptr;
@@ -716,10 +717,11 @@ void TranslationContext::markReadWriteGrids() {
   }
 }
 #endif
+
 bool TranslationContext::IsInit(SgFunctionCallExp *call) const {
+  if (!isSgFunctionRefExp(call->get_function())) return false;
   const string &fname = rose_util::getFuncName(call);
-  //LOG_DEBUG() << "func name: " << fname << "\n";
-  return fname == "PSInit";
+  return fname == PS_INIT_NAME;
 }
 
 const GridSet *TranslationContext::findGrid(SgInitializedName *var) const {

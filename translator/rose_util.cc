@@ -88,7 +88,10 @@ string getFuncName(SgFunctionRefExp *fref) {
 string getFuncName(SgFunctionCallExp *call) {
   SgFunctionRefExp *fref = isSgFunctionRefExp(call->get_function());
   if (!fref) {
-    throw physis::translator::PhysisException("Non-direct function calls are not supported.");
+    LOG_ERROR() << "Non-direct function calls are not supported: "
+                << call->unparseToString()
+                << "\n";
+    PSAbort(1);
   }
   return getFuncName(fref);
 }

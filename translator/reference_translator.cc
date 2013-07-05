@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2013, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "translator/reference_translator.h"
 
@@ -541,7 +539,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
   for (int i = s->getNumDim()-1; i >= 0; --i) {
     SgVariableDeclaration *index_decl =         
         sb::buildVariableDeclaration(getLoopIndexName(i),
-                                     sb::buildUnsignedIntType());
+                                     sb::buildIntType());
     indices[i] = index_decl;
     si::appendStatement(index_decl, parent_block);
     rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(

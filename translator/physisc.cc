@@ -210,6 +210,13 @@ void set_output_filename(SgFile *file, string suffix) {
   return;
 }
 
+static string GetInputFileSuffix(SgProject *proj) {
+  SgFile *ifile = proj->get_fileList()[0];
+  string name = ifile->get_sourceFileNameWithoutPath();
+  string suffix = name.substr(name.rfind(".")+1);
+  return suffix;
+}
+
 static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
                                         CommandLineOptions &opts) {
   pt::RuntimeBuilder *builder = NULL;
@@ -409,6 +416,7 @@ static void SetDynamicLinkLib(
 
 int main(int argc, char *argv[]) {
   pt::Translator *trans = NULL;
+  string filename_target_suffix;
   string filename_suffix;
   string dl_filename_suffix;  /* dynamic link library source suffix */
   string extra_arg;
@@ -436,13 +444,13 @@ int main(int argc, char *argv[]) {
 
   if (opts.ref_trans) {
     trans = new pt::ReferenceTranslator(config);
-    filename_suffix = "ref.c";
+    filename_target_suffix = "ref";
     argvec.push_back("-DPHYSIS_REF");
   }
 
   if (opts.cuda_trans) {
     trans = new pt::CUDATranslator(config);
-    filename_suffix = "cuda.cu";
+    filename_target_suffix = "cuda";
     argvec.push_back("-DPHYSIS_CUDA");
     /* set dynamic link library source suffix */
     dl_filename_suffix = "cuda_dl.cu";
@@ -450,7 +458,7 @@ int main(int argc, char *argv[]) {
 
   if (opts.mpi_trans) {
     trans = new pt::MPITranslator(config);
-    filename_suffix = "mpi.c";
+    filename_target_suffix = "mpi";
     argvec.push_back("-DPHYSIS_MPI");
   }
 
@@ -463,7 +471,7 @@ int main(int argc, char *argv[]) {
 #ifdef MPI_CUDA_TRANSLATOR_ENABLED
   if (opts.mpi_cuda_trans) {
     trans = new pt::MPICUDATranslator(config);
-    filename_suffix = "mpi-cuda.cu";
+    filename_target_suffix = "mpi-cuda";
     argvec.push_back("-DPHYSIS_MPI_CUDA");
   }
 #endif
@@ -471,7 +479,7 @@ int main(int argc, char *argv[]) {
 #ifdef OPENCL_TRANSLATOR_ENABLED
   if (opts.opencl_trans) {
     trans = new pt::OpenCLTranslator(config);
-    filename_suffix = "opencl.c";
+    filename_target_suffix = "opencl";
     argvec.push_back("-DPHYSIS_OPENCL");
   }
 #endif
@@ -479,7 +487,7 @@ int main(int argc, char *argv[]) {
 #ifdef MPI_OPENCL_TRANSLATOR_ENABLED
   if (opts.mpi_opencl_trans) {
     trans = new pt::MPIOpenCLTranslator(config);
-    filename_suffix = "mpi-opencl.c";
+    filename_target_suffix = "mpi-opencl";
     argvec.push_back("-DPHYSIS_MPI_OPENCL");
   }
 #endif
@@ -494,7 +502,7 @@ int main(int argc, char *argv[]) {
   if (opts.mpi_openmp_numa_trans) {
     // Use the same MPIOpenMPTranslator
     trans = new pt::MPIOpenMPTranslator(config);
-    filename_suffix = "mpi-openmp-numa.c";
+    filename_target_suffix = "mpi-openmp-numa";
     argvec.push_back("-DPHYSIS_MPI_OPENMP");
     argvec.push_back("-DPHYSIS_MPI_OPENMP_NUMA");
   }
@@ -611,8 +619,15 @@ int main(int argc, char *argv[]) {
   
   trans->Finish();
   delete optimizer;
+
+  filename_suffix = pt::GetInputFileSuffix(proj);
+  if (opts.cuda_trans || opts.mpi_cuda_trans) {
+    filename_suffix = "cu";
+  }
   
-  pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
+  pt::set_output_filename(
+      proj->get_fileList()[0],
+      filename_target_suffix + "." + filename_suffix);
 
   int b = backend(proj);
   LOG_INFO() << "Code generation complete.\n";

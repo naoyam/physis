@@ -526,7 +526,7 @@ function get_exe_name()
 {
 	local src=$1
 	local target=$2
-	local src_file_base=${src%.c}.$target
+	local src_file_base=${src%.c*}.$target
 	if [ "$target" = "opencl" -o "$target" = "mpi-opencl" ]; then
 		echo $src_file_base
 	else
@@ -534,11 +534,35 @@ function get_exe_name()
 	fi
 }
 
+function get_suffix()
+{
+	local x=$1
+	echo ${x##*.}
+}
+
+function c_compile()
+{
+	local src=$1
+	case $src in
+		*.c)
+			cc $*
+			;;
+		*.cc)
+			c++ $*
+			;;
+		*)
+			print_error "Unknown source language."
+			return 1
+			;;
+	esac
+}
+
 function compile()
 {
     local src=$1
     local target=$2
-    local src_file_base=${src%.c}.$target
+	local input_suffix=$(get_suffix $src)
+    local src_file_base=${src%.c*}.$target
     if [ "@MPI_FOUND@" = "TRUE" ]; then
 		MPI_CFLAGS="-pthread"
 		OPENMP_CFLAGS="-fopenmp"
@@ -565,8 +589,8 @@ function compile()
 	local exe_name=$(get_exe_name $src $target)
     case $target in
 		ref)
-			local src_file="$src_file_base".c
-			if ! cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $CFLAGS; then
+			local src_file=$src_file_base.$input_suffix
+			if ! c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include $CFLAGS; then
 				print_error "Physis code comilation failed"
 				return 1
 			fi
@@ -608,8 +632,8 @@ function compile()
 				echo "[COMPILE] Skipping MPI compilation (not supported)"
 				return 0
 			fi
-			local src_file="$src_file_base".c			
-			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
+			local src_file="$src_file_base".$input_suffix
+			c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
 			local lib_name=physis_rt_mpi
 			if [ $target = "mpi2" ]; then lib_name=physis_rt_mpi2; fi
 			mpic++ "$src_file_base".o -l$lib_name $LDFLAGS -o $exe_name
@@ -639,8 +663,8 @@ function compile()
 				echo "[COMPILE] Skipping OpenCL compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".c
-			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $CFLAGS &&
+			src_file="$src_file_base".$input_suffix
+			c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $CFLAGS &&
 			c++ "$src_file_base".o -lphysis_rt_opencl $LDFLAGS $OPENCL_LDFLAGS -o $exe_name
 			;;
 		mpi-opencl)
@@ -649,8 +673,8 @@ function compile()
 				echo "[COMPILE] Skipping MPI-OpenCL compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".c			
-			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $MPI_CFLAGS $CFLAGS &&
+			src_file="$src_file_base".$input_suffix
+			c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include -I@OPENCL_INCLUDE_PATH@ $MPI_CFLAGS $CFLAGS &&
 			mpic++ "$src_file_base".o -lphysis_rt_mpi_opencl $LDFLAGS $OPENCL_LDFLAGS -o $exe_name
 			;;
 		mpi-openmp | mpi-openmp-numa )
@@ -658,7 +682,7 @@ function compile()
 				echo "[COMPILE] Skipping MPI-OPENMP compilation (not supported)"
 				return 0
 			fi
-			src_file="$src_file_base".c		
+			src_file="$src_file_base".$input_suffix
 			LIBRARY=physis_rt_mpi_openmp
 			if [ $target = mpi-openmp-numa ] ; then
 				if [ "@NUMA_ENABLED@" != "TRUE" ]; then
@@ -668,7 +692,7 @@ function compile()
 				LIBRARY=physis_rt_mpi_openmp_numa
 				LDFLAGS+=" -lnuma"
 			fi	
-			cc -c $src_file -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $OPENMP_CFLAGS $CFLAGS &&
+			c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $OPENMP_CFLAGS $CFLAGS &&
 			mpic++ $OPENMP_CFLAGS "$src_file_base".o -l$LIBRARY $LDFLAGS -o $exe_name
 			;;
 		
@@ -879,10 +903,10 @@ function get_test_cases()
 {
 	local tests=""
     if [ $# -eq 0 ]; then
-		tests=$(find @CMAKE_CURRENT_SOURCE_DIR@/test_cases -name "test_*.c"|sort -n)
+		tests=$(find @CMAKE_CURRENT_SOURCE_DIR@/test_cases -name "test_*.c*"|sort -n)
     else
 		for t in $*; do
-			tests+="@CMAKE_CURRENT_SOURCE_DIR@/test_cases/$t.c "
+			tests+="@CMAKE_CURRENT_SOURCE_DIR@/test_cases/$t "
 		done
 	fi
     set +e	
