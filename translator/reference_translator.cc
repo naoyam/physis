@@ -15,6 +15,7 @@
 #include "translator/translation_context.h"
 #include "translator/reference_runtime_builder.h"
 #include "translator/runtime_builder.h"
+#include "translator/physis_names.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -609,7 +610,8 @@ SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
   si::appendArg(parlist, stencil_param);
   if (s->IsRedBlack()) {
     SgInitializedName *rb_param =
-        sb::buildInitializedName("rb", sb::buildIntType());
+        sb::buildInitializedName(PS_STENCIL_MAP_RB_PARAM_NAME,
+                                 sb::buildIntType());
     si::appendArg(parlist, rb_param);
   }
   SgFunctionDeclaration *runFunc =

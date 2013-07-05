@@ -20,6 +20,12 @@ SgFunctionCallExp *BuildCudaThreadSynchronize(void) {
   return fc;
 }
 
+SgFunctionCallExp *BuildCudaDeviceSynchronize(void) {
+  SgFunctionCallExp *fc = sb::buildFunctionCallExp(
+      "cudaDeviceSynchronize", sb::buildVoidType());
+  return fc;
+}
+
 SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y,
                                  SgExpression *z) {
   SgFunctionSymbol *fs

@@ -153,11 +153,11 @@ class CUDATranslator : public ReferenceTranslator {
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil The stencil map object.
-    \param dom_arg The stencil domain.
+    \param param Parameters for the run function.
     \return The body of the run function.
    */
   virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *stencil, SgInitializedName *dom_arg);
+      StencilMap *stencil, SgFunctionParameterList *param);
   //! Generates an argument list for a call to a stencil function.
   /*!
     This is a helper function for BuildKernelCall.
@@ -186,15 +186,19 @@ class CUDATranslator : public ReferenceTranslator {
   virtual SgExpression *BuildBlockDimY();
   //! Generates an expression of the z dimension of thread blocks.
   virtual SgExpression *BuildBlockDimZ();
+
   //! Generates an IF block to exclude indices outside a domain.
   /*!
     \param indices The indices to check.
     \param dom_arg Name of the domain parameter.
+    \param true_stmt Statement to execute if outside the domain
     \return The IF block.
    */
   virtual SgIfStmt *BuildDomainInclusionCheck(
       const vector<SgVariableDeclaration*> &indices,
-      SgInitializedName *dom_arg) const;
+      SgInitializedName *dom_arg,
+      SgStatement *true_stmt) const;
+
   //! Generates a device type corresponding to a given grid type.
   /*!
     \param gt The grid type.

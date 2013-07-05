@@ -15,6 +15,7 @@ namespace physis {
 namespace translator {
 
 SgFunctionCallExp *BuildCudaThreadSynchronize(void);
+SgFunctionCallExp *BuildCudaDeviceSynchronize(void);
 SgFunctionCallExp *BuildCudaStreamSynchronize(SgExpression *strm);
 SgFunctionCallExp *BuildCudaDim3(SgExpression *x, SgExpression *y=NULL,
                                  SgExpression *z=NULL);
