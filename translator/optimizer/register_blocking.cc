@@ -611,11 +611,9 @@ void register_blocking(
         si::getEnclosingFunctionDeclaration(target_loop);
     RunKernelAttribute *run_kernel_attr =
         rose_util::GetASTAttribute<RunKernelAttribute>(run_kernel_func);
-    // Do not apply the optimization if this loop is the dimension
-    // with stride-1 access for the red-black ordering
-    if (loop_attr->dim() == 1 &&
-        run_kernel_attr->stencil_map()->IsRedBlack()) {
-      LOG_DEBUG() << "Register blocking not applied for the red-black stride access loop\n";
+    // Do not apply the optimization if this loop is for the red-black ordering
+    if (run_kernel_attr->stencil_map()->IsRedBlack()) {
+      LOG_DEBUG() << "Register blocking not applied for stencils with the red-black ordering\n";
       continue;
     }
         
