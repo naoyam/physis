@@ -192,7 +192,7 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
   RunKernelAttribute *rk_attr =
       rose_util::GetASTAttribute<RunKernelAttribute>(func);
   PSAssert(rk_attr);
-  bool rb = rk_attr->stencil_map()->IsRedBlack();
+  bool rb = rk_attr->stencil_map()->IsRedBlackVariant();
 
   SgExpression *increment = NULL;
 
@@ -352,7 +352,7 @@ void offset_spatial_cse(
     // NOTE: Not implemented for red-black stencils with
     // non-unit-stride looping caases. Would be very complicated, but
     // not clear how much it would be actually effective
-    if (rk_attr->stencil_map()->IsRedBlack() &&
+    if (rk_attr->stencil_map()->IsRedBlackVariant() &&
         attr->dim() != 1) {
       LOG_WARNING() <<
           "Spatial offset CSE not applied because it is not implemented for this type of stencil.\n";

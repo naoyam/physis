@@ -49,6 +49,10 @@ StencilMap::Type StencilMap::AnalyzeType(SgFunctionCallExp *call) {
   string map_name = rose_util::getFuncName(call);
   if (map_name == PS_STENCIL_MAP_RB_NAME) {
     return StencilMap::kRedBlack;
+  } else if (map_name == PS_STENCIL_MAP_R_NAME) {
+    return StencilMap::kRed;
+  } else if (map_name == PS_STENCIL_MAP_B_NAME) {
+    return StencilMap::kBlack;
   } else {
     return StencilMap::kNormal;
   }
@@ -91,7 +95,9 @@ bool StencilMap::isMap(SgFunctionCallExp *call) {
   if (!f) return false;
   SgName name = f->get_symbol()->get_name();
   return name == PS_STENCIL_MAP_NAME ||
-      name == PS_STENCIL_MAP_RB_NAME;
+      name == PS_STENCIL_MAP_RB_NAME ||
+      name == PS_STENCIL_MAP_R_NAME ||
+      name == PS_STENCIL_MAP_B_NAME;
 }
 
 std::string GridRangeMapToString(GridRangeMap &gr) {

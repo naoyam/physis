@@ -550,7 +550,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
         sb::buildPntrArrRefExp(
             BuildStencilDomMinRef(sb::buildVarRefExp(stencil_param)),
             sb::buildIntVal(i));
-    if (i == 0 && s->IsRedBlack()) {
+    if (i == 0 && s->IsRedBlackVariant()) {
       loop_begin = sb::buildAddOp(
           loop_begin,
           BuildRedBlackInitOffset(loop_begin, indices,
@@ -568,7 +568,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
             sb::buildLessThanOp(
                 sb::buildVarRefExp(index_decl), loop_end));
     SgExpression *incr = NULL;
-    if (i == 0 && s->IsRedBlack()) {
+    if (i == 0 && s->IsRedBlackVariant()) {
       incr = sb::buildPlusAssignOp(sb::buildVarRefExp(index_decl),
                                    sb::buildIntVal(2));
     } else {      
@@ -608,7 +608,7 @@ SgFunctionDeclaration *ReferenceTranslator::BuildRunKernel(StencilMap *s) {
       sb::buildInitializedName(getStencilArgName(),
                                stencil_type);
   si::appendArg(parlist, stencil_param);
-  if (s->IsRedBlack()) {
+  if (s->IsRedBlackVariant()) {
     SgInitializedName *rb_param =
         sb::buildInitializedName(PS_STENCIL_MAP_RB_PARAM_NAME,
                                  sb::buildIntType());
@@ -658,11 +658,14 @@ void ReferenceTranslator::BuildRunBody(
     SgExpression *stencil = sb::buildVarRefExp(stencilName, block);
     SgExprListExp *args =
         sb::buildExprListExp(sb::buildAddressOfOp(stencil));
-    if (s->IsRedBlack()) {
-      si::appendExpression(args, sb::buildIntVal(0));
+    if (s->IsRedBlackVariant()) {
+      si::appendExpression(
+          args,
+          sb::buildIntVal(s->IsBlack() ? 1 : 0));
     }
     SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
     si::appendStatement(sb::buildExprStatement(c), loopBody);
+    // Call both Red and Black versions for MapRedBlack
     if (s->IsRedBlack()) {
       args =
           sb::buildExprListExp(

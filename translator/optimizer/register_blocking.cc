@@ -612,7 +612,7 @@ void register_blocking(
     RunKernelAttribute *run_kernel_attr =
         rose_util::GetASTAttribute<RunKernelAttribute>(run_kernel_func);
     // Do not apply the optimization if this loop is for the red-black ordering
-    if (run_kernel_attr->stencil_map()->IsRedBlack()) {
+    if (run_kernel_attr->stencil_map()->IsRedBlackVariant()) {
       LOG_DEBUG() << "Register blocking not applied for stencils with the red-black ordering\n";
       continue;
     }

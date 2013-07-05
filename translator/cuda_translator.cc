@@ -469,7 +469,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
             sb::buildVarRefExp("local_max")),
         sb::buildIntVal(1));
 
-    if (sm->IsRedBlack()) {
+    if (sm->IsRedBlackVariant()) {
       dom_max0 = sb::buildDivideOp(dom_max0, sb::buildIntVal(2));
     }
 
@@ -491,14 +491,17 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(func_sym),
                                     args, cuda_config);
     si::appendStatement(sb::buildExprStatement(cuda_call), loop_body);    
-    if (sm->IsRedBlack()) {
-      SgCudaKernelCallExp *black_call =
-          isSgCudaKernelCallExp(si::copyExpression(cuda_call));
-      si::appendExpression(cuda_call->get_args(),
-                           sb::buildIntVal(0));      
-      si::appendExpression(black_call->get_args(),
-                           sb::buildIntVal(1));
-      si::appendStatement(sb::buildExprStatement(black_call), loop_body);    
+    if (sm->IsRedBlackVariant()) {
+      if (sm->IsRedBlack()) {
+        SgCudaKernelCallExp *black_call =
+            isSgCudaKernelCallExp(si::copyExpression(cuda_call));
+        si::appendExpression(black_call->get_args(),
+                             sb::buildIntVal(1));
+        si::appendStatement(sb::buildExprStatement(black_call), loop_body);
+      }
+      si::appendExpression(
+          cuda_call->get_args(),
+          sb::buildIntVal(sm->IsBlack() ? 1 : 0));
     }
     appendGridSwap(sm, stencil_name, false, loop_body);
   }
@@ -609,7 +612,7 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   PSAssert(dom_arg);
 
   // Append RB color param
-  if (stencil->IsRedBlack()) {
+  if (stencil->IsRedBlackVariant()) {
     SgInitializedName *rb_param =
         sb::buildInitializedName(PS_STENCIL_MAP_RB_PARAM_NAME,
                                  sb::buildIntType());
@@ -714,7 +717,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
           sbx::buildCudaIdxExp(sbx::kBlockIdxX),
           sbx::buildCudaIdxExp(sbx::kBlockDimX)),
                      sbx::buildCudaIdxExp(sbx::kThreadIdxX));
-  if (stencil->IsRedBlack()) {
+  if (stencil->IsRedBlackVariant()) {
     init_x = sb::buildMultiplyOp(init_x, sb::buildIntVal(2));
   }
   SgVariableDeclaration *x_index = BuildIndexVarDeclaration(
@@ -767,7 +770,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
     index_args.push_back(sb::buildVarRefExp(loop_index));
 
     SgVariableDeclaration* t[] = {
-      stencil->IsRedBlack() ? NULL: indices[0], indices[1]};
+      stencil->IsRedBlackVariant() ? NULL: indices[0], indices[1]};
     vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
     si::appendStatement(
         BuildDomainInclusionCheck(
@@ -790,7 +793,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
   si::appendStatement(sb::buildExprStatement(kernel_call),
                       kernel_call_block);
 
-  if (stencil->IsRedBlack()) {
+  if (stencil->IsRedBlackVariant()) {
     SgExpression *rb_offset_init =
         sb::buildAddOp(
             sb::buildVarRefExp(indices[0]),

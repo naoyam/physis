@@ -32,7 +32,7 @@ std::string GridRangeMapToString(GridRangeMap &gr);
 
 class StencilMap {
  public:
-  enum Type {kNormal, kRedBlack};
+  enum Type {kNormal, kRedBlack, kRed, kBlack};
   
   StencilMap(SgFunctionCallExp *call, TranslationContext *tx);
 
@@ -118,6 +118,18 @@ class StencilMap {
   //! Returns true if red-black stencil is used.
   bool IsRedBlack() const {
     return type_ == kRedBlack;
+  }
+
+  bool IsRed() const {
+    return type_ == kRed;
+  }
+
+  bool IsBlack() const {
+    return type_ == kBlack;
+  }
+
+  bool IsRedBlackVariant() const {
+    return IsRedBlack() || IsRed() || IsBlack();
   }
 
  protected:

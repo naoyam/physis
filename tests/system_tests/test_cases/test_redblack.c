@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     
   PSGridCopyin(g, indata);
 
-  PSStencilRun(PSStencilMapRB(kernel, d, g));
+  PSStencilRun(PSStencilMapRedBlack(kernel, d, g));
     
   PSGridCopyout(g, outdata);
   dump(outdata);  
