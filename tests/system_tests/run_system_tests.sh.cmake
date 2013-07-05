@@ -851,6 +851,8 @@ function print_usage()
     echo -e "\t\tSet the test targets. Supported targets: $($PHYSISC --list-targets)."
     echo -e "\t-s, --source <source-names>"
     echo -e "\t\tSet the test source files."
+	echo -e "\t--list"
+    echo -e "\t\tList available test source files."
     echo -e "\t--translate"
     echo -e "\t\tTest only translation and its dependent tasks."
     echo -e "\t--compile"
@@ -882,6 +884,30 @@ function print_usage()
 	echo -e "\t--clear"
 	echo -e "\t\tClear output files."
 }
+
+function get_priority()
+{
+	local test=$1
+	local test_priority=$(grep PRIORITY $test | awk '{print $3}')
+	echo $test_priority
+}
+
+function get_description()
+{
+	local test=$1
+	DESC=$(grep -o '\WTEST: .*$' $test | sed 's/\WTEST: \(.*\)$/\1/')
+	echo $DESC
+}
+
+function list_tests()
+{
+	echo "Available test cases"
+	for t in $1; do
+		local p=$(get_priority $t)
+		echo -e "\t$(basename $t) #$p ($(get_description $t))"
+	done
+}
+	
 
 function filter_test_case_by_priority()
 {
@@ -944,7 +970,7 @@ function get_module_base()
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email: -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list, -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
@@ -1024,6 +1050,10 @@ function get_module_base()
 				clear_output
 				exit 0
 				shift
+				;;
+			--list)
+				list_tests "$TESTS"
+				exit 0
 				;;
 			--)
 				shift
