@@ -186,21 +186,25 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
       isSgFunctionCallExp(rhs)->get_args()->get_expressions()[0];
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-  LOG_DEBUG() << "dim: " << loop_attr->dim() << "\n";
+  int dim = loop_attr->dim();
+  LOG_DEBUG() << "dim: " << dim << "\n";
+  SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(loop);
+  RunKernelAttribute *rk_attr =
+      rose_util::GetASTAttribute<RunKernelAttribute>(func);
+  PSAssert(rk_attr);
+  bool rb = rk_attr->stencil_map()->IsRedBlack();
+
   SgExpression *increment = NULL;
-  for (int i = 1; i < loop_attr->dim(); ++i) {
+
+  for (int i = 1; i < dim; ++i) {
     SgExpression *d = builder->BuildGridDim(si::copyExpression(grid_ref), i);
     increment = increment ? sb::buildMultiplyOp(increment, d) : d;
   }
+  
   GridOffsetAttribute *offset_attr =
       rose_util::GetASTAttribute<GridOffsetAttribute>(rhs);
   const StencilIndexList *sil = offset_attr->GetStencilIndexList();
   PSAssert(sil);
-  RunKernelAttribute *rk_attr =
-      rose_util::GetASTAttribute<RunKernelAttribute>(
-          si::getEnclosingFunctionDeclaration(loop));
-  PSAssert(rk_attr);
-  bool rb = rk_attr->stencil_map()->IsRedBlack() && loop_attr->dim() == 1;
   // if the access is periodic, the offset is:
   // (i + 1 + n) % n - ((i + n)% n)
   if (offset_attr->periodic()) {
@@ -342,6 +346,19 @@ void offset_spatial_cse(
     RunKernelLoopAttribute *attr =
         rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
     if (!attr->IsMain()) continue;
+    SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(target_loop);
+    RunKernelAttribute *rk_attr =
+        rose_util::GetASTAttribute<RunKernelAttribute>(func);
+    // NOTE: Not implemented for red-black stencils with
+    // non-unit-stride looping caases. Would be very complicated, but
+    // not clear how much it would be actually effective
+    if (rk_attr->stencil_map()->IsRedBlack() &&
+        attr->dim() != 1) {
+      LOG_WARNING() <<
+          "Spatial offset CSE not applied because it is not implemented for this type of stencil.\n";
+      continue;
+    }
+        
     std::vector<SgNode*> offset_exprs =
         rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
             target_loop);
