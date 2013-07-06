@@ -29,6 +29,15 @@ add_executable(test_redblack-periodic.manual.ref.exe
 # uses the same manual code as test_redblack
 add_executable(test_redblack-separated.manual.ref.exe
   test_redblack.manual.ref.c)
+add_executable(test_7-pt-int-type.manual.ref.exe
+  test_7-pt-int-type.manual.ref.c)
+# For integer code, use the normal C code for testing the CUDA version
+add_executable(test_7-pt-int-type.manual.cuda.exe
+  test_7-pt-int-type.manual.ref.c)
+add_executable(test_7-pt-double-type.manual.ref.exe
+  test_7-pt-double-type.manual.ref.c)
+add_executable(test_7-pt-type-mix.manual.ref.exe
+  test_7-pt-type-mix.manual.ref.c)
 
 if (CUDA_FOUND)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
@@ -60,4 +69,8 @@ if (CUDA_FOUND)
     test_redblack-periodic.manual.cuda.cu)
   cuda_add_executable(test_redblack-separated.manual.cuda.exe
     test_redblack.manual.cuda.cu)
+  cuda_add_executable(test_7-pt-double-type.manual.cuda.exe
+    test_7-pt-double-type.manual.cuda.cu)
+  cuda_add_executable(test_7-pt-type-mix.manual.cuda.exe
+    test_7-pt-type-mix.manual.cuda.cu)
 endif ()

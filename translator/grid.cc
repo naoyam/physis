@@ -203,8 +203,10 @@ void GridType::FindPointType() {
 
 bool GridType::IsPrimitivePointType() const {
   PSAssert(point_type_ != NULL);
-  return (isSgTypeFloat(point_type_) ||
-          isSgTypeDouble(point_type_));
+  return isSgTypeFloat(point_type_) ||
+      isSgTypeDouble(point_type_) ||
+      isSgTypeInt(point_type_) ||
+      isSgTypeLong(point_type_);
 }
 
 bool GridType::IsUserDefinedPointType() const {

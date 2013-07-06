@@ -30,6 +30,16 @@ extern "C" {
     double *p0;    
   } __PSGrid1DDouble_dev;
 
+  typedef struct {
+    int dim[1];            
+    int *p0;    
+  } __PSGrid1DInt_dev;
+
+  typedef struct {
+    int dim[1];            
+    long *p0;    
+  } __PSGrid1DLong_dev;
+
   // Note: int may not be enough for dim
   typedef struct {
     int dim[2];        
@@ -47,6 +57,16 @@ extern "C" {
   } __PSGriD2DDouble_dev;
 
   typedef struct {
+    int dim[2];
+    int *p0;    
+  } __PSGrid2DInt_dev;
+
+  typedef struct {
+    int dim[2];
+    long *p0;    
+  } __PSGrid2DLong_dev;
+
+  typedef struct {
     int dim[3];    
     void *p0;    
   } __PSGrid3D_dev;
@@ -60,6 +80,16 @@ extern "C" {
     int dim[3];
     double *p0;    
   } __PSGrid3DDouble_dev;
+
+  typedef struct {
+    int dim[3];    
+    int *p0;    
+  } __PSGrid3DInt_dev;
+
+  typedef struct {
+    int dim[3];    
+    long *p0;    
+  } __PSGrid3DLong_dev;
 
   typedef struct {
     int dim[3];    
@@ -82,6 +112,12 @@ extern "C" {
   typedef __PSGrid *PSGrid1DDouble;
   typedef __PSGrid *PSGrid2DDouble;
   typedef __PSGrid *PSGrid3DDouble;
+  typedef __PSGrid *PSGrid1DInt;
+  typedef __PSGrid *PSGrid2DInt;
+  typedef __PSGrid *PSGrid3DInt;
+  typedef __PSGrid *PSGrid1DLong;
+  typedef __PSGrid *PSGrid2DLong;
+  typedef __PSGrid *PSGrid3DLong;
   //#define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])
 #define PSGridDim(p, d) ((p)->dim[(d)])
 #define __PSGridDimDev(p, d) ((p)->dim[d])

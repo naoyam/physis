@@ -65,10 +65,16 @@ extern "C" {
   
   DeclareGrid1D(Float, float);
   DeclareGrid1D(Double, double);
+  DeclareGrid1D(Int, int);
+  DeclareGrid1D(Long, long);
   DeclareGrid2D(Float, float);
   DeclareGrid2D(Double, double);
+  DeclareGrid2D(Int, int);
+  DeclareGrid2D(Long, long);
   DeclareGrid3D(Float, float);
   DeclareGrid3D(Double, double);
+  DeclareGrid3D(Int, int);
+  DeclareGrid3D(Long, long);
 
   //#undef DeclareGrid1D  
   //#undef DeclareGrid2D  
