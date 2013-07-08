@@ -41,8 +41,6 @@ void ReduceGridCUDA(void *buf, PSReduceOp op,
   } else {
     PSAbort(1);
   }
-  LOG_DEBUG() << "Reduction: " << *out << "\n";
-  LOG_DEBUG() << "Len: " << len << "\n";  
   return;
 }
 
