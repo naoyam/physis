@@ -503,7 +503,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
           cuda_call->get_args(),
           sb::buildIntVal(sm->IsBlack() ? 1 : 0));
     }
-    appendGridSwap(sm, stencil_name, false, loop_body);
+    //appendGridSwap(sm, stencil_name, false, loop_body);
   }
   return loop_body;
 }

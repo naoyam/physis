@@ -409,7 +409,7 @@ void MPITranslator::ProcessStencilMap(StencilMap *smap,
       sb::buildVarRefExp(sdecl));
   SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
   si::appendStatement(sb::buildExprStatement(c), loop_body);
-  appendGridSwap(smap, stencil_name, true, loop_body);
+  //appendGridSwap(smap, stencil_name, true, loop_body);
   DeactivateRemoteGrids(smap, sdecl, loop_body,
                         remote_grids);
 

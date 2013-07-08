@@ -105,9 +105,11 @@ class ReferenceTranslator : public Translator {
    */
   virtual SgBasicBlock *BuildRunKernelBody(
       StencilMap *s, SgFunctionParameterList *param);
+#ifdef DEPRECATED  
   virtual void appendGridSwap(StencilMap *mc, const string &stencil,
                               bool is_stencil_ptr,
                               SgScopeStatement *scope);
+#endif
   virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *s, SgExpressionPtrList &indexArgs,
       SgInitializedName *stencil_param);

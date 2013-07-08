@@ -474,7 +474,7 @@ ReferenceTranslator::BuildKernelCall(StencilMap *s,
           rose_util::getFunctionSymbol(s->getKernel()), args);
   return c;
 }
-
+#ifdef DEPRECATED
 void ReferenceTranslator::appendGridSwap(StencilMap *mc,
                                          const string &stencil_var_name,
                                          bool is_stencil_ptr,
@@ -500,7 +500,7 @@ void ReferenceTranslator::appendGridSwap(StencilMap *mc,
         scope);
   }
 }
-
+#endif 
 static SgExpression *BuildRedBlackInitOffset(SgExpression *idx,
                                              SgVariableDeclaration **indices,
                                              SgInitializedName *rb_param,
@@ -672,7 +672,7 @@ void ReferenceTranslator::BuildRunBody(
       c = sb::buildFunctionCallExp(fs, args);
       si::appendStatement(sb::buildExprStatement(c), loopBody);
     }
-    appendGridSwap(s, stencilName, false, loopBody);
+    //appendGridSwap(s, stencilName, false, loopBody);
   }
 
   TraceStencilRun(run, loop, block);

@@ -196,7 +196,7 @@ static bool propagateGridVarMapAcrossCall(SgExpressionPtrList &args,
     LOG_DEBUG() << "arg: " << arg->unparseToString()
                 << " (" << src << ")"
                 << ", param: " << param->unparseToString()
-                << "(" << param << ")" << "\n";
+                << " (" << param << ")" << "\n";
     bool b = handleGridAlias(param, src, tx);
     LOG_DEBUG() << "Changed? " << b << "\n";
     changed |= b;
