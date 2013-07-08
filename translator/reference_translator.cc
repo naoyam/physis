@@ -676,7 +676,6 @@ void ReferenceTranslator::BuildRunBody(
   }
 
   TraceStencilRun(run, loop, block);
-  
   return;
 }
 
@@ -702,12 +701,14 @@ void ReferenceTranslator::TraceStencilRun(Run *run,
   // Enter the loop
   si::appendStatement(loop, cur_scope);
 
+
   // Stop the stopwatch and call the post trace function
   si::appendStatement(
       sb::buildVariableDeclaration(
           "f", sb::buildFloatType(),
           sb::buildAssignInitializer(
-              BuildStopwatchStop(st_ptr), sb::buildFloatType())),
+              BuildStopwatchStop(st_ptr), sb::buildFloatType()),
+          cur_scope),
       cur_scope);
   rose_util::AppendExprStatement(
       cur_scope, BuildTraceStencilPost(sb::buildVarRefExp("f")));
