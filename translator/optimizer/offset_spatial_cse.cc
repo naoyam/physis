@@ -163,14 +163,27 @@ static void replace_initial_index(SgExpression *offset_expr,
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
   int dim = loop_attr->dim();
+  GridOffsetAttribute *offset_attr =
+      rose_util::GetASTAttribute<GridOffsetAttribute>(offset_expr);
+  PSAssert(offset_attr);
+  const StencilIndexList *sil = offset_attr->GetStencilIndexList();  
+  int target_index_order = StencilIndexListFindDim(sil, dim);
+  LOG_DEBUG() << "target index order: " << target_index_order
+              << "\n";
+  if (target_index_order < 0) {
+    LOG_DEBUG() << "No need for replacement since target index not used.\n";
+    return;
+  }
   SgExpression *target_index =
-      isSgFunctionCallExp(offset_expr)->get_args()->get_expressions()[dim];
+      isSgFunctionCallExp(offset_expr)->get_args()->get_expressions()[
+          target_index_order+1]; // +1 to ignore the first arg 
   vector<SgVarRefExp*> vref =
       si::querySubTree<SgVarRefExp>(target_index, V_SgVarRefExp);
   PSAssert(vref.size() == 1);
   si::replaceExpression(vref[0], si::copyExpression(loop_attr->begin()));
   return;
 }
+
 
 /*! Insert an increment statement at the end of the loop body.
   
@@ -193,6 +206,17 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
       rose_util::GetASTAttribute<RunKernelAttribute>(func);
   PSAssert(rk_attr);
   bool rb = rk_attr->stencil_map()->IsRedBlackVariant();
+  GridOffsetAttribute *offset_attr =
+      rose_util::GetASTAttribute<GridOffsetAttribute>(rhs);
+  const StencilIndexList *sil = offset_attr->GetStencilIndexList();
+  PSAssert(sil);
+
+  if (StencilIndexListFindDim(sil, dim) < 0) {
+    LOG_DEBUG() << "No offset increment since the grid is not associated with the dimension.\n";
+    LOG_DEBUG() << "rhs: " << rhs->unparseToString() << "\n";    
+    LOG_DEBUG() << "sil->size(): " << sil->size() << "\n";
+    return;
+  }
 
   SgExpression *increment = NULL;
 
@@ -201,10 +225,6 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
     increment = increment ? sb::buildMultiplyOp(increment, d) : d;
   }
   
-  GridOffsetAttribute *offset_attr =
-      rose_util::GetASTAttribute<GridOffsetAttribute>(rhs);
-  const StencilIndexList *sil = offset_attr->GetStencilIndexList();
-  PSAssert(sil);
   // if the access is periodic, the offset is:
   // (i + 1 + n) % n - ((i + n)% n)
   if (offset_attr->periodic()) {

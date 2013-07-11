@@ -109,6 +109,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
   SgExprListExp *offset_params = sb::buildExprListExp(gvref);
   FOREACH (it, offset_exprs->begin(),
            offset_exprs->end()) {
+    LOG_DEBUG() << "offset exp: " << (*it)->unparseToString() << "\n";    
     si::appendExpression(offset_params,
                          *it);
     goa->AppendIndex(*it);

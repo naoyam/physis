@@ -13,6 +13,7 @@
 #include "translator/translation_util.h"
 
 #include <climits>
+#include <algorithm>
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -221,23 +222,39 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
   return replaced_get;
 }
 
+static bool index_comp(SgNode *x, SgNode *y) {
+  RunKernelIndexVarAttribute *x_attr =
+      rose_util::GetASTAttribute<RunKernelIndexVarAttribute>(
+          isSgVariableDeclaration(x));
+  RunKernelIndexVarAttribute *y_attr =
+      rose_util::GetASTAttribute<RunKernelIndexVarAttribute>(
+          isSgVariableDeclaration(y));
+  return x_attr->dim() < y_attr->dim();
+}
 // Set loop var in run_kernel_attr.
 static SgExpressionPtrList GetLoopIndices(
     SgFunctionDeclaration *run_kernel_func,
-    SgForStatement *loop) {
+    SgForStatement *loop,
+    StencilIndexList *sil) {
   SgExpressionPtrList indices;
-  RunKernelAttribute *run_kernel_attr =
-      rose_util::GetASTAttribute<RunKernelAttribute>(run_kernel_func);
-  indices.resize(run_kernel_attr->stencil_map()->getNumDim(), NULL);
   std::vector<SgNode*> index_vars = 
       rose_util::QuerySubTreeAttribute<RunKernelIndexVarAttribute>(
           run_kernel_func);
+  std::sort(index_vars.begin(), index_vars.end(), index_comp);
   FOREACH (index_vars_it, index_vars.begin(), index_vars.end()) {
     SgVariableDeclaration *index_var =
         isSgVariableDeclaration(*index_vars_it);
     RunKernelIndexVarAttribute *index_var_attr =
         rose_util::GetASTAttribute<RunKernelIndexVarAttribute>(index_var);
-    indices.at(index_var_attr->dim()-1) = sb::buildVarRefExp(index_var);
+    int idim = index_var_attr->dim();
+    bool used = false;
+    FOREACH (sil_it, sil->begin(), sil->end()) {
+      if (sil_it->dim == idim) {
+        used = true;
+        break;
+      }
+    }
+    if (used) indices.push_back(sb::buildVarRefExp(index_var));
   }
 #ifdef PS_DEBUG
   StringJoin sj;
@@ -466,7 +483,7 @@ static bool DoRegisterBlockingOneLine(
     // Initial load from memory to registers
     if (i < (int)bil.size() - 1) {
       SgExpressionPtrList init_indices =
-          GetLoopIndices(run_kernel_func, loop);
+          GetLoopIndices(run_kernel_func, loop, &sil);
       si::deleteAST(init_indices[dim-1]);
       init_indices[dim-1] = si::copyExpression(loop_attr->begin());
       OffsetIndices(init_indices, il);
@@ -487,7 +504,7 @@ static bool DoRegisterBlockingOneLine(
     } else {
       // Load a new value to reg
       SgExpressionVector indices_next =
-          GetLoopIndices(run_kernel_func, loop);
+          GetLoopIndices(run_kernel_func, loop, &sil);
       OffsetIndices(indices_next, il);
       SgExpression *get_next = BuildGet(
           gd, run_kernel_func, gt, indices_next,

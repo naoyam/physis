@@ -65,6 +65,9 @@ typedef std::vector<StencilIndex> StencilIndexList;
 
 void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dim);
 
+int StencilIndexListFindDim(const StencilIndexList *sil, int dim);
+
+
 class StencilIndexAttribute: public AstAttribute {
  public:
   StencilIndexAttribute(const StencilIndexList &sil)
