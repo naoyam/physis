@@ -298,6 +298,7 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
 
 SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
     const SgName &name,
+    int dim,
     SgExpression *dom_dim_x,
     SgExpression *dom_dim_y,    
     SgExpression *block_dim_x,
@@ -309,12 +310,17 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
                                          sb::buildDoubleType()));
   dim_x = BuildFunctionCall("ceil", dim_x);
   dim_x = sb::buildCastExp(dim_x, sb::buildIntType());
-  SgExpression *dim_y =
+  SgExpression *dim_y = NULL;  
+  if (dim >= 2) {
+    dim_y =
       sb::buildDivideOp(dom_dim_y,
                         sb::buildCastExp(block_dim_y,
                                          sb::buildDoubleType()));
-  dim_y = BuildFunctionCall("ceil", dim_y);
-  dim_y = sb::buildCastExp(dim_y, sb::buildIntType());
+    dim_y = BuildFunctionCall("ceil", dim_y);
+    dim_y = sb::buildCastExp(dim_y, sb::buildIntType());
+  } else {
+    dim_y = sb::buildIntVal(1);
+  }
   SgExpression *dim_z = sb::buildIntVal(1);
   SgVariableDeclaration *grid_dim =
       sbx::buildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
@@ -322,7 +328,7 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
 }
 
 
-SgExpression *CUDATranslator::BuildBlockDimX() {
+SgExpression *CUDATranslator::BuildBlockDimX(int nd) {
   if (block_dim_x_ <= 0) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("x");
@@ -330,7 +336,10 @@ SgExpression *CUDATranslator::BuildBlockDimX() {
   return sb::buildIntVal(block_dim_x_);
 }
 
-SgExpression *CUDATranslator::BuildBlockDimY() {
+SgExpression *CUDATranslator::BuildBlockDimY(int nd) {
+  if (nd < 2) {
+    return sb::buildIntVal(1);
+  }
   if (block_dim_y_ <= 0) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("y");
@@ -338,7 +347,10 @@ SgExpression *CUDATranslator::BuildBlockDimY() {
   return sb::buildIntVal(block_dim_y_);  
 }
 
-SgExpression *CUDATranslator::BuildBlockDimZ() {
+SgExpression *CUDATranslator::BuildBlockDimZ(int nd) {
+  if (nd < 3) {
+    return sb::buildIntVal(1);
+  }
   if (block_dim_z_ <= 0) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("z");
@@ -426,18 +438,14 @@ SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(
 
 SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     Run *run, SgScopeStatement *outer_block) {
-  SgVariableDeclaration *block_dim =
-      sbx::buildDim3Declaration("block_dim", BuildBlockDimX(),
-                                BuildBlockDimY(),  BuildBlockDimZ(),
-                                outer_block);
-  si::appendStatement(block_dim, outer_block);
   
   SgBasicBlock *loop_body = sb::buildBasicBlock();
 
   // Generates a call to each of the stencil function specified in the
   // PSStencilRun.
   ENUMERATE(stencil_idx, it, run->stencils().begin(), run->stencils().end()) {
-    StencilMap *sm = it->second;    
+    StencilMap *sm = it->second;
+    int nd = sm->getNumDim();
 
     // Generate cache config code for each kernel
     SgFunctionSymbol *func_sym = rose_util::getFunctionSymbol(sm->run());
@@ -453,6 +461,15 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     string stencil_name = "s" + toString(stencil_idx);
     SgExprListExp *args = BuildCUDAKernelArgList(
         stencil_idx, sm, stencil_name);
+
+    SgVariableDeclaration *block_dim =
+        sbx::buildDim3Declaration(
+            stencil_name + "_block_dim",
+            BuildBlockDimX(nd),
+            BuildBlockDimY(nd),
+            BuildBlockDimZ(nd),
+            outer_block);
+    si::appendStatement(block_dim, outer_block);
 
     SgExpression *dom_max0 =
         sb::buildPntrArrRefExp(
@@ -475,10 +492,11 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
 
     SgVariableDeclaration *grid_dim =
         BuildGridDimDeclaration(stencil_name + "_grid_dim",
+                                sm->getNumDim(),
                                 dom_max0,
                                 dom_max1,
-                                BuildBlockDimX(),
-                                BuildBlockDimY(),
+                                BuildBlockDimX(nd),
+                                BuildBlockDimY(nd),
                                 outer_block);
     si::appendStatement(grid_dim, outer_block);
 
@@ -752,8 +770,22 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
   SgFunctionCallExp *kernel_call =
       BuildKernelCall(stencil, index_args);
   SgScopeStatement *kernel_call_block = block;
-  
-  if (dim >= 3) {
+
+  if (dim == 1) {
+    SgVariableDeclaration* t[] = {indices[0]};
+    vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
+    si::appendStatement(
+        BuildDomainInclusionCheck(
+            range_checking_idx, dom_arg, sb::buildReturnStmt()),
+        block);
+  } else if (dim == 2) {
+    SgVariableDeclaration* t[] = {indices[0], indices[1]};
+    vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
+    si::appendStatement(
+        BuildDomainInclusionCheck(
+            range_checking_idx, dom_arg, sb::buildReturnStmt()),
+        block);
+  } else if (dim == 3) {
     SgExpression *loop_begin =
         sb::buildPntrArrRefExp(
             BuildDomMinRef(sb::buildVarRefExp(dom_arg)),
@@ -788,12 +820,15 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         loop,
         new RunKernelLoopAttribute(3, loop_index->get_variables()[0],
                                    loop_begin, loop_end));
+  } else {
+    PSAssert(0);
   }
   
   si::appendStatement(sb::buildExprStatement(kernel_call),
                       kernel_call_block);
 
   if (stencil->IsRedBlackVariant()) {
+    PSAssert(dim == 3); // Lower dimension not implemented yet.
     SgExpression *rb_offset_init =
         sb::buildAddOp(
             sb::buildVarRefExp(indices[0]),

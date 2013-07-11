@@ -89,7 +89,6 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
     bool is_periodic);
   */
   
-  
  protected:
   SgType *index_t_;
   static const std::string  grid_type_name_;

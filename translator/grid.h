@@ -146,10 +146,11 @@ class Grid {
                   << toString() << "\n";
   }
 
-  GridType *getType() {
+  GridType *getType() const {
     return gt;
   }
   virtual ~Grid() {}
+  const SgFunctionCallExp *new_call() const { return newCall; }
   string toString() const;
   int getNumDim() const {
     return gt->getNumDim();
@@ -194,8 +195,6 @@ class Grid {
     _isReadWrite = b;
   }
 #endif
-  SgExprListExp *BuildSizeExprList();
-
   SgExpression *BuildAttributeExpr();
 
   const StencilRange &stencil_range() const {

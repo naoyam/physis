@@ -259,16 +259,6 @@ string Grid::toString() const {
   return ss.str();
 }
 
-SgExprListExp *Grid::BuildSizeExprList() {
-  SgExprListExp *exp_list = sb::buildExprListExp();
-  SgExpressionPtrList &args = newCall->get_args()->get_expressions();  
-  int nd = gt->getNumDim();
-  for (int i = 0; i < nd; ++i) {
-    si::appendExpression(exp_list, si::copyExpression(args[i]));
-  }
-  return exp_list;
-}
-
 SgExpression *Grid::BuildAttributeExpr() {
   if (!attribute_) return NULL;
   return si::copyExpression(attribute_);

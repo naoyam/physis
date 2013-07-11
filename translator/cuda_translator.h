@@ -78,6 +78,7 @@ class CUDATranslator : public ReferenceTranslator {
     other tree locations.
     
     \param name The name of the grid variable.
+    \param dim Domain dimension
     \param dom_dim_x
     \param dom_dim_y
     \param block_dim_x
@@ -87,6 +88,7 @@ class CUDATranslator : public ReferenceTranslator {
    */
   virtual SgVariableDeclaration *BuildGridDimDeclaration(
       const SgName &name,
+      int dim,
       SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) const;
@@ -181,11 +183,11 @@ class CUDATranslator : public ReferenceTranslator {
   virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *stencil, SgExpressionPtrList &index_args);
   //! Generates an expression of the x dimension of thread blocks.
-  virtual SgExpression *BuildBlockDimX();
+  virtual SgExpression *BuildBlockDimX(int nd);
   //! Generates an expression of the y dimension of thread blocks.  
-  virtual SgExpression *BuildBlockDimY();
+  virtual SgExpression *BuildBlockDimY(int nd);
   //! Generates an expression of the z dimension of thread blocks.
-  virtual SgExpression *BuildBlockDimZ();
+  virtual SgExpression *BuildBlockDimZ(int nd);
 
   //! Generates an IF block to exclude indices outside a domain.
   /*!

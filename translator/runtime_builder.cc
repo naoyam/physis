@@ -105,6 +105,17 @@ SgExprListExp *RuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
   return BuildStencilOffset(sr, false);
 }
 
+SgExprListExp *RuntimeBuilder::BuildSizeExprList(const Grid *g) {
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  SgExpressionPtrList &args = g->new_call()->get_args()->get_expressions();  
+  int nd = g->getType()->getNumDim();
+  for (int i = 0; i < PS_MAX_DIM; ++i) {
+    SgExpression *e = i >= nd ?
+        sb::buildIntVal(1) : si::copyExpression(args[i]);
+    si::appendExpression(exp_list, e);
+  }
+  return exp_list;
+}
 
 } // namespace translator
 } // namespace physis

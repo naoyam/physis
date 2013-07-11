@@ -175,7 +175,7 @@ void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
   Grid *g = tx_->findGrid(node);
   PSAssert(g);
 
-  SgExprListExp *dims = g->BuildSizeExprList();
+  SgExprListExp *dims = rt_builder_->BuildSizeExprList(g);
   SgBasicBlock *tmpBlock = sb::buildBasicBlock();
   SgVariableDeclaration *dimDecl
       = sb::buildVariableDeclaration(

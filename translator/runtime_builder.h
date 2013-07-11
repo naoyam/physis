@@ -138,6 +138,13 @@ class RuntimeBuilder {
 
   virtual SgExprListExp *BuildStencilOffsetMax(const StencilRange &sr);
   virtual SgExprListExp *BuildStencilOffsetMin(const StencilRange &sr);
+
+  //! Build an ivec array containing the size of a given grid.
+  /*!
+    \param g Grid object
+    \return ivec expression of the grid size
+   */
+  virtual SgExprListExp *BuildSizeExprList(const Grid *g);
       
  protected:
   SgScopeStatement *gs_;
