@@ -38,6 +38,12 @@ add_executable(test_7-pt-double-type.manual.ref.exe
   test_7-pt-double-type.manual.ref.c)
 add_executable(test_7-pt-type-mix.manual.ref.exe
   test_7-pt-type-mix.manual.ref.c)
+add_executable(test_3-pt-1d.manual.ref.exe
+  test_3-pt-1d.manual.ref.c)
+add_executable(test_9-pt-2d.manual.ref.exe
+  test_9-pt-2d.manual.ref.c)
+add_executable(test_mixed-dim.manual.ref.exe
+  test_mixed-dim.manual.ref.c)
 
 if (CUDA_FOUND)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
@@ -73,4 +79,10 @@ if (CUDA_FOUND)
     test_7-pt-double-type.manual.cuda.cu)
   cuda_add_executable(test_7-pt-type-mix.manual.cuda.exe
     test_7-pt-type-mix.manual.cuda.cu)
+  cuda_add_executable(test_3-pt-1d.manual.cuda.exe
+    test_3-pt-1d.manual.cuda.cu)
+  cuda_add_executable(test_9-pt-2d.manual.cuda.exe
+    test_9-pt-2d.manual.cuda.cu)
+  cuda_add_executable(test_mixed-dim.manual.cuda.exe
+    test_mixed-dim.manual.cuda.cu)
 endif ()
