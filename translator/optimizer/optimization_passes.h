@@ -86,14 +86,11 @@ extern void kernel_inlining(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
-// TODO
 extern void loop_peeling(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
-
-// TODO
 extern void register_blocking(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
@@ -114,7 +111,6 @@ extern void register_blocking(
   g[index+1] // GridGet(x+1, y, z);
   \endcode
  */
-// TODO
 extern void offset_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
