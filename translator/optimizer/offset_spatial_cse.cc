@@ -220,8 +220,10 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
 
   SgExpression *increment = NULL;
 
-  for (int i = 1; i < dim; ++i) {
-    SgExpression *d = builder->BuildGridDim(si::copyExpression(grid_ref), i);
+  ENUMERATE (i, it, sil->begin(), sil->end()) {
+    const StencilIndex &si = *it;
+    if (dim == si.dim) break;
+    SgExpression *d = builder->BuildGridDim(si::copyExpression(grid_ref), i+1);
     increment = increment ? sb::buildMultiplyOp(increment, d) : d;
   }
   

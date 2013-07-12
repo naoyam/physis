@@ -193,11 +193,12 @@ static void replace_offset(SgVariableDeclaration *base_offset,
     PSAssert(StencilIndexRegularOrder(sil));
     StencilRegularIndexList sril(sil);
     LOG_DEBUG() << "SRIL: " << sril << "\n";
-    int num_dims = sril.GetNumDims();
     SgExpression *dim_offset = sb::buildIntVal(1);
     SgExpression *new_offset_expr = sb::buildVarRefExp(base_offset);
-    for (int i = 1; i <= num_dims; ++i) {
-      int index_offset = sril.GetIndex(i);
+    StencilRegularIndexList::map_t indices = sril.indices();
+    FOREACH (it, indices.begin(), indices.end()) {
+      int i = it->first;
+      int index_offset = it->second;
       LOG_DEBUG() << "index-offset: " << index_offset << "\n";
       if (index_offset != 0) {
         SgExpression *offset_term = NULL;
@@ -237,8 +238,8 @@ static void do_offset_cse(RuntimeBuilder *builder,
   SgExpressionPtrList base_offset_list;
   build_index_var_list_from_offset_exp(offset_expr, &base_offset_list);
 
-  StencilIndexList sil;
-  StencilIndexListInitSelf(sil, attr->num_dim());
+  StencilIndexList sil = *attr->GetStencilIndexList();
+  StencilIndexListClearOffset(sil);
   PSAssert(attr->gvexpr());
   SgExpression *base_offset = builder->BuildGridOffset(
       si::copyExpression(attr->gvexpr()),

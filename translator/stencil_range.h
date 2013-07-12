@@ -88,9 +88,12 @@ class StencilIndexAttribute: public AstAttribute {
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims);
 bool StencilIndexRegularOrder(const StencilIndexList &sil, unsigned num_dims);
 bool StencilIndexRegularOrder(const StencilIndexList &sil);
+void StencilIndexListClearOffset(StencilIndexList &sil);
 
 class StencilRegularIndexList {
+ public:
   typedef std::map<int, ssize_t> map_t;
+ private:
   map_t indices_;
  public:
   StencilRegularIndexList() {}
@@ -104,7 +107,7 @@ class StencilRegularIndexList {
   void SetIndex(int dim, ssize_t index);
   int GetNumDims() const { return indices_.size(); }
   virtual ~StencilRegularIndexList() {}
-  std::map<int, ssize_t> indices() { return indices_; }
+  const std::map<int, ssize_t>& indices() const { return indices_; }  
   bool operator<(const StencilRegularIndexList &x) const {
     FOREACH (it, indices_.begin(), indices_.end()) {
       if (it->second < x.GetIndex(it->first)) {

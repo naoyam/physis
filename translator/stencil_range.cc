@@ -22,6 +22,12 @@ void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dims) {
   }
 }
 
+void StencilIndexListClearOffset(StencilIndexList &sil) {
+  FOREACH (it, sil.begin(), sil.end()) {
+    it->offset = 0;
+  }
+}
+
 int StencilIndexListFindDim(const StencilIndexList *sil, int dim) {
   ENUMERATE (i, it, sil->begin(), sil->end()) {
     if (it->dim == dim) return i;
@@ -45,10 +51,19 @@ bool StencilIndexRegularOrder(const StencilIndexList &sil,
     //            << ", " << num_dims << "\n";
     return false;
   }
+#if 0  
   ENUMERATE (i, it, sil.begin(), sil.end()) {
     const StencilIndex &si = *it;
     if (si.dim != i+1) return false;
   }
+#else
+  int cur_idx = sil.begin()->dim;
+  ENUMERATE (i, it, sil.begin()+1, sil.end()) {
+    const StencilIndex &si = *it;
+    if (si.dim <= cur_idx) return false;
+    cur_idx = si.dim;
+  }
+#endif  
   return true;
 }
 

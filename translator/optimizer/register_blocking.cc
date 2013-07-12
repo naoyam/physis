@@ -234,8 +234,9 @@ static bool index_comp(SgNode *x, SgNode *y) {
 // Set loop var in run_kernel_attr.
 static SgExpressionPtrList GetLoopIndices(
     SgFunctionDeclaration *run_kernel_func,
-    SgForStatement *loop,
-    StencilIndexList *sil) {
+    RunKernelLoopAttribute *loop_attr,
+    StencilIndexList *sil,
+    bool initial_load) {
   SgExpressionPtrList indices;
   std::vector<SgNode*> index_vars = 
       rose_util::QuerySubTreeAttribute<RunKernelIndexVarAttribute>(
@@ -254,7 +255,13 @@ static SgExpressionPtrList GetLoopIndices(
         break;
       }
     }
-    if (used) indices.push_back(sb::buildVarRefExp(index_var));
+    if (used) {
+      if (initial_load && idim == loop_attr->dim()) {
+        indices.push_back(si::copyExpression(loop_attr->begin()));
+      } else {
+        indices.push_back(sb::buildVarRefExp(index_var));
+      }
+    }
   }
 #ifdef PS_DEBUG
   StringJoin sj;
@@ -268,11 +275,14 @@ static SgExpressionPtrList GetLoopIndices(
 
 static void OffsetIndices(SgExpressionVector &indices,
                           StencilRegularIndexList &offset) {
+  StencilRegularIndexList::map_t::const_iterator sril_it = offset.indices().begin();
   ENUMERATE (i, indices_it, indices.begin(), indices.end()) {
-    ssize_t v = offset.GetIndex(i+1);
+    PSAssert(sril_it != offset.indices().end());
+    ssize_t v = sril_it->second;
     if (v != 0) {
       *indices_it = sb::buildAddOp(*indices_it, sb::buildIntVal(v));
     }
+    ++sril_it;
   }
   return;
 }
@@ -348,8 +358,9 @@ static bool ShouldGetPeriodic(SgForStatement *loop,
 
 static void SetStencilIndexList(StencilIndexList &sil,
                                 const StencilRegularIndexList &sril) {
-  for (int i = 1; i <= sril.GetNumDims(); ++i) {
-    sil.push_back(StencilIndex(i, sril.GetIndex(i)));
+  const StencilRegularIndexList::map_t indices = sril.indices();
+  FOREACH (it, indices.begin(), indices.end()) {
+    sil.push_back(StencilIndex(it->first, it->second));
   }
 }
 
@@ -483,9 +494,9 @@ static bool DoRegisterBlockingOneLine(
     // Initial load from memory to registers
     if (i < (int)bil.size() - 1) {
       SgExpressionPtrList init_indices =
-          GetLoopIndices(run_kernel_func, loop, &sil);
-      si::deleteAST(init_indices[dim-1]);
-      init_indices[dim-1] = si::copyExpression(loop_attr->begin());
+          GetLoopIndices(run_kernel_func, loop_attr, &sil, true);
+      //si::deleteAST(init_indices[dim-1]);
+      //init_indices[dim-1] = si::copyExpression(loop_attr->begin());
       OffsetIndices(init_indices, il);
       SgExpression *init_get = BuildGet(
           gd, run_kernel_func, gt, init_indices,
@@ -504,7 +515,7 @@ static bool DoRegisterBlockingOneLine(
     } else {
       // Load a new value to reg
       SgExpressionVector indices_next =
-          GetLoopIndices(run_kernel_func, loop, &sil);
+          GetLoopIndices(run_kernel_func, loop_attr, &sil, false);
       OffsetIndices(indices_next, il);
       SgExpression *get_next = BuildGet(
           gd, run_kernel_func, gt, indices_next,
