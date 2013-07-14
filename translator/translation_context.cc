@@ -123,13 +123,36 @@ static bool handleGridAssignment(SgInitializedName *lhs_in,
   }
 }
 
+static bool IsInGlobalScope(SgInitializedName *in) {
+  return si::getGlobalScope(in) == si::getScope(in);
+}
+
 static bool handleGridDeclaration(SgInitializedName *in,
                                   TranslationContext &tx,
                                   DefUseAnalysis &dua) {
+
+  if (IsInGlobalScope(in)) {
+    LOG_DEBUG() << "Global variable: " << in->unparseToString() << "\n";
+    return tx.associateVarWithGrid(in, NULL);
+  }
+  
   // just passing in as the first argument doesn't return the RHS of
   // the defining statement
   vector<SgNode*> defs = dua.getDefFor(in->get_declaration(), in);
-
+  if (defs.size() == 0) {
+    LOG_ERROR() << "Could not find definition for " << in->unparseToString()
+                << " found\n";
+    PSAssert(0);
+#if 0    
+    SgDeclarationStatement *d = in->get_declaration();
+    if (d) {
+      SgDeclarationStatement *dd = d->get_definingDeclaration();
+      LOG_DEBUG() << "DD: " << ((dd) ? dd->unparseToString() : "NONE") << "\n";
+    }
+    return false;
+#endif    
+  }
+  
   bool changed = false;
   FOREACH(it, defs.begin(), defs.end()) {
     SgNode *node = *it;
