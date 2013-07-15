@@ -118,6 +118,9 @@ extern "C" {
   typedef __PSGrid *PSGrid1DLong;
   typedef __PSGrid *PSGrid2DLong;
   typedef __PSGrid *PSGrid3DLong;
+#define DeclareGrid1D(name, type) typedef __PSGrid *PSGrid1D##name;
+#define DeclareGrid2D(name, type) typedef __PSGrid *PSGrid2D##name;
+#define DeclareGrid3D(name, type) typedef __PSGrid *PSGrid3D##name;
   //#define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])
 #define PSGridDim(p, d) ((p)->dim[(d)])
 #define __PSGridDimDev(p, d) ((p)->dim[d])
@@ -152,76 +155,76 @@ extern "C" {
 #define CUDA_DEVICE __device__
 #endif
   
-  inline PSIndex __PSGridGetOffset1D(__PSGrid *g, PSIndex i1) {
+  static inline PSIndex __PSGridGetOffset1D(__PSGrid *g, PSIndex i1) {
     return i1;
   }
-  inline PSIndex __PSGridGetOffset2D(__PSGrid *g, PSIndex i1,
+  static inline PSIndex __PSGridGetOffset2D(__PSGrid *g, PSIndex i1,
                                      PSIndex i2) {
     return i1 + i2 * PSGridDim(g, 0);
   }
-  inline PSIndex __PSGridGetOffset3D(__PSGrid *g, PSIndex i1,
+  static inline PSIndex __PSGridGetOffset3D(__PSGrid *g, PSIndex i1,
                                      PSIndex i2, PSIndex i3) {
     return i1 + i2 * PSGridDim(g, 0) + i3 * PSGridDim(g, 0)
         * PSGridDim(g, 1);
   }
 
-  inline PSIndex __PSGridGetOffsetPeriodic1D(__PSGrid *g, PSIndex i1) {
+  static inline PSIndex __PSGridGetOffsetPeriodic1D(__PSGrid *g, PSIndex i1) {
     return (i1 + PSGridDim(g, 0)) % PSGridDim(g, 0);
   }
-  inline PSIndex __PSGridGetOffsetPeriodic2D(__PSGrid *g, PSIndex i1,
+  static inline PSIndex __PSGridGetOffsetPeriodic2D(__PSGrid *g, PSIndex i1,
                                              PSIndex i2) {
     return __PSGridGetOffsetPeriodic1D(g, i1) +
         (i2 + PSGridDim(g, 1)) % PSGridDim(g, 1) * PSGridDim(g, 0);
   }
-  inline PSIndex __PSGridGetOffsetPeriodic3D(__PSGrid *g, PSIndex i1,
+  static inline PSIndex __PSGridGetOffsetPeriodic3D(__PSGrid *g, PSIndex i1,
                                              PSIndex i2, PSIndex i3) {
     return __PSGridGetOffsetPeriodic2D(g, i1, i2) +
         (i3 + PSGridDim(g, 2)) % PSGridDim(g, 2) * PSGridDim(g, 0) * PSGridDim(g, 1);
   }
   
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffset1DDev(const void *g,
-                                        PSIndex i1) {
+  static inline PSIndex __PSGridGetOffset1DDev(const void *g,
+                                               PSIndex i1) {
     return i1;
   }
   
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffset2DDev(const void *g,
-                                        PSIndex i1,
-                                        PSIndex i2) {
+  static inline PSIndex __PSGridGetOffset2DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2) {
     return i1 + i2 * PSGridDim((__PSGrid_dev *)g, 0);
   }
 
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffset3DDev(const void *g,
-                                        PSIndex i1,
-                                        PSIndex i2,
-                                        PSIndex i3) {
+  static inline PSIndex __PSGridGetOffset3DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2,
+                                               PSIndex i3) {
     return i1 + i2 * PSGridDim((__PSGrid_dev*)g, 0)
         + i3 * PSGridDim((__PSGrid_dev*)g, 0)
         * PSGridDim((__PSGrid_dev*)g, 1);
   }
 
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
-                                                PSIndex i1) {
+  static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
+                                                       PSIndex i1) {
     return (i1 + PSGridDim((__PSGrid_dev*)g, 0)) % PSGridDim((__PSGrid_dev*)g, 0);    
   }
   
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
-                                                PSIndex i1,
-                                                PSIndex i2) {
+  static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2) {
     return __PSGridGetOffsetPeriodic1DDev(g, i1) +
         (i2 + PSGridDim((__PSGrid_dev*)g, 1)) % PSGridDim((__PSGrid_dev*)g, 1)
         * PSGridDim((__PSGrid_dev*)g, 0);
   }
 
   CUDA_DEVICE
-  inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
-                                                PSIndex i1,
-                                                PSIndex i2,
-                                                PSIndex i3) {
+  static inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2,
+                                                       PSIndex i3) {
     return __PSGridGetOffsetPeriodic2DDev(g, i1, i2) +
         (i3 + PSGridDim((__PSGrid_dev*)g, 2)) % PSGridDim((__PSGrid_dev*)g, 2)
         * PSGridDim((__PSGrid_dev*)g, 0) * PSGridDim((__PSGrid_dev*)g, 1);
