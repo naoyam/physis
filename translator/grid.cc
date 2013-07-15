@@ -361,25 +361,30 @@ bool GridGetAttribute::IsUserDefinedType() const {
 
 const std::string GridEmitAttribute::name = "PSGridEmit";
 
-GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv):
-    gv_(gv), is_member_access_(false) {
-}
-
 GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
-                                     const string &member_name):
-    gv_(gv), is_member_access_(true), member_name_(member_name) {
+                                     SgScopeStatement *scope):
+    gv_(gv), is_member_access_(false), scope_(scope) {
 }
 
 GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
                                      const string &member_name,
-                                     const vector<string> &array_offsets):
+                                     SgScopeStatement *scope):
     gv_(gv), is_member_access_(true), member_name_(member_name),
-    array_offsets_(array_offsets) {
+    scope_(scope) {
+}
+
+GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
+                                     const string &member_name,
+                                     const vector<string> &array_offsets,
+                                     SgScopeStatement *scope):
+    gv_(gv), is_member_access_(true), member_name_(member_name),
+    array_offsets_(array_offsets), scope_(scope) {
 }
 
 GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
     gv_(x.gv_), is_member_access_(x.is_member_access_),
-    member_name_(x.member_name_), array_offsets_(x.array_offsets_) {
+    member_name_(x.member_name_), array_offsets_(x.array_offsets_),
+    scope_(x.scope_) {
 }
 
 GridEmitAttribute::~GridEmitAttribute() {}

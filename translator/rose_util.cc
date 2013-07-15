@@ -383,7 +383,8 @@ SgName GetName(const SgVarRefExp *x) {
 // Currently only limited string value is supported.
 // - just an integer
 // - just a variable reference
-SgExpression *ParseString(const string &s) {
+SgExpression *ParseString(const string &s, SgScopeStatement *scope) {
+#if 0  
   bool is_numeric = true;
   FOREACH (it, s.begin(), s.end()) {
     if (!isdigit(*it)) {
@@ -397,6 +398,24 @@ SgExpression *ParseString(const string &s) {
   }
   // NOTE: assume variable reference
   return sb::buildVarRefExp(s);
+#else
+  SgExpression* result = NULL;
+  assert (scope != NULL);
+  // set input and context for the parser
+  AstFromString::c_char = s.c_str();
+  assert (AstFromString::c_char== s.c_str());
+  AstFromString::c_sgnode = scope;
+  if (AstFromString::afs_match_expression()) {
+    result = isSgExpression(AstFromString::c_parsed_node); // grab the result
+    assert (result != NULL);
+    LOG_DEBUG() << "Parsed expression: " << result->unparseToString() << "\n";
+  } else {
+    LOG_ERROR() <<"Error. buildStatementFromString() cannot parse input string:"<<s
+                <<"\n\t under the given scope:"<<scope->class_name() << "\n";
+    PSAssert(0);
+  }
+  return result;
+#endif
 }
 
 void ReplaceWithCopy(SgExpressionVector &ev) {

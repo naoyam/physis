@@ -1048,7 +1048,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     if (array_offsets.size() > 0) {
       SgExpressionVector offset_vector;
       FOREACH (it, array_offsets.begin(), array_offsets.end()) {
-        SgExpression *e = rose_util::ParseString(*it);
+        SgExpression *e = rose_util::ParseString(*it, attr->scope());
         offset_vector.push_back(e);
       }
       SgExpression *array_offset =

@@ -254,7 +254,7 @@ SgType *GetType(SgVariableDeclaration *decl);
 SgName GetName(SgVariableDeclaration *decl);
 SgName GetName(const SgVarRefExp *decl);
 
-SgExpression *ParseString(const string &s);
+SgExpression *ParseString(const string &s, SgScopeStatement *scope);
 
 template <class T>
 bool GetIntLikeVal(SgExpression *v, T &x) {

@@ -326,22 +326,26 @@ class GridGetAttribute: public AstAttribute {
 class GridEmitAttribute: public AstAttribute {
  public:
   static const std::string name;
-  GridEmitAttribute(SgInitializedName *gv);
-  GridEmitAttribute(SgInitializedName *gv, const string &member_name);
+  GridEmitAttribute(SgInitializedName *gv, SgScopeStatement *scope);
   GridEmitAttribute(SgInitializedName *gv, const string &member_name,
-                    const vector<string> &array_offsets);
+                    SgScopeStatement *scope);
+  GridEmitAttribute(SgInitializedName *gv, const string &member_name,
+                    const vector<string> &array_offsets,
+                    SgScopeStatement *scope);
   GridEmitAttribute(const GridEmitAttribute &x);
   virtual ~GridEmitAttribute();
   GridEmitAttribute *copy();
   SgInitializedName *gv() const { return gv_; }
   bool is_member_access() const { return is_member_access_; }
   const string &member_name() const { return member_name_; }
-  const vector<string> &array_offsets() const { return array_offsets_; }  
+  const vector<string> &array_offsets() const { return array_offsets_; }
+  SgScopeStatement *scope() const { return scope_; }
  protected:
   SgInitializedName *gv_;
   bool is_member_access_;
   string member_name_;
   vector<string> array_offsets_;
+  SgScopeStatement *scope_;
 };
 
 } // namespace translator

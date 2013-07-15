@@ -150,7 +150,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
     lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
     const vector<string> &array_offsets = attr->array_offsets();
     FOREACH (it, array_offsets.begin(), array_offsets.end()) {
-      SgExpression *e = rose_util::ParseString(*it);
+      SgExpression *e = rose_util::ParseString(*it, attr->scope());
       lhs = sb::buildPntrArrRefExp(lhs, e);
     }
   }

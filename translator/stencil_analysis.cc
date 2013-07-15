@@ -279,6 +279,7 @@ static void AnalyzeArrayOffsets(string s,
 
 static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
   SgExpression *emit_arg = fc->get_args()->get_expressions()[0];
+  SgScopeStatement *scope = si::getScope(fc);
   LOG_DEBUG() << "Emit arg: " << emit_arg->unparseToString() << "\n";
   string emit_str = isSgStringVal(emit_arg)->get_value();
   SgFunctionDefinition *kernel = si::getEnclosingFunctionDefinition(fc);
@@ -291,7 +292,7 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
     // No dot operator found
     SgInitializedName *gv = FindInitializedName(emit_str, kernel);
     PSAssert(gv);
-    attr = new GridEmitAttribute(gv);
+    attr = new GridEmitAttribute(gv, scope);
   } else {
     if (dot_pos != emit_str.find_last_of('.')) {
       LOG_ERROR() << "Multiple dot operators found: "
@@ -311,11 +312,11 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
       LOG_DEBUG() << "member name: " << member_name << "\n";
       vector<string> offsets;
       AnalyzeArrayOffsets(offset_str, offsets);
-      attr = new GridEmitAttribute(gv, member_name, offsets);
+      attr = new GridEmitAttribute(gv, member_name, offsets, scope);
       LOG_DEBUG() << "Number of dimensions: " << offsets.size() << "\n";
     } else {
       LOG_DEBUG() << "member name: " << member_name << "\n";
-      attr = new GridEmitAttribute(gv, member_name);
+      attr = new GridEmitAttribute(gv, member_name, scope);
     }
   }
   return attr;
@@ -331,7 +332,8 @@ void AnalyzeEmit(SgFunctionDeclaration *func) {
     GridEmitAttribute *attr = NULL;
     if (GridType::isGridTypeSpecificCall(fc) &&
         GridType::GetGridFuncName(fc) == PS_GRID_EMIT_NAME) {
-      attr = new GridEmitAttribute(GridType::getGridVarUsedInFuncCall(fc));
+      attr = new GridEmitAttribute(GridType::getGridVarUsedInFuncCall(fc),
+                                   si::getScope(func));
     } else if (isSgFunctionRefExp(fc->get_function()) &&
                rose_util::getFuncName(fc) == PS_GRID_EMIT_UTYPE_NAME) {
       attr = AnalyzeEmitCall(fc);
