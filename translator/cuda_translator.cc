@@ -533,6 +533,19 @@ void CUDATranslator::ProcessUserDefinedPointType(
       static_cast<CUDARuntimeBuilder*>(rt_builder_)->
       BuildGridDevTypeForUserType(grid_decl, gt);
   si::insertStatementAfter(grid_decl, type_decl);
+  // If these user-defined types are defined in header files,
+  // inserting new related types and declarations AFTER those types
+  // does not seem to mean they are actually inserted after. New
+  // declarations are actually inserted before the include
+  // preprocessing directive, so the declaring header may not be included
+  // at the time when the new declarations appear. Explicitly add new
+  // include directive to work around this problem.
+  if (!grid_decl->get_file_info()->isSameFile(src_)) {
+    string fname = grid_decl->get_file_info()->get_filenameString();
+    LOG_DEBUG() << "fname: " << fname << "\n";
+    si::attachArbitraryText(type_decl, "#include \"" + fname + "\"\n",
+                            PreprocessingInfo::before);
+  }
   LOG_DEBUG() << "GridDevType: "
               << type_decl->unparseToString() << "\n";
   PSAssert(gt->aux_type() == NULL);

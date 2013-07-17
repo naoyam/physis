@@ -279,7 +279,8 @@ bool GetIntLikeVal(SgExpression *v, T &x) {
 }
 
 void ReplaceWithCopy(SgExpressionVector &ev);
-  
+
+bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2);
 
 }  // namespace rose_util
 }  // namespace translator

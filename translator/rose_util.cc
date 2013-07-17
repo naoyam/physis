@@ -425,6 +425,13 @@ void ReplaceWithCopy(SgExpressionVector &ev) {
   }
 }
 
+bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2) {
+  const string &n1_name = n1->get_file_info()->get_filenameString();
+  const string &n2_name = n2->get_file_info()->get_filenameString();
+  LOG_DEBUG() << "N1: " << n1_name << ", N2: " << n2_name << "\n";
+  return n1->get_file_info()->isSameFile(n2->get_file_info());
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

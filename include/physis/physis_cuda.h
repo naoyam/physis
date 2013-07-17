@@ -54,7 +54,7 @@ extern "C" {
   typedef struct {
     int dim[2];
     double *p0;    
-  } __PSGriD2DDouble_dev;
+  } __PSGrid2DDouble_dev;
 
   typedef struct {
     int dim[2];
