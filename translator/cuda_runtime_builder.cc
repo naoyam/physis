@@ -452,6 +452,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, sb::buildPointerType(sb::buildVoidType()), pl);
   rose_util::ReplaceFuncBody(fdecl, body);
+  si::setStatic(fdecl);
   return fdecl;
 }
 
@@ -515,6 +516,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, ret_type, pl);
   rose_util::ReplaceFuncBody(fdecl, body);
+  si::setStatic(fdecl);  
   return fdecl;
 }
 
@@ -840,6 +842,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, sb::buildVoidType(), pl);
   rose_util::ReplaceFuncBody(fdecl, body);
+  si::setStatic(fdecl);    
   return fdecl;
 }
 
@@ -936,6 +939,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
   fdecl->get_functionModifier().setCudaDevice();
   si::setStatic(fdecl);
   rose_util::ReplaceFuncBody(fdecl, body);
+  si::setStatic(fdecl);  
   return fdecl;
 }
 
