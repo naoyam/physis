@@ -162,24 +162,29 @@ void CUDATranslator::Visit(SgExpression *node) {
     if (gga == NULL) return;
     TranslateGetForUserDefinedType(dot, NULL);
   }
-  SgPntrArrRefExp *par = isSgPntrArrRefExp(node);
-  while (par) {
-    if (isSgPntrArrRefExp(par->get_parent())) return;
-    SgExpression *lhs = par->get_lhs_operand();
+  SgPntrArrRefExp *par = isSgPntrArrRefExp(node);  
+  // Process the top-level array access expression
+  if (par == NULL ||
+      isSgPntrArrRefExp(node->get_parent())) return;  
+
+  SgExpression *lhs = NULL;  
+  while (true) {
+    lhs = par->get_lhs_operand();
     if (isSgPntrArrRefExp(lhs)) {
       par = isSgPntrArrRefExp(lhs);
       continue;
+    } else {
+      break;
     }
-    if (isSgDotExp(lhs)) {
-      SgDotExp *dot = isSgDotExp(lhs);
-      SgExpression *dot_lhs = dot->get_lhs_operand();
-      GridGetAttribute *gga =
-          rose_util::GetASTAttribute<GridGetAttribute>(dot_lhs);
-      if (gga == NULL) return;
-      TranslateGetForUserDefinedType(dot, isSgPntrArrRefExp(node));
-      return;
-    }
-    break;
+  }
+  if (isSgDotExp(lhs)) {
+    SgDotExp *dot = isSgDotExp(lhs);
+    SgExpression *dot_lhs = dot->get_lhs_operand();
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(dot_lhs);
+    if (gga == NULL) return;
+    TranslateGetForUserDefinedType(dot, isSgPntrArrRefExp(node));
+    return;
   }
   
   return;
@@ -209,7 +214,6 @@ void CUDATranslator::TranslateGetForUserDefinedType(
       gga->gv());
   SgExpression *original = node;
   SgExpression *new_get = NULL;
-  // Member is an array
   if (array_top == NULL) {
     new_get = 
         rt_builder_->BuildGridGet(
@@ -218,7 +222,8 @@ void CUDATranslator::TranslateGetForUserDefinedType(
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
             mem_name);
-  } else {    
+  } else {
+    // Member is an array    
     SgExpressionVector indices;
     SgExpression *parent;
     PSAssert(AnalyzeGetArrayMember(node, indices, parent));

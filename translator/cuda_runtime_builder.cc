@@ -236,10 +236,11 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
   GetArrayDim(mt, dims);
   SgExpression *array_offset = NULL;
   SgExpression *dim_offset = NULL;
-  ENUMERATE (i, it, array_indices.begin(), array_indices.end()) {
+  vector<size_t>::reverse_iterator dim_it = dims.rbegin();
+  ENUMERATE (i, it, array_indices.rbegin(), array_indices.rend()) {
     if (array_offset == NULL) {
       array_offset = *it;
-      dim_offset = sb::buildUnsignedLongVal(dims[i]);
+      dim_offset = sb::buildUnsignedLongVal(*dim_it);
     } else {
       array_offset =
           sb::buildAddOp(
@@ -248,8 +249,9 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
                   *it, dim_offset));
       dim_offset = sb::buildMultiplyOp(
           si::copyExpression(dim_offset),
-          sb::buildUnsignedLongVal(dims[i]));
+          sb::buildUnsignedLongVal(*dim_it));
     }
+    ++dim_it;
   }
   si::deleteAST(dim_offset);
 
