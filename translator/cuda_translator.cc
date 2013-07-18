@@ -446,6 +446,8 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     // Generate cache config code for each kernel
     SgFunctionSymbol *func_sym = rose_util::getFunctionSymbol(sm->run());
     PSAssert(func_sym);
+#if 0 
+    // This is done device-wide at the start-up time
     // Set the SM on-chip memory to prefer the L1 cache
     SgFunctionCallExp *cache_config =
         sbx::buildCudaCallFuncSetCacheConfig(func_sym,
@@ -453,6 +455,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
                                              global_scope_);
     // Append invocation statement ahead of the loop
     si::appendStatement(sb::buildExprStatement(cache_config), outer_block);
+#endif    
 
     string stencil_name = "s" + toString(stencil_idx);
     SgExprListExp *args = BuildCUDAKernelArgList(

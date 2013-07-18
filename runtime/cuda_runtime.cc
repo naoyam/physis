@@ -35,6 +35,7 @@ extern "C" {
     if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
       PSAbort(1);
     }
+    CUDA_SAFE_CALL(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
   }
   
   void PSFinalize() {
