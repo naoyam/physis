@@ -240,7 +240,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
   ENUMERATE (i, it, array_indices.rbegin(), array_indices.rend()) {
     if (array_offset == NULL) {
       array_offset = *it;
-      dim_offset = sb::buildUnsignedLongVal(*dim_it);
+      dim_offset = sb::buildIntVal(*dim_it);
     } else {
       array_offset =
           sb::buildAddOp(
@@ -249,7 +249,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
                   *it, dim_offset));
       dim_offset = sb::buildMultiplyOp(
           si::copyExpression(dim_offset),
-          sb::buildUnsignedLongVal(*dim_it));
+          sb::buildIntVal(*dim_it));
     }
     ++dim_it;
   }
