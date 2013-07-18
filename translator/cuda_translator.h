@@ -27,34 +27,6 @@ class CUDATranslator : public ReferenceTranslator {
   std::vector<SgExpression *> cuda_block_size_vals_;
   /** hold __cuda_block_size_struct type */
   SgType *cuda_block_size_type_;
-
-  //! An optimization flag on grid address calculations.
-  /*!
-    If this flag is true, the Translator generates for grid_get in the
-    begining of the kernel. This optimization would be effective for
-    some cases such as consecutive code block of 'if' and
-    'grid_get'. In which case, size of if block could be reduced.
-    For example,
-    \code
-    kernel(x, y, z, g, ...) {
-      ...
-      v1 = grid_get(g, x, y, z);
-      v2 = grid_get(g, x+1, y, z);      
-      ...
-    }
-    \endcode
-    It generates code as follows:
-    \code
-    kernel(x, y, z, g, ...) {
-      float *p = (float *)(g->p0) + z*nx*ny + y*nx + x;
-      ...
-      v1 = *p;
-      v2 = *(p+1);
-      ...
-    }
-    \endcode
-  */  
-  bool flag_pre_calc_grid_address_;
   
   virtual void FixAST();
   virtual void FixGridType();
@@ -207,9 +179,6 @@ class CUDATranslator : public ReferenceTranslator {
     \return A type object corresponding to the given grid type.
    */
   virtual SgType *BuildOnDeviceGridType(GridType *gt) const;
-  bool flag_pre_calc_grid_address() const {
-    return flag_pre_calc_grid_address_;
-  }
 
   /** add dynamic parameter
    * @param[in/out] parlist ... parameter list

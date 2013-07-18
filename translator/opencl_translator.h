@@ -23,25 +23,6 @@ class OpenCLTranslator : public ReferenceTranslator {
 
   std::string kernel_mode_macro() { return "PHYSIS_OPENCL_KERNEL_MODE"; } ;
 
-  // If this flag is 'true', the Translator generates for grid_get in the
-  // begining of the kernel. This optimization is effective for some cases such
-  // as consecutive code block of 'if' and 'grid_get'. In which case, size of
-  // if block could be reduced.
-  // i.e.
-  //   kernel(x, y, z, g, ...) {
-  //     ...
-  //     val = grid_get(g, x, y, z);
-  //     ...
-  //   }
-  //   It generates code as following
-  //   kernel(x, y, z, g, ...) {
-  //     float *p = (float *)(g->p0) + z*nx*ny + y*nx + x;
-  //     ...
-  //     val = *p;
-  //     ...
-  //   }
-  bool flag_pre_calc_grid_address_;
-
   virtual void check_consistency(void);
   virtual void check_consistency_variable(void);
   virtual void check_consistency_function_definition(void);

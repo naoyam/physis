@@ -24,20 +24,8 @@ OpenCLTranslator::OpenCLTranslator(const Configuration &config):
   // TODO: Need check & implementation
 
   target_specific_macro_ = "PHYSIS_OPENCL";  
-  flag_pre_calc_grid_address_ = false;
 
-#if 0
-  const pu::LuaValue *lv
-      = config.Lookup(Configuration::OPENCL_PRE_CALC_GRID_ADDRESS);
-  if (lv) {
-    PSAssert(lv->get(flag_pre_calc_grid_address_));
-  }
-#else
   const pu::LuaValue *lv;
-#endif
-  if (flag_pre_calc_grid_address_) {
-    LOG_INFO() << "Optimization of address calculation enabled.\n";
-  }
 
   // Redefine the block size if specified in the configuration file
   lv = config.Lookup(Configuration::OPENCL_BLOCK_SIZE);

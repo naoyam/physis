@@ -39,18 +39,9 @@ CUDATranslator::CUDATranslator(const Configuration &config):
   target_specific_macro_ = "PHYSIS_CUDA";
   //validate_ast_ = false;
   validate_ast_ = true;  
-  flag_pre_calc_grid_address_ = false;
-  const pu::LuaValue *lv
-      = config.Lookup(Configuration::CUDA_PRE_CALC_GRID_ADDRESS);
-  if (lv) {
-    PSAssert(lv->get(flag_pre_calc_grid_address_));
-  }
-  if (flag_pre_calc_grid_address_) {
-    LOG_INFO() << "Optimization of address calculation enabled.\n";
-  }
   // Redefine the block size if specified in the configuration file
   cuda_block_size_vals_.clear();  /* clear */
-  lv = config.Lookup(Configuration::CUDA_BLOCK_SIZE);
+  const pu::LuaValue *lv = config.Lookup(Configuration::CUDA_BLOCK_SIZE);
   if (lv) {
     const pu::LuaTable *tbl = lv->getAsLuaTable();
     PSAssert(tbl);
