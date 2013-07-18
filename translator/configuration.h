@@ -20,17 +20,16 @@ namespace translator {
 class Configuration: public pu::Configuration {
  public:
   enum ConfigKey {
-    CUDA_PRE_CALC_GRID_ADDRESS,
     CUDA_BLOCK_SIZE,
     OPENCL_BLOCK_SIZE,
     MPI_OVERLAP,
     MULTISTREAM_BOUNDARY,
     MPI_OPENMP_DIVISION,
-    MPI_OPENMP_CACHESIZE
+    MPI_OPENMP_CACHESIZE,
+    TRACE_KERNEL,
+    CUDA_KERNEL_ERROR_CHECK
     };
   Configuration() {
-    AddKey(CUDA_PRE_CALC_GRID_ADDRESS,
-           "CUDA_PRE_CALC_GRID_ADDRESS");
     AddKey(CUDA_BLOCK_SIZE, "CUDA_BLOCK_SIZE");
     AddKey(OPENCL_BLOCK_SIZE, "OPENCL_BLOCK_SIZE");
     AddKey(MPI_OVERLAP, "MPI_OVERLAP");
@@ -38,6 +37,8 @@ class Configuration: public pu::Configuration {
     AddKey(MPI_OPENMP_DIVISION, "MPI_OPENMP_DIVISION");  
     AddKey(MPI_OPENMP_CACHESIZE, "MPI_OPENMP_CACHESIZE");
     auto_tuning_ = false; /* set default value */
+    AddKey(TRACE_KERNEL, "TRACE_KERNEL");
+    AddKey(CUDA_KERNEL_ERROR_CHECK, "CUDA_KERNEL_ERROR_CHECK");    
   }
   virtual ~Configuration() {}
   const pu::LuaValue *Lookup(ConfigKey key) const {
@@ -89,6 +90,15 @@ class Configuration: public pu::Configuration {
     if (!Lookup<bool>(key_name, f)) return false;
     return f;
   }
+  
+  bool LookupFlag(ConfigKey key) const {
+    const pu::LuaValue *lv = Lookup(key);
+    if (lv == NULL) return false;
+    bool b;
+    lv->get(b);
+    return b;
+  }
+  
   /** set flag value
    * @param[in]  key_name
    * @param[in]  f ... flag value

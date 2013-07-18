@@ -379,24 +379,24 @@ void CUDATranslator::BuildRunBody(
 
   TraceStencilRun(run, loop, block);
   
-  // cudaThreadSynchronize after each loop
-  si::insertStatementAfter(
-      loop,
-      sb::buildExprStatement(BuildCudaDeviceSynchronize()));
-#if 1 /* error handling ... failure of kernel calling */
-  si::insertStatementBefore(
-      loop,
-      sb::buildExprStatement(
-          sb::buildFunctionCallExp(
-              sb::buildFunctionRefExp("cudaGetLastError"), NULL)));
-  si::insertStatementAfter(
-      loop,
-      sb::buildExprStatement(
-          sb::buildFunctionCallExp(
-              sb::buildFunctionRefExp("__PSCheckCudaError"),
-              sb::buildExprListExp(
-                  sb::buildStringVal("Kernel Execution Failed!")))));
-#endif
+  // cudaThreadSynchronize after each loop if requested
+  if (config_.LookupFlag(Configuration::CUDA_KERNEL_ERROR_CHECK)) {
+    si::insertStatementAfter(
+        loop,
+        sb::buildExprStatement(BuildCudaDeviceSynchronize()));
+    si::insertStatementBefore(
+        loop,
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("cudaGetLastError"), NULL)));
+    si::insertStatementAfter(
+        loop,
+        sb::buildExprStatement(
+            sb::buildFunctionCallExp(
+                sb::buildFunctionRefExp("__PSCheckCudaError"),
+                sb::buildExprListExp(
+                    sb::buildStringVal("Kernel Execution Failed!")))));
+  }
   
   return;
 }
