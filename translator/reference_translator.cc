@@ -682,38 +682,46 @@ void ReferenceTranslator::BuildRunBody(
 void ReferenceTranslator::TraceStencilRun(Run *run,
                                           SgScopeStatement *loop,
                                           SgScopeStatement *cur_scope) {
-  // tracing
-  // build a string message with kernel names
-  StringJoin sj;
-  FOREACH (it, run->stencils().begin(), run->stencils().end()) {
-    sj << it->second->getKernel()->get_name().str();
+  SgExpression *st_ptr = NULL;  
+  if (config_.LookupFlag(Configuration::TRACE_KERNEL)) {
+    // tracing
+    // build a string message with kernel names
+    StringJoin sj;
+    FOREACH (it, run->stencils().begin(), run->stencils().end()) {
+      sj << it->second->getKernel()->get_name().str();
+    }
+    // Call the pre trace function
+    rose_util::AppendExprStatement(
+        cur_scope, BuildTraceStencilPre(sb::buildStringVal(sj.str())));
+    // Declare a stopwatch
+    SgVariableDeclaration *st_decl = BuildStopwatch("st", cur_scope, global_scope_);
+    si::appendStatement(st_decl, cur_scope);
+    st_ptr = sb::buildAddressOfOp(sb::buildVarRefExp(st_decl));  
+    // Start the stopwatch
+    rose_util::AppendExprStatement(cur_scope, BuildStopwatchStart(st_ptr));
   }
-  // Call the pre trace function
-  rose_util::AppendExprStatement(
-      cur_scope, BuildTraceStencilPre(sb::buildStringVal(sj.str())));
-  // Declare a stopwatch
-  SgVariableDeclaration *st_decl = BuildStopwatch("st", cur_scope, global_scope_);
-  si::appendStatement(st_decl, cur_scope);
-  SgExpression *st_ptr = sb::buildAddressOfOp(sb::buildVarRefExp(st_decl));  
-  // Start the stopwatch
-  rose_util::AppendExprStatement(cur_scope, BuildStopwatchStart(st_ptr));
 
   // Enter the loop
   si::appendStatement(loop, cur_scope);
 
+  if (config_.LookupFlag(Configuration::TRACE_KERNEL)) {
+    // Stop the stopwatch and call the post trace function
+    si::appendStatement(
+        sb::buildVariableDeclaration(
+            "f", sb::buildFloatType(),
+            sb::buildAssignInitializer(
+                BuildStopwatchStop(st_ptr), sb::buildFloatType()),
+            cur_scope),
+        cur_scope);
+    rose_util::AppendExprStatement(
+        cur_scope, BuildTraceStencilPost(sb::buildVarRefExp("f")));
+    si::appendStatement(
+        sb::buildReturnStmt(sb::buildVarRefExp("f")), cur_scope); /* return f; */
+  } else {
+    si::appendStatement(
+        sb::buildReturnStmt(sb::buildFloatVal(0.0f)), cur_scope); /* return f; */
+  }
 
-  // Stop the stopwatch and call the post trace function
-  si::appendStatement(
-      sb::buildVariableDeclaration(
-          "f", sb::buildFloatType(),
-          sb::buildAssignInitializer(
-              BuildStopwatchStop(st_ptr), sb::buildFloatType()),
-          cur_scope),
-      cur_scope);
-  rose_util::AppendExprStatement(
-      cur_scope, BuildTraceStencilPost(sb::buildVarRefExp("f")));
-  si::appendStatement(
-      sb::buildReturnStmt(sb::buildVarRefExp("f")), cur_scope); /* return f; */
   return;
 }
 
