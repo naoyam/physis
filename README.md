@@ -61,7 +61,7 @@ Physis depends on the following external software:
 In addition, the following platform-specific tools and libraries are
 required when using the respective platform:
 
-* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (4.0 tested)
+* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (5.0 tested)
 * MPI for multi-node parallel execution
   ([OpenMPI v1.4.2](http://www.open-mpi.org/) tested)
 
