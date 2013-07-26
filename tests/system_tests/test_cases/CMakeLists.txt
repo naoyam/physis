@@ -48,6 +48,8 @@ add_executable(test_mixed-dim2.manual.ref.exe
   test_mixed-dim2.manual.ref.c)
 add_executable(test_mixed-dim3.manual.ref.exe
   test_mixed-dim3.manual.ref.c)
+add_executable(test_user-defined-type5.manual.ref.exe
+  test_user-defined-type5.manual.ref.c)
 
 if (CUDA_FOUND)
   cuda_add_executable(test_04.manual.cuda.exe test_04.manual.cuda.cu)  
@@ -93,4 +95,6 @@ if (CUDA_FOUND)
     test_mixed-dim2.manual.cuda.cu)
   cuda_add_executable(test_mixed-dim3.manual.cuda.exe
     test_mixed-dim3.manual.cuda.cu)
+  cuda_add_executable(test_user-defined-type5.manual.cuda.exe
+    test_user-defined-type5.manual.cuda.cu)
 endif ()
