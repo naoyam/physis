@@ -74,7 +74,8 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       GridEmitAttribute *attr,
       GridType *gt,
       const SgExpressionPtrList *offset_exprs,
-      SgExpression *emit_val);
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL);
   
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,

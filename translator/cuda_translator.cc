@@ -208,7 +208,8 @@ void CUDATranslator::TranslateGetForUserDefinedType(
   if (array_top == NULL) {
     new_get = 
         rt_builder_->BuildGridGet(
-            sb::buildVarRefExp(gga->gv()->get_name()),
+            sb::buildVarRefExp(gga->gv()->get_name(),
+                               si::getScope(node)),
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
@@ -223,7 +224,8 @@ void CUDATranslator::TranslateGetForUserDefinedType(
     original = parent;
     new_get = 
         rt_builder_->BuildGridGet(
-            sb::buildVarRefExp(gga->gv()->get_name()),
+            sb::buildVarRefExp(gga->gv()->get_name(),
+                               si::getScope(node)),
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
@@ -247,7 +249,8 @@ void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
   const StencilIndexList *sil =
       rose_util::GetASTAttribute<GridGetAttribute>(
           func_call_exp)->GetStencilIndexList();
-  SgExpression *gv = sb::buildVarRefExp(grid_arg->get_name());
+  SgExpression *gv = sb::buildVarRefExp(grid_arg->get_name(),
+                                        si::getScope(func_call_exp));
   SgExpression *real_get =
       rt_builder_->BuildGridGet(
           gv, gt, &args, sil, is_kernel, is_periodic);
@@ -282,7 +285,7 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
       si::copyExpression(node->get_args()->get_expressions().back());
   
   SgExpression *real_exp = 
-      rt_builder_->BuildGridEmit(attr, gt, &args, v);
+      rt_builder_->BuildGridEmit(attr, gt, &args, v, si::getScope(node));
   
   si::replaceExpression(node, real_exp);
 

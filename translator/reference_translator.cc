@@ -231,7 +231,7 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
   rose_util::CopyExpressionPtrList(
       node->get_args()->get_expressions(), args);
   SgExpression *p0 = rt_builder_->BuildGridGet(
-      sb::buildVarRefExp(gv->get_name()), gt, 
+      sb::buildVarRefExp(gv->get_name(), si::getScope(node)), gt,
       &args, sil, is_kernel, is_periodic);
   rose_util::GetASTAttribute<GridGetAttribute>(p0)->
       SetGridVar(gv);  
@@ -260,15 +260,15 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
   SgExpressionPtrList args;
   for (int i = 0; i < nd; ++i) {
     SgInitializedName *p = params[i];
-    args.push_back(
-        sb::buildVarRefExp(p, getContainingScopeStatement(node)));
+    args.push_back(sb::buildVarRefExp(p, si::getScope(node)));
   }
 
   SgExpression *emit_val =
       si::copyExpression(node->get_args()->get_expressions().back());
 
   SgExpression *emit =
-      rt_builder_->BuildGridEmit(attr, gt, &args, emit_val);
+      rt_builder_->BuildGridEmit(attr, gt, &args, emit_val,
+                                 si::getScope(node));
 
   si::replaceExpression(node, emit);
   

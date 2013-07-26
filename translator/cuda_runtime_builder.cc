@@ -1031,11 +1031,12 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     GridEmitAttribute *attr,
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
-    SgExpression *emit_val) {
+    SgExpression *emit_val,
+    SgScopeStatement *scope) {
 
   if (gt->IsPrimitivePointType()) {
     return ReferenceRuntimeBuilder::BuildGridEmit(
-        attr, gt, offset_exprs, emit_val);
+        attr, gt, offset_exprs, emit_val, scope);
   }
 
   SgInitializedName *gv = attr->gv();  
@@ -1045,7 +1046,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
   StencilIndexListInitSelf(sil, nd);  
   
   SgExpression *offset = BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()),
+      sb::buildVarRefExp(gv->get_name(), scope),
       nd, offset_exprs, true, false, &sil);
 
   SgExpression *emit_expr = NULL;
@@ -1059,7 +1060,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
       }
       SgExpression *array_offset =
           BuildGridArrayMemberOffset(
-              sb::buildVarRefExp(gv->get_name()),
+              sb::buildVarRefExp(gv->get_name(), scope),
               gt, attr->member_name(),
               offset_vector);
       offset = sb::buildAddOp(offset, array_offset);
@@ -1067,16 +1068,18 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     emit_expr =
         sb::buildAssignOp(
             sb::buildPntrArrRefExp(
-                sb::buildArrowExp(sb::buildVarRefExp(gv->get_name()),
-                                  sb::buildVarRefExp(attr->member_name())),
+                sb::buildArrowExp(
+                    sb::buildVarRefExp(gv->get_name(), scope),
+                    sb::buildVarRefExp(attr->member_name())),
                 offset),
             emit_val);
   } else {
     emit_expr =
         sb::buildFunctionCallExp(
             sb::buildFunctionRefExp(gt->aux_emit_decl()),
-            sb::buildExprListExp(sb::buildVarRefExp(gv->get_name()),
-                                 offset, emit_val));
+            sb::buildExprListExp(
+                sb::buildVarRefExp(gv->get_name(), scope),
+                offset, emit_val));
   }
 
   return emit_expr;

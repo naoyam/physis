@@ -117,13 +117,15 @@ class RuntimeBuilder {
     \param gt GridType of the grid
     \param offset_exprs offset expressions
     \param emit_val Value to emit
+    \param scope Scope where this expression is built    
     \return Expression implementing the emit.
    */
   virtual SgExpression *BuildGridEmit(
       GridEmitAttribute *attr,
       GridType *gt,
       const SgExpressionPtrList *offset_exprs,
-      SgExpression *emit_val) = 0;
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL) = 0;
   
 
   virtual SgBasicBlock *BuildGridSet(

@@ -127,7 +127,8 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
     GridEmitAttribute *attr,
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
-    SgExpression *emit_val) {
+    SgExpression *emit_val,
+    SgScopeStatement *scope) {
   
   /*
     g->p1[offset] = value;
@@ -138,11 +139,11 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   StencilIndexListInitSelf(sil, nd);
   string dst_buf_name = "p0";
   SgExpression *p1 =
-      sb::buildArrowExp(sb::buildVarRefExp(gv->get_name()),
+      sb::buildArrowExp(sb::buildVarRefExp(gv->get_name(), scope),
                         sb::buildVarRefExp(dst_buf_name));
   p1 = sb::buildCastExp(p1, sb::buildPointerType(gt->point_type()));
   SgExpression *offset = BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()),
+      sb::buildVarRefExp(gv->get_name(), scope),
       nd, offset_exprs, true, false, &sil);
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   
