@@ -9,8 +9,8 @@
 
 #define N 32
 
-void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
-            PSGrid3DFloat g2) {
+static void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
+                  PSGrid3DFloat g2) {
   float v = PSGridGet(g, x, y, z) +
       PSGridGet(g, x+1, y, z) + PSGridGet(g, x-1, y, z) +
       PSGridGet(g, x, y+1, z) + PSGridGet(g, x, y-1, z) +
