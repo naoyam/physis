@@ -15,6 +15,7 @@ namespace translator {
 namespace rose_util {
 
 int RemoveRedundantVariableCopy(SgNode *scope);
+int RemoveUnusedFunction(SgNode *scope);
 
 }  // namespace rose_util
 }  // namespace translator

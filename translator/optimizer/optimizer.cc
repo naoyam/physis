@@ -8,6 +8,7 @@
 
 #include "translator/optimizer/optimizer.h"
 #include "translator/optimizer/optimization_passes.h"
+#include "translator/ast_processing.h"
 
 namespace physis {
 namespace translator {
@@ -40,6 +41,7 @@ void Optimizer::PreProcess() {
 }
 
 void Optimizer::PostProcess() {
+  rose_util::RemoveUnusedFunction(proj_);
 }
 
 

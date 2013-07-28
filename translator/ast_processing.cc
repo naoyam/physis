@@ -6,6 +6,8 @@
 
 #include "translator/ast_processing.h"
 
+#include <boost/foreach.hpp>
+
 #include "DefUseAnalysis.h"
 
 namespace sb = SageBuilder;
@@ -38,15 +40,15 @@ static bool IsAssignedOnce(SgInitializedName *var,
 }
 
 static void ReplaceVar(SgInitializedName *x,
-                       SgInitializedName *y,
+                       SgExpression *y,
                        SgNode *node,
                        DefUseAnalysis *dfa) {
   vector<SgVarRefExp*> vref = si::querySubTree<SgVarRefExp>(node);
   FOREACH (vref_it, vref.begin(), vref.end()) {
     SgVarRefExp *v = *vref_it;
-    if (dfa->getUseFor(v, x).size() > 0) {
+    if (v->get_symbol()->get_declaration() == x) {
       //LOG_DEBUG() << "Replacing use of " << x->unparseToString() << "\n";
-      si::replaceExpression(v, sb::buildVarRefExp(y));
+      si::replaceExpression(v, si::copyExpression(y));
     }
   }
   si::removeStatement(x->get_declaration());
@@ -54,39 +56,90 @@ static void ReplaceVar(SgInitializedName *x,
 }
 
 int RemoveRedundantVariableCopy(SgNode *top) {
-  vector<SgFunctionDefinition*> fdefs =
-      si::querySubTree<SgFunctionDefinition>(top);
   DefUseAnalysis *dfa = new DefUseAnalysis(si::getProject());
   dfa->run();
   int num_removed_vars = 0;
-  FOREACH (it, fdefs.begin(), fdefs.end()) {
-    SgFunctionDefinition *fdef = *it;
-    vector<SgInitializedName*> vars =
-      si::querySubTree<SgInitializedName>(fdef);
-    FOREACH (vit, vars.begin(), vars.end()) {
-      SgInitializedName *var = *vit;
-      SgAssignInitializer *init = isSgAssignInitializer(var->get_initializer());
-      if (init == NULL) continue;
-      SgVarRefExp *rhs = isSgVarRefExp(init->get_operand());
-      if (rhs == NULL) continue;
-      //LOG_DEBUG() << "Variable " << var->unparseToString()
-      //<< " is assigned with " << rhs->unparseToString() << "\n";
-      SgInitializedName *rhs_var = isSgInitializedName(
-          rhs->get_symbol()->get_declaration());
-      if (!IsAssignedOnce(var, fdef, dfa)) continue;
-      if (!IsAssignedOnce(rhs_var, fdef, dfa)) continue;
-      //LOG_DEBUG() << "This variable copy can be safely eliminated.\n";
-      ReplaceVar(var, rhs_var, fdef, dfa);
-#if 0      
-      LOG_DEBUG() << "AFTER\n:"
-                  << fdef->unparseToString() << "\n";
-#endif      
-      ++num_removed_vars;
+  vector<SgInitializedName*> vars =
+      si::querySubTree<SgInitializedName>(top);
+  FOREACH (vit, vars.begin(), vars.end()) {
+    SgInitializedName *var = *vit;
+    SgScopeStatement *scope = si::getScope(var);
+    SgAssignInitializer *init = isSgAssignInitializer(var->get_initializer());
+    if (init == NULL) continue;
+    SgExpression *rhs = init->get_operand();
+    SgVarRefExp *rhs_vref = isSgVarRefExp(rhs);
+    if (rhs_vref == NULL) {
+      if (isSgUnaryOp(rhs)) {
+        rhs_vref = isSgVarRefExp(isSgUnaryOp(rhs)->get_operand());
+        if (rhs_vref == NULL) continue;
+      } else {
+        continue;
+      }
     }
+    //LOG_DEBUG() << "Variable " << var->unparseToString()
+    //<< " is assigned with " << rhs->unparseToString() << "\n";
+    SgInitializedName *rhs_var = isSgInitializedName(
+        rhs_vref->get_symbol()->get_declaration());
+    if (!IsAssignedOnce(var, scope, dfa)) continue;
+    if (!IsAssignedOnce(rhs_var, scope, dfa)) continue;
+    //LOG_DEBUG() << "This variable copy can be safely eliminated.\n";
+    ReplaceVar(var, rhs, scope, dfa);
+#if 0
+    LOG_DEBUG() << "AFTER\n:"
+                << scope->unparseToString() << "\n";
+#endif      
+    ++num_removed_vars;
   }
   return num_removed_vars;
 }
 
+static bool DefinedInSource(SgNode *node) {
+  LOG_DEBUG() << "node: " << node->unparseToString() << "\n";
+  Sg_File_Info *finfo = node->get_file_info();
+  string fname = finfo->get_filenameString();
+  LOG_DEBUG() << "file: " << fname << "\n";
+  SgProject *proj = si::getProject();
+  BOOST_FOREACH(SgFile *f, proj->get_fileList()) {
+    if (finfo->isSameFile(f)) {
+      LOG_DEBUG() << "Defined in input source\n";
+      return true;
+    }
+  }
+  return false;
+}
+
+int RemoveUnusedFunction(SgNode *scope) {
+  int num_removed_funcs = 0;
+  BOOST_FOREACH(SgFunctionDeclaration *fdecl,
+                si::querySubTree<SgFunctionDeclaration>(scope)) {
+    // Don't remove non-static functions
+    if (!si::isStatic(fdecl)) continue;
+    if (!DefinedInSource(fdecl)) continue;
+    SgSymbol *fs = fdecl->search_for_symbol_from_symbol_table();
+    bool used = false;
+    BOOST_FOREACH(SgFunctionRefExp *fref,
+                  si::querySubTree<SgFunctionRefExp>(scope)) {
+      if (fs == fref->get_symbol()) {
+        used = true;
+        break;
+      }
+    }
+    if (used) continue;
+
+    LOG_DEBUG() << "Removing " << fs->get_name() << "\n";
+    
+    // si::removeStatement does not automatically relocate
+    // preprocessing info even if explicitly requested with the second
+    // argument. Move it beforehand.
+    si::movePreprocessingInfo(fdecl, si::getNextStatement(fdecl),
+                              PreprocessingInfo::undef,
+                              PreprocessingInfo::undef, true);
+    si::removeStatement(fdecl, true);
+    ++num_removed_funcs;
+  }
+  
+  return num_removed_funcs;
+}
 
 }  // namespace rose_util
 }  // namespace translator

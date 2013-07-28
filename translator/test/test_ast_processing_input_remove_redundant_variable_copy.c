@@ -24,3 +24,19 @@ int DoesNotRemoveVariableCopyWhenDstReassigned() {
   y = 10;
   return y;
 }
+
+int foo(int x) {
+  return x;
+}
+
+int RemoveRedundantVariableCopyWithFuncCall() {
+  int x = 10;
+  int y = x;
+  return foo(y);
+}
+
+int RemoveWhenAssignedWithUnaryOp() {
+  int x = 10;
+  int y = -x;
+  return foo(y);
+}

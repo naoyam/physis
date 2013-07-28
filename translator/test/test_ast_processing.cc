@@ -49,7 +49,7 @@ static bool HasVariable(const string &name,
 class ast_processing_RemoveRedundantVariableCopy: public Test {
  public:
   void SetUp() {
-    proj_ = FrontEnd("test_ast_processing_input1.c");
+    proj_ = FrontEnd("test_ast_processing_input_remove_redundant_variable_copy.c");
     func_ =
         si::findFunctionDeclaration(
             proj_, UnitTest::GetInstance()->current_test_info()->name(),
@@ -109,8 +109,50 @@ TEST_F(ast_processing_RemoveRedundantVariableCopy,
   AstTests::runAllTests(proj_);
   
   ASSERT_THAT(removed, Eq(0));
-  ASSERT_THAT(HasVariable("y", func_), Eq(true));
+  ASSERT_PRED2(HasVariable, "y", func_);
 }
+
+TEST_F(ast_processing_RemoveRedundantVariableCopy,
+       RemoveRedundantVariableCopyWithFuncCall) {
+  int removed = rose_util::RemoveRedundantVariableCopy(func_);
+  AstTests::runAllTests(proj_);
+  
+  ASSERT_THAT(removed, Eq(1));
+  ASSERT_THAT(HasVariable("y", func_), Eq(false));
+}
+
+TEST_F(ast_processing_RemoveRedundantVariableCopy,
+       RemoveWhenAssignedWithUnaryOp) {
+  
+  int removed = rose_util::RemoveRedundantVariableCopy(func_);
+  AstTests::runAllTests(proj_);
+  
+  ASSERT_THAT(removed, Eq(1));
+  ASSERT_THAT(HasVariable("y", func_), Eq(false));
+}
+
+class ast_processing_RemoveUnusedFunction: public Test {
+ public:
+  void SetUp() {
+    proj_ = FrontEnd("test_ast_processing_input_remove_unused_func.c");
+  }
+  void TearDown() {
+    delete proj_;    
+  }
+  SgProject *proj_;
+};
+
+TEST_F(ast_processing_RemoveUnusedFunction,
+       RemovesUnusedFunction) {
+  int removed = rose_util::RemoveUnusedFunction(proj_);
+  AstTests::runAllTests(proj_);
+  
+  ASSERT_THAT(removed, Eq(1));
+  ASSERT_THAT(GetFunction(proj_, "ToRemove"), IsNull());
+  ASSERT_THAT(GetFunction(proj_, "NotToRemove1"), NotNull());
+  ASSERT_THAT(GetFunction(proj_, "NotToRemove2"), NotNull());
+}
+
 
 } // namespace rose_util
 } // namespace translator

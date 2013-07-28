@@ -10,6 +10,7 @@
 
 
 #include "translator/rose_util.h"
+#include "translator/ast_processing.h"
 #include "translator/translation_context.h"
 #include "translator/reference_runtime_builder.h"
 #include "translator/runtime_builder.h"
@@ -69,6 +70,8 @@ void ReferenceTranslator::Translate() {
   
   traverseBottomUp(project_);
 
+  rose_util::RemoveUnusedFunction(project_);
+  
   FixAST();
   ValidateASTConsistency();
 }
