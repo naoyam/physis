@@ -34,27 +34,29 @@ void dump(REAL *input) {
 
 int main(int argc, char *argv[]) {
   REAL *g1, *g1d;
-  REAL *g2d;
+  REAL *g2, *g2d;
   size_t nelms = N*N*N;
   g1 = (REAL *)malloc(sizeof(REAL) * nelms);
+  g2 = (REAL *)malloc(sizeof(REAL) * nelms);  
   cudaMalloc((void**)&g1d, sizeof(REAL) * nelms);
   cudaMalloc((void**)&g2d, sizeof(REAL) * nelms);
 
   int i;
   for (i = 0; i < (int)nelms; i++) {
     g1[i] = i;
+    g2[i] = 0;    
   }
     
   cudaMemcpy(g1d, g1, sizeof(REAL) * nelms, cudaMemcpyHostToDevice);
-  cudaMemcpy(g2d, g1, sizeof(REAL) * nelms, cudaMemcpyHostToDevice);  
+  cudaMemcpy(g2d, g2, sizeof(REAL) * nelms, cudaMemcpyHostToDevice);  
   
   dim3 block_dim(4, 4, 4);
   dim3 grid_dim(N/block_dim.x, N/block_dim.y, N/block_dim.z);
 
   kernel<<<grid_dim, block_dim>>>(g1d, g2d);
-  cudaMemcpy(g1, g2d, sizeof(REAL) * nelms, cudaMemcpyDeviceToHost);
+  cudaMemcpy(g2, g2d, sizeof(REAL) * nelms, cudaMemcpyDeviceToHost);
 
-  dump(g1);
+  dump(g2);
 
   cudaDeviceReset();
   return 0;

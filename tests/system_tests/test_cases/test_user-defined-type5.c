@@ -20,18 +20,18 @@ void kernel1(const int x, const int y, const int z,
   float v = PSGridGet(g, x, y, z).p[0] +
       PSGridGet(g, x-1, y, z).p[0] +
       PSGridGet(g, x+1, y, z).p[0] +
-      PSGridGet(g, x+1, y-1, z).p[0] +
-      PSGridGet(g, x+1, y+1, z).p[0] +
-      PSGridGet(g, x+1, y, z-1).p[0] +
-      PSGridGet(g, x+1, y, z+1).p[0];
+      PSGridGet(g, x, y-1, z).p[0] +
+      PSGridGet(g, x, y+1, z).p[0] +
+      PSGridGet(g, x, y, z-1).p[0] +
+      PSGridGet(g, x, y, z+1).p[0];
   PSGridEmitUtype(g.p[1], v);
   return;
 }
 
-void dump(float *input) {
+void dump(struct Point *output) {
   int i;
   for (i = 0; i < N*N*N; ++i) {
-    printf("%f\n", input[i]);
+    printf("%f\n", output[i].p[1]);
   }
 }
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
   int i;
   for (i = 0; i < nelms; i++) {
     indata[i].p[0] = i;
-    indata[i].p[1] = i;
+    indata[i].p[1] = 0;
     outdata[i].p[0] = 0;
     outdata[i].p[1] = 0;
   }

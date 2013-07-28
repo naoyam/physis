@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   int i;
   for (i = 0; i < (int)nelms; i++) {
     g1[i] = i;
-    g2[i] = i;
+    g2[i] = 0;
   }
 
   kernel(g1, g2);
