@@ -94,14 +94,15 @@ int RemoveRedundantVariableCopy(SgNode *top) {
 }
 
 static bool DefinedInSource(SgNode *node) {
-  LOG_DEBUG() << "node: " << node->unparseToString() << "\n";
+  //LOG_DEBUG() << "node: " << node->unparseToString() << "\n";
   Sg_File_Info *finfo = node->get_file_info();
+  if (finfo->isTransformation()) return true;
   string fname = finfo->get_filenameString();
-  LOG_DEBUG() << "file: " << fname << "\n";
+  //LOG_DEBUG() << "file: " << fname << "\n";
   SgProject *proj = si::getProject();
   BOOST_FOREACH(SgFile *f, proj->get_fileList()) {
     if (finfo->isSameFile(f)) {
-      LOG_DEBUG() << "Defined in input source\n";
+      //LOG_DEBUG() << "Defined in input source\n";
       return true;
     }
   }
