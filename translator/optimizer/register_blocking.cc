@@ -335,9 +335,23 @@ static SgExpression *ReplaceGridInGet(SgExpression *original_get,
   return get;
 }
 
-static bool ShouldGetPeriodic(SgForStatement *loop,
-                              IndexListVector &bil,
-                              int dim, int index) {
+static bool ShouldGetPeriodic(SgExpression *get_exp) {
+  GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(
+      get_exp);
+  PSAssert(gga);
+  GridOffsetAttribute *goa =
+      rose_util::GetASTAttribute<GridOffsetAttribute>(gga->offset());
+  PSAssert(goa);
+  return goa->periodic();
+}
+
+static bool ShouldGetStencilHolePeriodic(SgForStatement *loop,
+                                         IndexListVector &bil,
+                                         int dim, int index) {
+  // Whether this index should be accessed with the periodic
+  // boundary condition can't be determined if this index is
+  // originally a stencil hole. Conservatively determine whether it
+  // should be periodic or not.
   if (index == 0) return false;
   FOREACH (bil_it, bil.begin(), bil.end()) {
     StencilRegularIndexList &il = *bil_it;
@@ -348,13 +362,12 @@ static bool ShouldGetPeriodic(SgForStatement *loop,
     SgExpression *get = FindGetAtIndex(loop, &il);
     // This index is originally a hole if no get is found.
     if (get == NULL) continue;
-    bool p = rose_util::GetASTAttribute<GridOffsetAttribute>(
-        rose_util::GetASTAttribute<GridGetAttribute>(
-            get)->offset())->periodic();
+    bool p = ShouldGetPeriodic(get);
     if (p) return true;
   }
-  return false;
+  return false;    
 }
+
 
 static void SetStencilIndexList(StencilIndexList &sil,
                                 const StencilRegularIndexList &sril) {
@@ -477,18 +490,10 @@ static bool DoRegisterBlockingOneLine(
     // There can be no get for this index. The element at that index
     // is still needed to be loaded for blocking.
     
-    // Whether this index should be accessed with the periodic
-    // boundary condition can't be determined if this index is
-    // originally a stencil hole. Conservatively determine whether it
-    // should be periodic or not.
-    bool is_periodic;
-    if (original_get) {
-      is_periodic = rose_util::GetASTAttribute<GridOffsetAttribute>(
-        rose_util::GetASTAttribute<GridGetAttribute>(
-            original_get)->offset())->periodic();
-    } else {
-      is_periodic = ShouldGetPeriodic(loop, bil, dim, il.GetIndex(dim));
-    }
+    bool is_periodic = original_get?
+        ShouldGetPeriodic(original_get) :
+        ShouldGetStencilHolePeriodic(loop, bil, dim, il.GetIndex(dim));
+    
     StencilIndexList sil;
     SetStencilIndexList(sil, il);
     // Initial load from memory to registers

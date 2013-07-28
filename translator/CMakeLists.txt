@@ -33,9 +33,10 @@ include_directories(${Boost_INCLUDE_DIRS})
 find_package(JNI REQUIRED)
 
 # common sources
-set (PHYSISC_SRC physisc.cc configuration.cc
+set (PHYSISC_SRC configuration.cc
   translation_context.cc grid.cc domain.cc
-  def_analysis.cc map.cc run.cc rose_traversal.cc rose_util.cc
+  def_analysis.cc map.cc run.cc rose_traversal.cc
+  rose_util.cc ast_processing.cc
   translator.cc reference_translator.cc kernel.cc
   alias_analysis.cc SageBuilderEx.cc
   stencil_analysis.cc stencil_range.cc translation_util.cc
@@ -159,7 +160,9 @@ if (MPI_OPENMP_TRANSLATOR_ENABLED)
     )
 endif ()
 
-add_executable(physisc ${PHYSISC_SRC})
+add_library(translator STATIC ${PHYSISC_SRC})
+add_executable(physisc physisc.cc)
+target_link_libraries(physisc translator)
 target_link_libraries(physisc ${ROSE_LIBRARIES})
 target_link_libraries(physisc ${JAVA_JVM_LIBRARY})
 target_link_libraries(physisc ${Boost_LIBRARIES})
@@ -177,3 +180,5 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/physisc-ref
 
 install(DIRECTORY ../include/ DESTINATION include
   FILES_MATCHING PATTERN "*.h")
+
+add_subdirectory(test)

@@ -31,13 +31,13 @@ static void FixGridOffsetAttributeFuncCall(SgFunctionCallExp *offset_exp,
 
 static void FixGridOffsetAttributeInlined(SgBinaryOp *offset_exp,
                                           GridOffsetAttribute *goa) {
-  // This turnes out to be rather difficult. It would be rather
-  // simpler to change the code generation method to use the function
-  // call format.
-  LOG_ERROR() << "Unsupported: "
-              << offset_exp->unparseToString()
-              << "\n";
-  PSAbort(1);
+  // Assumes that the expression consists of func call and struct
+  // member offset
+  PSAssert(isSgAddOp(offset_exp));
+  SgFunctionCallExp *offset_call = isSgFunctionCallExp(
+      offset_exp->get_lhs_operand());
+  PSAssert(offset_call);
+  FixGridOffsetAttributeFuncCall(offset_call, goa);
   return;
 }
 

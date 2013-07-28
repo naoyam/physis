@@ -179,6 +179,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
           si::copyExpression(gvref),
           sb::buildVarRefExp(member_name)),
       offset);
+
   GridGetAttribute *gga = new GridGetAttribute(
       NULL, gt->num_dim(), is_kernel, is_periodic,
       sil, offset, member_name);
@@ -283,20 +284,24 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
       BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
                       is_kernel, is_periodic, sil);
 
-  offset = sb::buildAddOp(
+  SgExpression *offset_with_array = sb::buildAddOp(
       offset,
       BuildGridArrayMemberOffset(si::copyExpression(gvref), gt,
                                  member_name,
                                  array_indices));
+  
+  rose_util::CopyASTAttribute<GridOffsetAttribute>(
+      offset_with_array, offset);
+  rose_util::RemoveASTAttribute<GridOffsetAttribute>(offset);
 
   SgExpression *x = sb::buildPntrArrRefExp(
       sb::buildArrowExp(
           si::copyExpression(gvref),
           sb::buildVarRefExp(member_name)),
-      offset);
+      offset_with_array);
   GridGetAttribute *gga = new GridGetAttribute(
       NULL, gt->num_dim(), is_kernel, is_periodic,
-      sil, offset, member_name);
+      sil, offset_with_array, member_name);
   rose_util::AddASTAttribute<GridGetAttribute>(
       x, gga);
   return x;
