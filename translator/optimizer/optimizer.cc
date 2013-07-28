@@ -22,25 +22,31 @@ void Optimizer::DoStage2() {
   pass::null_optimization(proj_, tx_, builder_);
 }
 void Optimizer::Stage1() {
-  PreProcess();
+  Stage1PreProcess();
   LOG_DEBUG() << "Applying Stage 1 optimization passes\n";  
   DoStage1();
   LOG_DEBUG() << "Stage 1 optimization done\n";  
-  PostProcess();
+  Stage1PostProcess();
 }
 
 void Optimizer::Stage2() {
-  PreProcess();
+  Stage2PreProcess();
   LOG_DEBUG() << "Applying Stage 2 optimization passes\n";
   DoStage2();
   LOG_DEBUG() << "Stage 2 optimization done\n";
-  PostProcess();  
+  Stage2PostProcess();  
 }
 
-void Optimizer::PreProcess() {
+void Optimizer::Stage1PreProcess() {
 }
 
-void Optimizer::PostProcess() {
+void Optimizer::Stage1PostProcess() {
+}
+
+void Optimizer::Stage2PreProcess() {
+}
+
+void Optimizer::Stage2PostProcess() {
   rose_util::RemoveUnusedFunction(proj_);
 }
 

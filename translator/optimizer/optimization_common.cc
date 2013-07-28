@@ -23,8 +23,11 @@ static void FixGridOffsetAttributeFuncCall(SgFunctionCallExp *offset_exp,
   FOREACH (it, ++args.begin(), args.end()) {
     indices.push_back(*it);
   }
-  SgVarRefExp *grid_ref =
-      isSgVarRefExp(offset_exp->get_args()->get_expressions()[0]);
+  SgExpression *grid_exp = offset_exp->get_args()->get_expressions()[0];
+  if (isSgAddressOfOp(grid_exp)) {
+    grid_exp = isSgAddressOfOp(grid_exp)->get_operand();
+  }
+  SgVarRefExp *grid_ref = isSgVarRefExp(grid_exp);
   PSAssert(grid_ref);
   goa->gvexpr() = grid_ref;
 }
@@ -78,11 +81,16 @@ void FixGridGetAttribute(SgExpression *get_exp) {
   get_exp = rose_util::removeCasts(get_exp);
   if (isSgBinaryOp(get_exp)) {
     new_offset = isSgBinaryOp(get_exp)->get_rhs_operand();
-    new_grid = isSgVarRefExp(isSgBinaryOp(
-        rose_util::removeCasts(
-            isSgBinaryOp(get_exp)->get_lhs_operand()))
-                             ->get_lhs_operand());
-    PSAssert(new_offset);    
+    PSAssert(new_offset);        
+    SgExpression *x = 
+        isSgBinaryOp(
+            rose_util::removeCasts(
+                isSgBinaryOp(get_exp)->get_lhs_operand()))->
+        get_lhs_operand();
+    if (isSgAddressOfOp(x)) {
+      x = isSgAddressOfOp(x)->get_operand();
+    }
+    new_grid = isSgVarRefExp(x);
     PSAssert(new_grid);
   } else if (isSgFunctionCallExp(get_exp)) {
     new_offset =

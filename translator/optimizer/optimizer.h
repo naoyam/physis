@@ -56,8 +56,10 @@ class Optimizer {
   physis::translator::Configuration *config_;
   virtual void DoStage1();
   virtual void DoStage2();  
-  virtual void PreProcess();
-  virtual void PostProcess();
+  virtual void Stage1PreProcess();
+  virtual void Stage1PostProcess();
+  virtual void Stage2PreProcess();
+  virtual void Stage2PostProcess();
 };
 
 } // namespace optimizer
