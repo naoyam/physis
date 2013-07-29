@@ -539,8 +539,8 @@ bool MPITranslator::TranslateGetHost(SgFunctionCallExp *node,
   }
 
   SgExpression *get = rt_builder_->BuildGridGet(
-      g, rose_util::GetASTAttribute<GridType>(g),
-      &indices, NULL, false, false);
+      g, rose_util::GetASTAttribute<GridVarAttribute>(gv),
+      gt, &indices, NULL, false, false);
   si::replaceExpression(node, get, true);
   rose_util::CopyASTAttribute<GridGetAttribute>(
       get, node, false);  
@@ -571,7 +571,6 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
                        sb::buildPointerType(gt->point_type())),
       offset);
   rose_util::CopyASTAttribute<GridGetAttribute>(x, node);
-  rose_util::GetASTAttribute<GridGetAttribute>(x)->offset() = offset;
   si::replaceExpression(node, x);
   return true;
 }

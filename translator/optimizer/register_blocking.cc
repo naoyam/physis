@@ -6,14 +6,16 @@
 //
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
+#include <climits>
+#include <algorithm>
+#include <boost/foreach.hpp>
+
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/translation_util.h"
 
-#include <climits>
-#include <algorithm>
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -32,19 +34,33 @@ typedef vector<StencilRegularIndexList> IndexListVector;
 
 //! Struct to represent a grid variable and a member to access.
 struct GridData {
-  SgInitializedName *gv_;
+  //SgInitializedName *gv_;
+  GridVarAttribute *gva_;
+  SgExpression *ref_get_;
   bool member_access_;
   string member_;
-  GridData(SgInitializedName *gv,
-           string member):
-      gv_(gv), member_access_(true),
+  IntVector indices_;
+  GridData(GridVarAttribute *gva,
+           SgExpression *ref_get,
+           const string &member):
+      gva_(gva), ref_get_(ref_get), member_access_(true),
       member_(member) {}
-  explicit GridData(SgInitializedName *gv):
-      gv_(gv), member_access_(false) {}
+  GridData(GridVarAttribute *gva,
+           SgExpression *ref_get,
+           const string &member, const IntVector &indices):
+      gva_(gva), ref_get_(ref_get), member_access_(true),
+      member_(member), indices_(indices) {}
+  GridData(GridVarAttribute *gva, SgExpression *ref_get):
+      gva_(gva), ref_get_(ref_get), member_access_(false) {}
   GridData(const GridData &gd):
-      gv_(gd.gv_),
+      gva_(gd.gva_),
+      ref_get_(gd.ref_get_),
       member_access_(gd.member_access_),
-      member_(gd.member_) {}
+      member_(gd.member_), indices_(gd.indices_) {}
+  bool IsMemberAccess() const { return member_access_; }
+  bool IsArrayMemberAcccess() const {
+    return member_access_ && indices_.size() > 0;
+  }
 };
 
 /*!
@@ -191,17 +207,19 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
     if (get_attr->GetStencilIndexList() == NULL) continue;
     if (*index_list != *get_attr->GetStencilIndexList())
       continue;
-    //if (!IsSameGrid(gd.gv_->get_name(), get_attr->gv())) continue;
-    if (gd.gv_ != get_attr->original_gv()) {
+    GridVarAttribute *gva_base = gd.gva_;
+    GridVarAttribute *gva_target = get_attr->gva();
+    PSAssert(gva_base);
+    PSAssert(gva_target);
+    if (gva_base != gva_target) {
       LOG_DEBUG() << "NOT Same grid: "
-                  << gd.gv_->get_name()
-                  << " != "
-                  << get_attr->original_gv() << "\n";
+                  << gd.ref_get_->unparseToString() << ", "
+                  << GridGetAnalysis::GetGridVar(get)->get_name() << "\n";
       continue;
     }
     // Ensure the get access is to the same member if its member
     // access 
-    if (gd.member_access_) {
+    if (gd.IsMemberAccess()) {
       if (get_attr->member_name() != gd.member_) continue;
     } else {
       // Ignore a get with a member access.
@@ -216,7 +234,10 @@ static SgExpression *ReplaceGetWithReg(SgForStatement *loop,
     }
     if (!replaced_get) replaced_get = get;
     SgVarRefExp *reg_ref = sb::buildVarRefExp(reg);
-    rose_util::CopyASTAttribute<GridGetAttribute>(reg_ref, get);    
+    rose_util::CopyASTAttribute<GridGetAttribute>(reg_ref, get);
+    LOG_DEBUG() << "Replacing "
+                << get->unparseToString()
+                << " with " << reg_ref->unparseToString() << "\n";
     si::replaceExpression(get, reg_ref, true);
   }
   return replaced_get;
@@ -234,6 +255,7 @@ static bool index_comp(SgNode *x, SgNode *y) {
 // Set loop var in run_kernel_attr.
 static SgExpressionPtrList GetLoopIndices(
     SgFunctionDeclaration *run_kernel_func,
+    SgForStatement *loop,
     RunKernelLoopAttribute *loop_attr,
     StencilIndexList *sil,
     bool initial_load) {
@@ -257,7 +279,13 @@ static SgExpressionPtrList GetLoopIndices(
     }
     if (used) {
       if (initial_load && idim == loop_attr->dim()) {
-        indices.push_back(si::copyExpression(loop_attr->begin()));
+        SgExpression *i = KernelLoopAnalysis::GetLoopBegin(loop);
+        if (i) {
+          i = si::copyExpression(i);
+        } else {
+          i = sb::buildVarRefExp(index_var);
+        }
+        indices.push_back(i);
       } else {
         indices.push_back(sb::buildVarRefExp(index_var));
       }
@@ -335,16 +363,6 @@ static SgExpression *ReplaceGridInGet(SgExpression *original_get,
   return get;
 }
 
-static bool ShouldGetPeriodic(SgExpression *get_exp) {
-  GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(
-      get_exp);
-  PSAssert(gga);
-  GridOffsetAttribute *goa =
-      rose_util::GetASTAttribute<GridOffsetAttribute>(gga->offset());
-  PSAssert(goa);
-  return goa->periodic();
-}
-
 static bool ShouldGetStencilHolePeriodic(SgForStatement *loop,
                                          IndexListVector &bil,
                                          int dim, int index) {
@@ -360,9 +378,9 @@ static bool ShouldGetStencilHolePeriodic(SgForStatement *loop,
       continue;
     }
     SgExpression *get = FindGetAtIndex(loop, &il);
-    // This index is originally a hole if no get is found.
-    if (get == NULL) continue;
-    bool p = ShouldGetPeriodic(get);
+    // no get for a stencil hole
+    if (!get) continue;
+    bool p = rose_util::GetASTAttribute<GridGetAttribute>(get)->is_periodic();
     if (p) return true;
   }
   return false;    
@@ -377,6 +395,7 @@ static void SetStencilIndexList(StencilIndexList &sil,
   }
 }
 
+
 //! Get type of a grid data.
 /*!
   If it's an access to member, returns its member type; otherwise, the
@@ -386,7 +405,7 @@ static void SetStencilIndexList(StencilIndexList &sil,
   \param gd
  */
 static SgType *GetType(GridType *gt, const GridData &gd) {
-  if (gt->IsPrimitivePointType() || !gd.member_access_) {
+  if (gt->IsPrimitivePointType() || !gd.IsMemberAccess()) {
     return gt->point_type();
   } else {
     SgClassDefinition *utdef = gt->point_def();
@@ -396,7 +415,13 @@ static SgType *GetType(GridType *gt, const GridData &gd) {
     FOREACH (it, mdecls.begin(), mdecls.end()) {
       SgVariableDeclaration *mdecl = *it;
       if (rose_util::GetName(mdecl) == gd.member_) {
-        return mdecl->get_definition()->get_type();
+        SgType *ty = mdecl->get_definition()->get_type();
+        if (gd.indices_.size() > 0) {
+          PSAssert(isSgArrayType(ty));
+          PSAssert(si::getDimensionCount(ty) == (int)gd.indices_.size());
+          ty = si::getArrayElementType(ty);
+        }
+        return ty;
       }
     }
     LOG_ERROR() << "No such member found: " << gd.member_
@@ -412,16 +437,24 @@ SgExpression *BuildGet(const GridData &gd,
                        const StencilIndexList &sil,
                        bool is_periodic,
                        RuntimeBuilder *builder) {
-  SgInitializedName *gv = gd.gv_;
-  SgExpression *grid_ref =
-      builder->BuildGridRefInRunKernel(
-          gv, run_kernel_func);
-  return gd.member_access_? 
-      builder->BuildGridGet(grid_ref, gt, &indices,
-                            &sil, true, is_periodic,
-                            gd.member_) :
-      builder->BuildGridGet(grid_ref, gt, &indices,
-                            &sil, true, is_periodic);
+  SgExpression *grid_ref = sb::buildVarRefExp(
+      GridGetAnalysis::GetGridVar(gd.ref_get_));
+  if (gd.IsArrayMemberAcccess()) {
+    SgExpressionPtrList array_indices;
+    BOOST_FOREACH(int i, gd.indices_) {
+      array_indices.push_back(sb::buildIntVal(i));
+    }
+    return builder->BuildGridGet(
+        grid_ref, gd.gva_, gt, &indices, &sil, true,
+        is_periodic, gd.member_, array_indices);
+  } else if (gd.IsMemberAccess()) {
+    return builder->BuildGridGet(
+        grid_ref, gd.gva_, gt, &indices, &sil, true,
+        is_periodic, gd.member_);
+  } else {
+    return builder->BuildGridGet(
+        grid_ref, gd.gva_, gt, &indices, &sil, true, is_periodic);
+  }
 }
 
 //! Apply register blocking along one line of accesses.
@@ -461,8 +494,7 @@ static bool DoRegisterBlockingOneLine(
    */
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-  SgInitializedName *gv = gd.gv_;
-  GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+  GridType *gt = gd.gva_->gt();
   int dim = loop_attr->dim();
   // Flag to indicate access replacement 
   bool replaced = false;
@@ -486,12 +518,13 @@ static bool DoRegisterBlockingOneLine(
     SgExpression *original_get =
         ReplaceGetWithReg(loop, gd, &il, reg1);
     // Track if any replacement is done
-    replaced |= original_get != NULL;
+    replaced = (original_get != NULL) || replaced;
     // There can be no get for this index. The element at that index
     // is still needed to be loaded for blocking.
     
     bool is_periodic = original_get?
-        ShouldGetPeriodic(original_get) :
+        rose_util::GetASTAttribute<GridGetAttribute>(
+            original_get)->is_periodic() :
         ShouldGetStencilHolePeriodic(loop, bil, dim, il.GetIndex(dim));
     
     StencilIndexList sil;
@@ -499,7 +532,7 @@ static bool DoRegisterBlockingOneLine(
     // Initial load from memory to registers
     if (i < (int)bil.size() - 1) {
       SgExpressionPtrList init_indices =
-          GetLoopIndices(run_kernel_func, loop_attr, &sil, true);
+          GetLoopIndices(run_kernel_func, loop, loop_attr, &sil, true);
       //si::deleteAST(init_indices[dim-1]);
       //init_indices[dim-1] = si::copyExpression(loop_attr->begin());
       OffsetIndices(init_indices, il);
@@ -520,7 +553,7 @@ static bool DoRegisterBlockingOneLine(
     } else {
       // Load a new value to reg
       SgExpressionVector indices_next =
-          GetLoopIndices(run_kernel_func, loop_attr, &sil, false);
+          GetLoopIndices(run_kernel_func, loop, loop_attr, &sil, false);
       OffsetIndices(indices_next, il);
       SgExpression *get_next = BuildGet(
           gd, run_kernel_func, gt, indices_next,
@@ -539,7 +572,8 @@ static bool DoRegisterBlockingOneLine(
       si::insertStatementBefore(loop, *it);
     }
     SgScopeStatement *loop_body =
-        isSgScopeStatement(loop->get_loop_body());
+        isSgScopeStatement(
+            rose_util::QuerySubTreeAttribute<KernelBodyAttribute>(loop).front());
     PSAssert(loop_body);
     FOREACH (move_stmts_it, move_stmts.rbegin(),
              move_stmts.rend()) {
@@ -560,6 +594,29 @@ static bool DoRegisterBlockingOneLine(
   return replaced;
 }
 
+static bool DoRegisterBlockingForAllIndices(
+    TranslationContext *tx,
+    RuntimeBuilder *builder,
+    SgFunctionDeclaration *run_kernel_func,
+    SgForStatement *loop,
+    const GridData &gd,
+    int dim,
+    const StencilRange &range) {
+  const vector<StencilIndexList> &indices = range.all_indices();
+  vector<IndexListVector> blocked_indices =
+      FindCandidateIndices(indices, dim);
+  FillStencilHole(blocked_indices, dim);
+  bool performed = false;
+  FOREACH (blocked_indices_it, blocked_indices.begin(),
+           blocked_indices.end()) {
+    IndexListVector bil = *blocked_indices_it;
+    performed = DoRegisterBlockingOneLine(
+        tx, builder, gd, run_kernel_func,
+        loop, bil) || performed;
+  }
+  return performed;
+}
+
 //! Apply register blocking to a kernel call.
 /*!
   \param proj
@@ -573,55 +630,45 @@ static void DoRegisterBlocking(
     TranslationContext *tx, RuntimeBuilder *builder,
     SgFunctionDeclaration *run_kernel_func,
     SgForStatement *loop) {
-  RunKernelAttribute *run_kernel_attr =
-      rose_util::GetASTAttribute<RunKernelAttribute>(run_kernel_func);
+  LOG_DEBUG() << "Checking run kernel function: "
+              << run_kernel_func->get_name() << "\n";
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
   int dim = loop_attr->dim();
-  GridRangeMap &gr = run_kernel_attr->stencil_map()
-      ->grid_stencil_range_map();
-  GridMemberRangeMap &gmr = run_kernel_attr->stencil_map()
-      ->grid_member_range_map();
-  set<SgInitializedName *> gv_set;
-  LOG_DEBUG() << "Checking member accesses\n";
-  FOREACH (gr_it, gmr.begin(), gmr.end()) {
-    SgInitializedName *gv = gr_it->first.first;
-    string member = gr_it->first.second;
-    const vector<StencilIndexList> &indices = gr_it->second.all_indices();
-    vector<IndexListVector> blocked_indices =
-        FindCandidateIndices(indices, dim);
-    FillStencilHole(blocked_indices, dim);
-    FOREACH (blocked_indices_it, blocked_indices.begin(),
-             blocked_indices.end()) {
-      IndexListVector bil = *blocked_indices_it;
-      if (DoRegisterBlockingOneLine(
-              tx, builder, GridData(gv, member),
-              run_kernel_func, loop, bil)) {
-        // Do not apply transformation for non-member access once the
-        // grid is applied for member accesses
-        gv_set.insert(gv);
-      }
-    }
-  }
-  LOG_DEBUG() << "Checking non-member accesses\n";
-  FOREACH (gr_it, gr.begin(), gr.end()) {
-    SgInitializedName *gv = gr_it->first;
-    if (gv_set.find(gv) != gv_set.end()) {
-      LOG_DEBUG() << gv->unparseToString()
-                  << " is already processed in member-access blocking.\n";
+  vector<SgNode*> target_gets =
+      rose_util::QuerySubTreeAttribute<GridGetAttribute>(loop);
+  set<GridVarAttribute*> done_grids;
+  BOOST_FOREACH (SgNode *get, target_gets) {
+    LOG_DEBUG() << "Checking grid get: " << get->unparseToString() << "\n";
+    GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(get);
+    GridVarAttribute *gva = gga->gva();
+    if (isContained(done_grids, gva)) {
+      LOG_DEBUG() << "Already processed.\n";
       continue;
     }
-    const vector<StencilIndexList> &indices = gr_it->second.all_indices();
-    vector<IndexListVector> blocked_indices =
-        FindCandidateIndices(indices, dim);
-    FillStencilHole(blocked_indices, dim);
-    FOREACH (blocked_indices_it, blocked_indices.begin(),
-             blocked_indices.end()) {
-      IndexListVector bil = *blocked_indices_it;
-      DoRegisterBlockingOneLine(
-          tx, builder, GridData(gv), run_kernel_func,
-          loop, bil);
+    //SgExpression *get_exp = GridGetAnalysis::GetGridExp(isSgExpression(get));
+    // If there are member-specific gets, apply register just to
+    // member accesses
+    bool member_blocked = false;
+    LOG_DEBUG() << "Checking member accesses\n";
+    BOOST_FOREACH (
+        GridVarAttribute::MemberStencilRangeMap::value_type &p,
+        gva->member_sr()) {
+      const string &member = p.first.first;
+      const IntVector &indices = p.first.second;
+      const StencilRange &sr = p.second;
+      GridData gd(gva, isSgExpression(get), member, indices);      
+      member_blocked = 
+          DoRegisterBlockingForAllIndices(
+              tx, builder, run_kernel_func, loop, gd, dim, sr) ||
+          member_blocked;
     }
+    if (!member_blocked) {
+      GridData gd(gva, isSgExpression(get));
+      DoRegisterBlockingForAllIndices(
+          tx, builder, run_kernel_func, loop, gd, dim, gva->sr());
+    }
+    done_grids.insert(gva);
   }
 }
 

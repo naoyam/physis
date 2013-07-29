@@ -12,6 +12,9 @@
 #include "translator/translation_context.h"
 #include "translator/physis_names.h"
 
+namespace si = SageInterface;
+namespace sb = SageBuilder;
+
 namespace physis {
 namespace translator {
 
@@ -143,6 +146,52 @@ void StencilMap::SetGridPeriodic(SgInitializedName *gv) {
   grid_periodic_set_.insert(gv);
 }
 
+SgVarRefExp *KernelLoopAnalysis::GetLoopVar(SgForStatement *loop) {
+  SgExpression *incr = loop->get_increment();
+  SgVarRefExp *v = rose_util::GetUniqueVarRefExp(incr);
+  PSAssert(v);
+  return v;
+}
+
+SgExpression *KernelLoopAnalysis::GetLoopBegin(SgForStatement *loop) {
+  const SgStatementPtrList &init_stmt = loop->get_init_stmt();
+  SgExpression *begin_exp = NULL;  
+  if (init_stmt.size() == 1) {
+    SgExprStatement *assign = isSgExprStatement(init_stmt[0]);
+    PSAssert(assign);
+    begin_exp = isSgAssignOp(
+        assign->get_expression())->get_rhs_operand();
+  } else if (init_stmt.size() == 0) {
+#if 0    
+    // backtrack to the previous loop
+    SgStatement *preceding_loop = si::getPreviousStatement(loop);
+    while (true) {
+      if (isSgForStatement(preceding_loop)) break;
+      preceding_loop = si::getPreviousStatement(preceding_loop);
+    }
+    PSAssert(isSgForStatement(preceding_loop));
+    begin_exp = KernelLoopAnalysis::GetLoopEnd(
+        isSgForStatement(preceding_loop));
+#else
+    begin_exp = NULL;
+#endif
+  } else {
+    LOG_ERROR() << "Unsupported loop init statement: "
+                << loop->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  
+  return begin_exp;
+}
+
+SgExpression *KernelLoopAnalysis::GetLoopEnd(SgForStatement *loop) {
+  SgExprStatement *test = isSgExprStatement(loop->get_test());
+  PSAssert(test);
+  SgBinaryOp *test_exp = isSgBinaryOp(test->get_expression());
+  PSAssert(isSgLessThanOp(test_exp));
+  SgExpression *end_exp = test_exp->get_rhs_operand();
+  return end_exp;
+}
 
 } // namespace translator
 } // namespace physis

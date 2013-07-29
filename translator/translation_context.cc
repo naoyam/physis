@@ -11,6 +11,7 @@
 #include <memory>
 #include <ostream>
 #include <vector>
+#include <boost/foreach.hpp>
 
 #include "translator/rose_util.h"
 #include "translator/def_analysis.h"
@@ -27,7 +28,7 @@ namespace si = SageInterface;
 namespace physis {
 namespace translator {
 
-void TranslationContext::analyzeGridTypes() {
+void TranslationContext::AnalyzeGridTypes() {
   Rose_STL_Container<SgNode*> structDefs =
       NodeQuery::querySubTree(project_, NodeQuery::StructDefinitions);
   FOREACH(it, structDefs.begin(), structDefs.end()) {
@@ -67,14 +68,37 @@ void TranslationContext::analyzeGridTypes() {
   }
 }
 
-static bool handleGridNew(SgInitializedName *in,
+/*!
+  Ensure every grid SgInitializedName has GridVarAttribute, which
+  should replace the (SgInitializedName, GridSet) map in
+  TranslationContext.
+
+  \param in Grid variable
+  \return true if new attr is attached
+*/
+static bool EnsureGridVarAttribute(SgInitializedName *in) {
+  if (rose_util::GetASTAttribute<GridVarAttribute>(in)) {
+    return false;
+  } else {
+    GridType *gt = 
+        rose_util::GetASTAttribute<GridType>(in);
+    PSAssert(gt);
+    GridVarAttribute *gva = new GridVarAttribute(gt);
+    rose_util::AddASTAttribute<GridVarAttribute>(in, gva);
+    LOG_DEBUG() << "Adding GridVarAttribute to "
+                << in->unparseToString() << "\n";
+    return true;
+  }
+}
+
+static bool HandleGridNew(SgInitializedName *in,
                           SgFunctionCallExp *callExp,
                           TranslationContext &tx) {
   Grid *g = tx.getOrCreateGrid(callExp);
   return tx.associateVarWithGrid(in, g);
 }
 
-static bool handleGridAlias(SgInitializedName *dst,
+static bool HandleGridAlias(SgInitializedName *dst,
                             SgInitializedName *src,
                             TranslationContext &tx) {
   /*
@@ -105,16 +129,16 @@ static bool handleGridAlias(SgInitializedName *dst,
   return changed;
 }
 
-static bool handleGridAssignment(SgInitializedName *lhs_in,
+static bool HandleGridAssignment(SgInitializedName *lhs_in,
                                  SgExpression *rhs_exp,
                                  TranslationContext &tx) {
   // rhs is either a grid variable or a call to grid new
   if (isSgVarRefExp(rhs_exp)) {
     SgVarRefExp *rhs_vref = isSgVarRefExp(rhs_exp);
-    return handleGridAlias(lhs_in, 
-                           rose_util::getInitializedName(rhs_vref), tx);
+    return HandleGridAlias(
+        lhs_in, si::convertRefToInitializedName(rhs_vref), tx);
   } else if (isSgFunctionCallExp(rhs_exp)) {
-    return handleGridNew(lhs_in, isSgFunctionCallExp(rhs_exp), tx);
+    return HandleGridNew(lhs_in, isSgFunctionCallExp(rhs_exp), tx);
   } else {
     // error
     LOG_ERROR() << "Invalid rhs: " << rhs_exp->unparseToString() << "\n";
@@ -127,82 +151,50 @@ static bool IsInGlobalScope(SgInitializedName *in) {
   return si::getGlobalScope(in) == si::getScope(in);
 }
 
-static bool handleGridDeclaration(SgInitializedName *in,
+static bool HandleGridDeclaration(SgInitializedName *in,
                                   TranslationContext &tx,
                                   DefUseAnalysis &dua) {
 
+  EnsureGridVarAttribute(in);
+  
   if (IsInGlobalScope(in)) {
     LOG_DEBUG() << "Global variable: " << in->unparseToString() << "\n";
     return tx.associateVarWithGrid(in, NULL);
   }
   
-  // just passing in as the first argument doesn't return the RHS of
-  // the defining statement
-  vector<SgNode*> defs = dua.getDefFor(in->get_declaration(), in);
-  if (defs.size() == 0) {
-    LOG_ERROR() << "Could not find definition for " << in->unparseToString()
-                << " found\n";
-    PSAssert(0);
-#if 0    
-    SgDeclarationStatement *d = in->get_declaration();
-    if (d) {
-      SgDeclarationStatement *dd = d->get_definingDeclaration();
-      LOG_DEBUG() << "DD: " << ((dd) ? dd->unparseToString() : "NONE") << "\n";
-    }
-    return false;
-#endif    
-  }
-  
   bool changed = false;
-  FOREACH(it, defs.begin(), defs.end()) {
-    SgNode *node = *it;
-    LOG_DEBUG() << "declaration: "
-                << in->unparseToString()
-                << " <- " << node->unparseToString() << "\n";
 
-    // When no rhs, in is returned
-    if (node == in) {
-      LOG_DEBUG() << "No definition\n";
-      if (rose_util::isFuncParam(in) &&
-          si::isStatic(si::getEnclosingFunctionDeclaration(in))) {
-        // in is a parameter of a static function.
-        // This is handled at call sites.
-        continue;
-      } else {
-        changed |= tx.associateVarWithGrid(in, NULL);
-        continue;
-      }
-    }
-
-    // node is assumed to be of type SgAssignInitializer
-    PSAssert(isSgAssignInitializer(node));
-    SgExpression *rhs
-        = isSgAssignInitializer(node)->get_operand();
-
-#if 1    
-    changed |= handleGridAssignment(in, rhs, tx);
-#else
-    // RHS can be either a call to grid_new or assignment of
-    // another grid object handle
-    if (isSgFunctionCallExp(rhs)) {
-      changed |= handleGridNew(in, isSgFunctionCallExp(rhs), tx);
-    } else if (isSgVarRefExp(rhs)) {
-      SgInitializedName *src =
-          rose_util::getInitializedName(isSgVarRefExp(rhs));
-      changed |= handleGridAlias(in, src, tx);
+  SgDeclarationStatement *decl = in->get_declaration();
+  
+  if (isSgFunctionParameterList(decl)) {
+    // Case: Function parameter    
+    SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(in);
+    if (si::isStatic(func)) {
+      // in is a parameter of a static function.
+      // This is handled at call sites.
     } else {
-      // error
-      LOG_ERROR() << "Unsupported: " << node->class_name()
-                  << "\n";
-      abort();
+      changed |= tx.associateVarWithGrid(in, NULL);
     }
-#endif    
+  } else if (isSgVariableDeclaration(decl)) {
+    // Case: Local variable declaration
+    SgAssignInitializer *asn = isSgAssignInitializer(
+        in->get_initializer());
+    PSAssert(asn);
+    SgExpression *rhs = asn->get_operand();
+    changed |= HandleGridAssignment(in, rhs, tx);    
+  } else {
+    LOG_ERROR() << "Unsupported InitializedName: "
+                << in->unparseToString()
+                << " appearing in "
+                << si::getEnclosingStatement(in)->unparseToString()
+                << "\n";
+    PSAbort(1);
   }
 
   return changed;
 }
 
-static bool propagateGridVarMapAcrossCall(SgExpressionPtrList &args,
+static bool PropagateGridVarMapAcrossCall(SgExpressionPtrList &args,
                                           SgInitializedNamePtrList &params,
                                           TranslationContext &tx) {
   bool changed = false;
@@ -215,19 +207,19 @@ static bool propagateGridVarMapAcrossCall(SgExpressionPtrList &args,
     SgVarRefExp *gv = isSgVarRefExp(arg);
     // grids as argument must be a variable
     assert(gv);
-    SgInitializedName *src = rose_util::getInitializedName(gv);
+    SgInitializedName *src = si::convertRefToInitializedName(gv);
     LOG_DEBUG() << "arg: " << arg->unparseToString()
                 << " (" << src << ")"
                 << ", param: " << param->unparseToString()
                 << " (" << param << ")" << "\n";
-    bool b = handleGridAlias(param, src, tx);
+    bool b = HandleGridAlias(param, src, tx);
     LOG_DEBUG() << "Changed? " << b << "\n";
     changed |= b;
   }
   return changed;
 }
 
-static bool propagateGridVarMapAcrossStencilCall(SgFunctionCallExp *c,
+static bool PropagateGridVarMapAcrossStencilCall(SgFunctionCallExp *c,
                                                  StencilMap *m,
                                                  TranslationContext &tx) {
   LOG_DEBUG() << "StencilMap: " << m->getKernel()->get_name().str() << "\n";
@@ -237,10 +229,10 @@ static bool propagateGridVarMapAcrossStencilCall(SgFunctionCallExp *c,
   SgInitializedNamePtrList params(
       m->getKernel()->get_args().begin() + m->getNumDim(),
       m->getKernel()->get_args().end());
-  return propagateGridVarMapAcrossCall(args, params, tx);
+  return PropagateGridVarMapAcrossCall(args, params, tx);
 }
 
-static bool propagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
+static bool PropagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
                                                   TranslationContext &tx) {
 
   SgExpressionPtrList &args = c->get_args()->get_expressions();
@@ -274,22 +266,21 @@ static bool propagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
   PSAssert(callee_decl);
   
   SgInitializedNamePtrList &params = callee_decl->get_args();
-  return propagateGridVarMapAcrossCall(args, params, tx);
+  return PropagateGridVarMapAcrossCall(args, params, tx);
 }
 
 
-void TranslationContext::analyzeGridVars(DefUseAnalysis &dua) {
-  SgNodePtrList vars =
-      NodeQuery::querySubTree(project_, V_SgInitializedName);
-  SgNodePtrList asns =
-      NodeQuery::querySubTree(project_, V_SgAssignOp);
-  SgNodePtrList calls =
-      NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
+void TranslationContext::AnalyzeGridVars(DefUseAnalysis &dua) {
+  vector<SgInitializedName*> vars =
+      si::querySubTree<SgInitializedName>(project_);
+  vector<SgAssignOp*> asns =
+      si::querySubTree<SgAssignOp>(project_);
+  vector<SgFunctionCallExp*> calls =
+      si::querySubTree<SgFunctionCallExp>(project_);
   bool changed = true;
   while (changed) {
     changed = false;
-    FOREACH(it, vars.begin(), vars.end()) {
-      SgInitializedName *in = isSgInitializedName(*it);
+    BOOST_FOREACH(SgInitializedName *in, vars) {
       SgType *type = in->get_type();
       GridType *gt = findGridType(type);
       if (gt == NULL) continue;
@@ -299,11 +290,9 @@ void TranslationContext::analyzeGridVars(DefUseAnalysis &dua) {
       if (!rose_util::GetASTAttribute<GridType>(in)) {
           rose_util::AddASTAttribute(in, gt);
       }
-      changed |= handleGridDeclaration(in, *this, dua);
+      changed |= HandleGridDeclaration(in, *this, dua);
     }
-    FOREACH(it, asns.begin(), asns.end()) {
-      SgAssignOp *aop = isSgAssignOp(*it);
-      assert(aop);
+    BOOST_FOREACH(SgAssignOp *aop, asns) {
       // Skip non-grid assignments
       SgType *type = aop->get_type();
       if (!findGridType(type)) continue;
@@ -311,31 +300,29 @@ void TranslationContext::analyzeGridVars(DefUseAnalysis &dua) {
                   << aop->unparseToString() << "\n";
       SgVarRefExp *lhs = isSgVarRefExp(aop->get_lhs_operand());
       assert(lhs);
-      changed |= handleGridAssignment(rose_util::getInitializedName(lhs),
-                                      aop->get_rhs_operand(),
-                                      *this);
+      changed |= HandleGridAssignment(
+          si::convertRefToInitializedName(lhs),
+          aop->get_rhs_operand(), *this);
     }
     // Handle stencil map
     FOREACH(it, mapBegin(), mapEnd()) {
       SgFunctionCallExp *c = isSgFunctionCallExp(it->first);
       if (!c) continue;
       StencilMap *m = it->second;
-      changed |= propagateGridVarMapAcrossStencilCall(c, m, *this);
+      changed |= PropagateGridVarMapAcrossStencilCall(c, m, *this);
     }
     
     // Note: grids are read-only in reduction kernels, so no need to
     // analyze them
     
     // Handle normal function call
-    FOREACH (it, calls.begin(), calls.end()) {
-      SgFunctionCallExp *c = isSgFunctionCallExp(*it);
-      if (!c) continue;
-      changed |= propagateGridVarMapAcrossOrdinaryCall(c, *this);
+    BOOST_FOREACH (SgFunctionCallExp *c, calls) {
+      changed |= PropagateGridVarMapAcrossOrdinaryCall(c, *this);
     }
   }
 }
 
-void TranslationContext::analyzeDomainExpr(DefUseAnalysis &dua) {
+void TranslationContext::AnalyzeDomainExpr(DefUseAnalysis &dua) {
   assert(PS_MAX_DIM == 3);
   SgType* domTypes[] = {dom1d_type_, dom2d_type_, dom3d_type_};
   vector<SgType*> v(domTypes, domTypes+3);
@@ -352,7 +339,7 @@ void TranslationContext::analyzeDomainExpr(DefUseAnalysis &dua) {
 
     if (isSgVarRefExp(exp)) {
       SgInitializedName *in =
-          rose_util::getInitializedName(isSgVarRefExp(exp));
+          si::convertRefToInitializedName(isSgVarRefExp(exp));
       SgExpressionPtrList &defs = (*defMap)[in];
       FOREACH(defIt, defs.begin(), defs.end()) {
         SgExpression *def = *defIt;
@@ -375,7 +362,7 @@ void TranslationContext::analyzeDomainExpr(DefUseAnalysis &dua) {
   }
 }
 
-void TranslationContext::analyzeMap() {
+void TranslationContext::AnalyzeMap() {
   Rose_STL_Container<SgNode*> calls =
       NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
   FOREACH(it, calls.begin(), calls.end()) {
@@ -400,7 +387,7 @@ void TranslationContext::locateDomainTypes() {
 
 
 // TODO: Now all types are predefined.
-void TranslationContext::build() {
+void TranslationContext::Build() {
   // eneratePDF(*project_);
   // enerateDOT(*project_);
 
@@ -430,17 +417,17 @@ void TranslationContext::build() {
   dua->run(false);
   //dua->dfaToDOT();
 
-  analyzeGridTypes();
-  analyzeDomainExpr(*dua);
-  analyzeMap();
+  AnalyzeGridTypes();
+  AnalyzeDomainExpr(*dua);
+  AnalyzeMap();
   AnalyzeReduce();
 
-  analyzeGridVars(*dua);
+  AnalyzeGridVars(*dua);
   LOG_DEBUG() << "grid variable analysis done\n";
   print(std::cout);
 
-  analyzeRun(*dua);
-  analyzeKernelFunctions();
+  AnalyzeRun(*dua);
+  AnalyzeKernelFunctions();
 #ifdef UNUSED_CODE
   markReadWriteGrids();
 #endif
@@ -526,7 +513,16 @@ static bool IsBuiltInFunction(const string &func_name) {
                    func_name) != buildin_functions + num_functions;
 }
 
-void TranslationContext::analyzeKernelFunctions(void) {
+static void EnsureKernelBodyAttribute(SgFunctionDeclaration *kernel_decl) {
+  SgScopeStatement *body =
+      kernel_decl->get_definition()->get_body();
+  if (!rose_util::GetASTAttribute<KernelBodyAttribute>(body)) {
+    rose_util::AddASTAttribute<KernelBodyAttribute>(
+        body, new KernelBodyAttribute());
+  }
+}
+
+void TranslationContext::AnalyzeKernelFunctions(void) {
   /*
    * NOTE: Using call graphs would be much simpler. analyzeCallToMap
    * can be simply extended so that after finding calls to map, it
@@ -550,6 +546,10 @@ void TranslationContext::analyzeKernelFunctions(void) {
           done = false;
           AnalyzeEmit(m->getKernel());
         }
+        // For some reason, attribute attached to kernel body causes
+        //assertion error when the body is inlined and its attribute
+        //is queried.
+        //EnsureKernelBodyAttribute(m->getKernel());
         continue;
       }
 
@@ -632,7 +632,7 @@ string TranslationContext::getGridFuncName(SgFunctionCallExp *call) {
   return name;
 }
 
-void TranslationContext::analyzeRun(DefUseAnalysis &dua) {
+void TranslationContext::AnalyzeRun(DefUseAnalysis &dua) {
   Rose_STL_Container<SgNode*> calls =
       NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
   FOREACH(it, calls.begin(), calls.end()) {

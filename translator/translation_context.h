@@ -43,7 +43,7 @@ class TranslationContext {
 
  public:
   explicit TranslationContext(SgProject *project): project_(project) {
-    build();
+    Build();
   }
 
  protected:
@@ -82,21 +82,21 @@ class TranslationContext {
   // Mapping from grid_get to its StencilIndex
   StencilIndexMap stencil_indices_;
 
-  void build();
+  void Build();
   // No dependency
-  void analyzeGridTypes();
+  void AnalyzeGridTypes();
   // Depends on analyzeDomainExpr, analyzeMap
-  void analyzeGridVars(DefUseAnalysis &dua);
+  void AnalyzeGridVars(DefUseAnalysis &dua);
   // No dependency
-  void analyzeDomainExpr(DefUseAnalysis &dua);
+  void AnalyzeDomainExpr(DefUseAnalysis &dua);
   // No dependency
-  void analyzeMap();
+  void AnalyzeMap();
   void locateDomainTypes();
   // Depends on analyzeMap, analyzeGridVars
-  void analyzeKernelFunctions();
-  void analyzeRun(DefUseAnalysis &dua);
+  void AnalyzeKernelFunctions();
+  void AnalyzeRun(DefUseAnalysis &dua);
   // Depends on analyzeGridVars, analyzeKernelFunctions
-  void markReadWriteGrids();
+  //void MarkReadWriteGrids();
 
   //! Find and collect information on reductions
   void AnalyzeReduce();

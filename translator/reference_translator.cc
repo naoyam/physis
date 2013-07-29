@@ -234,10 +234,10 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
   rose_util::CopyExpressionPtrList(
       node->get_args()->get_expressions(), args);
   SgExpression *p0 = rt_builder_->BuildGridGet(
-      sb::buildVarRefExp(gv->get_name(), si::getScope(node)), gt,
+      sb::buildVarRefExp(gv->get_name(), si::getScope(node)),
+      rose_util::GetASTAttribute<GridVarAttribute>(gv),
+      gt,
       &args, sil, is_kernel, is_periodic);
-  rose_util::GetASTAttribute<GridGetAttribute>(p0)->
-      SetGridVar(gv);  
   si::replaceExpression(node, p0);
 }
 
@@ -253,12 +253,11 @@ void ReferenceTranslator::RemoveEmitDummyExp(SgExpression *emit) {
 
 void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
                                         GridEmitAttribute *attr) {
-  SgInitializedName *gv = attr->gv();
   bool is_grid_type_specific_call =
       GridType::isGridTypeSpecificCall(node);
 
-  GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
+  GridType *gt = attr->gt();
+  int nd = gt->num_dim();
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
   SgExpressionPtrList args;
   for (int i = 0; i < nd; ++i) {
@@ -270,7 +269,8 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
       si::copyExpression(node->get_args()->get_expressions().back());
 
   SgExpression *emit =
-      rt_builder_->BuildGridEmit(attr, gt, &args, emit_val,
+      rt_builder_->BuildGridEmit(sb::buildVarRefExp(attr->gv()),
+                                 attr, &args, emit_val,
                                  si::getScope(node));
 
   si::replaceExpression(node, emit);
@@ -580,9 +580,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
     si::appendStatement(loop_statement, parent_block);
     rose_util::AddASTAttribute(
         loop_statement,
-        new RunKernelLoopAttribute(
-            i+1,index_decl->get_variables()[0], loop_begin,
-            loop_end));
+        new RunKernelLoopAttribute(i+1));
     parent_block = inner_block;
   }
 

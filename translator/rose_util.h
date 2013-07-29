@@ -107,8 +107,7 @@ void CopyExpressionPtrList(const SgExpressionPtrList &src,
 SgFunctionSymbol *getFunctionSymbol(SgFunctionDeclaration *f);
 SgFunctionRefExp *getFunctionRefExp(SgFunctionDeclaration *decl);
 SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name);
-bool isFuncParam(SgInitializedName *in);
-SgInitializedName *getInitializedName(SgVarRefExp *var);
+bool IsFuncParam(SgInitializedName *in);
 string generateUniqueName(SgScopeStatement *scope = NULL,
                           const string &prefix = "__ps_");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
@@ -281,6 +280,10 @@ bool GetIntLikeVal(SgExpression *v, T &x) {
 void ReplaceWithCopy(SgExpressionVector &ev);
 
 bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2);
+
+SgVarRefExp *GetUniqueVarRefExp(SgExpression *exp);
+
+SgDeclarationStatement *GetDecl(SgVarRefExp *vref);
 
 }  // namespace rose_util
 }  // namespace translator

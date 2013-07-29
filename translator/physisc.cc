@@ -360,21 +360,6 @@ static void ReplaceCloneRunKernelFunc(
     }
     si::insertStatementAfterLastDeclaration(f, sc);
   }
-  /* replace GridGetAttribute offset() */
-  vector<SgNode*> exps = rose_util::QuerySubTreeAttribute<GridGetAttribute>(proj);
-  FOREACH(it, exps.begin(), exps.end()) {
-    SgExpression *exp = isSgExpression(*it);
-    PSAssert(exp);
-    GridGetAttribute *gga = rose_util::GetASTAttribute<GridGetAttribute>(exp);
-    PSAssert(gga);
-    if (!gga->in_kernel()) continue;
-    //LOG_DEBUG() << "Found: " << exp->unparseToString() << "\n";
-    SgPntrArrRefExp *ar = isSgPntrArrRefExp(exp);
-    if (ar) {
-      //LOG_DEBUG() << "Found: " << ar->get_rhs_operand()->unparseToString() << "\n";
-      gga->offset() = ar->get_rhs_operand();
-    }
-  }
 }
 /** set dynamic link library file name in __dl_fname[],
  *  and attach '#include <dlfcn.h>'

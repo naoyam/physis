@@ -83,6 +83,13 @@ class Kernel {
 };
 
 
+class KernelBodyAttribute: public AstAttribute {
+ public:
+  KernelBodyAttribute() {}
+  virtual ~KernelBodyAttribute() {}
+  static const std::string name;
+};
+
 } // namespace translator
 } // namespace physis
 

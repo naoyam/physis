@@ -33,19 +33,21 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
 
   virtual SgExpression *BuildGridArrayMemberOffset(
     SgExpression *gvref,
-    GridType *gt,
+    const GridType *gt,
     const string &member_name,
     const SgExpressionVector &array_indices);
 
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
+      GridVarAttribute *gva,                  
       GridType *gt,      
       const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,      
       bool is_kernel,
       bool is_periodic);
   virtual SgExpression *BuildGridGet(
-      SgExpression *gvref,      
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
       GridType *gt,
       const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,
@@ -53,7 +55,8 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       bool is_periodic,
       const string &member_name);
   virtual SgExpression *BuildGridGet(
-      SgExpression *gvref,      
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
       GridType *gt,
       const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,
@@ -64,38 +67,38 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
 
   //! Build code for grid emit.
   /*!
+    \param grid_exp Grid expression    
     \param attr GridEmit attribute
-    \param gt GridType of the grid
     \param offset_exprs offset expressions
     \param emit_val Value to emit
     \return Expression implementing the emit.
    */
   virtual SgExpression *BuildGridEmit(
+      SgExpression *grid_exp,      
       GridEmitAttribute *attr,
-      GridType *gt,
       const SgExpressionPtrList *offset_exprs,
       SgExpression *emit_val,
       SgScopeStatement *scope=NULL);
   
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
-      GridType *gt);
+      const GridType *gt);
   
  protected:
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
-      GridType *gt, bool is_copyout);
+      const GridType *gt, bool is_copyout);
 };
 
 } // namespace translator

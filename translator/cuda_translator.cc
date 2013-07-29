@@ -190,26 +190,26 @@ void CUDATranslator::TranslateGetForUserDefinedType(
       array_top == NULL) {
     return;
   }
+  SgExpression *get_exp = node->get_lhs_operand();
   GridGetAttribute *gga =
       rose_util::GetASTAttribute<GridGetAttribute>(
-          node->get_lhs_operand());
+          get_exp);
   const string &mem_name = rose_util::GetName(mem_ref);
-  SgExpressionVector &indices =
-      rose_util::GetASTAttribute<GridOffsetAttribute>(
-          gga->offset())->indices();
+  SgExpressionPtrList indices =
+      GridOffsetAnalysis::GetIndices(
+          GridGetAnalysis::GetOffset(get_exp));
   SgExpressionPtrList args;
-  FOREACH (it, indices.begin(), indices.end()) {
-    args.push_back(si::copyExpression(*it));
-  }
-  GridType *gt = rose_util::GetASTAttribute<GridType>(
-      gga->gv());
+  rose_util::CopyExpressionPtrList(indices, args);
+  SgInitializedName *gv = GridGetAnalysis::GetGridVar(get_exp);
+  GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
   SgExpression *original = node;
   SgExpression *new_get = NULL;
   if (array_top == NULL) {
     new_get = 
         rt_builder_->BuildGridGet(
-            sb::buildVarRefExp(gga->gv()->get_name(),
+            sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
+            rose_util::GetASTAttribute<GridVarAttribute>(gv),
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
@@ -224,16 +224,15 @@ void CUDATranslator::TranslateGetForUserDefinedType(
     original = parent;
     new_get = 
         rt_builder_->BuildGridGet(
-            sb::buildVarRefExp(gga->gv()->get_name(),
+            sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
+            rose_util::GetASTAttribute<GridVarAttribute>(gv),            
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
             mem_name,
             indices);
   }
-  rose_util::GetASTAttribute<GridGetAttribute>(new_get)->
-      SetGridVar(gga->gv());
   // Replace the parent expression
   si::replaceExpression(original, new_get);
   return;  
@@ -253,10 +252,10 @@ void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
                                         si::getScope(func_call_exp));
   SgExpression *real_get =
       rt_builder_->BuildGridGet(
-          gv, gt, &args, sil, is_kernel, is_periodic);
+          gv,
+          rose_util::GetASTAttribute<GridVarAttribute>(grid_arg),
+          gt, &args, sil, is_kernel, is_periodic);
   si::replaceExpression(func_call_exp, real_get);
-  rose_util::GetASTAttribute<GridGetAttribute>(real_get)->
-      SetGridVar(grid_arg);
 }
 
 void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
@@ -285,7 +284,8 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
       si::copyExpression(node->get_args()->get_expressions().back());
   
   SgExpression *real_exp = 
-      rt_builder_->BuildGridEmit(attr, gt, &args, v, si::getScope(node));
+      rt_builder_->BuildGridEmit(
+          sb::buildVarRefExp(attr->gv()), attr, &args, v, si::getScope(node));
   
   si::replaceExpression(node, real_exp);
 
@@ -833,8 +833,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
     si::appendStatement(loop, block);
     rose_util::AddASTAttribute(
         loop,
-        new RunKernelLoopAttribute(3, loop_index->get_variables()[0],
-                                   loop_begin, loop_end));
+        new RunKernelLoopAttribute(3));
   } else {
     PSAssert(0);
   }

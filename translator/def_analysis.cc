@@ -12,6 +12,8 @@
 
 using std::auto_ptr;
 
+namespace si = SageInterface;
+
 namespace physis {
 namespace translator {
 
@@ -133,7 +135,7 @@ static bool handleVarDecl(SgInitializedName *in,
 
   if (isSgVarRefExp(rhs)) {
     SgInitializedName *rhsName =
-        rose_util::getInitializedName(isSgVarRefExp(rhs));
+        si::convertRefToInitializedName(isSgVarRefExp(rhs));
     return merge_defs(in, rhsName, defMap);
   } else {
     return register_def(in, rhs, defMap);
@@ -174,11 +176,11 @@ findDefinitions(SgNode *topLevelNode, const vector<SgType*> &relevantTypes) {
 
       SgVarRefExp *lhs = isSgVarRefExp(aop->get_lhs_operand());
       assert(lhs);
-      SgInitializedName *lhsIn = rose_util::getInitializedName(lhs);
+      SgInitializedName *lhsIn = si::convertRefToInitializedName(lhs);
       assert(lhsIn);
       SgVarRefExp *rhs = isSgVarRefExp(aop->get_rhs_operand());
       assert(rhs);
-      SgInitializedName *rhsIn = rose_util::getInitializedName(rhs);
+      SgInitializedName *rhsIn = si::convertRefToInitializedName(rhs);
       assert(rhsIn);
 
       changed |= merge_defs(lhsIn, rhsIn, *defMap);

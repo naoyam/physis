@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2013, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
@@ -22,28 +20,6 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-#if 0
-static void QueryGetInKernel(
-    SgNode *top,
-    Rose_STL_Container<SgPntrArrRefExp*> &gets) {
-  Rose_STL_Container<SgNode *> exps =
-      NodeQuery::querySubTree(top, V_SgPntrArrRefExp);
-  FOREACH(it, exps.begin(), exps.end()) {
-    SgPntrArrRefExp *exp = isSgPntrArrRefExp(*it);
-    PSAssert(exp);
-    
-    // Traverse only GridGet
-    GridGetAttribute *gga =
-        rose_util::GetASTAttribute<GridGetAttribute>(exp);
-    if (!gga) continue;
-
-    // Optimization applied only to in-kernel get
-    if (!gga->in_kernel()) continue;
-    gets.push_back(exp);
-  }
-  return;
-}
-#else
 static void QueryGetInKernel(
     SgNode *top,
     vector<SgExpression*> &gets) {
@@ -52,7 +28,6 @@ static void QueryGetInKernel(
   FOREACH(it, exps.begin(), exps.end()) {
     SgExpression *exp = isSgExpression(*it);
     PSAssert(exp);
-    // Traverse only GridGet
     GridGetAttribute *gga =
         rose_util::GetASTAttribute<GridGetAttribute>(exp);
     PSAssert(gga);
@@ -63,7 +38,6 @@ static void QueryGetInKernel(
   }
   return;
 }
-#endif
 
 // This ad-hoc code traversal heavily depends on how the previous
 // translation passes are implemented. Should be made more robust. 
@@ -122,12 +96,11 @@ static SgExpression *BuildGetOffsetCenter(
     SgScopeStatement *scope) {
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
-  GridOffsetAttribute *grid_offset_attr =
-      rose_util::GetASTAttribute<GridOffsetAttribute>(grid_get_attr->offset());
   int nd = grid_get_attr->num_dim();
   SgExpressionPtrList center_exp;
   for (int i = 1; i <= nd; ++i) {
-    SgExpression *center_index = grid_offset_attr->GetIndexAt(i);
+    SgExpression *center_index =
+        GridOffsetAnalysis::GetIndexAt(GridGetAnalysis::GetOffset(get_exp), i);
     center_index = si::copyExpression(ExtractVarRef(center_index));
     center_exp.push_back(center_index);
   }
@@ -137,14 +110,45 @@ static SgExpression *BuildGetOffsetCenter(
                                   nd, &center_exp, true, false, &sil);
 }
 
+static SgExpression *BuildGetOffset(
+    SgExpression *base_get_exp,
+    RuntimeBuilder *builder,
+    SgScopeStatement *scope,
+    SgExpression *paired_get_exp) {
+  GridGetAttribute *grid_get_attr =
+      rose_util::GetASTAttribute<GridGetAttribute>(paired_get_exp);
+  int nd = grid_get_attr->num_dim();
+  const StencilIndexList *sil = grid_get_attr->GetStencilIndexList();
+  PSAssert(StencilIndexRegularOrder(*sil));
+  StencilRegularIndexList sril(*sil);
+  SgExpressionPtrList offset_exprs;
+  for (int i = 1; i <= nd; ++i) {
+    SgExpression *index =
+        GridOffsetAnalysis::GetIndexAt(
+            GridGetAnalysis::GetOffset(base_get_exp), i);
+    // TODO: What if multiple variable refs are used?
+    SgExpression *offset_exp =
+        si::copyExpression(si::querySubTree<SgVarRefExp>(index).front());
+    ssize_t offset = sril.GetIndex(i);
+    if (offset != 0) {
+      offset_exp = sb::buildAddOp(offset_exp,
+                                  sb::buildIntVal(offset));
+    }
+    offset_exprs.push_back(offset_exp);
+  }
+  return builder->BuildGridOffset(
+      si::copyExpression(GetGridFromGet(base_get_exp)),
+      nd, &offset_exprs, true, false, sil);
+}
+
+
 static void ProcessIfStmtStage1(SgExpression *get_exp,
                                 SgIfStmt *if_stmt,
                                 RuntimeBuilder *builder,
                                 SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
-  GridGetAttribute *grid_get_attr =
-      rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
-  SgInitializedName *gv = grid_get_attr->gv();
+  GridVarAttribute *gva = rose_util::GetASTAttribute<
+    GridGetAttribute>(get_exp)->gva();
   
   // Find a get_exp that can be paired with this.
   vector<SgExpression *> gets;
@@ -162,9 +166,9 @@ static void ProcessIfStmtStage1(SgExpression *get_exp,
       continue;
     }
     // They must point to the same grid
-    SgInitializedName *gv_peer =
-        rose_util::GetASTAttribute<GridGetAttribute>(*it)->gv();
-    if (gv != gv_peer) continue;
+    GridVarAttribute *gva_peer =
+        rose_util::GetASTAttribute<GridGetAttribute>(*it)->gva();
+    if (gva != gva_peer) continue;
     paired_get_exp = *it;
   }
   
@@ -198,16 +202,9 @@ static void ProcessIfStmtStage1(SgExpression *get_exp,
           outer_scope);
   si::insertStatementBefore(if_stmt, cond_var);
   // Replace the condition with the bool variable
-  si::replaceStatement(if_stmt->get_conditional(),
-                       sb::buildExprStatement(sb::buildVarRefExp(cond_var)));
-}
-
-static SgExpression* GetOffsetExpression(SgExpression *get_exp) {
-  //return get_exp->get_rhs_operand();
-  GridGetAttribute *gga =
-      rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
-  PSAssert(gga);
-  return gga->offset();
+  si::replaceStatement(
+      if_stmt->get_conditional(),
+      sb::buildExprStatement(sb::buildVarRefExp(cond_var)));
 }
 
 static void ProcessIfStmtStage2(SgExpression *get_exp,
@@ -215,6 +212,9 @@ static void ProcessIfStmtStage2(SgExpression *get_exp,
                                 RuntimeBuilder *builder,
                                 SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
+  // precondition: get_exp is not replaced with a local var
+  PSAssert(!isSgVarRefExp(get_exp));
+  
   SgScopeStatement *outer_scope
       = si::getScope(if_stmt->get_parent());
   GridGetAttribute *grid_get_attr =
@@ -225,8 +225,7 @@ static void ProcessIfStmtStage2(SgExpression *get_exp,
   // Declare the index variable
   SgVariableDeclaration *index_var = NULL;
   SgExpression *offset_exp =
-      si::copyExpression(GetOffsetExpression(get_exp));
-  FixGridOffsetAttribute(offset_exp);  
+      si::copyExpression(GridGetAnalysis::GetOffset(get_exp));
   // If the access is to the center point, no guard by condition is
   // necessary and just assign the offset
   if (paired_get_exp == NULL &&
@@ -253,9 +252,15 @@ static void ProcessIfStmtStage2(SgExpression *get_exp,
     SgBasicBlock *paired_get_exp_index_assign = NULL;
     if (paired_get_exp) {
       SgExpression *paired_offset_exp =
-          si::copyExpression(
-              GetOffsetExpression(paired_get_exp));
-      FixGridOffsetAttribute(paired_offset_exp);
+          GridGetAnalysis::GetOffset(paired_get_exp);
+      if (paired_offset_exp) {
+        paired_offset_exp = 
+            si::copyExpression(paired_offset_exp);
+      } else {
+        paired_offset_exp =
+            BuildGetOffset(get_exp, builder, outer_scope,
+                           paired_get_exp);
+      }
       paired_get_exp_index_assign =
           sb::buildBasicBlock(
               sb::buildAssignStatement(
@@ -281,9 +286,8 @@ static void ProcessIfStmtStage2(SgExpression *get_exp,
     si::insertStatementBefore(if_stmt, index_assign_block);
   }
 
-  si::replaceExpression(GetOffsetExpression(get_exp),
+  si::replaceExpression(GridGetAnalysis::GetOffset(get_exp),
                         sb::buildVarRefExp(index_var));
-  FixGridGetAttribute(get_exp);
   rose_util::GetASTAttribute<GridGetAttribute>(
       get_exp)->SetStencilIndexList(NULL);
       

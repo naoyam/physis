@@ -7,6 +7,7 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/rose_util.h"
+#include "translator/ast_traversal.h"
 
 #include <cctype>
 
@@ -120,16 +121,9 @@ SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name) {
   return f;
 }
 
-bool isFuncParam(SgInitializedName *in) {
-  return isSgFunctionParameterList(in->get_declaration());
-}
-
-SgInitializedName *getInitializedName(SgVarRefExp *var) {
-  SgVariableSymbol *sym = var->get_symbol();
-  assert(sym);
-  SgInitializedName *refDecl = sym->get_declaration();
-  assert(refDecl);
-  return refDecl;
+bool IsFuncParam(SgInitializedName *in) {
+  SgDeclarationStatement *decl = in->get_declaration();
+  return isSgFunctionParameterList(decl);
 }
 
 static int unique_name_var_index = 0;
@@ -430,6 +424,22 @@ bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2) {
   const string &n2_name = n2->get_file_info()->get_filenameString();
   LOG_DEBUG() << "N1: " << n1_name << ", N2: " << n2_name << "\n";
   return n1->get_file_info()->isSameFile(n2->get_file_info());
+}
+
+SgVarRefExp *GetUniqueVarRefExp(SgExpression *exp) {
+  vector<SgVarRefExp*> v = si::querySubTree<SgVarRefExp>(exp);
+  if (v.size() == 1) {
+    return v.front();
+  } else {
+    return NULL;
+  }
+}
+
+SgDeclarationStatement *GetDecl(SgVarRefExp *vref) {
+  PSAssert(vref);
+  SgInitializedName *in = vref->get_symbol()->get_declaration();
+  PSAssert(in);
+  return in->get_declaration();
 }
 
 }  // namespace rose_util

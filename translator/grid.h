@@ -11,6 +11,8 @@
 
 #include <set>
 
+using std::pair;
+
 #include "translator/translator_common.h"
 #include "physis/physis_util.h"
 #include "translator/rose_util.h"
@@ -210,24 +212,59 @@ class Grid {
 
 typedef std::set<Grid*> GridSet;
 
+class GridVarAttribute: public AstAttribute {
+ public:
+  //typedef map<string, StencilRange> MemberStencilRangeMap;
+  //typedef map<pair<string, IntVector>, StencilRange>
+  //ArrayMemberStencilRangeMap;
+  typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
+  static const std::string name;  
+  GridVarAttribute(GridType *gt);
+  virtual ~GridVarAttribute() {}
+  void AddStencilIndexList(const StencilIndexList &sil);
+  void AddMemberStencilIndexList(const string &member,
+                                 const IntVector &indices,
+                                 const StencilIndexList &sil);
+  GridType *gt() { return gt_; }
+  StencilRange &sr() { return sr_; }
+  MemberStencilRangeMap &member_sr() { return member_sr_; }
+  //ArrayMemberStencilRangeMap &array_member_sr() { return array_member_sr_; }
+  
+ protected:
+  GridType *gt_;
+  StencilRange sr_;
+  MemberStencilRangeMap member_sr_;
+  //ArrayMemberStencilRangeMap array_member_sr_;
+};
+
+class GridOffsetAnalysis {
+ public:
+  //! Returns the grid variable from an offset expression
+  /*!
+    \param offset Offset expression
+    \return Variable reference for the grid object
+  */
+  static SgVarRefExp *GetGridVar(SgExpression *offset);
+  //! Returns the index expression for a specified dimension
+  /*!
+    \param offset Offset expression
+    \param dim Dimension (>=1)
+    \return Index expression
+   */
+  static SgExpression *GetIndexAt(SgExpression *offset, int dim);
+  //! Returns all index expressions
+  /*!
+    \param offset Offset expression
+    \return Expression vector of all indices
+  */
+  static SgExpressionPtrList GetIndices(SgExpression *offset);
+};
+
 class GridOffsetAttribute: public AstAttribute {
  public:
   GridOffsetAttribute(int num_dim, bool periodic,
-                      const vector<SgExpression *> &indices,
-                      const StencilIndexList *sil,
-                      SgExpression *gvexpr):
-      num_dim_(num_dim), periodic_(periodic), indices_(indices),
-      sil_(NULL), gvexpr_(gvexpr) {
-    if (sil) {
-      sil_ = new StencilIndexList();
-      *sil_ = *sil;
-    }
-  }
-  GridOffsetAttribute(int num_dim, bool periodic,
-                      const StencilIndexList *sil,
-                      SgExpression *gvexpr=NULL):
-      num_dim_(num_dim), periodic_(periodic), sil_(NULL),
-      gvexpr_(gvexpr) {
+                      const StencilIndexList *sil): 
+    num_dim_(num_dim), periodic_(periodic), sil_(NULL) {
     if (sil) {
       sil_ = new StencilIndexList();
       *sil_ = *sil;
@@ -236,42 +273,41 @@ class GridOffsetAttribute: public AstAttribute {
   virtual ~GridOffsetAttribute() {}
   AstAttribute *copy() {
     GridOffsetAttribute *a= new GridOffsetAttribute(
-        num_dim_, periodic_, indices_, sil_, gvexpr_);
+        num_dim_, periodic_, sil_);
     return a;
   }
-  void AppendIndex(SgExpression *index) {
-    indices_.push_back(index);
-  }
   static const std::string name;
-  SgExpression *GetIndexAt(int dim) { return indices_.at(dim-1); }
-  SgExpressionVector &indices() { return indices_; }
   bool periodic() const { return periodic_; }
-
   int num_dim() const { return num_dim_; }
   /*  
   void SetStencilIndexList(const StencilIndexList &sil) {
     sil_ = sil;
     }*/
   const StencilIndexList *GetStencilIndexList() { return sil_; }
-  SgExpression *gvexpr() const { return gvexpr_; }
-  SgExpression *&gvexpr() { return gvexpr_; }
   
  protected:
   int num_dim_;
   bool periodic_;  
-  SgExpressionVector indices_;
   StencilIndexList *sil_;
-  SgExpression *gvexpr_;  
+};
+
+class GridGetAnalysis {
+ public:
+  //! Returns the offset expression in a get expression
+  static SgExpression *GetOffset(SgExpression *get_exp);
+  //! Returns the grid variable in a get expression
+  static SgInitializedName *GetGridVar(SgExpression *get_exp);
+  static SgExpression *GetGridExp(SgExpression *get_exp);
 };
 
 class GridGetAttribute: public AstAttribute {
  public:
-  GridGetAttribute(SgInitializedName *gv,
-                   int num_dim,
+  GridGetAttribute(GridType *gt,
+                   SgInitializedName *gv,
+                   GridVarAttribute *gva,
                    bool in_kernel,
                    bool is_periodic,
                    const StencilIndexList *sil,
-                   SgExpression *offset=NULL,
                    const string &member_name="");
   GridGetAttribute(const GridGetAttribute &x);
   virtual ~GridGetAttribute();
@@ -281,71 +317,56 @@ class GridGetAttribute: public AstAttribute {
   void SetInKernel(bool t) { in_kernel_ = t; };
   bool is_periodic() const { return is_periodic_; }
   bool &is_periodic() { return is_periodic_; }
-  SgInitializedName *gv() const { return gv_; }
-  //SgInitializedName *&gv() { return gv_; }
-  void SetGridVar(SgInitializedName *gv) {
-    original_gv_ = gv_ = gv;
-  }
-  SgInitializedName *original_gv() const { return original_gv_; }
-  void UpdateGridVar(SgInitializedName *gv) { gv_ = gv; }
   void SetStencilIndexList(const StencilIndexList *sil);
   const StencilIndexList *GetStencilIndexList() { return sil_; }
-  int num_dim() const { return num_dim_; }
-  void SetOffset(SgExpression *offset) { offset_ = offset; }
-  SgExpression *offset() const { return offset_; }
-  SgExpression *&offset() { return offset_; }
+  int num_dim() const { return gt_->num_dim(); }
   const string &member_name() const { return member_name_; }
+  GridType *gt() { return gt_; }
+  SgInitializedName *gv() { return gv_; }
+  GridVarAttribute *gva() { return gva_; }  
   string &member_name() { return member_name_; }
   bool IsUserDefinedType() const;
   
  protected:
-  //! Referenced grid variable.
-  /*!
-    This variable can change when code transformation is applied. For
-    example, the kernel inlining optimization will change the
-    referenced grid variable from the kernel parameter to a normal
-    variable. 
-   */
+  GridType *gt_;
   SgInitializedName *gv_;
-  //! Grid variable referenced in the original user code.
-  /*!
-    gv can change when code transformation such as optimization is
-    applied. 
-   */
-  SgInitializedName *original_gv_;  
-  int num_dim_;  
+  GridVarAttribute *gva_;
   bool in_kernel_;
   bool is_periodic_;
   StencilIndexList *sil_;
-  SgExpression *offset_;
-  bool is_user_type_;
   string member_name_;
-
 };
 
 class GridEmitAttribute: public AstAttribute {
  public:
   static const std::string name;
-  GridEmitAttribute(SgInitializedName *gv, SgScopeStatement *scope);
-  GridEmitAttribute(SgInitializedName *gv, const string &member_name,
-                    SgScopeStatement *scope);
-  GridEmitAttribute(SgInitializedName *gv, const string &member_name,
-                    const vector<string> &array_offsets,
-                    SgScopeStatement *scope);
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv);
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv,
+                    const string &member_name);
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv,
+                    const string &member_name,
+                    const vector<string> &array_offsets);
   GridEmitAttribute(const GridEmitAttribute &x);
   virtual ~GridEmitAttribute();
   GridEmitAttribute *copy();
-  SgInitializedName *gv() const { return gv_; }
+  GridType *gt() { return gt_; }
+  SgInitializedName *gv() { return gv_; }  
   bool is_member_access() const { return is_member_access_; }
   const string &member_name() const { return member_name_; }
   const vector<string> &array_offsets() const { return array_offsets_; }
-  SgScopeStatement *scope() const { return scope_; }
  protected:
+  GridType *gt_;
+  //! Grid variable originally referenced in the user code.
+  /*!
+    May not be valid after translation.
+   */
   SgInitializedName *gv_;
   bool is_member_access_;
   string member_name_;
   vector<string> array_offsets_;
-  SgScopeStatement *scope_;
 };
 
 } // namespace translator

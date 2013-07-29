@@ -191,24 +191,14 @@ class RunKernelLoopAttribute: public AstAttribute {
   enum Kind {
     MAIN, FIRST, LAST
   };
-  RunKernelLoopAttribute(int dim, SgInitializedName *var,
-                         SgExpression *begin,
-                         SgExpression *end,
-                         Kind kind=MAIN):
-      dim_(dim), var_(var), begin_(begin), end_(end), kind_(kind)  {}
-  
+  RunKernelLoopAttribute(int dim, Kind kind=MAIN):
+      dim_(dim), kind_(kind)  {}
   virtual ~RunKernelLoopAttribute() {}
   AstAttribute *copy() {
-    return new RunKernelLoopAttribute(dim_, var_,
-                                      begin_, end_, kind_);
+    return new RunKernelLoopAttribute(dim_, kind_);
   }
   static const std::string name;
   int dim() const { return dim_; }
-  SgInitializedName *var() { return var_; }
-  SgExpression * const &begin() const { return begin_; }
-  SgExpression * const &end() const { return end_; }
-  SgExpression *&begin() { return begin_; }
-  SgExpression *&end() { return end_; }
   void SetMain() { kind_ = MAIN; }
   void SetFirst() { kind_ = FIRST; }
   void SetLast() { kind_ = LAST; }
@@ -217,10 +207,14 @@ class RunKernelLoopAttribute: public AstAttribute {
   bool IsLast() { return kind_ == LAST; }    
  protected:
   int dim_;
-  SgInitializedName *var_;
-  SgExpression *begin_;
-  SgExpression *end_;
   Kind kind_;
+};
+
+class KernelLoopAnalysis {
+ public:
+  static SgVarRefExp *GetLoopVar(SgForStatement *loop);
+  static SgExpression *GetLoopBegin(SgForStatement *loop);
+  static SgExpression *GetLoopEnd(SgForStatement *loop);  
 };
 
 class RunKernelIndexVarAttribute: public AstAttribute {

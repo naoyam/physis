@@ -8,9 +8,11 @@
 
 #include "translator/ast_processing.h"
 #include "translator/rose_util.h"
+#include "translator/test/common.h"
 
-using namespace testing;
-using namespace std;
+using namespace ::testing;
+using namespace ::std;
+using namespace ::physis::translator::test;
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
@@ -18,15 +20,6 @@ namespace sb = SageBuilder;
 namespace physis {
 namespace translator {
 namespace rose_util {
-
-static SgProject *FrontEnd(const char *infile) {
-  vector<string> argv;
-  argv.push_back("test");
-  argv.push_back(infile);
-  SgProject* proj = frontend(argv);
-  AstTests::runAllTests(proj);
-  return proj;
-}
 
 static SgFunctionDeclaration *GetFunction(SgNode *node,
                                           const char *fname) {

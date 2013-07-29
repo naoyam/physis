@@ -10,6 +10,8 @@
 
 #include "translator/rose_util.h"
 
+namespace si = SageInterface;
+
 namespace physis {
 namespace translator {
 
@@ -80,7 +82,7 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
 
   if (!initializer) {
     LOG_DEBUG() << "No definition\n";
-    if (rose_util::isFuncParam(in)) {
+    if (rose_util::IsFuncParam(in)) {
       changed |= av->addOrigin(AliasFuncParamNode::getInstance());
     } else {
       changed |= av->addOrigin(AliasNullInitNode::getInstance());
@@ -99,7 +101,7 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
 
   if (isSgVarRefExp(rhs)) {
     AliasVarNode *rhsV =
-        createOrFindAliasVar(rose_util::getInitializedName(isSgVarRefExp(rhs)));
+        createOrFindAliasVar(si::convertRefToInitializedName(isSgVarRefExp(rhs)));
     return av->addOrigin(rhsV);
   } else {
     return av->addOrigin(AliasUnknownOriginNode::getInstance());
@@ -109,9 +111,9 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
 bool AliasGraph::handleVarAssignment(SgExpression *lhs, SgExpression *rhs) {
   assert(isSgVarRefExp(lhs));
   assert(isSgVarRefExp(rhs));
-  SgInitializedName *lhsIn = rose_util::getInitializedName(isSgVarRefExp(lhs));
+  SgInitializedName *lhsIn = si::convertRefToInitializedName(isSgVarRefExp(lhs));
   assert(lhsIn);
-  SgInitializedName *rhsIn = rose_util::getInitializedName(isSgVarRefExp(rhs));
+  SgInitializedName *rhsIn = si::convertRefToInitializedName(isSgVarRefExp(rhs));
   assert(rhsIn);
 
   return addAlias(createOrFindAliasVar(lhsIn),

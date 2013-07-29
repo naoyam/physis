@@ -7,11 +7,15 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/grid.h"
+
+#include <algorithm>
+
 #include "translator/physis_names.h"
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
 
+using std::make_pair;
 
 namespace physis {
 namespace translator {
@@ -294,33 +298,117 @@ bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
   return false;
 }
 
+const std::string GridVarAttribute::name = "GridVar";
+
+GridVarAttribute::GridVarAttribute(GridType *gt):
+    gt_(gt), sr_(gt_->num_dim()) {
+}
+
+
+void GridVarAttribute::AddStencilIndexList(const StencilIndexList &sil) {
+  sr_.insert(sil);
+}
+
+void GridVarAttribute::AddMemberStencilIndexList(
+    const string &member, const IntVector &indices,
+    const StencilIndexList &sil) {
+  
+  if (!isContained<pair<string, IntVector>, StencilRange>(
+          member_sr_, make_pair(member, indices))) {
+    member_sr_.insert(make_pair(make_pair(member, indices),
+                                StencilRange(gt_->num_dim())));
+  }
+  StencilRange &sr = member_sr_.find(make_pair(member, indices))->second;
+  sr.insert(sil);
+}
+
 const std::string GridOffsetAttribute::name = "PSGridOffset";
 const std::string GridGetAttribute::name = "PSGridGet";
 
+static SgVarRefExp *GetGridVarFromFuncCallOffset(SgFunctionCallExp *offset)  {
+  SgExprListExp *args = offset->get_args();
+  PSAssert(args);
+  SgExpression *first_arg = args->get_expressions().front();
+  vector<SgVarRefExp*> vars = si::querySubTree<SgVarRefExp>(first_arg);
+  PSAssert(vars.size() == 1);
+  return vars.front();
+}
+
+SgVarRefExp *GridOffsetAnalysis::GetGridVar(SgExpression *offset)  {
+  PSAssert(offset);
+  SgFunctionCallExp *offset_call = NULL;
+  if (isSgAddOp(offset)) {
+    offset_call = isSgFunctionCallExp(isSgAddOp(offset)->get_lhs_operand());
+  } else if (isSgFunctionCallExp(offset)) {
+    offset_call = isSgFunctionCallExp(offset);
+  } else {
+    LOG_ERROR() << "Not supported expression: "
+                << offset->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  return GetGridVarFromFuncCallOffset(offset_call);
+}
+
+SgExpression *GridOffsetAnalysis::GetIndexAt(SgExpression *offset, int dim) {
+  PSAssert(offset);
+  PSAssert(dim >= 1 && dim <= PS_MAX_DIM);
+  SgFunctionCallExp *offset_call = NULL;
+  if (isSgAddOp(offset)) {
+    offset_call = isSgFunctionCallExp(isSgAddOp(offset)->get_lhs_operand());
+  } else if (isSgFunctionCallExp(offset)) {
+    offset_call = isSgFunctionCallExp(offset);
+  } else {
+    LOG_ERROR() << "Not supported expression: "
+                << offset->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  SgExprListExp *args = offset_call->get_args();
+  PSAssert(args);
+  SgExpression *index = args->get_expressions()[dim];
+  return index;
+}
+
+SgExpressionPtrList GridOffsetAnalysis::GetIndices(SgExpression *offset) {
+  PSAssert(offset);
+  SgFunctionCallExp *offset_call = NULL;
+  if (isSgAddOp(offset)) {
+    offset_call = isSgFunctionCallExp(isSgAddOp(offset)->get_lhs_operand());
+  } else if (isSgFunctionCallExp(offset)) {
+    offset_call = isSgFunctionCallExp(offset);
+  } else {
+    LOG_ERROR() << "Not supported expression: "
+                << offset->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  SgExpressionPtrList indices;
+  SgExpressionPtrList &args = offset_call->get_args()->get_expressions();
+  FOREACH (it, ++args.begin(), args.end()) {
+    indices.push_back(*it);
+  }
+  return indices;
+}
+
+
 GridGetAttribute::GridGetAttribute(
+    GridType *gt,
     SgInitializedName *gv,
-    int num_dim,
+    GridVarAttribute *gva,
     bool in_kernel,
     bool is_periodic,
     const StencilIndexList *sil,
-    SgExpression *offset,
     const string &member_name):
-      gv_(gv), original_gv_(gv),
-      num_dim_(num_dim), in_kernel_(in_kernel),
-      is_periodic_(is_periodic),
-      sil_(NULL), offset_(offset),
-      member_name_(member_name) {
+    gt_(gt), gv_(gv), gva_(gva), in_kernel_(in_kernel),
+    is_periodic_(is_periodic),
+    sil_(NULL), member_name_(member_name) {
   if (sil) {
     sil_ = new StencilIndexList(*sil);
   }
 }
 
 GridGetAttribute::GridGetAttribute(const GridGetAttribute &x):
-    gv_(x.gv_), original_gv_(x.original_gv_),
-    num_dim_(x.num_dim_), in_kernel_(x.in_kernel_),
+    gt_(x.gt_), gv_(x.gv_), gva_(x.gva_), in_kernel_(x.in_kernel_),
     is_periodic_(x.is_periodic_),
-    sil_(NULL), offset_(x.offset_),
-    member_name_(x.member_name_) {
+    sil_(NULL), member_name_(x.member_name_) {
   if (x.sil_) {
     sil_ = new StencilIndexList(*x.sil_);
   }
@@ -353,38 +441,101 @@ void GridGetAttribute::SetStencilIndexList(
 }
 
 bool GridGetAttribute::IsUserDefinedType() const {
-  GridType *g = rose_util::GetASTAttribute<GridType>(gv_);
-  PSAssert(g);
-  return g->IsUserDefinedPointType();
+  return gt_->IsUserDefinedPointType();
 }
 
+SgExpression *GridGetAnalysis::GetOffset(SgExpression *get_exp) {
+  if (isSgPointerDerefExp(get_exp)) {
+    get_exp = isSgPointerDerefExp(get_exp)->get_operand();
+  }
+  get_exp = rose_util::removeCasts(get_exp);
+  SgExpression *offset = NULL;
+  if (isSgPntrArrRefExp(get_exp)) {
+    offset = isSgPntrArrRefExp(get_exp)->get_rhs_operand();
+    PSAssert(offset);
+  } else if (isSgFunctionCallExp(get_exp)) {
+    offset = isSgFunctionCallExp(get_exp)->
+        get_args()->get_expressions()[1];
+    PSAssert(offset);
+  }
+  return offset;
+}
+
+SgExpression *GridGetAnalysis::GetGridExp(SgExpression *get_exp) {
+  if (isSgPointerDerefExp(get_exp)) {
+    get_exp = isSgPointerDerefExp(get_exp)->get_operand();
+  }
+  get_exp = rose_util::removeCasts(get_exp);
+  SgExpression *g = NULL;
+  if (isSgPntrArrRefExp(get_exp)) {
+    g = isSgPntrArrRefExp(get_exp)->get_lhs_operand();
+    PSAssert(g);
+  } else if (isSgFunctionCallExp(get_exp)) {
+    g = isSgFunctionCallExp(get_exp)->
+        get_args()->get_expressions()[0];
+    PSAssert(g);
+  } else {
+    LOG_ERROR() << "Unsupported grid get: "
+                << get_exp->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  return g;
+}
+
+
+SgInitializedName *GridGetAnalysis::GetGridVar(SgExpression *get_exp) {
+  if (isSgPointerDerefExp(get_exp)) {
+    get_exp = isSgPointerDerefExp(get_exp)->get_operand();
+  }
+  get_exp = rose_util::removeCasts(get_exp);
+  SgVarRefExp *gvref = NULL;
+  if (isSgPntrArrRefExp(get_exp)) {
+    SgExpression *g = rose_util::removeCasts(
+        isSgPntrArrRefExp(get_exp)->get_lhs_operand());
+    PSAssert(isSgDotExp(g) || isSgArrowExp(g));
+    SgExpression *x = 
+        isSgBinaryOp(g)->get_lhs_operand();
+    if (isSgAddressOfOp(x)) {
+      x = isSgAddressOfOp(x)->get_operand();
+    }
+    gvref = isSgVarRefExp(x);
+  } else if (isSgFunctionCallExp(get_exp)) {
+    gvref = isSgVarRefExp(isSgFunctionCallExp(get_exp)->
+                          get_args()->get_expressions()[0]);
+  } else {
+    LOG_ERROR() << "Unsupported grid get: "
+                << get_exp->unparseToString() << "\n";
+    PSAbort(1);
+  }
+  PSAssert(gvref);
+  return gvref->get_symbol()->get_declaration();
+}
 
 const std::string GridEmitAttribute::name = "PSGridEmit";
 
-GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
-                                     SgScopeStatement *scope):
-    gv_(gv), is_member_access_(false), scope_(scope) {
+GridEmitAttribute::GridEmitAttribute(GridType *gt,
+                                     SgInitializedName *gv):
+    gt_(gt), gv_(gv), is_member_access_(false) {
 }
 
-GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
-                                     const string &member_name,
-                                     SgScopeStatement *scope):
-    gv_(gv), is_member_access_(true), member_name_(member_name),
-    scope_(scope) {
+GridEmitAttribute::GridEmitAttribute(GridType *gt,
+                                     SgInitializedName *gv,
+                                     const string &member_name):
+    gt_(gt), gv_(gv), is_member_access_(true), member_name_(member_name) {
+
 }
 
-GridEmitAttribute::GridEmitAttribute(SgInitializedName *gv,
+GridEmitAttribute::GridEmitAttribute(GridType *gt,
+                                     SgInitializedName *gv,
                                      const string &member_name,
-                                     const vector<string> &array_offsets,
-                                     SgScopeStatement *scope):
-    gv_(gv), is_member_access_(true), member_name_(member_name),
-    array_offsets_(array_offsets), scope_(scope) {
+                                     const vector<string> &array_offsets):
+    gt_(gt), gv_(gv), is_member_access_(true), member_name_(member_name),
+    array_offsets_(array_offsets) {
 }
 
 GridEmitAttribute::GridEmitAttribute(const GridEmitAttribute &x):
-    gv_(x.gv_), is_member_access_(x.is_member_access_),
-    member_name_(x.member_name_), array_offsets_(x.array_offsets_),
-    scope_(x.scope_) {
+    gt_(x.gt_), gv_(x.gv_), is_member_access_(x.is_member_access_),
+    member_name_(x.member_name_), array_offsets_(x.array_offsets_) {
 }
 
 GridEmitAttribute::~GridEmitAttribute() {}

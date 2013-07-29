@@ -164,13 +164,26 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
   }
 }
 
+static void ExtractArrayIndices(SgNode *n, IntVector &v) {
+  SgPntrArrRefExp *p = isSgPntrArrRefExp(n);
+  if (p == NULL) return;
+  int i;
+  bool is_int = rose_util::GetIntLikeVal(p->get_rhs_operand(), i);
+  if (!is_int) return;
+  LOG_DEBUG() << "Index: " << i << "\n";
+  v.push_back(i);
+  return ExtractArrayIndices(p->get_parent(), v);
+}
+
 static bool GetGridMember(SgFunctionCallExp *get_call,
-                          string &member) {
+                          string &member,
+                          IntVector &indices) {
   SgDotExp *dot = isSgDotExp(get_call->get_parent());
   if (dot == NULL) return false;
   SgVarRefExp *rhs = isSgVarRefExp(dot->get_rhs_operand());
   PSAssert(rhs);
   member = rose_util::GetName(rhs);
+  ExtractArrayIndices(dot->get_parent(), indices);
   return true;
 }
 
@@ -179,20 +192,29 @@ static void AddIndex(SgFunctionCallExp *get_call,
                      GridMemberRangeMap &gmr,
                      SgInitializedName *gv,
                      StencilIndexList &sil, int nd) {
+
   string member;
-  if (GetGridMember(get_call, member)) {
+  IntVector indices;
+  // Collect member-specific information
+  if (GetGridMember(get_call, member, indices)) {
     LOG_DEBUG() << "Access to member: " << member << "\n";
     if (!isContained<GridMember, StencilRange>(gmr, GridMember(gv, member))) {
       gmr.insert(make_pair(GridMember(gv, member), StencilRange(nd)));
     }
     StencilRange &sr = gmr.find(GridMember(gv, member))->second;
     sr.insert(sil);
+    GridVarAttribute *gva =
+        rose_util::GetASTAttribute<GridVarAttribute>(gv);
+    gva->AddMemberStencilIndexList(member, indices, sil);
   }    
   if (!isContained<SgInitializedName*, StencilRange>(gr, gv)) {
     gr.insert(make_pair(gv, StencilRange(nd)));
   }
   StencilRange &sr = gr.find(gv)->second;
   sr.insert(sil);
+  GridVarAttribute *gva =
+      rose_util::GetASTAttribute<GridVarAttribute>(gv);
+  gva->AddStencilIndexList(sil);
   return;
 }
 
@@ -213,6 +235,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     SgInitializedName *gv = GridType::getGridVarUsedInFuncCall(get_call);
     SgExpressionPtrList &args = get_call->get_args()->get_expressions();
     int nd = args.size();
+    // Extracts a list of stencil indices
     StencilIndexList stencil_indices;
     ENUMERATE (dim, ait, args.begin(), args.end()) {
       LOG_DEBUG() << "get argument: " <<
@@ -229,18 +252,24 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       }
       stencil_indices.push_back(si);
     }
-    AddIndex(get_call, gr, gmr, gv, stencil_indices, nd);    
+    // Associate gv with the stencil indices
+    AddIndex(get_call, gr, gmr, gv, stencil_indices, nd);
+    // Associate GridGet with the stencil indices    
     tx.registerStencilIndex(get_call, stencil_indices);
     LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
+    // Attach GridGetAttribute to the get expression.
+    // NOTE: registerStencilIndex will be replaced with the attribute
     bool is_periodic = tx.getGridFuncName(get_call) ==
         GridType::get_periodic_name;
     // A kernel function is analyzed multiple times if it appears
     // multiple times in use at stencil_map.
     if (rose_util::GetASTAttribute<GridGetAttribute>(
             get_call) == NULL) {
+      GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+      PSAssert(gt);
       GridGetAttribute *gga = new GridGetAttribute(
-          gv, nd, tx.isKernel(kernel),
-          is_periodic, &stencil_indices);
+          gt, NULL, rose_util::GetASTAttribute<GridVarAttribute>(gv),
+          tx.isKernel(kernel), is_periodic, &stencil_indices);
       rose_util::AddASTAttribute(get_call, gga);
     }
     if (is_periodic) sm.SetGridPeriodic(gv);
@@ -279,7 +308,6 @@ static void AnalyzeArrayOffsets(string s,
 
 static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
   SgExpression *emit_arg = fc->get_args()->get_expressions()[0];
-  SgScopeStatement *scope = si::getScope(fc);
   LOG_DEBUG() << "Emit arg: " << emit_arg->unparseToString() << "\n";
   string emit_str = isSgStringVal(emit_arg)->get_value();
   SgFunctionDefinition *kernel = si::getEnclosingFunctionDefinition(fc);
@@ -287,12 +315,17 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
   // "g.v" -> gv: g, user_type: true, member_name: "v"
   // "g" -> gv: g, user_type: false
   size_t dot_pos = emit_str.find_first_of('.');
+  string gv_str = (dot_pos == string::npos) ?
+      emit_str : emit_str.substr(0, dot_pos);
+  SgInitializedName *gv = FindInitializedName(gv_str, kernel);
+  PSAssert(gv);
+  GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+  PSAssert(gt);
+      
   GridEmitAttribute *attr = NULL;
   if (dot_pos == string::npos) {
     // No dot operator found
-    SgInitializedName *gv = FindInitializedName(emit_str, kernel);
-    PSAssert(gv);
-    attr = new GridEmitAttribute(gv, scope);
+    attr = new GridEmitAttribute(gt, gv);
   } else {
     if (dot_pos != emit_str.find_last_of('.')) {
       LOG_ERROR() << "Multiple dot operators found: "
@@ -300,9 +333,6 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
       PSAbort(1);
     }
     LOG_DEBUG() << "User type emit\n";
-    SgInitializedName *gv = FindInitializedName(
-        emit_str.substr(0, dot_pos), kernel);
-    PSAssert(gv);
     string member_name = emit_str.substr(dot_pos+1);
     size_t array_offset_pos = member_name.find_first_of('[');
     if (array_offset_pos != string::npos) {
@@ -312,11 +342,11 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
       LOG_DEBUG() << "member name: " << member_name << "\n";
       vector<string> offsets;
       AnalyzeArrayOffsets(offset_str, offsets);
-      attr = new GridEmitAttribute(gv, member_name, offsets, scope);
+      attr = new GridEmitAttribute(gt, gv, member_name, offsets);
       LOG_DEBUG() << "Number of dimensions: " << offsets.size() << "\n";
     } else {
       LOG_DEBUG() << "member name: " << member_name << "\n";
-      attr = new GridEmitAttribute(gv, member_name, scope);
+      attr = new GridEmitAttribute(gt, gv, member_name);
     }
   }
   return attr;
@@ -332,8 +362,9 @@ void AnalyzeEmit(SgFunctionDeclaration *func) {
     GridEmitAttribute *attr = NULL;
     if (GridType::isGridTypeSpecificCall(fc) &&
         GridType::GetGridFuncName(fc) == PS_GRID_EMIT_NAME) {
-      attr = new GridEmitAttribute(GridType::getGridVarUsedInFuncCall(fc),
-                                   si::getScope(func));
+      SgInitializedName *gv = GridType::getGridVarUsedInFuncCall(fc);
+      GridType *gt = rose_util::GetASTAttribute<GridType>(gv);      
+      attr = new GridEmitAttribute(gt, gv);
     } else if (isSgFunctionRefExp(fc->get_function()) &&
                rose_util::getFuncName(fc) == PS_GRID_EMIT_UTYPE_NAME) {
       attr = AnalyzeEmitCall(fc);

@@ -22,6 +22,8 @@ if (NOT ROSE_FOUND)
 endif()
 
 include_directories(${ROSE_INCLUDE_DIR})
+# Use precompiled header if available
+add_definitions(-include rose.h)
 
 # Boost
 #set(Boost_USE_STATIC_LIBS ON)

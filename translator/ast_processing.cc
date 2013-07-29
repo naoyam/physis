@@ -41,16 +41,19 @@ static bool IsAssignedOnce(SgInitializedName *var,
 
 static void ReplaceVar(SgInitializedName *x,
                        SgExpression *y,
-                       SgNode *node,
-                       DefUseAnalysis *dfa) {
+                       SgNode *node) {
   vector<SgVarRefExp*> vref = si::querySubTree<SgVarRefExp>(node);
   FOREACH (vref_it, vref.begin(), vref.end()) {
     SgVarRefExp *v = *vref_it;
     if (v->get_symbol()->get_declaration() == x) {
       //LOG_DEBUG() << "Replacing use of " << x->unparseToString() << "\n";
-      si::replaceExpression(v, si::copyExpression(y));
+      //LOG_DEBUG() << "STMT: " << si::getEnclosingStatement(v)->unparseToString() << "\n";
+      //NOTE: AST consistency check fails if v is deleted (i.e.,
+      //false is given). Why?
+      si::replaceExpression(v, si::copyExpression(y), true);
     }
   }
+  LOG_DEBUG() << "Removing " << x->get_declaration()->unparseToString() << "\n";
   si::removeStatement(x->get_declaration());
   si::clearUnusedVariableSymbols();
 }
@@ -76,17 +79,17 @@ int RemoveRedundantVariableCopy(SgNode *top) {
         continue;
       }
     }
-    //LOG_DEBUG() << "Variable " << var->unparseToString()
-    //<< " is assigned with " << rhs->unparseToString() << "\n";
+    LOG_DEBUG() << "Variable " << var->unparseToString()
+                << " is assigned with " << rhs->unparseToString() << "\n";
     SgInitializedName *rhs_var = isSgInitializedName(
         rhs_vref->get_symbol()->get_declaration());
     if (!IsAssignedOnce(var, scope, dfa)) continue;
     if (!IsAssignedOnce(rhs_var, scope, dfa)) continue;
-    //LOG_DEBUG() << "This variable copy can be safely eliminated.\n";
-    ReplaceVar(var, rhs, scope, dfa);
-#if 0
+    LOG_DEBUG() << "This variable copy can be safely eliminated.\n";
+    ReplaceVar(var, rhs, scope);
+#if 1
     LOG_DEBUG() << "AFTER\n:"
-                << scope->unparseToString() << "\n";
+                << top->unparseToString() << "\n";
 #endif      
     ++num_removed_vars;
   }

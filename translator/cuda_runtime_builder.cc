@@ -88,6 +88,15 @@ SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
   return NULL;
 }
 
+static SgExpression *BuildGridMember(SgExpression *gvref,
+                                     SgExpression *member) {
+  if (si::isPointerType(gvref->get_type())) {
+    return isSgExpression(sb::buildArrowExp(gvref, member));
+  } else {
+    return isSgExpression(sb::buildDotExp(gvref, member));
+  }
+}
+
 SgExpression *CUDARuntimeBuilder::BuildGridOffset(
     SgExpression *gvref,
     int num_dim,
@@ -99,32 +108,34 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
   /*
     __PSGridGetOffsetND(g, i)
   */
-  GridOffsetAttribute *goa = new GridOffsetAttribute(
-      num_dim, is_periodic,
-      sil, gvref);  
   std::string func_name = "__PSGridGetOffset";
   if (is_periodic) func_name += "Periodic";
   func_name += toString(num_dim) + "D";
   if (is_kernel) func_name += "Dev";
-  SgExprListExp *offset_params = sb::buildExprListExp(gvref);
+  if (!si::isPointerType(gvref->get_type())) {
+    gvref = sb::buildAddressOfOp(gvref);
+  }
+  SgExprListExp *offset_params = sb::buildExprListExp(
+      gvref);
   FOREACH (it, offset_exprs->begin(),
            offset_exprs->end()) {
     LOG_DEBUG() << "offset exp: " << (*it)->unparseToString() << "\n";    
     si::appendExpression(offset_params,
                          *it);
-    goa->AppendIndex(*it);
   }
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes(func_name);
   SgFunctionCallExp *offset_fc =
       sb::buildFunctionCallExp(fs, offset_params);
   rose_util::AddASTAttribute<GridOffsetAttribute>(
-      offset_fc, goa);
+      offset_fc,
+      new GridOffsetAttribute(num_dim, is_periodic, sil));
   return offset_fc;
 }
 
 SgExpression *CUDARuntimeBuilder::BuildGridGet(
     SgExpression *gvref,
+    GridVarAttribute *gva,                
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
     const StencilIndexList *sil,    
@@ -132,7 +143,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
     bool is_periodic) {
   if (gt->IsPrimitivePointType()) {
     return ReferenceRuntimeBuilder::
-        BuildGridGet(gvref, gt, offset_exprs, sil,
+        BuildGridGet(gvref, gva, gt, offset_exprs, sil,
                      is_kernel, is_periodic);
   }
 
@@ -147,15 +158,15 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
           sb::buildExprListExp(si::copyExpression(gvref),
                                offset));
   GridGetAttribute *gga = new GridGetAttribute(
-      NULL, gt->num_dim(), is_kernel, is_periodic,
-      sil, offset);
+      gt, NULL, gva, is_kernel, is_periodic, sil);
   rose_util::AddASTAttribute<GridGetAttribute>(get_call,
                                                gga);
   return get_call;
 }
 
 SgExpression *CUDARuntimeBuilder::BuildGridGet(
-    SgExpression *gvref,      
+    SgExpression *gvref,
+    GridVarAttribute *gva,                    
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
     const StencilIndexList *sil,
@@ -173,16 +184,14 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   SgExpression *offset =
       BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
                       is_kernel, is_periodic, sil);
-  
-  SgExpression *x = sb::buildPntrArrRefExp(
-      sb::buildArrowExp(
-          si::copyExpression(gvref),
-          sb::buildVarRefExp(member_name)),
-      offset);
+
+  gvref = si::copyExpression(gvref);
+  SgExpression *member_exp = sb::buildVarRefExp(member_name);
+  SgExpression *x = BuildGridMember(gvref, member_exp);
+  x = sb::buildPntrArrRefExp(x, offset);
 
   GridGetAttribute *gga = new GridGetAttribute(
-      NULL, gt->num_dim(), is_kernel, is_periodic,
-      sil, offset, member_name);
+      gt, NULL, gva, is_kernel, is_periodic, sil, member_name);
   rose_util::AddASTAttribute<GridGetAttribute>(
       x, gga);
   return x;
@@ -218,15 +227,15 @@ static void GetArrayDim(SgArrayType *at,
 
 SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
     SgExpression *gvref,
-    GridType *gt,
+    const GridType *gt,
     const string &member_name,
     const SgExpressionVector &array_indices) {
 
+  SgVarRefExp *dim_ref = sb::buildVarRefExp("dim");
+  SgExpression *g_dim = BuildGridMember(gvref, dim_ref);
+      
   SgExpression *num_elms = BuildNumElmsExpr(
-      sb::buildArrowExp(
-          gvref,
-          sb::buildVarRefExp("dim")),
-      gt->num_dim());
+      g_dim, gt->num_dim());
 
   SgVariableDeclaration *md = FindMember(gt->point_def(),
                                          member_name);
@@ -263,7 +272,8 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
 }  
 
 SgExpression *CUDARuntimeBuilder::BuildGridGet(
-    SgExpression *gvref,      
+    SgExpression *gvref,
+    GridVarAttribute *gva,      
     GridType *gt,
     const SgExpressionPtrList *offset_exprs,
     const StencilIndexList *sil,
@@ -295,13 +305,11 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   rose_util::RemoveASTAttribute<GridOffsetAttribute>(offset);
 
   SgExpression *x = sb::buildPntrArrRefExp(
-      sb::buildArrowExp(
-          si::copyExpression(gvref),
-          sb::buildVarRefExp(member_name)),
+      BuildGridMember(si::copyExpression(gvref),
+                      sb::buildVarRefExp(member_name)),
       offset_with_array);
   GridGetAttribute *gga = new GridGetAttribute(
-      NULL, gt->num_dim(), is_kernel, is_periodic,
-      sil, offset_with_array, member_name);
+      gt, NULL, gva, is_kernel, is_periodic, sil, member_name);
   rose_util::AddASTAttribute<GridGetAttribute>(
       x, gga);
   return x;
@@ -309,7 +317,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
 
 
 SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
-    SgClassDeclaration *grid_decl, GridType *gt) {
+    SgClassDeclaration *grid_decl, const GridType *gt) {
   /*
     Let X be the user type name, N be the number of dimension,
     
@@ -359,7 +367,7 @@ static bool IsDimMember(SgVariableDeclaration *member) {
 
 // Build a "new" function.
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   /*
     Example:
   void* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
@@ -464,7 +472,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   /*
     Example:
   void __PSGridType_devFree(void *v) {
@@ -709,7 +717,7 @@ void AppendTranspose(SgBasicBlock *scope,
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
-    GridType *gt, bool is_copyout) {
+    const GridType *gt, bool is_copyout) {
   
   /*
   Example: Transfer SoA device data to AoS host buffer.    
@@ -854,19 +862,19 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyinFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   return BuildGridCopyFuncForUserType(gt, false);
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyoutFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   return BuildGridCopyFuncForUserType(gt, true);
 }
 
 
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   SgClassDeclaration *type_decl =
       (SgClassDeclaration*)gt->aux_decl();
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
@@ -951,7 +959,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
-    GridType *gt) {
+    const GridType *gt) {
   SgClassDeclaration *type_decl =
       (SgClassDeclaration*)gt->aux_decl();
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
@@ -1033,26 +1041,24 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
 }
 
 SgExpression *CUDARuntimeBuilder::BuildGridEmit(
+    SgExpression *grid_exp,    
     GridEmitAttribute *attr,
-    GridType *gt,
     const SgExpressionPtrList *offset_exprs,
     SgExpression *emit_val,
     SgScopeStatement *scope) {
 
+  GridType *gt = attr->gt();
   if (gt->IsPrimitivePointType()) {
     return ReferenceRuntimeBuilder::BuildGridEmit(
-        attr, gt, offset_exprs, emit_val, scope);
+        grid_exp, attr, offset_exprs, emit_val, scope);
   }
 
-  SgInitializedName *gv = attr->gv();  
-  
-  int nd = gt->getNumDim();
+  int nd = gt->num_dim();
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);  
   
   SgExpression *offset = BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name(), scope),
-      nd, offset_exprs, true, false, &sil);
+      grid_exp, nd, offset_exprs, true, false, &sil);
 
   SgExpression *emit_expr = NULL;
   if (attr->is_member_access()) {
@@ -1060,21 +1066,26 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     if (array_offsets.size() > 0) {
       SgExpressionVector offset_vector;
       FOREACH (it, array_offsets.begin(), array_offsets.end()) {
-        SgExpression *e = rose_util::ParseString(*it, attr->scope());
+        SgExpression *e = rose_util::ParseString(*it, scope);
         offset_vector.push_back(e);
       }
       SgExpression *array_offset =
-          BuildGridArrayMemberOffset(
-              sb::buildVarRefExp(gv->get_name(), scope),
-              gt, attr->member_name(),
-              offset_vector);
-      offset = sb::buildAddOp(offset, array_offset);
+          sb::buildAddOp(
+              offset,
+              BuildGridArrayMemberOffset(
+                  si::copyExpression(grid_exp),
+                  gt, attr->member_name(),
+                  offset_vector));
+      rose_util::CopyASTAttribute<GridOffsetAttribute>(
+          array_offset, offset);
+      rose_util::RemoveASTAttribute<GridOffsetAttribute>(offset);
+      offset = array_offset;
     }
     emit_expr =
         sb::buildAssignOp(
             sb::buildPntrArrRefExp(
                 sb::buildArrowExp(
-                    sb::buildVarRefExp(gv->get_name(), scope),
+                    si::copyExpression(grid_exp),
                     sb::buildVarRefExp(attr->member_name())),
                 offset),
             emit_val);
@@ -1083,7 +1094,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
         sb::buildFunctionCallExp(
             sb::buildFunctionRefExp(gt->aux_emit_decl()),
             sb::buildExprListExp(
-                sb::buildVarRefExp(gv->get_name(), scope),
+                si::copyExpression(grid_exp),
                 offset, emit_val));
   }
 
