@@ -60,62 +60,6 @@ static bool IsASTNodeDescendant(SgNode *top, SgNode *x) {
   return false;
 }
 
-/*!
-  Insert the base offset decl, which needs to be after all the used
-  variables. The kernel is inlined into the loop, so there is a
-  sequence of declarations that are kernel parameters. Find all
-  parameter variable delcarations, and append the base offset decl.
-*/
-static void insert_base_offset(SgBasicBlock *loop_body,
-                               SgVariableDeclaration *base_offset_decl,
-                               SgInitializedName *gv,
-                               SgExpressionPtrList &base_offset_indices) {
-  SgDeclarationStatementPtrList decls;
-  if (gv) decls.push_back(gv->get_declaration());
-  FOREACH (it, base_offset_indices.begin(), base_offset_indices.end()) {
-    SgVarRefExp *v = isSgVarRefExp(*it);
-    PSAssert(v);
-    SgDeclarationStatement *d =
-        v->get_symbol()->get_declaration()->get_declaration();
-    PSAssert(d);
-    if (IsASTNodeDescendant(loop_body, d)) {
-      decls.push_back(d);
-    }
-  }
-
-  FOREACH (it, decls.begin(), decls.end()) {
-    LOG_DEBUG() << "Decl: " << (*it)->unparseToString() << "\n";
-  }
-  
-  // Advance all variables are found
-  SgStatement *loop_body_stmt = loop_body->get_statements()[0];
-  LOG_DEBUG() << "loop_body_stmt: " << loop_body_stmt->unparseToString() << "\n";
-  std::stack<SgStatement*> stack;
-  while (decls.size() > 0) {
-    if (isSgBasicBlock(loop_body_stmt)) {
-      if (si::getNextStatement(loop_body_stmt))
-        stack.push(si::getNextStatement(loop_body_stmt));
-      loop_body_stmt = si::getFirstStatement(isSgBasicBlock(loop_body_stmt));
-    }
-    SgDeclarationStatementPtrList::iterator it =
-      std::find(decls.begin(), decls.end(), loop_body_stmt);
-    if (it != decls.end()) {
-      decls.erase(it);
-    }
-    loop_body_stmt = si::getNextStatement(loop_body_stmt);
-    if (!loop_body_stmt) {
-      if (stack.size() > 0) {
-        loop_body_stmt = stack.top();
-        stack.pop();
-      } else {
-        LOG_ERROR() << "Not all index var declrations found\n";
-        PSAssert(0);
-      }
-    }
-    LOG_DEBUG() << "loop_body_stmt: " << loop_body_stmt->unparseToString() << "\n";    
-  }
-  si::insertStatementBefore(loop_body_stmt, base_offset_decl);
-}
 
 /*!
   \param gvref Require copying
@@ -145,10 +89,12 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
       (index_offset > 0) ? 
       (SgExpression*)sb::buildSubtractOp(
           sb::buildIntVal(index_offset),
-          builder->BuildGridDim(si::copyExpression(gvref), dim)):
+          builder->BuildGridDim(
+              sb::buildAddressOfOp(si::copyExpression(gvref)), dim)):
       (SgExpression*)sb::buildAddOp(
           sb::buildIntVal(index_offset),
-          builder->BuildGridDim(si::copyExpression(gvref), dim));
+          builder->BuildGridDim(
+              sb::buildAddressOfOp(si::copyExpression(gvref)), dim));
   SgExpression *nowrap_around_exp = sb::buildIntVal(index_offset);
   SgExpression *offset_d =
       si::copyExpression(
@@ -157,7 +103,8 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
       (index_offset > 0) ?
       (SgExpression*)sb::buildGreaterOrEqualOp(
           offset_d,
-          builder->BuildGridDim(si::copyExpression(gvref), dim)) :
+          builder->BuildGridDim(
+              sb::buildAddressOfOp(si::copyExpression(gvref)), dim)) :
       (SgExpression*)sb::buildLessThanOp(
           offset_d, sb::buildIntVal(0));
   SgExpression *offset_periodic =
@@ -169,8 +116,10 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
   // Use modulus
   SgExpression *x = sb::buildModOp(
       sb::buildAddOp(offset_d,
-                     builder->BuildGridDim(si::copyExpression(gvref), dim)),
-      builder->BuildGridDim(si::copyExpression(gvref), dim));
+                     builder->BuildGridDim(
+                         sb::buildAddressOfOp(si::copyExpression(gvref)), dim)),
+      builder->BuildGridDim(
+          sb::buildAddressOfOp(si::copyExpression(gvref)), dim));
   offset_periodic = sb::buildSubtractOp(
       x,
       si::copyExpression(extract_index_var(offset_d)));
@@ -214,7 +163,8 @@ static void replace_offset(SgVariableDeclaration *base_offset,
       }
       dim_offset = sb::buildMultiplyOp(
           dim_offset,
-          builder->BuildGridDim(si::copyExpression(gvexpr), i));
+          builder->BuildGridDim(
+              sb::buildAddressOfOp(si::copyExpression(gvexpr)), i));
     }
     si::constantFolding(new_offset_expr);
     LOG_DEBUG() << "new offset expression: "
@@ -242,7 +192,7 @@ static void do_offset_cse(RuntimeBuilder *builder,
   StencilIndexListClearOffset(sil);
   PSAssert(attr->gvexpr());
   SgExpression *base_offset = builder->BuildGridOffset(
-      si::copyExpression(attr->gvexpr()),
+      sb::buildAddressOfOp(si::copyExpression(attr->gvexpr())),
       attr->num_dim(), &base_offset_list,
       true, false, &sil);
   LOG_DEBUG() << "base_offset: " << base_offset->unparseToString() << "\n";
@@ -258,15 +208,8 @@ static void do_offset_cse(RuntimeBuilder *builder,
   LOG_DEBUG() << "base_offset_var: "
               << base_offset_var->unparseToString() << "\n";
 
-  // NOTE: If the grid reference expression is a SgVarRefExp, it is
-  // assumed to be a kernel parameter. In that case, kernel inlining
-  // replaces the parameter with a new variable, and the base offset
-  // declaration must be placed after that.
-  SgInitializedName *gv = NULL;
-  if (isSgVarRefExp(attr->gvexpr())) {
-    gv = isSgVarRefExp(attr->gvexpr())->get_symbol()->get_declaration();
-  }
-  insert_base_offset(loop_body, base_offset_var, gv, base_offset_list);
+  si::insertStatementBefore(loop_body->get_statements()[0],
+                            base_offset_var);
   replace_offset(base_offset_var, offset_exprs, builder);
   return;
 }
