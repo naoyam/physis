@@ -255,20 +255,16 @@ function generate_translation_configurations_cuda()
     else
 		configs=$(generate_empty_translation_configuration)
     fi
-    local pre_calc='false'
     local bsize="64,4,1 32,8,1"
     local new_configs=""
     local idx=0
-    for i in $pre_calc; do
-		for j in $bsize; do
-			for k in $configs; do
-				local c=config.cuda.$idx
-				idx=$(($idx + 1))
-				cat $k > $c
-				echo "CUDA_PRE_CALC_GRID_ADDRESS = $i" >> $c
-				echo "CUDA_BLOCK_SIZE = {$j}" >> $c
-				new_configs="$new_configs $c"
-			done
+	for j in $bsize; do
+		for k in $configs; do
+			local c=config.cuda.$idx
+			idx=$(($idx + 1))
+			cat $k > $c
+			echo "CUDA_BLOCK_SIZE = {$j}" >> $c
+			new_configs="$new_configs $c"
 		done
     done
     for config in $new_configs; do

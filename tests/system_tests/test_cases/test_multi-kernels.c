@@ -1,7 +1,7 @@
 /*
  * TEST: Combining two kernels
  * DIM: 3
- * PRIORITY: 1 
+ * PRIORITY: 2 
  */ 
 
 #include <stdio.h>
