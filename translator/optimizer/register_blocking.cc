@@ -259,6 +259,10 @@ class RegisterBlocking {
       // Insert move statements and a grid get statement for
       // the next point
       if (i < (int)bil.size() - 1) {
+        LOG_DEBUG() << "copying "
+                    << registers[i+1]->unparseToString()
+                    << " to "
+                    << reg1->unparseToString() << "\n";
         move_stmts.push_back(
             sb::buildAssignStatement(
                 sb::buildVarRefExp(reg1),
@@ -270,9 +274,13 @@ class RegisterBlocking {
         OffsetIndices(indices_next, il);
         SgExpression *get_next = BuildGet(
             gd, gt, indices_next, sil, is_periodic);
+        LOG_DEBUG() << "Loading "
+                    << get_next->unparseToString()
+                    << "\n";
         SgExprStatement *asn_stmt =
             sb::buildAssignStatement(sb::buildVarRefExp(reg1),
                                      get_next);
+
         si::fixVariableReferences(asn_stmt);
         move_stmts.push_back(asn_stmt);
       }
@@ -407,6 +415,36 @@ class RegisterBlocking {
     return NULL;
   }
 
+  bool DoesMatchForReplacingGetArrayMember(const GridData &gd,
+                                           SgExpression *get,
+                                           GridGetAttribute *get_attr) {
+    if (get_attr->member_name() != gd.member_) return false;
+    SgMultiplyOp *array_offset =
+        isSgMultiplyOp(GridOffsetAnalysis::GetArrayOffset(
+            GridGetAnalysis::GetOffset(get)));
+    SgMultiplyOp *ref_array_offset =
+        isSgMultiplyOp(GridOffsetAnalysis::GetArrayOffset(
+            GridGetAnalysis::GetOffset(gd.ref_get_)));
+    PSAssert(array_offset);
+    PSAssert(ref_array_offset);
+    int array_static_offset;
+    if (!rose_util::GetIntLikeVal(array_offset->get_lhs_operand(),
+                                  array_static_offset)) {
+      return false;
+    }
+    int ref_array_static_offset;
+    if (!rose_util::GetIntLikeVal(ref_array_offset->get_lhs_operand(),
+                                  ref_array_static_offset)) {
+      return false;
+    }
+    if (array_static_offset != ref_array_static_offset) {
+      LOG_DEBUG() << "Different static offset: "
+                  << array_static_offset << " != "
+                  << ref_array_static_offset << "\n";
+      return false;
+    }
+    return true;
+  }
   
   //!
   /*!
@@ -416,7 +454,7 @@ class RegisterBlocking {
     \param reg 
     \return one of replaced get expression.
   */
-  SgExpression *ReplaceGetWithReg(SgForStatement *loop,
+  SgExpression* ReplaceGetWithReg(SgForStatement *loop,
                                   const GridData &gd,
                                   StencilRegularIndexList *index_list,
                                   SgVariableDeclaration *reg) {
@@ -441,9 +479,16 @@ class RegisterBlocking {
                     << GridGetAnalysis::GetGridVar(get)->get_name() << "\n";
         continue;
       }
+      if (isSgVarRefExp(get)) {
+        LOG_DEBUG() << "Already replaced\n";
+        continue;
+      }
       // Ensure the get access is to the same member if its member
-      // access 
-      if (gd.IsMemberAccess()) {
+      // access
+      if (gd.IsArrayMemberAcccess()) {
+        if (!DoesMatchForReplacingGetArrayMember(gd, get, get_attr))
+          continue;
+      } else if (gd.IsMemberAccess()) {
         if (get_attr->member_name() != gd.member_) continue;
       } else {
         // Ignore a get with a member access.

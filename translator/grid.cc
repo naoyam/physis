@@ -388,6 +388,11 @@ SgExpressionPtrList GridOffsetAnalysis::GetIndices(SgExpression *offset) {
   return indices;
 }
 
+SgExpression *GridOffsetAnalysis::GetArrayOffset(SgExpression *offset) {
+  PSAssert(offset);
+  PSAssert(isSgAddOp(offset));
+  return isSgAddOp(offset)->get_rhs_operand();
+}
 
 GridGetAttribute::GridGetAttribute(
     GridType *gt,
