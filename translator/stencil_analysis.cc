@@ -184,6 +184,7 @@ static bool GetGridMember(SgFunctionCallExp *get_call,
   PSAssert(rhs);
   member = rose_util::GetName(rhs);
   ExtractArrayIndices(dot->get_parent(), indices);
+  std::reverse(indices.begin(), indices.end());
   return true;
 }
 

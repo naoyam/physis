@@ -423,6 +423,7 @@ class RegisterBlocking {
         GridOffsetAnalysis::GetArrayOffsetIndices(
             GridGetAnalysis::GetOffset(get));
     IntVector::const_iterator it = gd.indices_.begin();
+    int d = 1;
     BOOST_FOREACH(SgExpression *idx_exp, array_offset_indices) {
       int idx;
       if (!rose_util::GetIntLikeVal(idx_exp, idx)) {
@@ -431,10 +432,12 @@ class RegisterBlocking {
         return false;
       }
       if (idx != *it) {
-        LOG_DEBUG() << "Different index: "
+        LOG_DEBUG() << "Different index at dim " << d << ": "
                     << idx << " != " << *it << "\n";
         return false;
       }
+      ++d;
+      ++it;
     }
     return true;
   }
@@ -457,6 +460,8 @@ class RegisterBlocking {
     FOREACH (it, gets.begin(), gets.end()) {
       SgExpression *get = isSgExpression(*it);
       PSAssert(get);
+      LOG_DEBUG() << "Replacement target: "
+                  << get->unparseToString() << "\n";
       GridGetAttribute *get_attr =
           rose_util::GetASTAttribute<GridGetAttribute>(get);
       if (get_attr->GetStencilIndexList() == NULL) continue;
