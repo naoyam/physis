@@ -419,7 +419,6 @@ SgExpressionPtrList GridOffsetAnalysis::GetArrayOffsetIndices(SgExpression *offs
       break;
     }
   }
-  std::reverse(indices.begin(), indices.end());
   return indices;
 }
 
