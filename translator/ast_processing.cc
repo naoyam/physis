@@ -87,7 +87,7 @@ int RemoveRedundantVariableCopy(SgNode *top) {
     if (!IsAssignedOnce(rhs_var, scope, dfa)) continue;
     LOG_DEBUG() << "This variable copy can be safely eliminated.\n";
     ReplaceVar(var, rhs, scope);
-#if 1
+#if 0
     LOG_DEBUG() << "AFTER\n:"
                 << top->unparseToString() << "\n";
 #endif      

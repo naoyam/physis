@@ -259,6 +259,10 @@ class RegisterBlocking {
       // Insert move statements and a grid get statement for
       // the next point
       if (i < (int)bil.size() - 1) {
+        LOG_DEBUG() << "copying "
+                    << registers[i+1]->unparseToString()
+                    << " to "
+                    << reg1->unparseToString() << "\n";
         move_stmts.push_back(
             sb::buildAssignStatement(
                 sb::buildVarRefExp(reg1),
@@ -270,9 +274,13 @@ class RegisterBlocking {
         OffsetIndices(indices_next, il);
         SgExpression *get_next = BuildGet(
             gd, gt, indices_next, sil, is_periodic);
+        LOG_DEBUG() << "Loading "
+                    << get_next->unparseToString()
+                    << "\n";
         SgExprStatement *asn_stmt =
             sb::buildAssignStatement(sb::buildVarRefExp(reg1),
                                      get_next);
+
         si::fixVariableReferences(asn_stmt);
         move_stmts.push_back(asn_stmt);
       }
@@ -407,6 +415,32 @@ class RegisterBlocking {
     return NULL;
   }
 
+  bool DoesMatchForReplacingGetArrayMember(const GridData &gd,
+                                           SgExpression *get,
+                                           GridGetAttribute *get_attr) {
+    if (get_attr->member_name() != gd.member_) return false;
+    SgExpressionPtrList array_offset_indices =
+        GridOffsetAnalysis::GetArrayOffsetIndices(
+            GridGetAnalysis::GetOffset(get));
+    IntVector::const_iterator it = gd.indices_.begin();
+    int d = 1;
+    BOOST_FOREACH(SgExpression *idx_exp, array_offset_indices) {
+      int idx;
+      if (!rose_util::GetIntLikeVal(idx_exp, idx)) {
+        LOG_DEBUG() << "Not static offset: " << idx_exp->unparseToString()
+                    << "\n";
+        return false;
+      }
+      if (idx != *it) {
+        LOG_DEBUG() << "Different index at dim " << d << ": "
+                    << idx << " != " << *it << "\n";
+        return false;
+      }
+      ++d;
+      ++it;
+    }
+    return true;
+  }
   
   //!
   /*!
@@ -416,7 +450,7 @@ class RegisterBlocking {
     \param reg 
     \return one of replaced get expression.
   */
-  SgExpression *ReplaceGetWithReg(SgForStatement *loop,
+  SgExpression* ReplaceGetWithReg(SgForStatement *loop,
                                   const GridData &gd,
                                   StencilRegularIndexList *index_list,
                                   SgVariableDeclaration *reg) {
@@ -426,6 +460,8 @@ class RegisterBlocking {
     FOREACH (it, gets.begin(), gets.end()) {
       SgExpression *get = isSgExpression(*it);
       PSAssert(get);
+      LOG_DEBUG() << "Replacement target: "
+                  << get->unparseToString() << "\n";
       GridGetAttribute *get_attr =
           rose_util::GetASTAttribute<GridGetAttribute>(get);
       if (get_attr->GetStencilIndexList() == NULL) continue;
@@ -441,9 +477,16 @@ class RegisterBlocking {
                     << GridGetAnalysis::GetGridVar(get)->get_name() << "\n";
         continue;
       }
+      if (isSgVarRefExp(get)) {
+        LOG_DEBUG() << "Already replaced\n";
+        continue;
+      }
       // Ensure the get access is to the same member if its member
-      // access 
-      if (gd.IsMemberAccess()) {
+      // access
+      if (gd.IsArrayMemberAcccess()) {
+        if (!DoesMatchForReplacingGetArrayMember(gd, get, get_attr))
+          continue;
+      } else if (gd.IsMemberAccess()) {
         if (get_attr->member_name() != gd.member_) continue;
       } else {
         // Ignore a get with a member access.

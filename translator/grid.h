@@ -258,6 +258,18 @@ class GridOffsetAnalysis {
     \return Expression vector of all indices
   */
   static SgExpressionPtrList GetIndices(SgExpression *offset);
+  //! Returns the offset component for array member accesses
+  /*!
+    \param offset Offset expression
+    \return Array offset component
+  */
+  static SgExpression *GetArrayOffset(SgExpression *offset);
+  //! Returns the offset indices for array member accesses
+  /*!
+    \param offset Offset expression
+    \return Array offset indices
+  */
+  static SgExpressionPtrList GetArrayOffsetIndices(SgExpression *offset);
 };
 
 class GridOffsetAttribute: public AstAttribute {

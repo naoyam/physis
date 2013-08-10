@@ -388,6 +388,40 @@ SgExpressionPtrList GridOffsetAnalysis::GetIndices(SgExpression *offset) {
   return indices;
 }
 
+SgExpression *GridOffsetAnalysis::GetArrayOffset(SgExpression *offset) {
+  PSAssert(offset);
+  PSAssert(isSgAddOp(offset));
+  return isSgAddOp(offset)->get_rhs_operand();
+}
+
+SgExpressionPtrList GridOffsetAnalysis::GetArrayOffsetIndices(SgExpression *offset) {
+  SgMultiplyOp *array_offset = isSgMultiplyOp(GetArrayOffset(offset));
+  PSAssert(array_offset);
+  SgExpressionPtrList indices;
+  SgExpression *x = array_offset->get_lhs_operand();
+  while (x) {
+    SgExpression *dim_component = NULL;
+    if (isSgAddOp(x)) {
+      dim_component = isSgAddOp(x)->get_rhs_operand();
+    } else {
+      dim_component = x;
+    }
+    PSAssert(dim_component);
+    SgExpression *i =
+        isSgMultiplyOp(dim_component) ?
+        isSgMultiplyOp(dim_component)->get_lhs_operand() :
+        dim_component;
+    LOG_DEBUG() << "index: " << i->unparseToString() << "\n";
+    indices.push_back(i);
+    if (isSgAddOp(x)) {
+      x = isSgAddOp(x)->get_lhs_operand();
+    } else {
+      break;
+    }
+  }
+  std::reverse(indices.begin(), indices.end());
+  return indices;
+}
 
 GridGetAttribute::GridGetAttribute(
     GridType *gt,
@@ -510,6 +544,7 @@ SgInitializedName *GridGetAnalysis::GetGridVar(SgExpression *get_exp) {
   PSAssert(gvref);
   return gvref->get_symbol()->get_declaration();
 }
+
 
 const std::string GridEmitAttribute::name = "PSGridEmit";
 
