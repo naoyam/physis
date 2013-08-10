@@ -21,14 +21,9 @@ namespace translator {
 using std::pair;
 
 class TranslationContext;
-//typedef map<Grid*, StencilRange> GridRangeMap;
-typedef map<SgInitializedName*, StencilRange> GridRangeMap;
+
 typedef pair<SgInitializedName*, string> GridMember;
 typedef map<GridMember, StencilRange> GridMemberRangeMap;
-
-std::string GridRangeMapToString(GridRangeMap &gr);
-// StencilRange AggregateStencilRange(GridRangeMap &gr,
-//                                    const GridSet *gs);
 
 class StencilMap {
  public:
@@ -73,29 +68,6 @@ class StencilMap {
   SgFunctionDeclaration*& run_boundary() { return run_boundary_; }    
   const SgInitializedNamePtrList& grid_args() const { return grid_args_; }
   const SgInitializedNamePtrList& grid_params() const { return grid_params_; }  
-  //GridRangeMap &gr() { return gr_; }
-  GridRangeMap &grid_stencil_range_map() { return grid_stencil_range_map_; }
-  const GridRangeMap &grid_stencil_range_map() const {
-    return grid_stencil_range_map_; }  
-  StencilRange &GetStencilRange(SgInitializedName *gv) {
-    if (!isContained<SgInitializedName*, StencilRange>(
-            grid_stencil_range_map(), gv)) {
-      PSAssert(false);
-    }
-    return grid_stencil_range_map().find(gv)->second;
-  }
-
-  GridMemberRangeMap &grid_member_range_map() { return grid_member_range_map_; }
-  const GridMemberRangeMap &grid_member_range_map() const {
-    return grid_member_range_map_; }  
-  StencilRange &GetStencilRange(SgInitializedName *gv,
-                                const string &member) {
-    if (!isContained<GridMember, StencilRange>(
-            grid_member_range_map(), GridMember(gv, member))) {
-      PSAssert(false);
-    }
-    return grid_member_range_map().find(GridMember(gv, member))->second;
-  }  
 
   // Use Kernel::isGridParamWritten and Kernel::isGridParamRead
   // bool IsWritten(Grid *g);
@@ -150,9 +122,6 @@ class StencilMap {
   SgFunctionDeclaration *run_inner_;
   // function to run boundary stencil
   SgFunctionDeclaration *run_boundary_;
-  //GridRangeMap gr_;
-  GridRangeMap grid_stencil_range_map_;
-  GridMemberRangeMap grid_member_range_map_;    
   SgInitializedNamePtrList grid_args_;
   SgInitializedNamePtrList grid_params_;  
   SgFunctionCallExp *fc_;

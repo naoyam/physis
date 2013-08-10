@@ -46,6 +46,8 @@ class TranslationContext {
     Build();
   }
 
+
+  
  protected:
   SgProject *project_;
   SgIncidenceDirectedGraph *call_graph_;
@@ -104,6 +106,7 @@ class TranslationContext {
  public:
 
   // Accessors
+  SgProject *project() { return project_; }
   RunMap &run_map() { return run_map_; }
 
   

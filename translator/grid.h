@@ -214,9 +214,6 @@ typedef std::set<Grid*> GridSet;
 
 class GridVarAttribute: public AstAttribute {
  public:
-  //typedef map<string, StencilRange> MemberStencilRangeMap;
-  //typedef map<pair<string, IntVector>, StencilRange>
-  //ArrayMemberStencilRangeMap;
   typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
   static const std::string name;  
   GridVarAttribute(GridType *gt);

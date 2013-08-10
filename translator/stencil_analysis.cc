@@ -7,6 +7,9 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/stencil_analysis.h"
+
+#include <boost/foreach.hpp>
+
 #include "translator/translation_context.h"
 #include "translator/physis_names.h"
 
@@ -143,13 +146,13 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
 }
 
 static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) {
-  GridRangeMap &gr = sm.grid_stencil_range_map();
-  FOREACH (it, gr.begin(), gr.end()) {
-    SgInitializedName *gn = it->first;
-    StencilRange &sr = it->second;
+  BOOST_FOREACH(SgNode *node,
+                rose_util::QuerySubTreeAttribute<GridVarAttribute>(tx.project())) {
+    SgInitializedName *gn = isSgInitializedName(node);
+    PSAssert(gn);
+    GridVarAttribute *gva = rose_util::GetASTAttribute<GridVarAttribute>(gn);
     const GridSet *gs = tx.findGrid(gn);
-    FOREACH (git, gs->begin(), gs->end()) {
-      Grid *g = *git;
+    BOOST_FOREACH (Grid *g, *gs) {
       // Note: g is NULL if InitializedName can be initialized
       // with external variables. That happens if a stencil kernel is
       // not designated as static.
@@ -157,9 +160,9 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
         LOG_INFO() << "Externally passed grid not set with stencil range info.\n";
         continue;
       } 
-      g->SetStencilRange(sr);
+      g->SetStencilRange(gva->sr());
       LOG_DEBUG() << "Grid stencil range: "
-                  << *g << ", " << sr << "\n";
+                  << *g << ", " << gva->sr() << "\n";
     }
   }
 }
@@ -189,8 +192,6 @@ static bool GetGridMember(SgFunctionCallExp *get_call,
 }
 
 static void AddIndex(SgFunctionCallExp *get_call,
-                     GridRangeMap &gr,
-                     GridMemberRangeMap &gmr,
                      SgInitializedName *gv,
                      StencilIndexList &sil, int nd) {
 
@@ -199,20 +200,10 @@ static void AddIndex(SgFunctionCallExp *get_call,
   // Collect member-specific information
   if (GetGridMember(get_call, member, indices)) {
     LOG_DEBUG() << "Access to member: " << member << "\n";
-    if (!isContained<GridMember, StencilRange>(gmr, GridMember(gv, member))) {
-      gmr.insert(make_pair(GridMember(gv, member), StencilRange(nd)));
-    }
-    StencilRange &sr = gmr.find(GridMember(gv, member))->second;
-    sr.insert(sil);
     GridVarAttribute *gva =
         rose_util::GetASTAttribute<GridVarAttribute>(gv);
     gva->AddMemberStencilIndexList(member, indices, sil);
   }    
-  if (!isContained<SgInitializedName*, StencilRange>(gr, gv)) {
-    gr.insert(make_pair(gv, StencilRange(nd)));
-  }
-  StencilRange &sr = gr.find(gv)->second;
-  sr.insert(sil);
   GridVarAttribute *gva =
       rose_util::GetASTAttribute<GridVarAttribute>(gv);
   gva->AddStencilIndexList(sil);
@@ -227,8 +218,6 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       = tx.getGridGetPeriodicCalls(kernel->get_definition());
   get_calls.insert(get_calls.end(), get_periodic_calls.begin(),
                    get_periodic_calls.end());
-  GridRangeMap &gr = sm.grid_stencil_range_map();
-  GridMemberRangeMap &gmr = sm.grid_member_range_map();  
   FOREACH (it, get_calls.begin(), get_calls.end()) {
     SgFunctionCallExp *get_call = *it;
     LOG_DEBUG() << "Get call detected: "
@@ -254,7 +243,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
       stencil_indices.push_back(si);
     }
     // Associate gv with the stencil indices
-    AddIndex(get_call, gr, gmr, gv, stencil_indices, nd);
+    AddIndex(get_call, gv, stencil_indices, nd);
     // Associate GridGet with the stencil indices    
     tx.registerStencilIndex(get_call, stencil_indices);
     LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
@@ -275,9 +264,6 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     }
     if (is_periodic) sm.SetGridPeriodic(gv);
   }
-  LOG_DEBUG() << "Stencil access: "
-              << GridRangeMapToString(gr)
-              << std::endl;
   PropagateStencilRangeToGrid(sm, tx);
 }
 

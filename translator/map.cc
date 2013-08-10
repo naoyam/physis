@@ -82,14 +82,6 @@ string StencilMap::toString() const {
   ostringstream ss;
 
   ss << "Call to map with " << rose_util::getName(kernel);
-
-  StringJoin sj(", ");
-  FOREACH(git, grid_stencil_range_map().begin(),
-          grid_stencil_range_map().end()) {
-    git->second.print(sj << (git->first->unparseToString() + ": "));
-  }
-  ss << ", grid access: " << sj;
-
   return ss.str();
 }
 
@@ -103,28 +95,6 @@ bool StencilMap::isMap(SgFunctionCallExp *call) {
       name == PS_STENCIL_MAP_B_NAME;
 }
 
-std::string GridRangeMapToString(GridRangeMap &gr) {
-  StringJoin sj;
-
-  FOREACH (it, gr.begin(), gr.end()) {
-    sj << it->first->unparseToString()
-       << "->" << it->second;
-    //sj << (*it->first) << "->" << it->second;
-  }
-  return "{" + sj.str() + "}";
-}
-
-// StencilRange AggregateStencilRange(GridRangeMap &gr,
-//                                    const GridSet *gs) {
-//   PSAssert(gs->size() > 0);
-//   StencilRange stencil_range(gr.find(*(gs->begin()))->second);
-//   FOREACH (gsi, gs->begin(), gs->end()) {
-//     Grid *g = *gsi;
-//     StencilRange &sr = gr.find(g)->second;
-//     stencil_range.merge(sr);
-//   }
-//   return stencil_range;
-// }
 
 #if 0
 void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {

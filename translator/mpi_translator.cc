@@ -260,8 +260,14 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     } else {
       reuse = sb::buildIntVal(0);
     }
-    
+
+#if 0    
     StencilRange &sr = smap->GetStencilRange(grid_param);
+#else
+    GridVarAttribute *gva =
+        rose_util::GetASTAttribute<GridVarAttribute>(grid_param);
+    StencilRange &sr = gva->sr();
+#endif
     LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
 
     bool is_periodic = smap->IsGridPeriodic(grid_param);
