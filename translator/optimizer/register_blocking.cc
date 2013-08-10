@@ -419,29 +419,22 @@ class RegisterBlocking {
                                            SgExpression *get,
                                            GridGetAttribute *get_attr) {
     if (get_attr->member_name() != gd.member_) return false;
-    SgMultiplyOp *array_offset =
-        isSgMultiplyOp(GridOffsetAnalysis::GetArrayOffset(
-            GridGetAnalysis::GetOffset(get)));
-    SgMultiplyOp *ref_array_offset =
-        isSgMultiplyOp(GridOffsetAnalysis::GetArrayOffset(
-            GridGetAnalysis::GetOffset(gd.ref_get_)));
-    PSAssert(array_offset);
-    PSAssert(ref_array_offset);
-    int array_static_offset;
-    if (!rose_util::GetIntLikeVal(array_offset->get_lhs_operand(),
-                                  array_static_offset)) {
-      return false;
-    }
-    int ref_array_static_offset;
-    if (!rose_util::GetIntLikeVal(ref_array_offset->get_lhs_operand(),
-                                  ref_array_static_offset)) {
-      return false;
-    }
-    if (array_static_offset != ref_array_static_offset) {
-      LOG_DEBUG() << "Different static offset: "
-                  << array_static_offset << " != "
-                  << ref_array_static_offset << "\n";
-      return false;
+    SgExpressionPtrList array_offset_indices =
+        GridOffsetAnalysis::GetArrayOffsetIndices(
+            GridGetAnalysis::GetOffset(get));
+    IntVector::const_iterator it = gd.indices_.begin();
+    BOOST_FOREACH(SgExpression *idx_exp, array_offset_indices) {
+      int idx;
+      if (!rose_util::GetIntLikeVal(idx_exp, idx)) {
+        LOG_DEBUG() << "Not static offset: " << idx_exp->unparseToString()
+                    << "\n";
+        return false;
+      }
+      if (idx != *it) {
+        LOG_DEBUG() << "Different index: "
+                    << idx << " != " << *it << "\n";
+        return false;
+      }
     }
     return true;
   }
