@@ -18,7 +18,7 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-void premitive_optimization(
+void primitive_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder) {

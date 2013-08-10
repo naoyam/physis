@@ -37,7 +37,7 @@ void CUDAOptimizer::DoStage2() {
   }
   if (config_->LookupFlag("OPT_LOOP_OPT")) {
     pass::loop_opt(proj_, tx_, builder_);
-    pass::premitive_optimization(proj_, tx_, builder_);
+    pass::primitive_optimization(proj_, tx_, builder_);
   }
 }
 

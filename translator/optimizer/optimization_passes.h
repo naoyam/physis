@@ -44,12 +44,12 @@ extern void null_optimization(
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
 
-//! Apply premitive optimizations
+//! Apply primitive optimizations
 /*!
   @proj The whole AST.
   @param tx The translation context built for the AST.
  */
-extern void premitive_optimization(
+extern void primitive_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
     physis::translator::RuntimeBuilder *builder);
