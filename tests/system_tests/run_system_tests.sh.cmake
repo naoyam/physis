@@ -31,6 +31,7 @@ mkdir -p $WD
 ORIGINAL_WD=$(pwd)
 cd $WD
 
+NUM_ALL_TESTS=0
 NUM_SUCCESS_TRANS=0
 NUM_FAIL_TRANS=0
 NUM_SUCCESS_COMPILE=0
@@ -81,9 +82,9 @@ function fail()
 
 function print_results_short()
 {
-    echo  -n "[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS"
-    echo  -n ", [COMPILE] #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE"
-    echo  ", [EXECUTE] #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+    echo  -n "[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_ALL_TESTS"
+    echo  -n ", [COMPILE] $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_ALL_TESTS"
+    echo  ", [EXECUTE] $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_ALL_TESTS."
 }
 
 function email_results()
@@ -104,9 +105,9 @@ EOF
 function print_results()
 {
 	local msg=""
-	msg+="[TRANSLATE] #SUCCESS: $NUM_SUCCESS_TRANS, #FAIL: $NUM_FAIL_TRANS."
-	msg+="\n[COMPILE]   #SUCCESS: $NUM_SUCCESS_COMPILE, #FAIL: $NUM_FAIL_COMPILE."
-	msg+="\n[EXECUTE]   #SUCCESS: $NUM_SUCCESS_EXECUTE, #FAIL: $NUM_FAIL_EXECUTE."
+	msg+="[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_ALL_TESTS."
+	msg+="\n[COMPILE]   $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_ALL_TESTS."
+	msg+="\n[EXECUTE]   $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_ALL_TESTS."
 	msg+="\n"
 	if [ "x" != "x$FAILED_TESTS" ]; then
 		msg+="\n!!! $(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
@@ -933,7 +934,9 @@ function get_test_cases()
 	fi
     set +e	
     tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.manual\.'; done)
-    tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.module_base\.'; done)	
+    tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.module_base\.'; done)
+	# Filter out emacs backup files
+    tests=$(for t in $tests; do echo -e "$t\n" | grep -v '*~'; done)		
     set -e
 	echo $tests
 }
@@ -958,6 +961,103 @@ function get_module_base()
 {
 	local mod_physis=$1
 	echo @CMAKE_CURRENT_SOURCE_DIR@/test_cases/${mod_physis%.module.c}.module_base.c
+}
+
+function count_num_all_tests()
+{
+	local TARGETS=$1
+	local TESTS=$2
+	local num=0
+    for TARGET in $TARGETS; do
+		for TEST in $TESTS; do
+			SHORTNAME=$(basename $TEST)			
+			if is_skipped_module_test $TEST $TARGET; then
+				continue;
+			fi
+			if [ "x$CONFIG_ARG" = "x" ]; then
+				CONFIG=$(generate_translation_configurations $TARGET)
+			else
+				CONFIG=$CONFIG_ARG
+			fi
+			num=$((num + $(echo $CONFIG | wc -w)))
+		done
+	done
+	echo $num
+}
+
+function do_test()
+{
+	local TARGET=$1
+	local TEST=$2
+	local DESC=$3
+	local cfg=$4
+	local DIM=$5
+	local SHORTNAME=$6
+	echo "Testing with $SHORTNAME ($DESC)"
+	echo "Configuration ($cfg):"
+	echo "Dimension: $DIM"
+	cat $cfg
+	local test_wd=$WD/$TARGET/$SHORTNAME/$(basename $cfg)
+	mkdir -p $test_wd
+	cd $test_wd
+	if [ $cfg = "$(basename $cfg)" ]; then
+		cfg=$WD/$cfg
+	fi
+	echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
+	echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
+		--config $cfg $TEST
+	if $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
+		--config $cfg $TEST > $(basename $TEST).$TARGET.log \
+		2>&1; then
+		echo "[TRANSLATE] SUCCESS"
+		NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
+	else
+		echo "[TRANSLATE] FAIL"
+		NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
+		fail $SHORTNAME $TARGET translate $cfg
+		continue
+	fi
+	if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
+	echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
+	if compile $SHORTNAME $TARGET; then
+		echo "[COMPILE] SUCCESS"
+		NUM_SUCCESS_COMPILE=$(($NUM_SUCCESS_COMPILE + 1))
+	else
+		echo "[COMPILE] FAIL"
+		NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
+		fail $SHORTNAME $TARGET compile $cfg
+		continue				
+	fi
+	if [ "$STAGE" = "COMPILE" ]; then continue; fi
+	
+	case "$TARGET" in
+		mpi|mpi2|mpi-*)
+			np_target=$MPI_PROC_DIM
+			;;
+		*)
+			np_target=1
+	esac
+	echo "[EXECUTE] Trying with process configurations: $np_target"				
+	for np in $np_target; do
+		if execute $SHORTNAME $TARGET $np $DIM; then
+			execute_success=1
+		else
+			execute_success=0
+		fi
+		if [ $execute_success -eq 1 ]; then
+			echo "[EXECUTE] SUCCESS"
+			NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
+		else
+			echo "[EXECUTE] FAIL"
+			NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
+			fail $SHORTNAME $TARGET execute $cfg $np
+			rm -f $(get_exe_name $SHORTNAME $TARGET)
+			continue
+		fi
+	done
+	#rm -f $(get_exe_name $SHORTNAME $TARGET)
+	print_results_short
+	cd $WD
 }
 
 {
@@ -1069,9 +1169,12 @@ function get_module_base()
     if [ "x$TARGETS" = "x" ]; then
 		TARGETS=$DEFAULT_TARGETS
 	fi
-    
+
+	NUM_ALL_TESTS=$(count_num_all_tests "$TARGETS" "$TESTS")
+	
     echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
     echo "Targets: $TARGETS"
+	echo "Number of tests: $NUM_ALL_TESTS"
 
     for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
@@ -1088,64 +1191,7 @@ function get_module_base()
 				CONFIG=$CONFIG_ARG
 			fi
 			for cfg in $CONFIG; do
-				echo "Testing with $SHORTNAME ($DESC)"
-				echo "Configuration ($cfg):"
-				echo "Dimension: $DIM"
-				cat $cfg
-				echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
-				echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
-					--config $cfg $TEST
-				if $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
-					--config $cfg $TEST > $(basename $TEST).$TARGET.log \
-					2>&1; then
-					echo "[TRANSLATE] SUCCESS"
-					NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
-				else
-					echo "[TRANSLATE] FAIL"
-					NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
-					fail $SHORTNAME $TARGET translate $cfg
-					continue
-				fi
-				if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
-				echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
-				if compile $SHORTNAME $TARGET; then
-					echo "[COMPILE] SUCCESS"
-					NUM_SUCCESS_COMPILE=$(($NUM_SUCCESS_COMPILE + 1))
-				else
-					echo "[COMPILE] FAIL"
-					NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
-					fail $SHORTNAME $TARGET compile $cfg
-					continue				
-				fi
-				if [ "$STAGE" = "COMPILE" ]; then continue; fi
-				
-				case "$TARGET" in
-					mpi|mpi2|mpi-*)
-						np_target=$MPI_PROC_DIM
-						;;
-					*)
-						np_target=1
-				esac
-				echo "[EXECUTE] Trying with process configurations: $np_target"				
-				for np in $np_target; do
-					if execute $SHORTNAME $TARGET $np $DIM; then
-						execute_success=1
-					else
-						execute_success=0
-					fi
-					if [ $execute_success -eq 1 ]; then
-						echo "[EXECUTE] SUCCESS"
-						NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
-					else
-						echo "[EXECUTE] FAIL"
-						NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
-						fail $SHORTNAME $TARGET execute $cfg $np
-						rm -f $(get_exe_name $SHORTNAME $TARGET)
-						continue
-					fi
-				done
-				rm -f $(get_exe_name $SHORTNAME $TARGET)				
-				print_results_short			
+				do_test $TARGET $TEST "$DESC" $cfg $DIM $SHORTNAME
 			done
 		done
     done
