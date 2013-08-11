@@ -23,13 +23,12 @@ DIE_IMMEDIATELY=0
 ###############################################################
 set -u
 #set -e
+SELF_NAME=$(realpath $0)
+SELF_BASE=$(basename $0)
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
-LOGFILE=$PWD/${0%.sh}.log.$TIMESTAMP
+LOGFILE=$PWD/${SELF_BASE%.sh}.log.$TIMESTAMP
 WD=$WD_BASE/$TIMESTAMP
 ORIGINAL_DIRECTORY=$PWD
-mkdir -p $WD
-ORIGINAL_WD=$(pwd)
-cd $WD
 
 NUM_ALL_TESTS=0
 NUM_SUCCESS_TRANS=0
@@ -55,6 +54,14 @@ CONFIG_ARG=""
 
 EMAIL_TO=""
 
+RUN_PARALLEL=0
+
+RETURN_SUCCESS=0
+FAIL_TRANSLATE=1
+FAIL_COMPILE=2
+FAIL_EXECUTE=3
+###############################################################
+
 function print_error()
 {
     echo "ERROR!: $1" >&2
@@ -79,6 +86,7 @@ function fail()
 		exit_error
     fi
 }
+
 
 function print_results_short()
 {
@@ -941,6 +949,13 @@ function get_test_cases()
 	echo $tests
 }
 
+function get_desc()
+{
+	local TEST=$1
+	local DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
+	echo $DESC
+}
+
 function is_module_test()
 {
 	echo $1 | grep 'test_.*\.module\.c' > /dev/null 2>&1
@@ -985,88 +1000,202 @@ function count_num_all_tests()
 	echo $num
 }
 
+function do_test_finish()
+{
+    local pass=$1
+	echo $pass > result
+}
+
 function do_test()
 {
 	local TARGET=$1
 	local TEST=$2
-	local DESC=$3
-	local cfg=$4
-	local DIM=$5
-	local SHORTNAME=$6
-	echo "Testing with $SHORTNAME ($DESC)"
-	echo "Configuration ($cfg):"
-	echo "Dimension: $DIM"
-	cat $cfg
+	local DIM=$3
+	local SHORTNAME=$4
+	local STAGE=$5
+	local cfg=$6
+	local DESC=$(get_desc $TEST)
+	
 	local test_wd=$WD/$TARGET/$SHORTNAME/$(basename $cfg)
 	mkdir -p $test_wd
+	pushd . > /dev/null
 	cd $test_wd
-	if [ $cfg = "$(basename $cfg)" ]; then
-		cfg=$WD/$cfg
-	fi
-	echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
-	echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
-		--config $cfg $TEST
-	if $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
-		--config $cfg $TEST > $(basename $TEST).$TARGET.log \
-		2>&1; then
-		echo "[TRANSLATE] SUCCESS"
-		NUM_SUCCESS_TRANS=$(($NUM_SUCCESS_TRANS + 1))
-	else
-		echo "[TRANSLATE] FAIL"
-		NUM_FAIL_TRANS=$(($NUM_FAIL_TRANS + 1))
-		fail $SHORTNAME $TARGET translate $cfg
-		continue
-	fi
-	if [ "$STAGE" = "TRANSLATE" ]; then continue; fi
-	echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
-	if compile $SHORTNAME $TARGET; then
-		echo "[COMPILE] SUCCESS"
-		NUM_SUCCESS_COMPILE=$(($NUM_SUCCESS_COMPILE + 1))
-	else
-		echo "[COMPILE] FAIL"
-		NUM_FAIL_COMPILE=$(($NUM_FAIL_COMPILE + 1))
-		fail $SHORTNAME $TARGET compile $cfg
-		continue				
-	fi
-	if [ "$STAGE" = "COMPILE" ]; then continue; fi
-	
-	case "$TARGET" in
-		mpi|mpi2|mpi-*)
-			np_target=$MPI_PROC_DIM
-			;;
-		*)
-			np_target=1
-	esac
-	echo "[EXECUTE] Trying with process configurations: $np_target"				
-	for np in $np_target; do
-		if execute $SHORTNAME $TARGET $np $DIM; then
-			execute_success=1
-		else
-			execute_success=0
+
+	{
+		echo "Testing with $SHORTNAME ($DESC)"
+		echo "Configuration ($cfg):"
+		if [ $cfg = "$(basename $cfg)" ]; then
+			cfg=$WD/$cfg
 		fi
-		if [ $execute_success -eq 1 ]; then
-			echo "[EXECUTE] SUCCESS"
-			NUM_SUCCESS_EXECUTE=$(($NUM_SUCCESS_EXECUTE + 1))
+		cat $cfg	
+		echo "Dimension: $DIM"
+
+		echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
+		#echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
+		#	--config $cfg $TEST
+		if $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
+			--config $cfg $TEST > $(basename $TEST).$TARGET.log \
+			2>&1; then
+			echo "[TRANSLATE] SUCCESS"
 		else
-			echo "[EXECUTE] FAIL"
-			NUM_FAIL_EXECUTE=$(($NUM_FAIL_EXECUTE + 1))
-			fail $SHORTNAME $TARGET execute $cfg $np
-			rm -f $(get_exe_name $SHORTNAME $TARGET)
-			continue
+			echo "[TRANSLATE] FAIL"
+			#fail $SHORTNAME $TARGET translate $cfg
+			do_test_finish $FAIL_TRANSLATE
+			popd > /dev/null
+			return $FAIL_TRANSLATE
 		fi
-	done
-	#rm -f $(get_exe_name $SHORTNAME $TARGET)
-	print_results_short
-	cd $WD
+		if [ "$STAGE" = "TRANSLATE" ]; then return; fi
+		echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
+		if compile $SHORTNAME $TARGET; then
+			echo "[COMPILE] SUCCESS"
+		else
+			echo "[COMPILE] FAIL"
+			#fail $SHORTNAME $TARGET compile $cfg
+			do_test_finish $FAIL_COMPILE
+			popd > /dev/null
+			return $FAIL_COMPILE
+		fi
+		if [ "$STAGE" = "COMPILE" ]; then continue; fi
+		
+		case "$TARGET" in
+			mpi|mpi2|mpi-*)
+				np_target=$MPI_PROC_DIM
+				;;
+			*)
+				np_target=1
+		esac
+		echo "[EXECUTE] Trying with process configurations: $np_target"				
+		for np in $np_target; do
+			if execute $SHORTNAME $TARGET $np $DIM; then
+				execute_success=1
+			else
+				execute_success=0
+			fi
+			if [ $execute_success -eq 1 ]; then
+				echo "[EXECUTE] SUCCESS"
+			else
+				echo "[EXECUTE] FAIL"
+				#fail $SHORTNAME $TARGET execute $cfg $np
+				rm -f $(get_exe_name $SHORTNAME $TARGET)
+				do_test_finish $FAIL_EXECUTE
+				popd > /dev/null
+				return $FAIL_EXECUTE
+			fi
+		done
+		do_test_finish $RETURN_SUCCESS
+	} 2>&1 | tee log
+	popd > /dev/null
+	return 0
 }
 
+function inc()
 {
+	local var=$1
+	eval $var=$(($var + 1))
+}
+
+function update_results()
+{
+	local f=$1
+	local code=$(cat $f)
+	local test_sig=$(dirname $f)
+	case $code in
+		$RETURN_SUCCESS)
+			inc NUM_SUCCESS_TRANS
+			inc NUM_SUCCESS_COMPILE
+			inc NUM_SUCCESS_EXECUTE
+			;;
+		$FAIL_TRANSLATE)
+			inc NUM_FAIL_TRANS
+			;;
+		$FAIL_COMPILE)
+			inc NUM_FAIL_COMPILE
+			;;
+		$FAIL_EXECUTE)
+			inc NUM_FAIL_EXECUTE
+			;;
+	esac
+	if [ "$code" != $RETURN_SUCCESS ]; then
+		FAILED_TESTS="$FAILED_TESTS $test_sig"
+	fi
+}
+
+function fetch_results()
+{
+	for f in $(find $1/$2 -name result | sort -n ); do
+		update_results $f
+		mv $f $f.checked
+	done
+}
+
+function do_test_parallel()
+{
+	local TARGET=$1
+	local TEST=$2
+	local CONFIG=$3
+	local DIM=$4
+	local SHORTNAME=$5
+	local STAGE=$6
+	if [ "1" = "$RUN_PARALLEL" ]; then
+		if ! type parallel > /dev/null 2>&1; then
+			exit_error "Parallel testing requested, but parallel command is not found."
+		fi
+		parallel $SELF_NAME subcommand $WD $LOGFILE do_test $TARGET $TEST $DIM $SHORTNAME $STAGE -- $CONFIG
+		fetch_results $TARGET $SHORTNAME
+		print_results_short
+		if [ $DIE_IMMEDIATELY -eq 1 -a -n "$FAILED_TESTS" ]; then
+			exit_error
+		fi
+	else
+		for cfg in $CONFIG; do
+			do_test $TARGET $TEST $DIM $SHORTNAME $STAGE $cfg
+			fetch_results $TARGET $SHORTNAME
+			print_results_short
+			if [ $DIE_IMMEDIATELY -eq 1 -a -n "$FAILED_TESTS" ]; then
+				exit_error
+			fi
+		done
+	fi
+}
+
+function is_sub_command()
+{
+	if [ "subcommand" = "$1" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function do_sub_command()
+{
+	shift 1
+	WD=$1
+	shift 1
+	LOGFILE=$1
+	shift 1
+	{
+		eval $@
+	} 2>&1 | tee -a $LOGFILE
+}
+
+
+if is_sub_command $@; then
+	do_sub_command $@
+	exit $?
+fi
+
+{
+	mkdir -p $WD
+	ORIGINAL_WD=$(pwd)
+	cd $WD
+	
     TARGETS=""
     STAGE="ALL"
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list, -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list,parallel, -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Invalid options: $@"
@@ -1151,6 +1280,10 @@ function do_test()
 				list_tests "$TESTS"
 				exit 0
 				;;
+			--parallel)
+				RUN_PARALLEL=1
+				shift
+				;;
 			--)
 				shift
 				break
@@ -1163,7 +1296,6 @@ function do_test()
 		esac
     done
 
-	echo priority: $PRIORITY
 	TESTS=$(filter_test_case_by_priority $PRIORITY $TESTS)
     
     if [ "x$TARGETS" = "x" ]; then
@@ -1183,16 +1315,13 @@ function do_test()
 				echo "Skipping $SHORTNAME for $TARGET target"
 				continue;
 			fi
-			DESC=$(grep -o '\WTEST: .*$' $TEST | sed 's/\WTEST: \(.*\)$/\1/')
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
 			if [ "x$CONFIG_ARG" = "x" ]; then
 				CONFIG=$(generate_translation_configurations $TARGET)
 			else
 				CONFIG=$CONFIG_ARG
 			fi
-			for cfg in $CONFIG; do
-				do_test $TARGET $TEST "$DESC" $cfg $DIM $SHORTNAME
-			done
+			do_test_parallel $TARGET $TEST "$CONFIG" $DIM $SHORTNAME $STAGE
 		done
     done
     finish
