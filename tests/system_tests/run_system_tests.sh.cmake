@@ -23,6 +23,15 @@ DIE_IMMEDIATELY=0
 ###############################################################
 set -u
 #set -e
+function realpath() {
+	local p=$1
+	local dname=""
+	if echo $p | grep '^/' > /dev/null 2>&1; then
+		echo $p
+	else
+		echo $(pwd)/$p
+	fi
+}
 SELF_NAME=$(realpath $0)
 SELF_BASE=$(basename $0)
 TIMESTAMP=$(date +%m-%d-%Y_%H-%M-%S)
