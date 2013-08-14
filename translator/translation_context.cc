@@ -568,8 +568,9 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
         }
         // For some reason, attribute attached to kernel body causes
         //assertion error when the body is inlined and its attribute
-        //is queried.
-        //EnsureKernelBodyAttribute(m->getKernel());
+        //is queried. --> This is because KernelBodyAttribute lacked
+        //the copy inherited method.
+        EnsureKernelBodyAttribute(m->getKernel());
         continue;
       }
 

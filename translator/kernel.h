@@ -88,6 +88,9 @@ class KernelBodyAttribute: public AstAttribute {
   KernelBodyAttribute() {}
   virtual ~KernelBodyAttribute() {}
   static const std::string name;
+  AstAttribute *copy() {
+    return new KernelBodyAttribute();
+  }
 };
 
 } // namespace translator

@@ -74,7 +74,8 @@ See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
   edges. node->append_statement() seems to be just connecting an edge
   from the parent to the child, but the pointer from the child to the
   parent is not set correctly.
-
+* Subclasses of AstAttribute must override virtual function copy for
+  the deepcopy mechanism copies the attributes as well.
   
 # Questions
 * SageInterface::lookupNamedTypeInParentScopes

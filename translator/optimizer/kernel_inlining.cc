@@ -191,9 +191,6 @@ void kernel_inlining(
       } else {
         LOG_DEBUG() << "NO PREV\n";
       }
-
-      si::prependStatement(sb::buildLabelStatement("Kernel_Begin"),
-                           callee_decl->get_definition()->get_body());
       
       if (!doInline(call_exp)) {
         LOG_ERROR() << "Kernel inlining failed.\n";
@@ -202,19 +199,10 @@ void kernel_inlining(
         PSAbort(1);
       }
 
-      SgScopeStatement *inlined_body = NULL;
-      
-      BOOST_FOREACH(SgLabelStatement *ls,
-                    si::querySubTree<SgLabelStatement>(func)) {
-        if (startswith(ls->get_name(), "Kernel_Begin")) {
-          inlined_body = si::getScope(ls);
-          rose_util::AddASTAttribute<KernelBodyAttribute>(
-              inlined_body, new KernelBodyAttribute());
-          si::removeStatement(ls);
-          break;
-        }
-      }
-      
+      vector<SgNode*> body_vec =
+          rose_util::QuerySubTreeAttribute<KernelBodyAttribute>(func);
+      PSAssert(body_vec.size() == 1);
+      SgScopeStatement *inlined_body = isSgScopeStatement(body_vec.front());
       PSAssert(inlined_body);
 
       AttachStencilIndexVarAttribute(func);
