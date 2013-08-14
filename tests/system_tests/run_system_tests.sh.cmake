@@ -109,7 +109,7 @@ function email_results()
 {
 	local subject="Tests report: "
 	if [ "x" = "x$FAILED_TESTS" ]; then
-		subject+="Completed successfully"
+		subject+="Successfully completed"
 	else
 		subject+="$(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
 	fi

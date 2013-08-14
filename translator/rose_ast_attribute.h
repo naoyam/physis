@@ -33,6 +33,8 @@ class GridCallAttribute: public AstAttribute {
   KIND kind_;
 };
 
+void CopyAllAttributes(SgNode *dst, SgNode *src);
+
 } // namespace translator
 } // namespace physis
 
