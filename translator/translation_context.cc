@@ -522,6 +522,25 @@ static void EnsureKernelBodyAttribute(SgFunctionDeclaration *kernel_decl) {
   }
 }
 
+static void AttachStencilIndexVarAttribute(SgFunctionDeclaration *kernel_decl) {
+  SgInitializedNamePtrList &params = kernel_decl->get_parameterList()->get_args();
+  int dim = 1;
+  BOOST_FOREACH (SgInitializedName *param, params) {
+    SgType *ty = param->get_type();
+    if (!(si::isConstType(ty) && isSgTypeInt(ty))) {
+      // No more index param
+      break;
+    }
+    StencilIndexVarAttribute *attr = new StencilIndexVarAttribute(dim);
+    ++dim;
+    vector<SgVarRefExp*> vars = si::querySubTree<SgVarRefExp>(kernel_decl);
+    BOOST_FOREACH (SgVarRefExp *vr, vars) {
+      if (si::convertRefToInitializedName(vr) != param) continue;
+      rose_util::AddASTAttribute<StencilIndexVarAttribute>(vr, attr);
+    }
+  }
+}
+
 void TranslationContext::AnalyzeKernelFunctions(void) {
   /*
    * NOTE: Using call graphs would be much simpler. analyzeCallToMap
@@ -545,6 +564,7 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
         if (registerEntryKernel(m->getKernel())) {
           done = false;
           AnalyzeEmit(m->getKernel());
+          AttachStencilIndexVarAttribute(m->getKernel());          
         }
         // For some reason, attribute attached to kernel body causes
         //assertion error when the body is inlined and its attribute

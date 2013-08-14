@@ -255,5 +255,7 @@ void StencilRegularIndexList::SetIndex(int dim, ssize_t idx) {
   indices_[dim] = idx;
 }
 
+const std::string StencilIndexVarAttribute::name = "StencilIndexVar";
+
 } // namespace translator
 } // namespace physis

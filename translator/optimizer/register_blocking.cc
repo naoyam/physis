@@ -543,17 +543,22 @@ class RegisterBlocking {
         }
       }
       if (used) {
+        SgExpression *i = NULL;
         if (initial_load && idim == loop_attr_->dim()) {
-          SgExpression *i = KernelLoopAnalysis::GetLoopBegin(target_loop_);
+          i = KernelLoopAnalysis::GetLoopBegin(target_loop_);
           if (i) {
             i = si::copyExpression(i);
           } else {
             i = sb::buildVarRefExp(index_var);
+            rose_util::AddASTAttribute<StencilIndexVarAttribute>(
+                i, new StencilIndexVarAttribute(idim));
           }
-          indices.push_back(i);
         } else {
-          indices.push_back(sb::buildVarRefExp(index_var));
+          i = sb::buildVarRefExp(index_var);
+          rose_util::AddASTAttribute<StencilIndexVarAttribute>(
+              i, new StencilIndexVarAttribute(idim));
         }
+        indices.push_back(i);
       }
     }
 #ifdef PS_DEBUG

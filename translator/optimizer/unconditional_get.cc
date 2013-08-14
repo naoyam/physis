@@ -126,9 +126,11 @@ static SgExpression *BuildGetOffset(
     SgExpression *index =
         GridOffsetAnalysis::GetIndexAt(
             GridGetAnalysis::GetOffset(base_get_exp), i);
-    // TODO: What if multiple variable refs are used?
+    vector<SgNode*> sia =
+        rose_util::QuerySubTreeAttribute<StencilIndexVarAttribute>(index);
+    PSAssert(sia.size() == 1);
     SgExpression *offset_exp =
-        si::copyExpression(si::querySubTree<SgVarRefExp>(index).front());
+        si::copyExpression(isSgVarRefExp(sia.front()));
     ssize_t offset = sril.GetIndex(i);
     if (offset != 0) {
       offset_exp = sb::buildAddOp(offset_exp,

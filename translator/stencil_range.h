@@ -181,6 +181,21 @@ class StencilRange {
   }
 };
 
+class StencilIndexVarAttribute: public AstAttribute {
+ public:
+  static const std::string name;  
+  StencilIndexVarAttribute(int dim): dim_(dim) {}
+  StencilIndexVarAttribute(const StencilIndexVarAttribute &x): dim_(x.dim_) {}  
+  virtual ~StencilIndexVarAttribute() {}
+  int dim() { return dim_; }
+  AstAttribute *copy() {
+    return new StencilIndexVarAttribute(*this);
+  }
+
+ protected:
+  int dim_;
+};
+
 } // namespace translator
 } // namespace physis
 

@@ -120,6 +120,24 @@ SgForStatement *IsInLoop(SgFunctionCallExp *c) {
   return false;
 }
 
+static void AttachStencilIndexVarAttribute(SgFunctionDeclaration *run_kernel) {
+
+  vector<SgNode *> indices =
+      rose_util::QuerySubTreeAttribute<RunKernelIndexVarAttribute>(run_kernel);
+  BOOST_FOREACH(SgNode *n, indices) {
+    SgVariableDeclaration *index = isSgVariableDeclaration(n);
+    RunKernelIndexVarAttribute *attr =
+        rose_util::GetASTAttribute<RunKernelIndexVarAttribute>(index);
+    StencilIndexVarAttribute *sva = new StencilIndexVarAttribute(attr->dim());
+    BOOST_FOREACH(SgVarRefExp *vr, si::querySubTree<SgVarRefExp>(run_kernel)) {
+      SgInitializedName *vrn = si::convertRefToInitializedName(vr);
+      if (si::getFirstInitializedName(index) == vrn) {
+        rose_util::AddASTAttribute<StencilIndexVarAttribute>(vr, sva);
+      }
+    }
+  }
+}
+
 void kernel_inlining(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
@@ -198,6 +216,8 @@ void kernel_inlining(
       }
       
       PSAssert(inlined_body);
+
+      AttachStencilIndexVarAttribute(func);
       
       //while (RemoveRedundantBlock(scope)) {};
 
