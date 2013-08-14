@@ -64,6 +64,7 @@ CONFIG_ARG=""
 EMAIL_TO=""
 
 RUN_PARALLEL=0
+PARALLEL_NP=""
 
 RETURN_SUCCESS=0
 FAIL_TRANSLATE=1
@@ -893,6 +894,8 @@ function print_usage()
 	echo -e "\t\tRead configuration option from the file."
 	echo -e "\t--email <email-address>"
 	echo -e "\t\tEmail test result"
+	echo -e "\t--parallel [max parallel tests]"
+	echo -e "\t\tRun tests in parallel"
 	echo -e "\t-q, --quit"
 	echo -e "\t\tQuit immediately upon error."
 	echo -e "\t--clear"
@@ -1145,11 +1148,15 @@ function do_test_parallel()
 	local DIM=$4
 	local SHORTNAME=$5
 	local STAGE=$6
+	local PARALLEL_OPT=""
+	if [ -n "$PARALLEL_NP" ]; then
+		local PARALLEL_OPT="-j $PARALLEL_NP"
+	fi
 	if [ "1" = "$RUN_PARALLEL" ]; then
 		if ! type parallel > /dev/null 2>&1; then
 			exit_error "Parallel testing requested, but parallel command is not found."
 		fi
-		parallel $SELF_NAME subcommand $WD $LOGFILE do_test $TARGET $TEST $DIM $SHORTNAME $STAGE -- $CONFIG
+		parallel $PARALLEL_OPT $SELF_NAME subcommand $WD $LOGFILE do_test $TARGET $TEST $DIM $SHORTNAME $STAGE -- $CONFIG
 		fetch_results $TARGET $SHORTNAME
 		print_results_short
 		if [ $DIE_IMMEDIATELY -eq 1 -a -n "$FAILED_TESTS" ]; then
@@ -1204,10 +1211,10 @@ fi
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list,parallel, -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list,parallel::, -- "$@")
 
     if [ $? != 0 ]; then
-		print_error "Invalid options: $@"
+		print_error "Error in getopt. Invalid options: $@"
 		print_usage
 		exit_error
     fi
@@ -1291,7 +1298,8 @@ fi
 				;;
 			--parallel)
 				RUN_PARALLEL=1
-				shift
+				PARALLEL_NP="$2"
+				shift 2
 				;;
 			--)
 				shift
@@ -1316,6 +1324,14 @@ fi
     echo "Test sources: $(for i in $TESTS; do basename $i; done | xargs)"
     echo "Targets: $TARGETS"
 	echo "Number of tests: $NUM_ALL_TESTS"
+	if [ -n "$RUN_PARALLEL" ]; then
+		echo -n "Parallel mode"
+		if [ -n "$PARALLEL_NP" ]; then
+			echo " (up to $PARALLEL_NP parallel tests)"
+		else
+			echo ""
+		fi
+	fi
 
     for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
