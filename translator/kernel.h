@@ -83,13 +83,13 @@ class Kernel {
 };
 
 
-class KernelBodyAttribute: public AstAttribute {
+class KernelBody: public AstAttribute {
  public:
-  KernelBodyAttribute() {}
-  virtual ~KernelBodyAttribute() {}
+  KernelBody() {}
+  virtual ~KernelBody() {}
   static const std::string name;
-  AstAttribute *copy() {
-    return new KernelBodyAttribute();
+  KernelBody *copy() {
+    return new KernelBody();
   }
 };
 

@@ -42,6 +42,37 @@ unsigned GridType::getNumDimFromTypeName(const string &tname) {
   }
 }
 
+GridType::GridType(SgClassType *struct_type, SgTypedefType *user_type)
+    : struct_type_(struct_type), user_type_(user_type),
+      point_type_(NULL), point_def_(NULL),
+      aux_type_(NULL), aux_decl_(NULL),
+      aux_free_decl_(NULL), aux_new_decl_(NULL),
+      aux_copyin_decl_(NULL), aux_copyout_decl_(NULL),
+      aux_get_decl_(NULL), aux_emit_decl_(NULL) {
+  type_name_ = user_type_->get_name().getString();
+  LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
+  string realName = struct_type_->get_name().getString();
+  num_dim_ = getNumDimFromTypeName(realName);
+  LOG_DEBUG() << "grid dimension: " << num_dim_ << "\n";
+  FindPointType();
+}
+
+GridType::GridType(const GridType &gt):
+    struct_type_(gt.struct_type_), user_type_(gt.user_type_),
+    num_dim_(gt.num_dim_), type_name_(gt.type_name_),
+    point_type_(gt.point_type_), point_def_(gt.point_def_),
+    aux_type_(gt.aux_type_), aux_decl_(gt.aux_decl_),
+    aux_free_decl_(gt.aux_free_decl_),
+    aux_new_decl_(gt.aux_new_decl_),
+    aux_copyin_decl_(gt.aux_copyin_decl_),
+    aux_copyout_decl_(gt.aux_copyout_decl_),
+    aux_get_decl_(gt.aux_get_decl_),
+    aux_emit_decl_(gt.aux_emit_decl_) {}
+
+GridType *GridType::copy() {
+  return new GridType(*this);
+}
+
 bool GridType::isGridType(SgType *ty) {
   SgTypedefType *tt = isSgTypedefType(ty);
   // handle typedef'ed alias type too
@@ -301,9 +332,10 @@ bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
 const std::string GridVarAttribute::name = "GridVar";
 
 GridVarAttribute::GridVarAttribute(GridType *gt):
-    gt_(gt), sr_(gt_->num_dim()) {
-}
+    gt_(gt), sr_(gt_->num_dim()) {}
 
+GridVarAttribute::GridVarAttribute(const GridVarAttribute &x):
+    gt_(x.gt_), sr_(x.sr_), member_sr_(x.member_sr_) {}
 
 void GridVarAttribute::AddStencilIndexList(const StencilIndexList &sil) {
   sr_.insert(sil);

@@ -212,7 +212,7 @@ static void do_offset_cse(RuntimeBuilder *builder,
 
   SgScopeStatement *kernel =
       isSgScopeStatement(
-          rose_util::QuerySubTreeAttribute<KernelBodyAttribute>(loop).front());
+          rose_util::QuerySubTreeAttribute<KernelBody>(loop).front());
   PSAssert(kernel);
   
   si::prependStatement(base_offset_var, kernel);

@@ -516,9 +516,9 @@ static bool IsBuiltInFunction(const string &func_name) {
 static void EnsureKernelBodyAttribute(SgFunctionDeclaration *kernel_decl) {
   SgScopeStatement *body =
       kernel_decl->get_definition()->get_body();
-  if (!rose_util::GetASTAttribute<KernelBodyAttribute>(body)) {
-    rose_util::AddASTAttribute<KernelBodyAttribute>(
-        body, new KernelBodyAttribute());
+  if (!rose_util::GetASTAttribute<KernelBody>(body)) {
+    rose_util::AddASTAttribute<KernelBody>(
+        body, new KernelBody());
   }
 }
 

@@ -200,7 +200,7 @@ void kernel_inlining(
       }
 
       vector<SgNode*> body_vec =
-          rose_util::QuerySubTreeAttribute<KernelBodyAttribute>(func);
+          rose_util::QuerySubTreeAttribute<KernelBody>(func);
       PSAssert(body_vec.size() == 1);
       SgScopeStatement *inlined_body = isSgScopeStatement(body_vec.front());
       PSAssert(inlined_body);

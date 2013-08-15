@@ -180,14 +180,6 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
   //si::deleteAST(original_init);
   LOG_DEBUG() << "Init modified\n";
 
-  RunKernelLoopAttribute *loop_attr
-      = rose_util::GetASTAttribute<RunKernelLoopAttribute>(
-          loop);
-#if 0  
-  loop_attr->begin() = rose_util::BuildMax(
-      si::copyExpression(loop_attr->begin()),
-      si::copyExpression(loop_end));
-#endif  
   LOG_DEBUG() << "Peeling of the first iterations done.\n";
   // Only copies of loop_end is used, so the original is not needed.
   si::deleteAST(loop_end);

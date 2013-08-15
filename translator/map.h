@@ -147,7 +147,7 @@ class RunKernelAttribute: public AstAttribute {
                      SgInitializedName *stencil_param=NULL):
       stencil_map_(sm), stencil_param_(stencil_param) {}
   virtual ~RunKernelAttribute() {}
-  AstAttribute *copy() {
+  RunKernelAttribute *copy() {
     return new RunKernelAttribute(stencil_map_, stencil_param_);
   }
   static const std::string name;
@@ -163,7 +163,7 @@ class RunKernelLoopAttribute: public AstAttribute {
   RunKernelLoopAttribute(int dim, Kind kind=MAIN):
       dim_(dim), kind_(kind)  {}
   virtual ~RunKernelLoopAttribute() {}
-  AstAttribute *copy() {
+  RunKernelLoopAttribute *copy() {
     return new RunKernelLoopAttribute(dim_, kind_);
   }
   static const std::string name;
@@ -191,7 +191,7 @@ class RunKernelIndexVarAttribute: public AstAttribute {
   RunKernelIndexVarAttribute(int dim):
       dim_(dim) {}
   virtual ~RunKernelIndexVarAttribute() {}
-  AstAttribute *copy() {
+  RunKernelIndexVarAttribute *copy() {
     return new RunKernelIndexVarAttribute(dim_);
   }
   static const std::string name;
@@ -205,7 +205,7 @@ class RunKernelCallerAttribute: public AstAttribute {
  public:
   RunKernelCallerAttribute() {}
   virtual ~RunKernelCallerAttribute() {}
-  AstAttribute *copy() {
+  RunKernelCallerAttribute *copy() {
     return new RunKernelCallerAttribute();
   }
   static const std::string name;

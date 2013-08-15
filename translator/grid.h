@@ -44,21 +44,11 @@ class GridType: public AstAttribute {
   SgFunctionDeclaration *aux_emit_decl_;
 
  public:
-  GridType(SgClassType *struct_type, SgTypedefType *user_type)
-      : struct_type_(struct_type), user_type_(user_type),
-        point_type_(NULL), point_def_(NULL),
-        aux_type_(NULL), aux_decl_(NULL),
-        aux_free_decl_(NULL), aux_new_decl_(NULL),
-        aux_copyin_decl_(NULL), aux_copyout_decl_(NULL),
-        aux_get_decl_(NULL), aux_emit_decl_(NULL) {
-    type_name_ = user_type_->get_name().getString();
-    LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
-    string realName = struct_type_->get_name().getString();
-    num_dim_ = getNumDimFromTypeName(realName);
-    LOG_DEBUG() << "grid dimension: " << num_dim_ << "\n";
-    FindPointType();
-  }
-
+  
+  GridType(SgClassType *struct_type, SgTypedefType *user_type);
+  GridType(const GridType &gt);
+  GridType *copy();
+  
   unsigned getNumDim() const {
     return num_dim_;
   }
@@ -217,7 +207,11 @@ class GridVarAttribute: public AstAttribute {
   typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
   static const std::string name;  
   GridVarAttribute(GridType *gt);
+  GridVarAttribute(const GridVarAttribute &x);
   virtual ~GridVarAttribute() {}
+  GridVarAttribute *copy() {
+    return new GridVarAttribute(*this);
+  }
   void AddStencilIndexList(const StencilIndexList &sil);
   void AddMemberStencilIndexList(const string &member,
                                  const IntVector &indices,
@@ -280,7 +274,7 @@ class GridOffsetAttribute: public AstAttribute {
     }
   }
   virtual ~GridOffsetAttribute() {}
-  AstAttribute *copy() {
+  GridOffsetAttribute *copy() {
     GridOffsetAttribute *a= new GridOffsetAttribute(
         num_dim_, periodic_, sil_);
     return a;

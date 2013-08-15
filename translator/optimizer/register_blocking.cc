@@ -293,7 +293,7 @@ class RegisterBlocking {
       }
       SgScopeStatement *loop_body =
           isSgScopeStatement(
-              rose_util::QuerySubTreeAttribute<KernelBodyAttribute>(
+              rose_util::QuerySubTreeAttribute<KernelBody>(
                   target_loop_).front());
       PSAssert(loop_body);
       FOREACH (move_stmts_it, move_stmts.rbegin(),
