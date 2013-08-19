@@ -42,7 +42,7 @@ class GridMPICUDA3D: public GridMPI {
       int attr);
   virtual ~GridMPICUDA3D();
   virtual void DeleteBuffers();
-  virtual void InitBuffer();
+  virtual void InitBuffers();
   virtual std::ostream &Print(std::ostream &os) const;
   __PSGridDev3D *GetDev() { return &dev_; }
   virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);

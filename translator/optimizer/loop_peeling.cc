@@ -136,8 +136,8 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
                                            int peel_size) {
   LOG_DEBUG() << "Peeling the first " << peel_size << " iteration(s)\n";
   PSAssert(peel_size > 0);
-  SgInitializedName *loop_var = 
-      rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop)->var();
+  SgVarRefExp *loop_var =
+      KernelLoopAnalysis::GetLoopVar(loop);
   PSAssert(loop_var);
   LOG_INFO() << "Copying original loop (Warnings on AST copy may be issued. Seems safe to ignore.)\n";
   SgForStatement *peeled_iterations =
@@ -145,19 +145,20 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
   LOG_DEBUG() << "Copying of original loop done.\n";  
   RenameLastStatementLabel(peeled_iterations);
   LOG_DEBUG() << "Label renaming done\n";
-  FixGridAttributes(peeled_iterations);
   
   // Modify the termination condition to i < peel_size
   SgStatement *original_cond = peeled_iterations->get_test();
   SgExpression *loop_end = sb::buildIntVal(peel_size);
   SgStatement *cond =
       sb::buildExprStatement(
-          sb::buildLessThanOp(sb::buildVarRefExp(loop_var),
+          sb::buildLessThanOp(si::copyExpression(loop_var),
                               si::copyExpression(loop_end)));
   RunKernelLoopAttribute *peeled_iter_attr
       = rose_util::GetASTAttribute<RunKernelLoopAttribute>(
           peeled_iterations);
+#if 0  
   peeled_iter_attr->end() = si::copyExpression(loop_end);
+#endif  
   peeled_iter_attr->SetFirst();
   si::replaceStatement(original_cond, cond);
   si::insertStatementBefore(loop, peeled_iterations);
@@ -169,14 +170,9 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
   // Remove the original loop's initialization since the loop
   // induction variable is reused over from the peeled iteration
   // block.
-#if 0
-  // This doesn't work (no file_info assertion)
-  SgForInitStatement *empty_init = sb::buildForInitStatement();
-#else
   SgStatementPtrList empty_statement;
   SgForInitStatement *empty_init =
       sb::buildForInitStatement(empty_statement);
-#endif  
   SgForInitStatement *original_init = loop->get_for_init_stmt();
   si::replaceStatement(original_init, empty_init);
   si::removeStatement(original_init);
@@ -184,12 +180,6 @@ static SgForStatement* PeelFirstIterations(SgForStatement *loop,
   //si::deleteAST(original_init);
   LOG_DEBUG() << "Init modified\n";
 
-  RunKernelLoopAttribute *loop_attr
-      = rose_util::GetASTAttribute<RunKernelLoopAttribute>(
-          loop);
-  loop_attr->begin() = rose_util::BuildMax(
-      si::copyExpression(loop_attr->begin()),
-      si::copyExpression(loop_end));
   LOG_DEBUG() << "Peeling of the first iterations done.\n";
   // Only copies of loop_end is used, so the original is not needed.
   si::deleteAST(loop_end);
@@ -213,7 +203,7 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
   PSAssert(peel_size > 0);
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-  SgInitializedName *loop_var = loop_attr->var();
+  SgVarRefExp *loop_var = KernelLoopAnalysis::GetLoopVar(loop);
   PSAssert(loop_var);
   LOG_INFO() << "Copying original loop (Warnings on AST copy may be issued. Seems safe to ignore.)\n";  
   SgForStatement *peeled_iterations =
@@ -225,14 +215,13 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
 
   RenameLastStatementLabel(peeled_iterations);
 
-  FixGridAttributes(peeled_iterations);
-  
   // Modify the termination condition of the original loop
   SgStatement *original_cond = loop->get_test();
   // loop_end is min(original_end, g->dim - peel_size)
-  SgExpression *original_loop_end = loop_attr->end();
+  SgExpression *original_loop_end =
+      KernelLoopAnalysis::GetLoopEnd(loop);
   SgExpression *grid_ref_in_loop =
-      si::copyExpression(FindGridRefInLoop(peel_grid));
+      sb::buildVarRefExp(peel_grid);
   SgExpression *grid_end_offset =
       sb::buildSubtractOp(
           builder->BuildGridDim(grid_ref_in_loop,
@@ -242,13 +231,15 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
       si::copyExpression(original_loop_end), grid_end_offset);
   SgStatement *cond =
       sb::buildExprStatement(
-          sb::buildLessThanOp(sb::buildVarRefExp(loop_var),
+          sb::buildLessThanOp(si::copyExpression(loop_var),
                               loop_end));
   si::replaceStatement(original_cond, cond);
   // Remove old condtional
   si::removeStatement(original_cond);
   //si::deleteAST(original_cond);
+#if 0  
   loop_attr->end() = si::copyExpression(loop_end);
+#endif  
   
   // Prepend the peeled iterations
   si::insertStatementAfter(loop, peeled_iterations);
@@ -256,7 +247,9 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
   // Set the loop begin and end of the peeled iterations.
   // The end is not affected; only the beginning needs to be
   // corrected.
+#if 0  
   peel_iter_attr->begin() = si::copyExpression(loop_end);
+#endif  
   peel_iter_attr->SetLast();
   return peeled_iterations;
 }
@@ -294,14 +287,14 @@ static void PeelLoop(
     } else {
       // Peel last iterations
       if (peel_last_grid == NULL) {
-        peel_last_grid = grid_get_attr->gv();
+        peel_last_grid = GridGetAnalysis::GetGridVar(grid_get);
         peel_size_last = peel_size;
-      } else if (peel_last_grid == grid_get_attr->gv()) {
+      } else if (peel_last_grid == GridGetAnalysis::GetGridVar(grid_get)) {
         peel_size_last = std::max(peel_size, peel_size_last);
       } else {
         // Peel only the grid found first.
         LOG_DEBUG() << "Ignoring peeling of grid: "
-                    << grid_get_attr->gv()->get_name()
+                    << GridGetAnalysis::GetGridVar(grid_get)->get_name()
                     << "\n";
       }
     }
@@ -484,9 +477,8 @@ static void RemoveDeadConditional(SgForStatement *loop,
                                   int peel_size_last,
                                   RunKernelLoopAttribute::Kind kind) {
   vector<SgBinaryOp*> bin_ops = si::querySubTree<SgBinaryOp>(loop);
-  RunKernelLoopAttribute *loop_attr =
-      rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-  SgInitializedName *loop_var = loop_attr->var();
+  SgInitializedName *loop_var =
+      KernelLoopAnalysis::GetLoopVar(loop)->get_symbol()->get_declaration();
   FOREACH (it, bin_ops.begin(), bin_ops.end()) {
     SgBinaryOp *bin_op = isSgBinaryOp(si::copyExpression(*it));
     if (!(isSgEqualityOp(bin_op))) continue;

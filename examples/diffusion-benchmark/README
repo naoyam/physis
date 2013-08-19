@@ -1,0 +1,48 @@
+====================================
+Diffusion 7-point Stencil Benchmarks
+====================================
+
+Benchmarks
+----------
+
+- baseline
+  - A baseline sequential implementation
+- openmp
+  - OpenMP-parallel version of baseline
+- mic (not completed)
+  - Intel MIC version
+- cuda 
+  - NVIDIA CUDA version
+  - Several variants available (e.g., cuda_opt1)
+- opencl (not completed)
+  - Portable OpenCL version
+
+Compilation
+-----------
+
+Type `make'. By default, diffusion3d_baseline and diffusion3d_openmp
+will be built. Other variants can be built with `make
+variant-name'. For example, the CUDA variant can be built `make cuda'
+if the CUDA toolkit is available.
+
+
+Usage
+-----
+
+Execute each benchmark as: 
+
+   benchmark_executable [--count N] [--size S]
+
+The options can be used to set benchmark configurations. For more
+information, see the help message by supplying --help option.
+
+
+Notes
+-----
+- File diffusion3d.mic.c
+  - deprecated
+- File diffusion3d_mic.cc
+  - not tested
+  - needs PCI timing. see diffusion3d.mic.c
+
+

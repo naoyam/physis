@@ -49,19 +49,23 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
                    const IndexArray &subgrid_size);
 
 
-inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                const IndexArray &size) {
-  return x + y * size[0] + z * size[0] * size[1];
+// TODO: Create two distinctive types: offset_type and index_type
+//#define _OFFSET_TYPE intprt_t
+#define _OFFSET_TYPE PSIndex
+inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                     PSIndex xsize, PSIndex ysize) {
+  return ((_OFFSET_TYPE)x) + ((_OFFSET_TYPE)y) * ((_OFFSET_TYPE)xsize)
+      + ((_OFFSET_TYPE)z) * ((_OFFSET_TYPE)xsize) * ((_OFFSET_TYPE)ysize);
+}
+
+inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
+                                     const IndexArray &size) {
+  return GridCalcOffset3D(x, y, z, size[0], size[1]);
 }  
 
-inline PSIndex GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
-                                PSIndex xsize, PSIndex ysize) {
-  return x + y * xsize + z * xsize * ysize;
-}  
-
-inline PSIndex GridCalcOffset3D(const IndexArray &index,
-                                const IndexArray &size) {
-  return index[0] + index[1] * size[0] + index[2] * size[0] * size[1];
+inline intptr_t GridCalcOffset3D(const IndexArray &index,
+                                 const IndexArray &size) {
+  return GridCalcOffset3D(index[0], index[1], index[2], size[0], size[1]);  
 }
 
 } // namespace runtime

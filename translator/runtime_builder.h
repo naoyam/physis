@@ -53,16 +53,21 @@ class RuntimeBuilder {
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
 
-  //!
+  //! Build an offset expression.
   /*!
-    \param offset_exprs Free AST node of offset expressions
-    
-    Parameter offset_exprs will be used in the returned offset
+    Parameter offset_exprs will be used in the returned offset 
     expression without cloning.
+
+    @param num_dim Number of dimensions.
+    @param offset_exprs Index argument list.
+    @param is_kernel True if the expression is used in a stencil
+    kernel. 
+    @param is_periodic True if it is a periodic access.
+    @param sil The stencil index list of this access.
    */
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      const SgExpressionPtrList *offset_exprs, bool is_kernel,
       bool is_periodic,
       const StencilIndexList *sil) = 0;
   //!
@@ -82,12 +87,49 @@ class RuntimeBuilder {
 #endif
 
   virtual SgExpression *BuildGridGet(
-      SgExpression *gvref,      
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
       GridType *gt,
-      SgExpressionPtrList *offset_exprs,
+      const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,
       bool is_kernel,
       bool is_periodic) = 0;
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name) = 0;
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name,
+      const SgExpressionVector &array_indices) = 0;
+
+  //! Build code for grid emit.
+  /*!
+    \param grid_exp Grid expression
+    \param attr GridEmit attribute
+    \param offset_exprs offset expressions
+    \param emit_val Value to emit
+    \param scope Scope where this expression is built    
+    \return Expression implementing the emit.
+   */
+  virtual SgExpression *BuildGridEmit(
+      SgExpression *grid_exp,            
+      GridEmitAttribute *attr,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL) = 0;
+  
 
   virtual SgBasicBlock *BuildGridSet(
       SgExpression *grid_var, int num_dims,
@@ -98,9 +140,22 @@ class RuntimeBuilder {
   virtual SgType *GetIndexType() {
     return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
   }
+
+  virtual SgExprListExp *BuildStencilOffsetMax(const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilOffsetMin(const StencilRange &sr);
+
+  //! Build an ivec array containing the size of a given grid.
+  /*!
+    \param g Grid object
+    \return ivec expression of the grid size
+   */
+  virtual SgExprListExp *BuildSizeExprList(const Grid *g);
       
  protected:
   SgScopeStatement *gs_;
+  
+  virtual SgExprListExp *BuildStencilOffset(const StencilRange &sr,
+                                            bool is_max);
 };
 
 } // namespace translator

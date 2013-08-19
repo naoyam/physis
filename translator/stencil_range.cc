@@ -17,9 +17,22 @@ namespace translator {
 const std::string StencilIndexAttribute::name = "StencilIndexList";
 
 void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dims) {
-  for (unsigned i = 1; i < num_dims; ++i) {
+  for (unsigned i = 1; i <= num_dims; ++i) {
     sil.push_back(StencilIndex(i, 0));
   }
+}
+
+void StencilIndexListClearOffset(StencilIndexList &sil) {
+  FOREACH (it, sil.begin(), sil.end()) {
+    it->offset = 0;
+  }
+}
+
+int StencilIndexListFindDim(const StencilIndexList *sil, int dim) {
+  ENUMERATE (i, it, sil->begin(), sil->end()) {
+    if (it->dim == dim) return i;
+  }
+  return -1;
 }
 
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims) {
@@ -38,10 +51,19 @@ bool StencilIndexRegularOrder(const StencilIndexList &sil,
     //            << ", " << num_dims << "\n";
     return false;
   }
+#if 0  
   ENUMERATE (i, it, sil.begin(), sil.end()) {
     const StencilIndex &si = *it;
     if (si.dim != i+1) return false;
   }
+#else
+  int cur_idx = sil.begin()->dim;
+  ENUMERATE (i, it, sil.begin()+1, sil.end()) {
+    const StencilIndex &si = *it;
+    if (si.dim <= cur_idx) return false;
+    cur_idx = si.dim;
+  }
+#endif  
   return true;
 }
 
@@ -147,7 +169,7 @@ void StencilRange::merge(const StencilRange &sr) {
   diagonal_ |= sr.diagonal_;
 }
 
-bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) {
+bool StencilRange::GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) const {
   if (!IsNeighborAccess()) return false;
 
   for (int i = 0; i < num_dims_; ++i) {
@@ -232,6 +254,8 @@ ssize_t StencilRegularIndexList::GetIndex(int dim) const {
 void StencilRegularIndexList::SetIndex(int dim, ssize_t idx) {
   indices_[dim] = idx;
 }
+
+const std::string StencilIndexVarAttribute::name = "StencilIndexVar";
 
 } // namespace translator
 } // namespace physis

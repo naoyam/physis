@@ -25,7 +25,7 @@ class Reduce: public AstAttribute {
   Reduce(SgFunctionCallExp *fc);
   virtual ~Reduce();
   static const std::string name;
-  AstAttribute *copy();
+  Reduce *copy();
   SgFunctionCallExp *reduce_call() const { return reduce_call_; };
   bool IsGrid() const;
   bool IsKernel() const;

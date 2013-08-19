@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #ifndef PHYSIS_RUNTIME_GRID_H_
 #define PHYSIS_RUNTIME_GRID_H_
@@ -22,16 +20,7 @@ class Grid {
  protected:
   Grid(PSType type, int elm_size, int num_dims,
        const IndexArray &size,
-       bool double_buffering, int attr):
-      type_(type), elm_size_(elm_size), num_dims_(num_dims),
-      size_(size),
-      double_buffering_(double_buffering), attr_(attr) {
-    num_elms_ = size.accumulate(num_dims_);
-    data_[0] = NULL;
-    data_[1] = NULL;
-    data_buffer_[0] = NULL;
-    data_buffer_[1] = NULL;
-  }
+       bool double_buffering, int attr);
   PSType type_;
  public:
   virtual ~Grid();
@@ -46,9 +35,7 @@ class Grid {
   }
   
   virtual std::ostream &Print(std::ostream &os) const;
-  int &id() {
-    return id_;
-  }
+  int &id() { return id_; }
   void Swap();
   PSType type() { return type_; }
   int elm_size_;
@@ -63,6 +50,7 @@ class Grid {
   char *_data() { return data_[0]; }
   char *_data_emit() { return data_[1]; }  
   Buffer *buffer() { return data_buffer_[0]; }
+  const Buffer *buffer() const { return data_buffer_[0]; }  
   virtual void *GetAddress(const IndexArray &indices);    
   virtual void Set(const IndexArray &indices, const void *buf);
   virtual void Get(const IndexArray &indices, void *buf); 
@@ -76,9 +64,10 @@ class Grid {
    */
   virtual int Reduce(PSReduceOp op, void *out);
 
-  
+#ifdef CHECKPOINTING_ENABLED  
   virtual void Save();
   virtual void Restore();
+#endif
   
  protected:
   int id_;
@@ -92,8 +81,10 @@ class Grid {
   virtual void Copyin(void *dst, const void *src, size_t size);
   // the dstination is address of ordinary memory region  
   virtual void Copyout(void *dst, const void *src, size_t size);
+#ifdef CHECKPOINTING_ENABLED  
   virtual void SaveToFile(const void *buf, size_t len) const;
   virtual void RestoreFromFile(void *buf, size_t len);
+#endif  
   
 };
 
@@ -106,8 +97,12 @@ class GridSpace {
   void DeleteGrid(int id);
   //void ReduceGrid(Grid *g, void *buf);
 
+  virtual std::ostream &Print(std::ostream &os) const;
+
+#ifdef CHECKPOINTING_ENABLED
   virtual void Save();
   virtual void Restore();
+#endif
   
  protected:
   bool RegisterGrid(Grid *g);
@@ -123,6 +118,10 @@ inline std::ostream& operator<<(std::ostream &os, physis::runtime::Grid &g) {
   return g.Print(os);
 }
 
+inline std::ostream &operator<<(std::ostream &os,
+                                const physis::runtime::GridSpace &gs) {
+  return gs.Print(os);
+}
 
 #endif /* PHYSIS_RUNTIME_GRID_H_ */
 

@@ -28,16 +28,14 @@
 namespace physis {
 namespace runtime {
 
-// Internal method to initialize common runtime components. This is
-// only called by the user-visible runtime initialize, i.e., PSInit.
-void PSInitCommon(int *argc, char ***argv);
+struct Width2 {
+  UnsignedArray bw;
+  UnsignedArray fw;
+};
 
-// Returns the number of process grid dimensions. Returns negative
-// value on failure.
-int GetProcessDim(int *argc, char ***argv, IntArray &proc_size);
+typedef void (*__PSStencilRunClientFunction)(int, void **);
 
-bool ParseOption(int *argc, char ***argv, const string &opt_name,
-                 int num_additional_args, vector<string> &opts);
+
 
 } // namespace runtime
 } // namespace physis

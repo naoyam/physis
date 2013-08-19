@@ -65,6 +65,9 @@ typedef std::vector<StencilIndex> StencilIndexList;
 
 void StencilIndexListInitSelf(StencilIndexList &sil, unsigned num_dim);
 
+int StencilIndexListFindDim(const StencilIndexList *sil, int dim);
+
+
 class StencilIndexAttribute: public AstAttribute {
  public:
   StencilIndexAttribute(const StencilIndexList &sil)
@@ -85,9 +88,12 @@ class StencilIndexAttribute: public AstAttribute {
 bool StencilIndexSelf(const StencilIndexList &sil, unsigned num_dims);
 bool StencilIndexRegularOrder(const StencilIndexList &sil, unsigned num_dims);
 bool StencilIndexRegularOrder(const StencilIndexList &sil);
+void StencilIndexListClearOffset(StencilIndexList &sil);
 
 class StencilRegularIndexList {
+ public:
   typedef std::map<int, ssize_t> map_t;
+ private:
   map_t indices_;
  public:
   StencilRegularIndexList() {}
@@ -101,7 +107,7 @@ class StencilRegularIndexList {
   void SetIndex(int dim, ssize_t index);
   int GetNumDims() const { return indices_.size(); }
   virtual ~StencilRegularIndexList() {}
-  std::map<int, ssize_t> indices() { return indices_; }
+  const std::map<int, ssize_t>& indices() const { return indices_; }  
   bool operator<(const StencilRegularIndexList &x) const {
     FOREACH (it, indices_.begin(), indices_.end()) {
       if (it->second < x.GetIndex(it->first)) {
@@ -158,7 +164,7 @@ class StencilRange {
   StencilIndexList* min_indices() { return min_indices_; }
   StencilIndexList* max_indices() { return max_indices_; }  
   bool IsNeighborAccess() const;
-  bool GetNeighborAccess(IntVector &offset_min, IntVector &offset_max);
+  bool GetNeighborAccess(IntVector &offset_min, IntVector &offset_max) const;
   bool IsNeighborAccessDiagonalAccessed() const;
   bool IsZero() const;
   // Returns true if indices with a unique dimension is given for each
@@ -170,6 +176,24 @@ class StencilRange {
   const std::vector<StencilIndexList> &all_indices() const {
     return all_indices_;
   }
+  int IsEmpty() const {
+    return min_indices_[0].size() == 0;
+  }
+};
+
+class StencilIndexVarAttribute: public AstAttribute {
+ public:
+  static const std::string name;  
+  StencilIndexVarAttribute(int dim): dim_(dim) {}
+  StencilIndexVarAttribute(const StencilIndexVarAttribute &x): dim_(x.dim_) {}  
+  virtual ~StencilIndexVarAttribute() {}
+  int dim() { return dim_; }
+  AstAttribute *copy() {
+    return new StencilIndexVarAttribute(*this);
+  }
+
+ protected:
+  int dim_;
 };
 
 } // namespace translator

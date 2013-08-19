@@ -1,0 +1,34 @@
+# OPENCL_INCLUDE_PATH
+# OPENCL_LIBRARIES
+# OPENCL_FOUND = true if ROSE is found
+
+find_package (CUDA)
+
+if (CUDA_FOUND) 
+  find_path (OPENCL_INCLUDE_DIR
+    NAMES CL/cl.h
+    PATHS ${CUDA_INCLUDE_DIRS}
+    )
+  if (OPENCL_INCLUDE_DIR)
+    find_library(OPENCL_LIBRARY
+      NAMES OpenCL
+      PATHS env LD_LIBRARY_PATH
+      )
+  endif ()
+endif()
+
+set (OPENCL_FOUND FALSE)
+if (OPENCL_INCLUDE_DIR AND OPENCL_LIBRARY)
+  message (STATUS "OpenCL found")  
+  message (STATUS "OPENCL_INCLUDE_DIR=${OPENCL_INCLUDE_DIR}")
+  message (STATUS "OPENCL_LIBRARY=${OPENCL_LIBRARY}")
+  set (OPENCL_FOUND TRUE)
+else ()
+  message (STATUS "OpenCL not found")
+endif ()
+
+MARK_AS_ADVANCED(
+OPENCL_INCLUDE_DIR
+OPENCL_LIBRARY
+OPENCL_FOUND
+)

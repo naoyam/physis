@@ -19,6 +19,19 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
                          SgFunctionDeclaration *kernel);
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx);
 
+void AnalyzeEmit(SgFunctionDeclaration *func);
+
+/*!
+  
+  \param get
+  \param indices
+  \param parent
+  \return True upon success; fasle otherwise.
+*/
+bool AnalyzeGetArrayMember(SgDotExp *get, SgExpressionVector &indices,
+                           SgExpression *&parent);
+
+
 } // namespace translator
 } // namespace physis
 

@@ -13,7 +13,7 @@
 #define PSGrid3DReal PSGrid3DFloat
 #define PSGrid3DRealNew PSGrid3DFloatNew
 
-void kernel(const int x, const int y, const int z,
+static void kernel(const int x, const int y, const int z,
             PSGrid3DReal g1, PSGrid3DReal g2,
             REAL ce, REAL cw, REAL cn, REAL cs,
             REAL ct, REAL cb, REAL cc) {

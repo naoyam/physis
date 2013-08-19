@@ -31,7 +31,8 @@ class ReferenceTranslator : public Translator {
   virtual ~ReferenceTranslator();
   virtual void Translate();
   virtual void Optimize();
-  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void SetUp(SgProject *project, TranslationContext *context,
+                     RuntimeBuilder *rt_builder);  
   virtual void Finish();  
 
   bool flag_constant_grid_size_optimization() const {
@@ -51,17 +52,21 @@ class ReferenceTranslator : public Translator {
     variable validate_ast_.
    */
   virtual void ValidateASTConsistency();
-  virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
-  virtual void translateNew(SgFunctionCallExp *node, GridType *gt);
+  virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
+  virtual void TranslateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
-  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g);
-  virtual void translateGet(SgFunctionCallExp *node,
+  virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
+                                 SgVariableDeclaration *dim_decl);
+  virtual void TranslateGet(SgFunctionCallExp *node,
                             SgInitializedName *gv,
                             bool is_kernel,
                             bool is_periodic);
-  virtual void translateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
-  virtual void translateSet(SgFunctionCallExp *node, SgInitializedName *gv);  
+  virtual void TranslateEmit(SgFunctionCallExp *node,
+                             GridEmitAttribute *attr);
+  virtual void RemoveEmitDummyExp(SgExpression *emit);
+  virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);
+#if 0  
   //! Build an offset expression.
   /*!
     @param gv The grid to get a offset.
@@ -80,7 +85,8 @@ class ReferenceTranslator : public Translator {
                                     bool is_periodic,                                    
                                     const StencilIndexList *sil,
                                     SgScopeStatement *scope);
-  virtual void translateMap(SgFunctionCallExp *node, StencilMap *s);
+#endif  
+  virtual void TranslateMap(SgFunctionCallExp *node, StencilMap *s);
   virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s) {
@@ -94,21 +100,55 @@ class ReferenceTranslator : public Translator {
   //! A helper function for BuildRunKernel.
   /*!
     \param s The stencil map object.
-    \param stencil_param 
+    \param param Parameter list of the run function
     \return The body of the run function.
    */
   virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *s, SgInitializedName *stencil_param);
+      StencilMap *s, SgFunctionParameterList *param);
+#ifdef DEPRECATED  
   virtual void appendGridSwap(StencilMap *mc, const string &stencil,
                               bool is_stencil_ptr,
                               SgScopeStatement *scope);
+#endif
   virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *s, SgExpressionPtrList &indexArgs,
       SgInitializedName *stencil_param);
   virtual void defineMapSpecificTypesAndFunctions();
-  virtual SgBasicBlock *BuildRunBody(Run *run);
-  virtual SgFunctionDeclaration *GenerateRun(Run *run);
-  virtual void translateRun(SgFunctionCallExp *node, Run *run);
+  virtual void BuildRunBody(
+      SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
+  virtual SgFunctionDeclaration *BuildRun(Run *run);
+  virtual void TranslateRun(SgFunctionCallExp *node, Run *run);
+
+  /** generate dlopen and dlsym code
+   * @param[in] run
+   * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+   * @param[in] index ... VAR's expression
+   * @param[in] scope
+   * @return    statement of dlopen and dlsym
+   */
+  virtual SgStatement *GenerateDlopenDlsym(
+      Run *run, SgFunctionRefExp *ref,
+      SgExpression *index, SgScopeStatement *scope);
+  /** generate trial code
+   * @param[in] run
+   * @param[in] ref ... function reference  '__PSStencilRun_0(1, ...);'
+   * @return    function declaration
+   */
+  virtual SgFunctionDeclaration *GenerateTrial(
+      Run *run, SgFunctionRefExp *ref);
+  /** add dynamic parameter
+   * @param[in/out] parlist ... parameter list
+   */
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
+  /** add dynamic argument
+   * @param[in/out] args ... arguments
+   * @param[in] a_exp ... index expression
+   */
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
+  /** add some code after dlclose()
+   * @param[in] scope
+   */
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
 
   virtual void TranslateReduceGrid(Reduce *rd);
   virtual void TranslateReduceKernel(Reduce *rd);
@@ -121,8 +161,6 @@ class ReferenceTranslator : public Translator {
 
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
-  //ReferenceRuntimeBuilder *ref_rt_builder_;
-  RuntimeBuilder *rt_builder_;
   virtual std::string GetStencilDomName() const;
   virtual SgExpression *BuildDomMaxRef(SgExpression *domain) const;
   virtual SgExpression *BuildDomMinRef(SgExpression *domain) const;

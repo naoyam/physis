@@ -23,7 +23,7 @@ namespace translator {
 namespace optimizer {
 namespace pass {
 
-typedef map<string, SgExpressionVector> GridOffsetMap;
+typedef map<SgVariableSymbol*, SgExpressionVector> GridOffsetMap;
 
 static SgExpression *extract_index_var(SgExpression *offset_dim_exp) {
   SgExpression *off =
@@ -33,9 +33,21 @@ static SgExpression *extract_index_var(SgExpression *offset_dim_exp) {
   return off;
 }
 
+SgFunctionCallExp *ExtractOffsetCall(SgExpression *offset) {
+  if (isSgAddOp(offset)) {
+    SgAddOp *aop = isSgAddOp(offset);
+    if (isSgFunctionCallExp(aop->get_lhs_operand())) {
+      return isSgFunctionCallExp(aop->get_lhs_operand());
+    }
+  }
+  PSAssert(isSgFunctionCallExp(offset));
+  return isSgFunctionCallExp(offset);
+}
+
 static void build_index_var_list_from_offset_exp(
     SgExpression *offset_expr,
     SgExpressionPtrList *index_va_list) {
+  offset_expr = ExtractOffsetCall(offset_expr);
   PSAssert(isSgFunctionCallExp(offset_expr));
   SgExpressionPtrList &args =
       isSgFunctionCallExp(offset_expr)->get_args()->get_expressions();
@@ -46,71 +58,6 @@ static void build_index_var_list_from_offset_exp(
                 << index_va_list->back()->unparseToString()
                 << "\n";
   }
-}
-
-static bool IsASTNodeDescendant(SgNode *top, SgNode *x) {
-  PSAssert(top);
-  PSAssert(x);
-  do {
-    if (top == x) {
-      return true;
-    }
-    x = x->get_parent();
-  } while (x != NULL);
-  return false;
-}
-
-/*!
-  Insert the base offset decl, which needs to be after all the used
-  variables. The kernel is inlined into the loop, so there is a
-  sequence of declarations that are kernel parameters. Find all
-  parameter variable delcarations, and append the base offset decl.
-*/
-static void insert_base_offset(SgBasicBlock *loop_body,
-                               SgVariableDeclaration *base_offset_decl,
-                               SgInitializedName *gv,
-                               SgExpressionPtrList &base_offset_indices) {
-  SgDeclarationStatementPtrList decls;
-  if (gv) decls.push_back(gv->get_declaration());
-  FOREACH (it, base_offset_indices.begin(), base_offset_indices.end()) {
-    SgVarRefExp *v = isSgVarRefExp(*it);
-    PSAssert(v);
-    SgDeclarationStatement *d =
-        v->get_symbol()->get_declaration()->get_declaration();
-    PSAssert(d);
-    if (IsASTNodeDescendant(loop_body, d)) {
-      decls.push_back(d);
-    }
-  }
-  
-  // Advance all variables are found
-  SgStatement *loop_body_stmt = loop_body->get_statements()[0];
-  LOG_DEBUG() << "loop_body_stmt: " << loop_body_stmt->unparseToString() << "\n";
-  std::stack<SgStatement*> stack;
-  while (decls.size() > 0) {
-    if (isSgBasicBlock(loop_body_stmt)) {
-      if (si::getNextStatement(loop_body_stmt))
-        stack.push(si::getNextStatement(loop_body_stmt));
-      loop_body_stmt = si::getFirstStatement(isSgBasicBlock(loop_body_stmt));
-    }
-    SgDeclarationStatementPtrList::iterator it =
-      std::find(decls.begin(), decls.end(), loop_body_stmt);
-    if (it != decls.end()) {
-      decls.erase(it);
-    }
-    loop_body_stmt = si::getNextStatement(loop_body_stmt);
-    if (!loop_body_stmt) {
-      if (stack.size() > 0) {
-        loop_body_stmt = stack.top();
-        stack.pop();
-      } else {
-        LOG_ERROR() << "Not all index var declrations found\n";
-        PSAssert(0);
-      }
-    }
-    LOG_DEBUG() << "loop_body_stmt: " << loop_body_stmt->unparseToString() << "\n";    
-  }
-  si::insertStatementBefore(loop_body_stmt, base_offset_decl);
 }
 
 /*!
@@ -141,10 +88,12 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
       (index_offset > 0) ? 
       (SgExpression*)sb::buildSubtractOp(
           sb::buildIntVal(index_offset),
-          builder->BuildGridDim(si::copyExpression(gvref), dim)):
+          builder->BuildGridDim(
+              si::copyExpression(gvref), dim)):
       (SgExpression*)sb::buildAddOp(
           sb::buildIntVal(index_offset),
-          builder->BuildGridDim(si::copyExpression(gvref), dim));
+          builder->BuildGridDim(
+              si::copyExpression(gvref), dim));
   SgExpression *nowrap_around_exp = sb::buildIntVal(index_offset);
   SgExpression *offset_d =
       si::copyExpression(
@@ -165,8 +114,10 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
   // Use modulus
   SgExpression *x = sb::buildModOp(
       sb::buildAddOp(offset_d,
-                     builder->BuildGridDim(si::copyExpression(gvref), dim)),
-      builder->BuildGridDim(si::copyExpression(gvref), dim));
+                     builder->BuildGridDim(
+                         si::copyExpression(gvref), dim)),
+      builder->BuildGridDim(
+          si::copyExpression(gvref), dim));
   offset_periodic = sb::buildSubtractOp(
       x,
       si::copyExpression(extract_index_var(offset_d)));
@@ -184,16 +135,18 @@ static void replace_offset(SgVariableDeclaration *base_offset,
     GridOffsetAttribute *offset_attr =
         rose_util::GetASTAttribute<GridOffsetAttribute>(
             original_offset_expr);
-    SgExpression *gvexpr = offset_attr->gvexpr();
+    original_offset_expr = ExtractOffsetCall(original_offset_expr);
+    SgVarRefExp *gvref = GridOffsetAnalysis::GetGridVar(original_offset_expr);
     const StencilIndexList sil = *offset_attr->GetStencilIndexList();
     PSAssert(StencilIndexRegularOrder(sil));
     StencilRegularIndexList sril(sil);
     LOG_DEBUG() << "SRIL: " << sril << "\n";
-    int num_dims = sril.GetNumDims();
     SgExpression *dim_offset = sb::buildIntVal(1);
     SgExpression *new_offset_expr = sb::buildVarRefExp(base_offset);
-    for (int i = 1; i <= num_dims; ++i) {
-      int index_offset = sril.GetIndex(i);
+    StencilRegularIndexList::map_t indices = sril.indices();
+    FOREACH (it, indices.begin(), indices.end()) {
+      int i = it->first;
+      int index_offset = it->second;
       LOG_DEBUG() << "index-offset: " << index_offset << "\n";
       if (index_offset != 0) {
         SgExpression *offset_term = NULL;
@@ -201,7 +154,7 @@ static void replace_offset(SgVariableDeclaration *base_offset,
           offset_term = sb::buildIntVal(index_offset);
         } else {
           offset_term = build_offset_periodic(
-              original_offset_expr, i,index_offset, gvexpr, builder);
+              original_offset_expr, i,index_offset, gvref, builder);
         }
         new_offset_expr = sb::buildAddOp(
             new_offset_expr,            
@@ -209,7 +162,8 @@ static void replace_offset(SgVariableDeclaration *base_offset,
       }
       dim_offset = sb::buildMultiplyOp(
           dim_offset,
-          builder->BuildGridDim(si::copyExpression(gvexpr), i));
+          builder->BuildGridDim(
+              si::copyExpression(gvref), i));
     }
     si::constantFolding(new_offset_expr);
     LOG_DEBUG() << "new offset expression: "
@@ -233,11 +187,14 @@ static void do_offset_cse(RuntimeBuilder *builder,
   SgExpressionPtrList base_offset_list;
   build_index_var_list_from_offset_exp(offset_expr, &base_offset_list);
 
-  StencilIndexList sil;
-  StencilIndexListInitSelf(sil, attr->num_dim());
-  PSAssert(attr->gvexpr());
+  StencilIndexList sil = *attr->GetStencilIndexList();
+  StencilIndexListClearOffset(sil);
+  SgExpression *gref = si::copyExpression(GridOffsetAnalysis::GetGridVar(offset_expr));
+  if (!isSgPointerType(gref->get_type())) {
+    gref = sb::buildAddressOfOp(gref);
+  }
   SgExpression *base_offset = builder->BuildGridOffset(
-      si::copyExpression(attr->gvexpr()),
+      gref,
       attr->num_dim(), &base_offset_list,
       true, false, &sil);
   LOG_DEBUG() << "base_offset: " << base_offset->unparseToString() << "\n";
@@ -253,18 +210,17 @@ static void do_offset_cse(RuntimeBuilder *builder,
   LOG_DEBUG() << "base_offset_var: "
               << base_offset_var->unparseToString() << "\n";
 
-  // NOTE: If the grid reference expression is a SgVarRefExp, it is
-  // assumed to be a kernel parameter. In that case, kernel inlining
-  // replaces the parameter with a new variable, and the base offset
-  // declaration must be placed after that.
-  SgInitializedName *gv = NULL;
-  if (isSgVarRefExp(attr->gvexpr())) {
-    gv = isSgVarRefExp(attr->gvexpr())->get_symbol()->get_declaration();
-  }
-  insert_base_offset(loop_body, base_offset_var, gv, base_offset_list);
+  SgScopeStatement *kernel =
+      isSgScopeStatement(
+          rose_util::QuerySubTreeAttribute<KernelBody>(loop).front());
+  PSAssert(kernel);
+  
+  si::prependStatement(base_offset_var, kernel);
+                       
   replace_offset(base_offset_var, offset_exprs, builder);
   return;
 }
+
 
 /*!
 
@@ -283,17 +239,20 @@ static GridOffsetMap find_candidates(SgForStatement *loop) {
     GridOffsetAttribute *attr =
         rose_util::GetASTAttribute<GridOffsetAttribute>(offset_expr);
     PSAssert(attr);
-    string gv = attr->gvexpr()->unparseToString();
-    if (!isContained(ggm, gv)) {
-      ggm.insert(std::make_pair(gv, SgExpressionVector()));
+    SgVarRefExp *gref = GridOffsetAnalysis::GetGridVar(offset_expr);
+    LOG_DEBUG() << "gref: " << gref->unparseToString() << "\n";
+    SgVariableSymbol *vs = gref->get_symbol();
+    if (!isContained(ggm, vs)) {
+      ggm.insert(std::make_pair(vs, SgExpressionVector()));
     }
-    SgExpressionVector &v = ggm[gv];
+    SgExpressionVector &v = ggm[vs];
+    //v.push_back(ExtractCSETarget(offset_expr));
     v.push_back(offset_expr);
   }
 
   GridOffsetMap::iterator ggm_it = ggm.begin();
   while (ggm_it != ggm.end()) {
-    string grid_str = ggm_it->first;
+    SgVariableSymbol *vs = ggm_it->first;
     SgExpressionVector &get_exprs = ggm_it->second;
     // Needs multiple gets to do CSE
     if (get_exprs.size() <= 1) {
@@ -303,8 +262,7 @@ static GridOffsetMap find_candidates(SgForStatement *loop) {
       ggm_it = ggm_it_next;
       continue;
     }
-    LOG_DEBUG() << grid_str
-                << " has multiple gets\n";
+    LOG_DEBUG() << vs->unparseToString() << " has multiple gets\n";
     ++ggm_it;
   }
   return ggm;

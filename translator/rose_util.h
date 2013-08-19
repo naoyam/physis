@@ -102,13 +102,12 @@ SgClassDefinition *getDefinition(SgClassType *t);
 SgFunctionDeclaration *getContainingFunction(SgNode *node);
 string getFuncName(SgFunctionRefExp *fref);
 string getFuncName(SgFunctionCallExp *call);
-SgExpression *copyExpr(const SgExpression *expr);
-SgInitializedName *copySgNode(const SgInitializedName *expr);
+void CopyExpressionPtrList(const SgExpressionPtrList &src,
+                           SgExpressionPtrList &dst);
 SgFunctionSymbol *getFunctionSymbol(SgFunctionDeclaration *f);
 SgFunctionRefExp *getFunctionRefExp(SgFunctionDeclaration *decl);
 SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name);
-bool isFuncParam(SgInitializedName *in);
-SgInitializedName *getInitializedName(SgVarRefExp *var);
+bool IsFuncParam(SgInitializedName *in);
 string generateUniqueName(SgScopeStatement *scope = NULL,
                           const string &prefix = "__ps_");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
@@ -187,6 +186,16 @@ void CopyASTAttribute(SgNode *dst_node,
 }
 
 template <class T>
+void RemoveASTAttribute(SgNode *node) {
+  if (!GetASTAttribute<T>(node)) {
+    LOG_ERROR() << "No such attribute: " << T::name << "\n";
+    PSAbort(1);
+  }
+  node->removeAttribute(T::name);
+  return;
+}
+
+template <class T>
 class QueryASTNodeVisitor: public AstSimpleProcessing {
  public:
   QueryASTNodeVisitor() {}
@@ -240,6 +249,41 @@ void ReplaceFuncBody(SgFunctionDeclaration *func,
 SgGlobal *GetGlobalScope();
 
 SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
+SgType *GetType(SgVariableDeclaration *decl);
+SgName GetName(SgVariableDeclaration *decl);
+SgName GetName(const SgVarRefExp *decl);
+
+SgExpression *ParseString(const string &s, SgScopeStatement *scope);
+
+template <class T>
+bool GetIntLikeVal(SgExpression *v, T &x) {
+  if (isSgIntVal(v)) {
+    x = (T)(isSgIntVal(v)->get_value());
+  } else if (isSgUnsignedIntVal(v)) {
+    x = (T)(isSgUnsignedIntVal(v)->get_value());
+  } else if (isSgLongIntVal(v)) {
+    x = (T)(isSgLongIntVal(v)->get_value());
+  } else if (isSgUnsignedLongVal(v)) {
+    x = (T)(isSgUnsignedLongVal(v)->get_value());
+  } else if (isSgLongLongIntVal(v)) {
+    x = (T)(isSgLongLongIntVal(v)->get_value());
+  } else if (isSgUnsignedLongLongIntVal(v)) {
+    x = (T)(isSgUnsignedLongLongIntVal(v)->get_value());
+  } else {
+    LOG_DEBUG() << "Not an int like value: "
+                << v->unparseToString() << "\n";
+    return false;
+  }
+  return true;
+}
+
+void ReplaceWithCopy(SgExpressionVector &ev);
+
+bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2);
+
+SgVarRefExp *GetUniqueVarRefExp(SgExpression *exp);
+
+SgDeclarationStatement *GetDecl(SgVarRefExp *vref);
 
 }  // namespace rose_util
 }  // namespace translator

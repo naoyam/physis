@@ -13,20 +13,21 @@ namespace translator {
 namespace rose_util {
 
 void RoseASTTraversal::VisitInternal(SgNode *node) {
-  if (isSgForStatement(node))
+  if (isSgForStatement(node)) {
     Visit(isSgForStatement(node));
-  if (isSgTypedefDeclaration(node)) 
+  } else if (isSgTypedefDeclaration(node)) {
     Visit(isSgTypedefDeclaration(node));
-  if (isSgClassDeclaration(node))
-    Visit(isSgClassDeclaration(node));
-  if (isSgFunctionCallExp(node))
+  } else if (isSgClassDeclaration(node)) {
+    Visit(isSgClassDeclaration(node));    
+  } else if (isSgFunctionCallExp(node)) {
     Visit(isSgFunctionCallExp(node));
-  if (isSgExpression(node))
+  } else if (isSgExpression(node)) {
     Visit(isSgExpression(node));
-  if (isSgFunctionDeclaration(node))
+  } else if (isSgFunctionDeclaration(node)) {
     Visit(isSgFunctionDeclaration(node));
-  
-  Visit(node);
+  } else {
+    Visit(node);
+  }
 }
 
 void RoseASTTraversal::traverseTopDown(SgNode *node) {

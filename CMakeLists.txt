@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 # CMAKE_BUILD_TYPE must be set before calling project.
 set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel.")
+  "Choose the type of build, options are: VerboseDebug Debug Release RelWithDebInfo MinSizeRel.")
 message (STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
 project(physis)
@@ -54,24 +54,42 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
-# Logging configuration
+# Default logging configuration
+set(PS_VERBOSE FALSE)
+set(PS_DEBUG FALSE)
+set(PS_WARNING TRUE)
+# Enable debug logging in the debug mode
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set (PS_DEBUG TRUE)
 endif ()
-if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+# Disable debug logging in the debug mode
+if ((CMAKE_BUILD_TYPE STREQUAL "Release") OR
+    (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+  set (PS_WARNING FALSE)
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "VerboseDebug")
   set (PS_DEBUG TRUE)
+  set (PS_VERBOSE TRUE)
 endif ()
 
-set(PS_VERBOSE FALSE)
-set(PS_WARNING TRUE)
-
 set(AUTO_DOUBLE_BUFFERING FALSE)
+
+set (AUTO_TUNING FALSE CACHE BOOL
+  "Flag to enable auto tuning.")
+# Ensure the actual value is either TRUE or FALSE so that variable
+# replacement with configure_file can be assumed to be either "TRUE"
+# or "FALSE", rather than "ON" or "OFF".
+if (AUTO_TUNING)
+  set (AUTO_TUNING TRUE)
+else ()
+  set (AUTO_TUNING FALSE)  
+endif ()
+message (STATUS "Auto tuning: ${AUTO_TUNING}")
   
 find_package(CUDA)
 if (CUDA_FOUND AND
     (CUDA_VERSION VERSION_EQUAL "4.0") OR
     (CUDA_VERSION VERSION_GREATER "4.0"))
-  set(CUDA_ENABLED TRUE)
   set (CUDA_NVCC_FLAGS -arch sm_20)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
   foreach(i ${CUDA_LIBRARIES})
@@ -81,45 +99,29 @@ if (CUDA_FOUND AND
   endforeach()
   message(STATUS "CUDART=${CUDA_LIBRT}")
   get_filename_component(CUDA_RT_DIR ${CUDA_LIBRT} PATH)
-  find_path (CUDA_CUT_INCLUDE_DIR cutil.h
-    PATHS ${CUDA_SDK_SEARCH_PATH}
-    PATH_SUFFIXES "common/inc"
-    NO_DEFAULT_PATH
-    )
-  message(STATUS "CUDA_CUT_INCLUDE_DIR=${CUDA_CUT_INCLUDE_DIR}")
-  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(cuda_cutil_name cutil64)
-  else(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(cuda_cutil_name cutil32)
-  endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-  find_library(CUDA_CUT_LIBRARY
-    NAMES cutil cutil_x86_64 ${cuda_cutil_name}
-    PATHS ${CUDA_SDK_SEARCH_PATH}
-    # The new version of the sdk shows up in common/lib, but the old one is in lib
-    PATH_SUFFIXES "common/lib" "lib"
-    DOC "Location of cutil library"
-    NO_DEFAULT_PATH
-    )
-  # Now search system paths
-  find_library(CUDA_CUT_LIBRARY NAMES cutil ${cuda_cutil_name}
-    DOC "Location of cutil library")
-  mark_as_advanced(CUDA_CUT_LIBRARY)
-  set(CUDA_CUT_LIBRARIES ${CUDA_CUT_LIBRARY})
-  message(STATUS "CUDA_CUT_LIBRARIES=${CUDA_CUT_LIBRARIES}")
 else()
   message(WARNING "Compatible CUDA toolkit (4.0 or higher) not found.")
   message(WARNING "CUDA toolkit can be explicitly specified with CUDA_TOOLKIT_ROOT_DIR CMake variable.")
-  set(CUDA_ENABLED FALSE)
 endif()
 
 find_package(MPI)
+
 if (MPI_FOUND)
-  set(MPI_ENABLED TRUE)
   set(MPI_INCLUDE_DIR ${MPI_INCLUDE_PATH})
-else()
-  set(MPI_ENABLED FALSE)
+  message(STATUS "MPI found")
+  message(STATUS "MPIEXEC=${MPIEXEC}")
+  message(STATUS "MPI_INCLUDE_PATH=${MPI_INCLUDE_PATH}")
+  message(STATUS "MPI_LIBRARIES=${MPI_LIBRARIES}")
 endif()
+
+find_library(NUMA_LIBRARY numa)
+if (NUMA_LIBRARY)
+  set(NUMA_FOUND TRUE)
+else()
+  set(NUMA_FOUND FALSE)
+endif()
+
+find_package (OpenCL)
 
 # http://www.cmake.org/Wiki/CMake_RPATH_handling
 # use, i.e. don't skip the full RPATH for the build tree
@@ -155,8 +157,9 @@ else ()
 endif()
 
 add_subdirectory(common)
+add_subdirectory(tests)
 add_subdirectory(include/physis)
 add_subdirectory(util)
 add_subdirectory(translator)
 add_subdirectory(runtime)
-add_subdirectory(tests)
+add_subdirectory(examples)

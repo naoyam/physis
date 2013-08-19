@@ -7,12 +7,12 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "runtime/grid_mpi_cuda.h"
+#include "runtime/runtime_common_cuda.h"
 #include "runtime/buffer_cuda.h"
 #include "runtime/grid_util.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <cutil.h>
 
 using namespace physis::runtime::performance;
 using std::make_pair;
@@ -51,7 +51,7 @@ GridMPICUDA3D *GridMPICUDA3D::Create(
                                          double_buffering, global_offset,
                                          local_offset, local_size,
                                          attr);
-  gmc->InitBuffer();
+  gmc->InitBuffers();
   return gmc;
 }
 
@@ -96,7 +96,7 @@ void GridMPICUDA3D::DeleteBuffers() {
 }
 
 
-void GridMPICUDA3D::InitBuffer() {
+void GridMPICUDA3D::InitBuffers() {
   LOG_DEBUG() << "Initializing grid buffer\n";
 
   if (empty_) return;
@@ -193,7 +193,8 @@ void GridMPICUDA3D::CopyoutHalo(int dim, unsigned width, bool fw,
   // Next, copy out to the halo buffer from CUDA pinned host memory
   halo_mpi_host->EnsureCapacity(CalcHaloSize(dim, width, diagonal));
   if (dim == num_dims_ - 1 || !diagonal) {
-    halo_cuda_host->Copyout(*halo_mpi_host, halo_size.accumulate(num_dims_));
+    halo_cuda_host->Copyout(*halo_mpi_host,
+                            IndexArray(halo_size.accumulate(num_dims_)));
     return;
   }
 
@@ -239,7 +240,7 @@ void GridMPICUDA3D::CopyoutHalo3D1(unsigned width, bool fw) {
   // copy halo
   sg_size[2] = local_size_[2];
   // different
-  halo_self_cuda_[1][fw_idx]->Copyout(buf, sg_size.accumulate(nd));
+  halo_self_cuda_[1][fw_idx]->Copyout(buf, IndexArray(sg_size.accumulate(nd)));
   buf += sg_size.accumulate(nd) * elm_size_;
   
   // copy diag
@@ -372,7 +373,7 @@ void GridMPICUDA3D::Save() {
 void GridMPICUDA3D::Restore() {
   LOG_DEBUG() << "Restoring grid\n";
   LOG_DEBUG() << "Initializing buffer\n";
-  InitBuffer();
+  InitBuffers();
   LOG_DEBUG() << "Buffer initialized\n";
   // Read from a file
   BufferCUDADev3D *buf = static_cast<BufferCUDADev3D*>(
@@ -815,7 +816,7 @@ GridMPI *GridSpaceMPICUDA::LoadNeighborStage1(
   IndexArray halo_fw_width(offset_max);
   halo_fw_width.SetNoLessThan(0);  
   IndexArray halo_bw_width(offset_min);
-  halo_bw_width *= -1;
+  halo_bw_width = halo_bw_width * -1;
   halo_bw_width.SetNoLessThan(0);
   
   //for (int i = g->num_dims_ - 1; i >= 0; --i) {
@@ -842,7 +843,7 @@ GridMPI *GridSpaceMPICUDA::LoadNeighborStage2(
   IndexArray halo_fw_width(offset_max);
   halo_fw_width.SetNoLessThan(0);  
   IndexArray halo_bw_width(offset_min);
-  halo_bw_width *= -1;
+  halo_bw_width = halo_bw_width * -1;
   halo_bw_width.SetNoLessThan(0);
 
   // Does not perform staging for the continuous dimension. 

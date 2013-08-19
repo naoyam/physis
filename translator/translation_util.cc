@@ -59,8 +59,12 @@ SgVariableDeclaration *BuildPSOffsets(std::string name,
   SgType *index_array_type = sb::buildArrayType(BuildIndexType(scope));
   SgExprListExp *elist = sb::buildExprListExp();
   for (int i = 0; i < v.num; ++i) {
-    elist->append_expression(rose_util::BuildIntLikeVal(v.offsets[i*2]));
-    elist->append_expression(rose_util::BuildIntLikeVal(v.offsets[i*2+1]));
+    si::appendExpression(
+        elist,
+        rose_util::BuildIntLikeVal(v.offsets[i*2]));
+    si::appendExpression(
+        elist,
+        rose_util::BuildIntLikeVal(v.offsets[i*2+1]));
   }
   SgAggregateInitializer *agg_init
       = sb::buildAggregateInitializer(elist);
@@ -176,6 +180,7 @@ SgExpression *BuildFunctionCall(const std::string &name,
   return call;
 }
 
+#if 0
 std::string GetTypeName(SgType *ty) {
   if (isSgTypeFloat(ty)) {
     return string("Float");
@@ -192,6 +197,7 @@ std::string GetTypeDimName(GridType *gt) {
   return GetTypeName(gt->getElmType())
       + toString(gt->getNumDim()) + "D";
 }
+#endif
 
 SgType *GetBaseType(SgType *ty) {
   if (si::isPointerType(ty)) {

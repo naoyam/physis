@@ -44,7 +44,7 @@ Reduce::Reduce(SgFunctionCallExp *call)
 Reduce::~Reduce() {
 }
 
-AstAttribute *Reduce::copy() {
+Reduce *Reduce::copy() {
   return new Reduce(reduce_call_);
 }
 

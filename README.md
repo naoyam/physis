@@ -35,6 +35,7 @@ devices and network connections.
 
 ## News & Updates
 
+* 19 Aug 2013 - Version 0.5 available.
 * 25 Jul 2012 - Version 0.4 available.
 * 24 Apr 2012 - Version 0.3 available.
 * 1 Jan 2012 - Version 0.2 available.
@@ -61,7 +62,7 @@ Physis depends on the following external software:
 In addition, the following platform-specific tools and libraries are
 required when using the respective platform:
 
-* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (4.0 tested)
+* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (5.0 tested)
 * MPI for multi-node parallel execution
   ([OpenMPI v1.4.2](http://www.open-mpi.org/) tested)
 
@@ -87,6 +88,10 @@ See docs/faq.md.
 The corresponding source of each version is attached with a Git tag
 with the version number.
 
+* Version 0.5 (19 Aug 2013)
+    * User-defined point type.
+	* Only REFERENCE and CUDA targets are updated. MPI and MPI-CUDA
+      targets are not updated in this version.
 * Version 0.4 (25 Jul 2012)
     * Single GPU tuning. Near hand-tuned performance with 7-pt diffusion.
 * Version 0.3 (24 Apr 2012)

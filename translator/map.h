@@ -15,24 +15,24 @@
 #include "translator/grid.h"
 #include "physis/physis_util.h"
 
-#define MAP_NAME ("PSStencilMap")
-
 namespace physis {
 namespace translator {
 
-class TranslationContext;
-//typedef map<Grid*, StencilRange> GridRangeMap;
-typedef map<SgInitializedName*, StencilRange> GridRangeMap;
+using std::pair;
 
-std::string GridRangeMapToString(GridRangeMap &gr);
-// StencilRange AggregateStencilRange(GridRangeMap &gr,
-//                                    const GridSet *gs);
+class TranslationContext;
+
+typedef pair<SgInitializedName*, string> GridMember;
+typedef map<GridMember, StencilRange> GridMemberRangeMap;
 
 class StencilMap {
  public:
+  enum Type {kNormal, kRedBlack, kRed, kBlack};
+  
   StencilMap(SgFunctionCallExp *call, TranslationContext *tx);
 
   static bool isMap(SgFunctionCallExp *call);
+  static Type AnalyzeType(SgFunctionCallExp *call);
   static SgFunctionDeclaration *getKernelFromMapCall(SgFunctionCallExp *call);
   static SgExpression *getDomFromMapCall(SgFunctionCallExp *call);
 
@@ -68,17 +68,6 @@ class StencilMap {
   SgFunctionDeclaration*& run_boundary() { return run_boundary_; }    
   const SgInitializedNamePtrList& grid_args() const { return grid_args_; }
   const SgInitializedNamePtrList& grid_params() const { return grid_params_; }  
-  //GridRangeMap &gr() { return gr_; }
-  GridRangeMap &grid_stencil_range_map() { return grid_stencil_range_map_; }
-  const GridRangeMap &grid_stencil_range_map() const {
-    return grid_stencil_range_map_; }  
-  StencilRange &GetStencilRange(SgInitializedName *gv) {
-    if (!isContained<SgInitializedName*, StencilRange>(
-            grid_stencil_range_map(), gv)) {
-      PSAssert(false);
-    }
-    return grid_stencil_range_map().find(gv)->second;
-  }  
 
   // Use Kernel::isGridParamWritten and Kernel::isGridParamRead
   // bool IsWritten(Grid *g);
@@ -96,9 +85,27 @@ class StencilMap {
   /*!
     \param gv Grid param name.
   */
-  void SetGridPeriodic(SgInitializedName *gv);  
+  void SetGridPeriodic(SgInitializedName *gv);
+
+  //! Returns true if red-black stencil is used.
+  bool IsRedBlack() const {
+    return type_ == kRedBlack;
+  }
+
+  bool IsRed() const {
+    return type_ == kRed;
+  }
+
+  bool IsBlack() const {
+    return type_ == kBlack;
+  }
+
+  bool IsRedBlackVariant() const {
+    return IsRedBlack() || IsRed() || IsBlack();
+  }
 
  protected:
+  Type type_;
   SgExpression *dom;
   int numDim;
   int id;
@@ -115,12 +122,11 @@ class StencilMap {
   SgFunctionDeclaration *run_inner_;
   // function to run boundary stencil
   SgFunctionDeclaration *run_boundary_;
-  //GridRangeMap gr_;
-  GridRangeMap grid_stencil_range_map_;  
   SgInitializedNamePtrList grid_args_;
   SgInitializedNamePtrList grid_params_;  
   SgFunctionCallExp *fc_;
   std::set<SgInitializedName*> grid_periodic_set_;
+  
 
  private:
   // NOTE: originally dimenstion is added to names, but it is probably
@@ -141,7 +147,7 @@ class RunKernelAttribute: public AstAttribute {
                      SgInitializedName *stencil_param=NULL):
       stencil_map_(sm), stencil_param_(stencil_param) {}
   virtual ~RunKernelAttribute() {}
-  AstAttribute *copy() {
+  RunKernelAttribute *copy() {
     return new RunKernelAttribute(stencil_map_, stencil_param_);
   }
   static const std::string name;
@@ -154,24 +160,14 @@ class RunKernelLoopAttribute: public AstAttribute {
   enum Kind {
     MAIN, FIRST, LAST
   };
-  RunKernelLoopAttribute(int dim, SgInitializedName *var,
-                         SgExpression *begin,
-                         SgExpression *end,
-                         Kind kind=MAIN):
-      dim_(dim), var_(var), begin_(begin), end_(end), kind_(kind)  {}
-  
+  RunKernelLoopAttribute(int dim, Kind kind=MAIN):
+      dim_(dim), kind_(kind)  {}
   virtual ~RunKernelLoopAttribute() {}
-  AstAttribute *copy() {
-    return new RunKernelLoopAttribute(dim_, var_,
-                                      begin_, end_, kind_);
+  RunKernelLoopAttribute *copy() {
+    return new RunKernelLoopAttribute(dim_, kind_);
   }
   static const std::string name;
   int dim() const { return dim_; }
-  SgInitializedName *var() { return var_; }
-  SgExpression * const &begin() const { return begin_; }
-  SgExpression * const &end() const { return end_; }
-  SgExpression *&begin() { return begin_; }
-  SgExpression *&end() { return end_; }
   void SetMain() { kind_ = MAIN; }
   void SetFirst() { kind_ = FIRST; }
   void SetLast() { kind_ = LAST; }
@@ -180,10 +176,14 @@ class RunKernelLoopAttribute: public AstAttribute {
   bool IsLast() { return kind_ == LAST; }    
  protected:
   int dim_;
-  SgInitializedName *var_;
-  SgExpression *begin_;
-  SgExpression *end_;
   Kind kind_;
+};
+
+class KernelLoopAnalysis {
+ public:
+  static SgVarRefExp *GetLoopVar(SgForStatement *loop);
+  static SgExpression *GetLoopBegin(SgForStatement *loop);
+  static SgExpression *GetLoopEnd(SgForStatement *loop);  
 };
 
 class RunKernelIndexVarAttribute: public AstAttribute {
@@ -191,13 +191,24 @@ class RunKernelIndexVarAttribute: public AstAttribute {
   RunKernelIndexVarAttribute(int dim):
       dim_(dim) {}
   virtual ~RunKernelIndexVarAttribute() {}
-  AstAttribute *copy() {
+  RunKernelIndexVarAttribute *copy() {
     return new RunKernelIndexVarAttribute(dim_);
   }
   static const std::string name;
   int dim() const {return dim_; }
  protected:
   int dim_;
+};
+
+/** attribute for kernel caller */
+class RunKernelCallerAttribute: public AstAttribute {
+ public:
+  RunKernelCallerAttribute() {}
+  virtual ~RunKernelCallerAttribute() {}
+  RunKernelCallerAttribute *copy() {
+    return new RunKernelCallerAttribute();
+  }
+  static const std::string name;
 };
 
 } // namespace translator

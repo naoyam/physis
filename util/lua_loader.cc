@@ -119,12 +119,15 @@ LuaNumber *LuaLoader::LoadNumber(lua_State *L) const {
 
 // For debugging
 static void print_key(lua_State *L, int index)  {
-  if (lua_isstring(L, index)) {
-    string key(lua_tostring(L, index));
-    LOG_DEBUG_LUA() << "key (string): " << key << "\n";
-  } else if (lua_isnumber(L, index)) {
+  // Numeric check needs to be done earlier than string
+  // check. lua_isstring returns true for numeric values since they
+  // can be automatically convetted to strings in Lua.
+  if (lua_isnumber(L, index)) {  
     int i = lua_tointeger(L, index);
     LOG_DEBUG_LUA() << "key (index): " << i << "\n";
+  } else if (lua_isstring(L, index)) {
+    string key(lua_tostring(L, index));
+    LOG_DEBUG_LUA() << "key (string): " << key << "\n";
   } else {
     LOG_ERROR() << "Unsupported key type\n";
   }
@@ -135,7 +138,8 @@ static bool skip_entry(lua_State *L) {
   int key_index = -2;
   int val_index = -1;
   if (lua_istable(L, val_index)) {
-    if (lua_isstring(L, key_index)) {
+    if (lua_isstring(L, key_index) &&
+        !lua_isnumber(L, key_index)) {
       string key(lua_tostring(L, key_index));
       if (key == "package") return true;
       //if (key == "io") return true;
@@ -223,11 +227,6 @@ void LuaTable::Merge(const LuaTable &tbl) {
     lst_.insert(std::make_pair(it->first, nv));
   }
   return;
-}
-
-const LuaTable *LuaValue::getAsLuaTable() const {
-  if (type_ != LUA_TABLE) return NULL;
-  return static_cast<const LuaTable*>(this);
 }
 
 bool LuaTable::get(std::vector<double> &v) const {

@@ -34,9 +34,7 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
         LOG_DEBUG() << "gobj: "
                     << (*it)->toString() << "\n";
       } else {
-        LOG_WARNING() << "Ignoring possible undefined grid: "
-                      << gv->unparseToString() << "\n";
-        continue;
+        LOG_DEBUG() << "gobj: NULL\n";
       }
     }
     grid_set.insert(gs->begin(), gs->end());
@@ -93,6 +91,7 @@ const GridSet& Kernel::getOutGrids() const {
   return wGrids;
 }
 
+#ifdef UNUSED_CODE
 bool Kernel::isModified(Grid *g) const {
   if (wGrids.count(g)) return true;
   FOREACH(it, calls.begin(), calls.end()) {
@@ -108,11 +107,25 @@ bool Kernel::isModifiedAny(GridSet *gs) const {
   }
   return false;
 }
+#endif
+
+bool Kernel::IsGridUnmodified(Grid *g) const {
+  assert(g != NULL);
+  // If NULL is contained, g may be modified.
+  if (wGrids.find(NULL) != wGrids.end()) return false;
+  if (wGrids.find(g) != wGrids.end()) return false;
+  FOREACH(it, calls.begin(), calls.end()) {
+    Kernel *child = it->second;
+    if (!child->IsGridUnmodified(g)) return false;
+  }
+  return true;
+}
 
 bool Kernel::isGridParamModified(SgInitializedName *v) const {
   return wGridVars.find(v) != wGridVars.end();
 }
 
+#ifdef UNUSED_CODE
 bool Kernel::isRead(Grid *g) const {
   if (rGrids.find(g) != rGrids.end()) return true;
   FOREACH(it, calls.begin(), calls.end()) {
@@ -121,11 +134,23 @@ bool Kernel::isRead(Grid *g) const {
   }
   return false;
 }
+
 bool Kernel::isReadAny(GridSet *gs) const {
   FOREACH (it, gs->begin(), gs->end()) {
     if (isRead(*it)) return true;
   }
   return false;
+}
+#endif
+
+bool Kernel::IsGridUnread(Grid *g) const {
+  if (rGrids.find(NULL) != rGrids.end()) return false;
+  if (rGrids.find(g) != rGrids.end()) return false;
+  FOREACH(it, calls.begin(), calls.end()) {
+    Kernel *child = it->second;
+    if (!child->IsGridUnread(g)) return false;
+  }
+  return true;
 }
 
 bool Kernel::isGridParamRead(SgInitializedName *v) const {
@@ -137,6 +162,8 @@ void Kernel::appendChild(SgFunctionCallExp *call, Kernel *child) {
 }
 
 const std::string RunKernelAttribute::name = "RunKernel";
+
+const std::string KernelBody::name = "KernelBody";
 
 } // namespace translator
 } // namespace physis

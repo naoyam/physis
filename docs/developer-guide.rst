@@ -83,3 +83,20 @@ done on the feature branch, which is then merged back to the `develop`
 branch when finished. See
 http://nvie.com/posts/a-successful-git-branching-model/ for more
 information.
+
+Data Types
+----------
+
+Some common data types are defined in the physis_common.h file. 
+
+- PSIndex: Integral data type for grid indices (int32_t or int64_t)
+- PSVectorInt: Array of int with PS_MAX_DIM elements
+
+In addition, internal_common.h defines several types for Physis
+translators and runtimes only.
+
+- IntArray: boost::array of int
+- UnsignedArray: boost::array of unsigned
+- SizeArray: boost::array of size_t
+- SSizeArray: boost::array of ssize_t
+- IndexArray: boost::array of PSIndex

@@ -11,6 +11,8 @@
 
 #include <set>
 
+using std::pair;
+
 #include "translator/translator_common.h"
 #include "physis/physis_util.h"
 #include "translator/rose_util.h"
@@ -27,44 +29,62 @@ class GridType: public AstAttribute {
   SgClassType *struct_type_;
   SgTypedefType *user_type_;
   unsigned num_dim_;
-  string name_;
-  SgType *elm_type_;
+  string type_name_;
+  SgType *point_type_;
+  SgClassDefinition *point_def_;
+  //! Used, e.g., to hold its corresponding device type
+  SgType *aux_type_;
+  //! The decl of aux_type_
+  SgDeclarationStatement *aux_decl_;
+  SgFunctionDeclaration *aux_free_decl_;
+  SgFunctionDeclaration *aux_new_decl_;
+  SgFunctionDeclaration *aux_copyin_decl_;
+  SgFunctionDeclaration *aux_copyout_decl_;
+  SgFunctionDeclaration *aux_get_decl_;
+  SgFunctionDeclaration *aux_emit_decl_;
 
  public:
-  GridType(SgClassType *struct_type, SgTypedefType *user_type)
-      : struct_type_(struct_type), user_type_(user_type) {
-    name_ = user_type_->get_name().getString();
-    LOG_DEBUG() << "grid type name: " << name_ << "\n";
-    string realName = struct_type_->get_name().getString();
-    num_dim_ = getNumDimFromTypeName(realName);
-    LOG_DEBUG() << "grid dimension: " << num_dim_ << "\n";
-    findElementType();
-    LOG_DEBUG() << "grid element type: "
-                << elm_type_->class_name() << "\n";
-  }
-
+  
+  GridType(SgClassType *struct_type, SgTypedefType *user_type);
+  GridType(const GridType &gt);
+  GridType *copy();
+  
   unsigned getNumDim() const {
     return num_dim_;
   }
   unsigned num_dim() const { return num_dim_; }
-  const string& getName() const {
-    return name_;
-  }
-  SgType *getElmType() const {
-    return elm_type_;
-  }
-  SgType *elm_type() const { return elm_type_; }
+  const string& type_name() const { return type_name_; };  
+  SgType *point_type() const { return point_type_; }
+  SgClassDefinition *point_def() const { return point_def_; }  
+  SgType *aux_type() const { return aux_type_; }      
+  SgType *&aux_type() { return aux_type_; }
+  SgDeclarationStatement *aux_decl() const { return aux_decl_; }
+  SgDeclarationStatement *&aux_decl() { return aux_decl_; }    
+  SgFunctionDeclaration *aux_new_decl() const { return aux_new_decl_; }
+  SgFunctionDeclaration *&aux_new_decl() { return aux_new_decl_; }    
+  SgFunctionDeclaration *aux_free_decl() const { return aux_free_decl_; }
+  SgFunctionDeclaration *&aux_free_decl() { return aux_free_decl_; }    
+  SgFunctionDeclaration *aux_copyin_decl() const { return aux_copyin_decl_; }
+  SgFunctionDeclaration *&aux_copyin_decl() { return aux_copyin_decl_; }    
+  SgFunctionDeclaration *aux_copyout_decl() const { return aux_copyout_decl_; }
+  SgFunctionDeclaration *&aux_copyout_decl() { return aux_copyout_decl_; }    
+  SgFunctionDeclaration *aux_get_decl() const { return aux_get_decl_; }
+  SgFunctionDeclaration *&aux_get_decl() { return aux_get_decl_; }    
+  SgFunctionDeclaration *aux_emit_decl() const { return aux_emit_decl_; }
+  SgFunctionDeclaration *&aux_emit_decl() { return aux_emit_decl_; }    
+  bool IsPrimitivePointType() const;
+  bool IsUserDefinedPointType() const;
   
   string getRealFuncName(const string &funcName) const;
   
   string getRealFuncName(const string &funcName,
                          const string &kernelName) const;
   string toString() const {
-    return name_;
+    return type_name_;
   }
 
   string getNewName() const {
-    return name_ + "New";
+    return type_name_ + "New";
   }
 
   static string getTypeNameFromFuncName(const string &funcName);
@@ -72,9 +92,9 @@ class GridType: public AstAttribute {
   static bool isGridType(SgType *ty);
   static bool isGridType(const string &t);
   static bool isGridTypeSpecificCall(SgFunctionCallExp *ce);
+  static string GetGridFuncName(SgFunctionCallExp *ce);  
   static SgInitializedName*
   getGridVarUsedInFuncCall(SgFunctionCallExp *call);
-  static bool isGridCall(SgFunctionCallExp *ce);
   SgExpression *BuildElementTypeExpr();
   static const string name;
   static const string get_name;
@@ -82,13 +102,13 @@ class GridType: public AstAttribute {
   static const string emit_name;
   static const string set_name;  
  private:
-  void findElementType();
+  void FindPointType();
 };
 
 class Grid {
   GridType *gt;
   SgFunctionCallExp *newCall;
-  //StencilRange sr;
+  StencilRange stencil_range_;
   SizeVector static_size_;
   bool has_static_size_;
   void identifySize(SgExpressionPtrList::const_iterator size_begin,
@@ -99,7 +119,7 @@ class Grid {
  public:
   
   Grid(GridType *gt, SgFunctionCallExp *newCall):
-      gt(gt), newCall(newCall), 
+      gt(gt), newCall(newCall), stencil_range_(gt->getNumDim()),
       _isReadWrite(false), attribute_(NULL) {
     SgExpressionPtrList &args = newCall->get_args()->get_expressions();
     size_t num_dims = gt->getNumDim();
@@ -118,10 +138,11 @@ class Grid {
                   << toString() << "\n";
   }
 
-  GridType *getType() {
+  GridType *getType() const {
     return gt;
   }
   virtual ~Grid() {}
+  const SgFunctionCallExp *new_call() const { return newCall; }
   string toString() const;
   int getNumDim() const {
     return gt->getNumDim();
@@ -158,135 +179,197 @@ class Grid {
     }
     return sj.get();
   }
-
+#ifdef UNUSED_CODE
   bool isReadWrite() const {
     return _isReadWrite;
   }
   void setReadWrite(bool b = true) {
     _isReadWrite = b;
   }
-  SgExprListExp *BuildSizeExprList();
+#endif
   SgExpression *BuildAttributeExpr();
+
+  const StencilRange &stencil_range() const {
+    return stencil_range_;
+  }
+  StencilRange &stencil_range() {
+    return stencil_range_;
+  }
+  virtual void SetStencilRange(const StencilRange &sr);
+
+  static bool IsIntrinsicCall(SgFunctionCallExp *call);
 };
 
 typedef std::set<Grid*> GridSet;
 
+class GridVarAttribute: public AstAttribute {
+ public:
+  typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
+  static const std::string name;  
+  GridVarAttribute(GridType *gt);
+  GridVarAttribute(const GridVarAttribute &x);
+  virtual ~GridVarAttribute() {}
+  GridVarAttribute *copy() {
+    return new GridVarAttribute(*this);
+  }
+  void AddStencilIndexList(const StencilIndexList &sil);
+  void AddMemberStencilIndexList(const string &member,
+                                 const IntVector &indices,
+                                 const StencilIndexList &sil);
+  GridType *gt() { return gt_; }
+  StencilRange &sr() { return sr_; }
+  MemberStencilRangeMap &member_sr() { return member_sr_; }
+  //ArrayMemberStencilRangeMap &array_member_sr() { return array_member_sr_; }
+  
+ protected:
+  GridType *gt_;
+  StencilRange sr_;
+  MemberStencilRangeMap member_sr_;
+  //ArrayMemberStencilRangeMap array_member_sr_;
+};
+
+class GridOffsetAnalysis {
+ public:
+  //! Returns the grid variable from an offset expression
+  /*!
+    \param offset Offset expression
+    \return Variable reference for the grid object
+  */
+  static SgVarRefExp *GetGridVar(SgExpression *offset);
+  //! Returns the index expression for a specified dimension
+  /*!
+    \param offset Offset expression
+    \param dim Dimension (>=1)
+    \return Index expression
+   */
+  static SgExpression *GetIndexAt(SgExpression *offset, int dim);
+  //! Returns all index expressions
+  /*!
+    \param offset Offset expression
+    \return Expression vector of all indices
+  */
+  static SgExpressionPtrList GetIndices(SgExpression *offset);
+  //! Returns the offset component for array member accesses
+  /*!
+    \param offset Offset expression
+    \return Array offset component
+  */
+  static SgExpression *GetArrayOffset(SgExpression *offset);
+  //! Returns the offset indices for array member accesses
+  /*!
+    \param offset Offset expression
+    \return Array offset indices
+  */
+  static SgExpressionPtrList GetArrayOffsetIndices(SgExpression *offset);
+};
+
 class GridOffsetAttribute: public AstAttribute {
  public:
   GridOffsetAttribute(int num_dim, bool periodic,
-                      const vector<SgExpression *> &indices,
-                      const StencilIndexList *sil,
-                      SgExpression *gvexpr):
-      num_dim_(num_dim), periodic_(periodic), indices_(indices),
-      sil_(NULL), gvexpr_(gvexpr) {
-    if (sil) {
-      sil_ = new StencilIndexList();
-      *sil_ = *sil;
-    }
-  }
-  GridOffsetAttribute(int num_dim, bool periodic,
-                      const StencilIndexList *sil,
-                      SgExpression *gvexpr=NULL):
-      num_dim_(num_dim), periodic_(periodic), sil_(NULL),
-      gvexpr_(gvexpr) {
+                      const StencilIndexList *sil): 
+    num_dim_(num_dim), periodic_(periodic), sil_(NULL) {
     if (sil) {
       sil_ = new StencilIndexList();
       *sil_ = *sil;
     }
   }
   virtual ~GridOffsetAttribute() {}
-  AstAttribute *copy() {
+  GridOffsetAttribute *copy() {
     GridOffsetAttribute *a= new GridOffsetAttribute(
-        num_dim_, periodic_, indices_, sil_, gvexpr_);
+        num_dim_, periodic_, sil_);
     return a;
   }
-  void AppendIndex(SgExpression *index) {
-    indices_.push_back(index);
-  }
   static const std::string name;
-  SgExpression *GetIndexAt(int dim) { return indices_.at(dim-1); }
-  SgExpressionVector &indices() { return indices_; }
   bool periodic() const { return periodic_; }
-
   int num_dim() const { return num_dim_; }
   /*  
   void SetStencilIndexList(const StencilIndexList &sil) {
     sil_ = sil;
     }*/
   const StencilIndexList *GetStencilIndexList() { return sil_; }
-  SgExpression *gvexpr() const { return gvexpr_; }
-  SgExpression *&gvexpr() { return gvexpr_; }
   
  protected:
   int num_dim_;
   bool periodic_;  
-  SgExpressionVector indices_;
   StencilIndexList *sil_;
-  SgExpression *gvexpr_;  
 };
 
+class GridGetAnalysis {
+ public:
+  //! Returns the offset expression in a get expression
+  static SgExpression *GetOffset(SgExpression *get_exp);
+  //! Returns the grid variable in a get expression
+  static SgInitializedName *GetGridVar(SgExpression *get_exp);
+  static SgExpression *GetGridExp(SgExpression *get_exp);
+};
 
 class GridGetAttribute: public AstAttribute {
  public:
-  GridGetAttribute(SgInitializedName *gv,
-                   int num_dim,
+  GridGetAttribute(GridType *gt,
+                   SgInitializedName *gv,
+                   GridVarAttribute *gva,
                    bool in_kernel,
+                   bool is_periodic,
                    const StencilIndexList *sil,
-                   SgExpression *offset=NULL):
-      gv_(gv), num_dim_(num_dim), in_kernel_(in_kernel),
-      sil_(NULL), offset_(offset) {
-    if (sil) {
-      sil_ = new StencilIndexList();
-      *sil_ = *sil;
-    }
-  }
-  virtual ~GridGetAttribute() {
-    if (sil_) {
-      delete sil_;
-    }
-  }
-  AstAttribute *copy() {
-    GridGetAttribute *a= new GridGetAttribute(gv_, num_dim_,
-                                              in_kernel_, sil_,
-                                              offset_);
-    return a;
-  }
+                   const string &member_name="");
+  GridGetAttribute(const GridGetAttribute &x);
+  virtual ~GridGetAttribute();
+  GridGetAttribute *copy();
   static const std::string name;
   bool in_kernel() const { return in_kernel_; }
   void SetInKernel(bool t) { in_kernel_ = t; };
-  SgInitializedName *gv() const { return gv_; }
-  SgInitializedName *&gv() { return gv_; }
-  void SetStencilIndexList(const StencilIndexList *sil) {
-    if (sil) {
-      if (sil_ == NULL) {
-        sil_ = new StencilIndexList();
-      }
-      *sil_ = *sil;
-    } else {
-      if (sil_) {
-        delete sil_;
-        sil_ = NULL;
-      }
-    }
-  }
+  bool is_periodic() const { return is_periodic_; }
+  bool &is_periodic() { return is_periodic_; }
+  void SetStencilIndexList(const StencilIndexList *sil);
   const StencilIndexList *GetStencilIndexList() { return sil_; }
-  int num_dim() const { return num_dim_; }
-  void SetOffset(SgExpression *offset) { offset_ = offset; }
-  SgExpression *offset() const { return offset_; }
-  SgExpression *&offset() { return offset_; }
+  int num_dim() const { return gt_->num_dim(); }
+  const string &member_name() const { return member_name_; }
+  GridType *gt() { return gt_; }
+  SgInitializedName *gv() { return gv_; }
+  GridVarAttribute *gva() { return gva_; }  
+  string &member_name() { return member_name_; }
+  bool IsUserDefinedType() const;
   
  protected:
+  GridType *gt_;
   SgInitializedName *gv_;
-  int num_dim_;  
+  GridVarAttribute *gva_;
   bool in_kernel_;
+  bool is_periodic_;
   StencilIndexList *sil_;
-  SgExpression *offset_;
-
+  string member_name_;
 };
 
-class GridEmitAttr: public AstAttribute {
+class GridEmitAttribute: public AstAttribute {
  public:
   static const std::string name;
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv);
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv,
+                    const string &member_name);
+  GridEmitAttribute(GridType *gt,
+                    SgInitializedName *gv,
+                    const string &member_name,
+                    const vector<string> &array_offsets);
+  GridEmitAttribute(const GridEmitAttribute &x);
+  virtual ~GridEmitAttribute();
+  GridEmitAttribute *copy();
+  GridType *gt() { return gt_; }
+  SgInitializedName *gv() { return gv_; }  
+  bool is_member_access() const { return is_member_access_; }
+  const string &member_name() const { return member_name_; }
+  const vector<string> &array_offsets() const { return array_offsets_; }
+ protected:
+  GridType *gt_;
+  //! Grid variable originally referenced in the user code.
+  /*!
+    May not be valid after translation.
+   */
+  SgInitializedName *gv_;
+  bool is_member_access_;
+  string member_name_;
+  vector<string> array_offsets_;
 };
 
 } // namespace translator

@@ -18,6 +18,22 @@
 #include "physis/physis_common.h"
 #include "physis/physis_util.h"
 
+#define PS_XFREE(p) do {                        \
+    if (p) {                                    \
+      free(p);                                  \
+      p = NULL;                                 \
+    } } while (0)
+
+#define PS_XDELETE(p) do {                        \
+    delete (p);                                   \
+    p = NULL;                                     \
+  } while (0)
+
+#define PS_XDELETEA(p) do {                         \
+    delete[] (p);                                   \
+    p = NULL;                                       \
+  } while (0)
+
 namespace physis {
 
 template <typename ty>
@@ -29,16 +45,16 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
   IntegerArray() {
     this->assign(0);
   }
-  IntegerArray(ty x) {
+  explicit IntegerArray(ty x) {
     this->assign(0);
     (*this)[0] = x;
   }
-  IntegerArray(ty x, ty y) {
+  explicit IntegerArray(ty x, ty y) {
     this->assign(0);
     (*this)[0] = x;
     (*this)[1] = y;
   }
-  IntegerArray(ty x, ty y, ty z) {
+  explicit IntegerArray(ty x, ty y, ty z) {
     this->assign(0);    
     (*this)[0] = x;
     (*this)[1] = y;
@@ -69,6 +85,12 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
 #endif
   template <typename ty2>
   IntegerArray(const ty2 *v) {
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      (*this)[i] = (ty)v[i];
+    }
+  }
+  template <typename ty2>
+  IntegerArray(const IntegerArray<ty2> &v) {
     for (int i = 0; i < PS_MAX_DIM; ++i) {
       (*this)[i] = (ty)v[i];
     }
@@ -116,6 +138,20 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
     IntegerArray ret;
     for (int i = 0; i < PS_MAX_DIM; ++i) {
       ret[i] = (*this)[i] - x;
+    }
+    return ret;
+  }
+  IntegerArray<ty> operator*(const ty &x) const {
+    IntegerArray ret;
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      ret[i] = (*this)[i] * x;
+    }
+    return ret;
+  }
+  IntegerArray<ty> operator/(const ty &x) const {
+    IntegerArray ret;
+    for (int i = 0; i < PS_MAX_DIM; ++i) {
+      ret[i] = (*this)[i] / x;
     }
     return ret;
   }

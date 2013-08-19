@@ -6,6 +6,8 @@
 //
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
+#include <boost/foreach.hpp>
+
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
@@ -18,76 +20,22 @@
 namespace si = SageInterface;
 namespace sb = SageBuilder;
 
-namespace physis {
-namespace translator {
-namespace optimizer {
-namespace pass {
+using namespace std;
+using namespace physis;
+using namespace physis::translator;
 
-#if 0
-static bool is_constant(SgVarRefExp *e) {
-  SgDeclarationStatement *decl =
-      e->get_symbol()->get_declaration()->get_declaration();
-  LOG_DEBUG() << "decl: " << decl->unparseToString() << "\n";
-  return false;
-}
+namespace {
 
-static bool is_constant(SgExpression *e) {
-  bool t = false;
-  if (isSgVarRefExp(e)) {
-    t = is_constant(isSgVarRefExp(e));
-  } else if (isSgArrowExp(e)) {
-    SgArrowExp *ae = isSgArrowExp(e);
-    if (si::isConstType(ae->get_lhs_operand()->get_type())) {
-      SgType *elmty = si::getElementType(
-          isSgModifierType(ae->get_lhs_operand()->get_type())
-          ->get_base_type());
-      LOG_DEBUG() << "elmty: " << elmty->unparseToString() << "\n";
-      t = si::isConstType(elmty);
+SgFunctionCallExp *ExtractOffsetCall(SgExpression *offset) {
+  if (isSgAddOp(offset)) {
+    SgAddOp *aop = isSgAddOp(offset);
+    if (isSgFunctionCallExp(aop->get_lhs_operand())) {
+      return isSgFunctionCallExp(aop->get_lhs_operand());
     }
   }
-  LOG_DEBUG() << e->unparseToString() << " constant?: "
-              << t << "\n";
-  return t;
+  //PSAssert(isSgFunctionCallExp(offset));
+  return isSgFunctionCallExp(offset);
 }
-
-static bool is_loop_var_ref(SgExpression *e) {
-  SgVarRefExp *vref = isSgVarRefExp(e);
-  if (!vref) return false;
-  for (SgForStatement *loop = si::getEnclosingNode<SgForStatement>(vref);
-       loop != NULL; loop = si::getEnclosingNode<SgForStatement>(loop, false)) {
-    RunKernelLoopAttribute *loop_attr =
-        rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-    PSAssert(loop_attr);
-    SgInitializedName *loop_var = loop_attr->var();
-    if (loop_var == vref->get_symbol()->get_declaration()) {
-      LOG_DEBUG() << e->unparseToString() << " is a loop variable\n";
-      return true;
-    }
-  }
-  return false;
-}
-
-static void remove_redundant_variable_copy(SgForStatement *loop) {
-  Rose_STL_Container<SgNode*> vdecls =
-      NodeQuery::querySubTree(loop, V_SgVariableDeclaration);
-  FOREACH (it, vdecls.begin(), vdecls.end()) {
-    SgVariableDeclaration *decl = isSgVariableDeclaration(*it);
-    SgVariableDefinition *var_def = decl->get_definition();
-    if (!var_def) continue;
-    SgAssignInitializer *init = isSgAssignInitializer(
-        var_def->get_vardefn()->get_initializer());
-    if (!init) continue;
-    SgExpression *rhs = init->get_operand();
-    SgType *type = rhs->get_type();
-    LOG_DEBUG() << "RHS: " << rhs->unparseToString()
-                << "\n";
-    if (is_constant(rhs) || is_loop_var_ref(rhs)) {
-      // replace decl with rhs
-    }
-  }
-}
-
-#endif
 
 /*! Replace a variable reference in an offset expression.
 
@@ -125,25 +73,12 @@ static void replace_arg_defined_in_loop(SgExpression *offset_expr,
   LOG_DEBUG() << "Replacing undef var in "
               << offset_expr->unparseToString() << "\n";
   PSAssert(offset_expr != NULL && loop_body != NULL);
-  SgFunctionCallExp *offset_call = isSgFunctionCallExp(offset_expr);
+  SgFunctionCallExp *offset_call = ExtractOffsetCall(offset_expr);
   PSAssert(offset_call);
   SgExpressionPtrList &args = offset_call->get_args()->get_expressions();
   if (isSgVarRefExp(args[0])) {
     replace_var_ref(isSgVarRefExp(args[0]), loop_body);
   }
-  // This is done right after kernel inlining. The grid is not
-  // processed because some optimization passes assume it is expressed
-  // by a variable not expression like s->g.
-#if 0  
-  FOREACH (argit, args.begin()+1, args.end()) {
-    SgExpression *arg = *argit;
-    Rose_STL_Container<SgNode*> vref_list =
-        NodeQuery::querySubTree(arg, V_SgVarRefExp);
-    if (vref_list.size() == 0) continue;
-    PSAssert(vref_list.size() == 1);
-    replace_var_ref(isSgVarRefExp(vref_list[0]), loop_body);
-  }
-#endif  
   LOG_DEBUG() << "Replaced: " << offset_expr->unparseToString() << "\n";
   return;
 }
@@ -159,18 +94,31 @@ static void replace_arg_defined_in_loop(SgExpression *offset_expr,
   \param loop Target innermost loop
  */
 static void replace_initial_index(SgExpression *offset_expr,
-                                  SgForStatement *loop) {
+                                  SgForStatement *loop,
+                                  GridOffsetAttribute *offset_attr) {
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
   int dim = loop_attr->dim();
+  const StencilIndexList *sil = offset_attr->GetStencilIndexList();  
+  int target_index_order = StencilIndexListFindDim(sil, dim);
+  LOG_DEBUG() << "target index order: " << target_index_order
+              << "\n";
+  if (target_index_order < 0) {
+    LOG_DEBUG() << "No need for replacement since target index not used.\n";
+    return;
+  }
   SgExpression *target_index =
-      isSgFunctionCallExp(offset_expr)->get_args()->get_expressions()[dim];
+      ExtractOffsetCall(offset_expr)->get_args()->get_expressions()[
+          target_index_order+1]; // +1 to ignore the first arg 
   vector<SgVarRefExp*> vref =
       si::querySubTree<SgVarRefExp>(target_index, V_SgVarRefExp);
   PSAssert(vref.size() == 1);
-  si::replaceExpression(vref[0], si::copyExpression(loop_attr->begin()));
+  SgExpression *begin_exp = KernelLoopAnalysis::GetLoopBegin(loop);
+  if (begin_exp)
+    si::replaceExpression(vref[0], si::copyExpression(begin_exp));
   return;
 }
+
 
 /*! Insert an increment statement at the end of the loop body.
   
@@ -180,37 +128,54 @@ static void replace_initial_index(SgExpression *offset_expr,
  */
 static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
                                          SgForStatement *loop,
-                                         RuntimeBuilder *builder) {
+                                         RuntimeBuilder *builder,
+                                         GridOffsetAttribute *offset_attr) {
   SgExpression *rhs = rose_util::GetVariableDefinitionRHS(vdecl);
   SgExpression *grid_ref =
-      isSgFunctionCallExp(rhs)->get_args()->get_expressions()[0];
+      ExtractOffsetCall(rhs)->get_args()->get_expressions()[0];
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
-  LOG_DEBUG() << "dim: " << loop_attr->dim() << "\n";
-  SgExpression *increment = NULL;
-  for (int i = 1; i < loop_attr->dim(); ++i) {
-    SgExpression *d = builder->BuildGridDim(si::copyExpression(grid_ref), i);
-    increment = increment ? sb::buildMultiplyOp(increment, d) : d;
-  }
-  GridOffsetAttribute *offset_attr =
-      rose_util::GetASTAttribute<GridOffsetAttribute>(rhs);
+  int dim = loop_attr->dim();
+  LOG_DEBUG() << "dim: " << dim << "\n";
+  SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(loop);
+  RunKernelAttribute *rk_attr =
+      rose_util::GetASTAttribute<RunKernelAttribute>(func);
+  PSAssert(rk_attr);
+  bool rb = rk_attr->stencil_map()->IsRedBlackVariant();
   const StencilIndexList *sil = offset_attr->GetStencilIndexList();
   PSAssert(sil);
+
+  if (StencilIndexListFindDim(sil, dim) < 0) {
+    LOG_DEBUG() << "No offset increment since the grid is not associated with the dimension.\n";
+    LOG_DEBUG() << "rhs: " << rhs->unparseToString() << "\n";    
+    LOG_DEBUG() << "sil->size(): " << sil->size() << "\n";
+    return;
+  }
+
+  SgExpression *increment = NULL;
+
+  ENUMERATE (i, it, sil->begin(), sil->end()) {
+    const StencilIndex &si = *it;
+    if (dim == si.dim) break;
+    SgExpression *d = builder->BuildGridDim(si::copyExpression(grid_ref), i+1);
+    increment = increment ? sb::buildMultiplyOp(increment, d) : d;
+  }
+  
   // if the access is periodic, the offset is:
   // (i + 1 + n) % n - ((i + n)% n)
   if (offset_attr->periodic()) {
     LOG_DEBUG() << "Periodic access\n";
-    SgVariableDeclaration *loop_var_decl =
-        isSgVariableDeclaration(loop_attr->var()->get_declaration());
+    SgVarRefExp *loop_var = KernelLoopAnalysis::GetLoopVar(loop);
     int offset = (*sil)[loop_attr->dim()-1].offset;
     SgExpression *offset_expr = offset != 0 ?
-        (SgExpression*)sb::buildAddOp(sb::buildVarRefExp(loop_var_decl),
+        (SgExpression*)sb::buildAddOp(si::copyExpression(loop_var),
                                       sb::buildIntVal(offset)):
-        (SgExpression*)sb::buildVarRefExp(loop_var_decl);
+        (SgExpression*)si::copyExpression(loop_var);
     SgExpression *e =
         sb::buildModOp(
             sb::buildAddOp(
-                sb::buildAddOp(offset_expr, sb::buildIntVal(1)),
+                sb::buildAddOp(offset_expr,
+                               sb::buildIntVal(rb? 2 : 1)),
                 builder->BuildGridDim(
                     si::copyExpression(grid_ref), loop_attr->dim())),
             builder->BuildGridDim(
@@ -226,7 +191,10 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
                 si::copyExpression(grid_ref), loop_attr->dim())));
     increment = increment? sb::buildMultiplyOp(increment, e) : e;
   }
-  if (!increment) increment = sb::buildIntVal(1);  
+  // loop over the unit-stride dimension
+  if (!increment) {
+    increment = sb::buildIntVal(rb ? 2: 1);
+  }
   PSAssert(offset_attr);
   SgStatement *stmt =
       sb::buildExprStatement(
@@ -234,6 +202,27 @@ static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
   si::appendStatement(stmt, isSgScopeStatement(loop->get_loop_body()));
   LOG_DEBUG() << "Inserting " << stmt->unparseToString() << "\n";
   return;
+}
+
+static SgExpression *ExtractInvariantPart(SgExpression *offset_expr,
+                                          SgForStatement *loop) {
+  if (!isSgAddOp(offset_expr)) {
+    return offset_expr;
+  }
+  // Test if member offset is invariant
+  SgExpression *offset_lhs = isSgAddOp(offset_expr)->get_lhs_operand();  
+  SgExpression *member_offset = isSgAddOp(offset_expr)->get_rhs_operand();
+  vector<SgVarRefExp*> var_refs = si::querySubTree<SgVarRefExp>(member_offset);
+  BOOST_FOREACH (SgVarRefExp *v, var_refs) {
+    SgDeclarationStatement *decl =
+        si::convertRefToInitializedName(v)->get_declaration();
+    if (si::isAncestor(loop, decl)) {
+      LOG_DEBUG() << "Variable " << decl->unparseToString()
+                  << " is declared inside the loop, disallowing offset spatial CSE.\n";
+      return offset_lhs;
+    }
+  }
+  return offset_expr;
 }
 
 /*! Perform the optimization on an offset computation expression.
@@ -254,6 +243,11 @@ static void do_offset_spatial_cse(SgExpression *offset_expr,
               << ", "
               << containing_stmt->class_name() 
               << "\n";
+
+  GridOffsetAttribute *offset_attr =
+      rose_util::GetASTAttribute<GridOffsetAttribute>(offset_expr);
+  offset_expr = ExtractInvariantPart(offset_expr, loop);
+  LOG_DEBUG() << "CSE target: " << offset_expr->unparseToString() << "\n";
 
   SgVariableDeclaration *vdecl = NULL;
   if (isSgVariableDeclaration(containing_stmt)) {
@@ -292,10 +286,18 @@ static void do_offset_spatial_cse(SgExpression *offset_expr,
   replace_arg_defined_in_loop(rose_util::GetVariableDefinitionRHS(vdecl),
                               isSgBasicBlock(loop->get_loop_body()));
   replace_initial_index(rose_util::GetVariableDefinitionRHS(vdecl),
-                        loop);
-  insert_offset_increment_stmt(vdecl, loop, builder);
+                        loop, offset_attr);
+  insert_offset_increment_stmt(vdecl, loop, builder,
+                               offset_attr);
   return;
 }
+
+} // namespace
+
+namespace physis {
+namespace translator {
+namespace optimizer {
+namespace pass {
 
 /*! Optimizing offset computation by CSE over the innermost loop.
 
@@ -322,8 +324,8 @@ static void do_offset_spatial_cse(SgExpression *offset_expr,
 */
 void offset_spatial_cse(
     SgProject *proj,
-    physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    ::physis::translator::TranslationContext *tx,
+    ::physis::translator::RuntimeBuilder *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
@@ -333,11 +335,29 @@ void offset_spatial_cse(
     RunKernelLoopAttribute *attr =
         rose_util::GetASTAttribute<RunKernelLoopAttribute>(target_loop);
     if (!attr->IsMain()) continue;
+    SgFunctionDeclaration *func = si::getEnclosingFunctionDeclaration(target_loop);
+    RunKernelAttribute *rk_attr =
+        rose_util::GetASTAttribute<RunKernelAttribute>(func);
+    // NOTE: Not implemented for red-black stencils with
+    // non-unit-stride looping caases. Would be very complicated, but
+    // not clear how much it would be actually effective
+    if (rk_attr->stencil_map()->IsRedBlackVariant() &&
+        attr->dim() != 1) {
+      LOG_WARNING() <<
+          "Spatial offset CSE not applied because it is not implemented for this type of stencil.\n";
+      continue;
+    }
+        
     std::vector<SgNode*> offset_exprs =
         rose_util::QuerySubTreeAttribute<GridOffsetAttribute>(
             target_loop);
     FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
       SgExpression *offset_expr = isSgExpression(*it);
+      if (ExtractOffsetCall(offset_expr) == NULL) {
+        LOG_DEBUG() << "Ignoring offset with no call in "
+                    << offset_expr->unparseToString() << "\n";
+        continue;
+      }
       PSAssert(offset_expr);
       do_offset_spatial_cse(offset_expr, target_loop, builder);
     }

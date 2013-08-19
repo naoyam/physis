@@ -17,15 +17,11 @@
 * CUDA (Optional)
     * Required for CUDA-based runtimes. If not found, no CUDA-based
       runtimes will be built.
-    * Both toolkit and SDK (tested with 4.0)
-    * Specify the location of SDK by environment variable NVSDKCOMPUTE_ROOT  
-    * MacOSX's SDK may not contain 64-bit version of cutil. It can be
-      build by entering C/lib/common directory and type make x86_64=1
+    * Only toolkit is required. Tested with up to 4.2.
     
 ## Steps
 1. Change directory to an empty build directory
-2. Set shell environment variable NVSDKCOMPUTE_ROOT as the path to the root SDK directory path.
-3. Run cmkake as follows:
+2. Run cmkake as follows:
   'cmake -i PHYSIS_SOURCE_PATH -DCMAKE_INSTALL_PREFIX=PHYSIS_INSTALL_PATH -DCMAKE_PREFIX_PATH=ROSE_INSTALL_PATH -DBOOST_ROOT=BOOST_INSTALL_PATH' 
   where PHYSIS_SOURCE_PATH is the path to the Physis root directory, PHYSIS_INSTALL_PATH is the path where Physis should be installed, ROSE_INSTALL_PATH is the path where ROSE is installed. 
  On Tsubame, the following CMake variable might need to be defined.

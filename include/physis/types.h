@@ -18,7 +18,8 @@ extern "C" {
     PS_INT = 0,
     PS_LONG = 1,
     PS_FLOAT = 2,
-    PS_DOUBLE = 3
+    PS_DOUBLE = 3,
+    PS_USER = 4
   };
 
 #ifdef __cplusplus

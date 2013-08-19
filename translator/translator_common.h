@@ -19,6 +19,8 @@
 #include "rose.h"
 
 #include "common/config.h"
+// Always enable debug output in translators
+#define PS_DEBUG
 #include "translator/config.h"
 #include "physis/physis_common.h"
 #include "physis/internal_common.h"

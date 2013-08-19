@@ -41,12 +41,12 @@ class LuaValue {
   virtual bool get(bool &v) const = 0;
   virtual bool get(std::string &v) const = 0;
   virtual bool get(double &v) const = 0;
-  template <class T>
-  LuaTable *getAsLuaTable() {
-    if (type_ != LUA_TABLE) return NULL;
-    return static_cast<LuaTable*>(this);
+  virtual LuaTable *getAsLuaTable() {
+    return NULL;
   }
-  const LuaTable *getAsLuaTable() const;
+  virtual const LuaTable *getAsLuaTable() const {
+    return NULL;
+  }
 };
 
 class LuaBoolean: public LuaValue {
@@ -133,6 +133,12 @@ class LuaTable: public LuaValue {
   virtual bool get(std::vector<double> &v) const;
   void Insert(const std::string &key, const LuaValue *v) {
     tbl_.insert(make_pair(key, v->clone()));
+  }
+  virtual LuaTable *getAsLuaTable() {
+    return this;
+  }
+  virtual const LuaTable *getAsLuaTable() const {
+    return this;
   }
 };
 

@@ -1,10 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
+// Copyright 2011-2012, RIKEN AICS.
 // All rights reserved.
 //
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// This file is distributed under the BSD license. See LICENSE.txt for
+// details.
 
 #ifndef PHYSIS_RUNTIME_BUFFER_CUDA_H_
 #define PHYSIS_RUNTIME_BUFFER_CUDA_H_
@@ -20,36 +18,8 @@ class BufferCUDADev;
 // Pinned buffer on *host* memory
 class BufferCUDAHost: public Buffer {
  public:
-  BufferCUDAHost(size_t elm_size);
-  BufferCUDAHost(int num_dims, size_t elm_size);  
+  BufferCUDAHost();
   virtual ~BufferCUDAHost();
-  
-  virtual void Copyin(const void *buf, const IndexArray &offset,
-                      const IndexArray &size);
-  virtual void Copyin(const void *buf, const IndexArray &size) {
-    Copyin(buf, IndexArray(), size);
-  }
-  // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
-                      const IndexArray &size);                       
- 
-  virtual void Copyout(void *buf, const IndexArray &offset,
-                       const IndexArray &size);
-  virtual void Copyout(void *buf,  const IndexArray &size) {
-    Copyout(buf, IndexArray(), size);
-  }
-  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
-                       const IndexArray &size);                       
-  virtual void Copyout(BufferHost &buf,  const IndexArray &size) {
-    Copyout(buf, IndexArray(), size);
-  }
-  
-  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
-                       const IndexArray &size);
-
-  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
-                       const IndexArray &size);
-
   template <class T>
   std::ostream& print(std::ostream &os) const {
     StringJoin sj;
@@ -68,13 +38,12 @@ class BufferCUDAHost: public Buffer {
   }
 
  protected:
-  virtual void *GetChunk(const IndexArray &size);
-
-  BufferHost *mpi_buf_;
- public:
-  static void DeleteChunk(void *ptr);  
+  virtual void *GetChunk(size_t size);
+ private:
+  static void FreeChunk(void *ptr);  
 };
 
+#if 0
 class BufferCUDAHostMapped: public Buffer {
  public:
   BufferCUDAHostMapped(size_t elm_size);
@@ -118,40 +87,19 @@ class BufferCUDAHostMapped: public Buffer {
   static void DeleteChunk(void *ptr);
   void *GetDevPointer() { return dev_ptr_;}
 };
+#endif
 
 class BufferCUDADev: public Buffer {
  public:
-  BufferCUDADev(size_t elm_size);
-  BufferCUDADev(int num_dims, size_t elm_size);  
+  BufferCUDADev();
   virtual ~BufferCUDADev();
-  
-  virtual void Copyin(const void *buf, const IndexArray &offset,
-                      const IndexArray &size);
-  // Assumes 1-D buffer as buf  
-  virtual void Copyin(const BufferHost &buf, const IndexArray &offset,
-                      const IndexArray &size);                      
-  virtual void Copyin(const BufferCUDAHost &buf, const IndexArray &offset,
-                      const IndexArray &size);                      
-  virtual void Copyout(void *buf, const IndexArray &offset,
-                       const IndexArray &size);
-  virtual void Copyout(BufferHost &buf, const IndexArray &offset,
-                       const IndexArray &size);                       
-  virtual void Copyout(BufferCUDAHost &buf, const IndexArray &offset,
-                       const IndexArray &size);                       
-  virtual void MPIRecv(int src, MPI_Comm comm, const IndexArray &offset,
-                       const IndexArray &size);
-  virtual void MPISend(int dst, MPI_Comm comm, const IndexArray &offset,
-                       const IndexArray &size);
-  cudaStream_t &strm() { return strm_; }
-
  protected:
   virtual void *GetChunk(const IndexArray &size);
-  BufferCUDAHost *pinned_buf_;
-  cudaStream_t strm_;  
- public:
-  static void DeleteChunk(void *ptr);
+ private:
+  static void FreeChunk(void *ptr);
 };
 
+#if 0
 class BufferCUDADev3D: public Buffer {
  public:
   BufferCUDADev3D(int num_dims, size_t elm_size);  
@@ -197,7 +145,7 @@ class BufferCUDADev3D: public Buffer {
  public:
   static void DeleteChunk(void *ptr);
 };
-
+#endif
 
 
 } // namespace runtime

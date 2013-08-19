@@ -11,6 +11,7 @@
 
 #include "runtime/runtime_common.h"
 #include "runtime/grid_mpi.h"
+#include "runtime/ipc.h"
 
 namespace physis {
 namespace runtime {
@@ -25,15 +26,24 @@ enum RT_FUNC_KIND {
   FUNC_GRID_REDUCE
 };
 
-class ProcInfo {
- public:
-  int rank_;
-  int num_procs_;
-  ProcInfo(int rank, int num_procs):
-      rank_(rank), num_procs_(num_procs) {}
-  std::ostream &print(std::ostream &os) const;
-  int rank() const { return rank_; }
-  bool IsRoot() const { return rank_ == 0; }
+
+struct Request {
+  RT_FUNC_KIND kind;
+  int opt;
+  Request(RT_FUNC_KIND k=FUNC_INVALID, int opt=0)
+      : kind(k), opt(opt) {}
+};
+
+struct RequestNEW {
+  PSType type;
+  int elm_size;
+  int num_dims;
+  IndexArray size;
+  bool double_buffering;
+  IndexArray global_offset;
+  IndexArray stencil_offset_min;
+  IndexArray stencil_offset_max;
+  int attr;
 };
 
 class Client {

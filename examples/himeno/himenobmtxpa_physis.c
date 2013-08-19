@@ -66,6 +66,7 @@ float jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1,
 double fflop(int,int,int);
 double mflops(int,double,double);
 double second();
+double GetThroughput(int nn, int mx, int my, int mz, double time);
 
 float   omega=0.8;
 //Matrix  a,b,c,p,bnd,wrk1,wrk2;
@@ -142,9 +143,9 @@ main(int argc, char *argv[])
   mat_set(a1, 1.0, host_buf);
   mat_set(a2, 1.0, host_buf);
   mat_set(a3, 1.0/6.0, host_buf);
-  //mat_set(b0, 0.0, host_buf);
-  //mat_set(b1, 0.0, host_buf);
-  //mat_set(b2, 0.0, host_buf);
+  mat_set(b0, 0.0, host_buf);
+  mat_set(b1, 0.0, host_buf);
+  mat_set(b2, 0.0, host_buf);
   mat_set(c0, 1.0, host_buf);
   mat_set(c1, 1.0, host_buf);
   mat_set(c2, 1.0, host_buf);
@@ -208,6 +209,9 @@ main(int argc, char *argv[])
   printf(" Loop executed for %d times\n",nn);
   printf(" Gosa : %e \n",gosa);
   printf(" MFLOPS measured : %f\tcpu : %f\n",mflops(nn,cpu,flop),cpu);
+  printf(" Throughput   : %.3f (GB/s)\n",
+         GetThroughput(nn, mimax, mjmax, mkmax, cpu));
+  
   printf(" Score based on Pentium III 600MHz using Fortran 77: %f\n",
          mflops(nn,cpu,flop)/82);
 
@@ -232,7 +236,11 @@ main(int argc, char *argv[])
 double
 fflop(int mx,int my, int mz)
 {
+#ifdef COMPUTE_GOSA_EVERY_ITERATION
   return((double)(mz-2)*(double)(my-2)*(double)(mx-2)*34.0);
+#else
+  return((double)(mz-2)*(double)(my-2)*(double)(mx-2)*32.0);
+#endif
 }
 
 double
@@ -307,12 +315,12 @@ mat_set_init(PSGrid3DFloat Mat, float *buf)
 {
   int  i,j,k;
 
-  size_t d0 = PSGridDim(Mat, 0);
+  int d0 = PSGridDim(Mat, 2);
   size_t x = 0;
-  for(i=0; i< PSGridDim(Mat, 0); i++)
-    for(j=0; j< PSGridDim(Mat, 1); j++)
-      for(k=0; k< PSGridDim(Mat, 2); k++) {
-        float v = ((float)(i*i)) / (d0 - 1) * (d0 - 1);
+  for(k=0; k< PSGridDim(Mat, 2); k++) 
+    for(j=0; j< PSGridDim(Mat, 1); j++)        
+      for(i=0; i< PSGridDim(Mat, 0); i++) {
+        float v = (float)(k*k) / ((d0 - 1) * (d0 - 1));
         buf[x] = v;
         ++x;
       }
@@ -329,22 +337,21 @@ void jacobi_kernel(int i, int j, int k,
                    float omega)
 {
   float s0, ss;
-    
-  s0= PSGridGet(a0, i, j, k) * PSGridGet(p0, i+1, j, k)
+  s0= PSGridGet(a0, i, j, k) * PSGridGet(p0, i, j, k+1)
       + PSGridGet(a1, i, j, k) * PSGridGet(p0, i, j+1, k)
-      + PSGridGet(a2, i, j, k) * PSGridGet(p0, i, j, k+1)
+      + PSGridGet(a2, i, j, k) * PSGridGet(p0, i+1, j, k)
       + PSGridGet(b0, i, j, k)
-      *( PSGridGet(p0, i+1, j+1, k) - PSGridGet(p0, i+1, j-1, k)
-         - PSGridGet(p0, i-1, j+1, k) + PSGridGet(p0, i-1, j-1, k) )
-      + PSGridGet(b1, i, j, k)
       *( PSGridGet(p0, i, j+1, k+1) - PSGridGet(p0, i, j-1, k+1)
          - PSGridGet(p0, i, j+1, k-1) + PSGridGet(p0, i, j-1, k-1) )
+      + PSGridGet(b1, i, j, k)
+      *( PSGridGet(p0, i+1, j+1, k) - PSGridGet(p0, i+1, j-1, k)
+         - PSGridGet(p0, i-1, j+1, k) + PSGridGet(p0, i-1, j-1, k) )
       + PSGridGet(b2, i, j, k)
-      *( PSGridGet(p0, i+1, j, k+1) - PSGridGet(p0, i-1, j, k+1)
-         - PSGridGet(p0, i+1, j, k-1) + PSGridGet(p0, i-1, j, k-1) )
-      + PSGridGet(c0, i, j, k) * PSGridGet(p0, i-1, j, k)
+      *( PSGridGet(p0, i+1, j, k+1) - PSGridGet(p0, i+1, j, k-1)
+         - PSGridGet(p0, i-1, j, k+1) + PSGridGet(p0, i-1, j, k-1) )
+      + PSGridGet(c0, i, j, k) * PSGridGet(p0, i, j, k-1)
       + PSGridGet(c1, i, j, k) * PSGridGet(p0, i, j-1, k)
-      + PSGridGet(c2, i, j, k) * PSGridGet(p0, i, j, k-1)
+      + PSGridGet(c2, i, j, k) * PSGridGet(p0, i-1, j, k)
       + PSGridGet(wrk1, i, j, k);
   ss = (s0 * PSGridGet(a3, i, j, k) - PSGridGet(p0, i, j, k))
        * PSGridGet(bnd, i, j, k);
@@ -352,39 +359,7 @@ void jacobi_kernel(int i, int j, int k,
   PSGridEmit(p1, v);
   return;
 }
-#if 0
-void gosa_kernel(int i, int j, int k, PSGrid3DFloat p,
-                 PSGrid3DFloat a0, PSGrid3DFloat a1,
-                 PSGrid3DFloat a2, PSGrid3DFloat a3,
-                 PSGrid3DFloat b0, PSGrid3DFloat b1,
-                 PSGrid3DFloat b2, PSGrid3DFloat c0,
-                 PSGrid3DFloat c1, PSGrid3DFloat c2,
-                 PSGrid3DFloat c3, PSGrid3DFloat bnd,
-                 PSGrid3DFloat wrk1, float omega)
-{
-  float s0, ss;
-  s0= PSGridGet(a0, i, j, k) * PSGridGet(p, i+1, j, k)
-      + PSGridGet(a1, i, j, k) * PSGridGet(p, i, j+1, k)
-      + PSGridGet(a2, i, j, k) * PSGridGet(p, i, j, k+1)
-      + PSGridGet(b0, i, j, k)
-      *( PSGridGet(p, i+1, j+1, k) - PSGridGet(p, i+1, j-1, k)
-         - PSGridGet(p, i-1, j+1, k) + PSGridGet(p, i-1, j-1, k) )
-      + PSGridGet(b1, i, j, k)
-      *( PSGridGet(p, i, j+1, k+1) - PSGridGet(p, i, j-1, k+1)
-         - PSGridGet(p, i, j+1, k-1) + PSGridGet(p, i, j-1, k-1) )
-      + PSGridGet(b2, i, j, k)
-      *( PSGridGet(p, i+1, j, k+1) - PSGridGet(p, i-1, j, k+1)
-         - PSGridGet(p, i+1, j, k-1) + PSGridGet(p, i-1, j, k-1) )
-      + PSGridGet(c0, i, j, k) * PSGridGet(p, i-1, j, k)
-      + PSGridGet(c1, i, j, k) * PSGridGet(p, i, j-1, k)
-      + PSGridGet(c2, i, j, k) * PSGridGet(p, i, j, k-1)
-      + PSGridGet(wrk1, i, j, k);
-  ss = (s0 * PSGridGet(a3, i, j, k) - PSGridGet(p, i, j, k))
-       * PSGridGet(bnd, i, j, k);
-  PSGridEmit(p, ss*ss);
-  return;
-}
-#endif
+
 float
 jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1, PSGrid3DFloat a2,
        PSGrid3DFloat a3, PSGrid3DFloat b0, PSGrid3DFloat b1,
@@ -400,7 +375,7 @@ jacobi(int nn, PSGrid3DFloat a0, PSGrid3DFloat a1, PSGrid3DFloat a2,
   
   assert(nn % 2 == 0);
   
-  printf("executing jacobi\n");
+  printf("Executing jacobi\n");
   PSStencilRun(PSStencilMap(jacobi_kernel, innerDom,
                             p0, p1, a0, a1, a2, a3, b0, b1, b2,
                             c0, c1, c2, bnd, wrk1, omega),
@@ -440,3 +415,18 @@ second()
   return t ;
 }
 
+double GetThroughput(int nn, int mx, int my, int mz, double time)
+{
+  // load from a0-3, b0-2, c0-2, wrk1, bnd
+  double load_interior_only =
+      (double)(mz-2)*(double)(my-2)*(double)(mx-2)*12;
+  // load from p0
+  double load_whole =
+      (double)(mz)*(double)(my)*(double)(mx)*1;
+  // store to p1
+  double store =
+      (double)(mz-2)*(double)(my-2)*(double)(mx-2)*1;
+  double total_size_per_update =
+      sizeof(float) * (load_interior_only + load_whole + store);
+  return (total_size_per_update * nn / time) * 1.0e-09;
+}

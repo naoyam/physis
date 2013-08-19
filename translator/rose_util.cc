@@ -7,6 +7,9 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/rose_util.h"
+#include "translator/ast_traversal.h"
+
+#include <cctype>
 
 namespace sb = SageBuilder;
 namespace si = SageInterface;
@@ -15,6 +18,7 @@ namespace physis {
 namespace translator {
 namespace rose_util {
 
+// TODO: Rename to FindType
 SgType *getType(SgNode *topLevelNode, const string &typeName) {
   SgName typeNameNode(typeName);
   Rose_STL_Container<SgNode*> types =
@@ -85,23 +89,20 @@ string getFuncName(SgFunctionRefExp *fref) {
 string getFuncName(SgFunctionCallExp *call) {
   SgFunctionRefExp *fref = isSgFunctionRefExp(call->get_function());
   if (!fref) {
-    throw physis::translator::PhysisException("Non-direct function calls are not supported.");
+    LOG_ERROR() << "Non-direct function calls are not supported: "
+                << call->unparseToString()
+                << "\n";
+    PSAbort(1);
   }
   return getFuncName(fref);
 }
 
-SgExpression *copyExpr(const SgExpression *expr) {
-  SgTreeCopy tc;
-  SgExpression *c = isSgExpression(expr->copy(tc));
-  assert(c);
-  return c;
-}
-
-SgInitializedName *copySgNode(const SgInitializedName *expr) {
-  SgTreeCopy tc;
-  SgInitializedName *c = isSgInitializedName(expr->copy(tc));
-  assert(c);
-  return c;
+void CopyExpressionPtrList(const SgExpressionPtrList &src,
+                           SgExpressionPtrList &dst) {
+  dst.clear();
+  FOREACH (it, src.begin(), src.end()) {
+    dst.push_back(si::copyExpression(*it));
+  }
 }
 
 SgFunctionSymbol *getFunctionSymbol(SgFunctionDeclaration *f) {
@@ -120,16 +121,9 @@ SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name) {
   return f;
 }
 
-bool isFuncParam(SgInitializedName *in) {
-  return isSgFunctionParameterList(in->get_declaration());
-}
-
-SgInitializedName *getInitializedName(SgVarRefExp *var) {
-  SgVariableSymbol *sym = var->get_symbol();
-  assert(sym);
-  SgInitializedName *refDecl = sym->get_declaration();
-  assert(refDecl);
-  return refDecl;
+bool IsFuncParam(SgInitializedName *in) {
+  SgDeclarationStatement *decl = in->get_declaration();
+  return isSgFunctionParameterList(decl);
 }
 
 static int unique_name_var_index = 0;
@@ -161,6 +155,7 @@ void SetFunctionStatic(SgFunctionDeclaration *fdecl) {
 }
 
 SgExpression *buildNULL(SgScopeStatement *global_scope) {
+#if 0  
   static SgVariableDeclaration *dummy_null = NULL;
   if (!dummy_null) {
     dummy_null =
@@ -170,6 +165,9 @@ SgExpression *buildNULL(SgScopeStatement *global_scope) {
             NULL, global_scope);
   }
   return sb::buildVarRefExp(dummy_null);
+#else
+  return sb::buildOpaqueVarRefExp("NULL");
+#endif
 }
 
 SgVariableDeclaration *buildVarDecl(const string &name,
@@ -362,6 +360,86 @@ SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl) {
   SgExpression *rhs =  asinit->get_operand();
   PSAssert(rhs);
   return rhs;
+}
+
+SgType *GetType(SgVariableDeclaration *decl) {
+  return decl->get_variables()[0]->get_type();
+}
+SgName GetName(SgVariableDeclaration *decl) {
+  return decl->get_variables()[0]->get_name();
+}
+
+SgName GetName(const SgVarRefExp *x) {
+  return x->get_symbol()->get_name();
+}
+
+// TODO: Complete string parsing
+// Currently only limited string value is supported.
+// - just an integer
+// - just a variable reference
+SgExpression *ParseString(const string &s, SgScopeStatement *scope) {
+#if 0  
+  bool is_numeric = true;
+  FOREACH (it, s.begin(), s.end()) {
+    if (!isdigit(*it)) {
+      is_numeric = false;
+      break;
+    }
+  }
+  if (is_numeric) {
+    int x = toInteger(s);
+    return sb::buildIntVal(x);
+  }
+  // NOTE: assume variable reference
+  return sb::buildVarRefExp(s);
+#else
+  SgExpression* result = NULL;
+  assert (scope != NULL);
+  // set input and context for the parser
+  AstFromString::c_char = s.c_str();
+  assert (AstFromString::c_char== s.c_str());
+  AstFromString::c_sgnode = scope;
+  if (AstFromString::afs_match_expression()) {
+    result = isSgExpression(AstFromString::c_parsed_node); // grab the result
+    assert (result != NULL);
+    LOG_DEBUG() << "Parsed expression: " << result->unparseToString() << "\n";
+  } else {
+    LOG_ERROR() <<"Error. buildStatementFromString() cannot parse input string:"<<s
+                <<"\n\t under the given scope:"<<scope->class_name() << "\n";
+    PSAssert(0);
+  }
+  return result;
+#endif
+}
+
+void ReplaceWithCopy(SgExpressionVector &ev) {
+  FOREACH (it, ev.begin(), ev.end()) {
+    SgExpression *e = si::copyExpression(*it);
+    *it = e;
+  }
+}
+
+bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2) {
+  const string &n1_name = n1->get_file_info()->get_filenameString();
+  const string &n2_name = n2->get_file_info()->get_filenameString();
+  LOG_DEBUG() << "N1: " << n1_name << ", N2: " << n2_name << "\n";
+  return n1->get_file_info()->isSameFile(n2->get_file_info());
+}
+
+SgVarRefExp *GetUniqueVarRefExp(SgExpression *exp) {
+  vector<SgVarRefExp*> v = si::querySubTree<SgVarRefExp>(exp);
+  if (v.size() == 1) {
+    return v.front();
+  } else {
+    return NULL;
+  }
+}
+
+SgDeclarationStatement *GetDecl(SgVarRefExp *vref) {
+  PSAssert(vref);
+  SgInitializedName *in = vref->get_symbol()->get_declaration();
+  PSAssert(in);
+  return in->get_declaration();
 }
 
 }  // namespace rose_util

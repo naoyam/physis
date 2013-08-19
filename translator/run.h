@@ -42,12 +42,13 @@ class Run {
 
   static bool isRun(SgFunctionCallExp *call);
   static SgExpression *findCountArg(SgFunctionCallExp *call);
-
+#ifdef UNUSED_CODE
   virtual bool IsRead(Grid *g, TranslationContext *tx);
   virtual bool IsReadAny(GridSet *gs, TranslationContext *tx);
   virtual bool IsModified(Grid *g, TranslationContext *tx);
   virtual bool IsModifiedAny(GridSet *gs, TranslationContext *tx);
-
+#endif
+  
   int id() const { return id_; }
   
  protected:

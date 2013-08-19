@@ -75,5 +75,47 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
   return fc;
 }
 
+SgExprListExp *RuntimeBuilder::BuildStencilOffset(const StencilRange &sr,
+                                                  bool is_max) {
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  IntVector offset_min, offset_max;
+  int nd = sr.num_dims();
+  if (sr.IsEmpty()) {
+    for (int i = 0; i < nd; ++i) {
+      offset_min.push_back(0);
+      offset_max.push_back(0);
+    }
+  } else if (!sr.GetNeighborAccess(offset_min, offset_max)) {
+    LOG_DEBUG() << "Stencil access is not regular: "
+                << sr << "\n";
+    return NULL;
+  }
+  for (int i = 0; i < (int)offset_min.size(); ++i) {
+    PSIndex v = is_max ? offset_max[i] : offset_min[i];
+    si::appendExpression(exp_list, sb::buildIntVal(v));
+  }
+  return exp_list;
+}
+
+SgExprListExp *RuntimeBuilder::BuildStencilOffsetMax(const StencilRange &sr) {
+  return BuildStencilOffset(sr, true);
+}
+
+SgExprListExp *RuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
+  return BuildStencilOffset(sr, false);
+}
+
+SgExprListExp *RuntimeBuilder::BuildSizeExprList(const Grid *g) {
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  SgExpressionPtrList &args = g->new_call()->get_args()->get_expressions();  
+  int nd = g->getType()->getNumDim();
+  for (int i = 0; i < PS_MAX_DIM; ++i) {
+    SgExpression *e = i >= nd ?
+        sb::buildIntVal(1) : si::copyExpression(args[i]);
+    si::appendExpression(exp_list, e);
+  }
+  return exp_list;
+}
+
 } // namespace translator
 } // namespace physis

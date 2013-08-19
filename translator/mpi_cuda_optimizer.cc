@@ -135,7 +135,7 @@ void MPICUDAOptimizer::GridPreCalcAddr(SgFunctionDeclaration *func) {
         calls.front()->getAssociatedFunctionSymbol();
     SgExprListExp *params = sb::buildExprListExp(sb::buildVarRefExp(gv));
     FOREACH (it, indices.begin(), indices.end()) {
-        params->append_expression(sb::buildVarRefExp(*it));
+      si::appendExpression(params, sb::buildVarRefExp(*it));
     }
     SgFunctionCallExp *center =
         sb::buildFunctionCallExp(get_addr_symbol, params);

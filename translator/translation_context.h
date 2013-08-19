@@ -43,9 +43,11 @@ class TranslationContext {
 
  public:
   explicit TranslationContext(SgProject *project): project_(project) {
-    build();
+    Build();
   }
 
+
+  
  protected:
   SgProject *project_;
   SgIncidenceDirectedGraph *call_graph_;
@@ -82,21 +84,21 @@ class TranslationContext {
   // Mapping from grid_get to its StencilIndex
   StencilIndexMap stencil_indices_;
 
-  void build();
+  void Build();
   // No dependency
-  void analyzeGridTypes();
+  void AnalyzeGridTypes();
   // Depends on analyzeDomainExpr, analyzeMap
-  void analyzeGridVars(DefUseAnalysis &dua);
+  void AnalyzeGridVars(DefUseAnalysis &dua);
   // No dependency
-  void analyzeDomainExpr(DefUseAnalysis &dua);
+  void AnalyzeDomainExpr(DefUseAnalysis &dua);
   // No dependency
-  void analyzeMap();
+  void AnalyzeMap();
   void locateDomainTypes();
   // Depends on analyzeMap, analyzeGridVars
-  void analyzeKernelFunctions();
-  void analyzeRun(DefUseAnalysis &dua);
+  void AnalyzeKernelFunctions();
+  void AnalyzeRun(DefUseAnalysis &dua);
   // Depends on analyzeGridVars, analyzeKernelFunctions
-  void markReadWriteGrids();
+  //void MarkReadWriteGrids();
 
   //! Find and collect information on reductions
   void AnalyzeReduce();
@@ -104,6 +106,7 @@ class TranslationContext {
  public:
 
   // Accessors
+  SgProject *project() { return project_; }
   RunMap &run_map() { return run_map_; }
 
   
@@ -206,6 +209,9 @@ class TranslationContext {
 
   bool isNewCall(SgFunctionCallExp *ce);
   bool isNewFunc(const string &funcName);
+  SgVarRefExp *IsFree(SgFunctionCallExp *ce);
+  SgVarRefExp *IsCopyin(SgFunctionCallExp *ce);
+  SgVarRefExp *IsCopyout(SgFunctionCallExp *ce);
 
   // ool isGridTypeSpecificCall(SgFunctionCallExp *ce);
   // gInitializedName* getGridVarUsedInFuncCall(SgFunctionCallExp *call);

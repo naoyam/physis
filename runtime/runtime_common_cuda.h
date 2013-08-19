@@ -12,7 +12,36 @@
 #include "common/config.h"
 #include "runtime/runtime_common.h"
 #include <cuda_runtime.h>
-#include <cutil.h>
+
+#define CUDA_SAFE_CALL(x) do {                                  \
+    cudaError_t e = x;                                          \
+    if (e != cudaSuccess) {                                     \
+      fprintf(stderr, "CUDA ERROR at " __FILE__ "#%d: %s\n",    \
+              __LINE__, cudaGetErrorString(e));                 \
+      exit(EXIT_FAILURE);                                       \
+    }                                                           \
+  } while (0)
+
+#define CUDA_CHECK_ERROR(msg) do {                                      \
+    cudaError_t e = cudaGetLastError();                                 \
+    if (e != cudaSuccess) {                                             \
+      fprintf(stderr, "CUDA ERROR: %s at " __FILE__ "#%d: %s\n",        \
+              msg, __LINE__, cudaGetErrorString(e));                    \
+    }                                                                   \
+    e = cudaDeviceSynchronize();                                        \
+    if (e != cudaSuccess) {                                             \
+      fprintf(stderr, "CUDA ERROR: %s at " __FILE__ "#%d: %s\n",        \
+              msg, __LINE__, cudaGetErrorString(e));                    \
+    }                                                                   \
+  } while (0)
+
+#define CUDA_DEVICE_INIT(devid) do {                            \
+    cudaDeviceProp dp;                                          \
+    CUDA_SAFE_CALL(cudaGetDeviceProperties(&dp, devid));        \
+    LOG_INFO() << "Using device " << devid                      \
+               << ": " << dp.name << "\n";                      \
+    CUDA_SAFE_CALL(cudaSetDevice(devid));                       \
+  } while (0)
 
 namespace physis {
 namespace runtime {

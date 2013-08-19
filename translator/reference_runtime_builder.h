@@ -32,18 +32,57 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
 
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
+      GridVarAttribute *gva,      
       GridType *gt,      
-      SgExpressionPtrList *offset_exprs,
+      const SgExpressionPtrList *offset_exprs,
       const StencilIndexList *sil,      
       bool is_kernel,
       bool is_periodic);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,      
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name,
+      const SgExpressionVector &array_indices);
+
+  //! Build code for grid emit.
+  /*!
+    \param grid_exp Grid expression
+    \param attr GridEmit attribute
+    \param offset_exprs offset expressions
+    \param emit_val Value to emit
+    \param scope Scope where this expression is built
+    \return Expression implementing the emit.
+   */
+  virtual SgExpression *BuildGridEmit(
+      SgExpression *grid_exp,
+      GridEmitAttribute *attr,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL);
+  
   
   //!
   /*!
    */
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      SgExpressionPtrList *offset_exprs, bool is_kernel,
+      const SgExpressionPtrList *offset_exprs, bool is_kernel,
       bool is_periodic, const StencilIndexList *sil);
 
   /*
@@ -54,7 +93,6 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
     TranslationContext *tx, bool is_kernel,
     bool is_periodic);
   */
-  
   
  protected:
   SgType *index_t_;
