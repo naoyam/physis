@@ -35,6 +35,7 @@ devices and network connections.
 
 ## News & Updates
 
+* 19 Aug 2013 - Version 0.5 available.
 * 25 Jul 2012 - Version 0.4 available.
 * 24 Apr 2012 - Version 0.3 available.
 * 1 Jan 2012 - Version 0.2 available.
@@ -87,6 +88,10 @@ See docs/faq.md.
 The corresponding source of each version is attached with a Git tag
 with the version number.
 
+* Version 0.5 (19 Aug 2013)
+    * User-defined point type.
+	* Only REFERENCE and CUDA targets are updated. MPI and MPI-CUDA
+      targets are not updated in this version.
 * Version 0.4 (25 Jul 2012)
     * Single GPU tuning. Near hand-tuned performance with 7-pt diffusion.
 * Version 0.3 (24 Apr 2012)
