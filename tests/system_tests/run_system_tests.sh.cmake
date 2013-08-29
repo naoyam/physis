@@ -374,6 +374,15 @@ function generate_translation_configurations_cuda()
     echo $new_configs
 }
 
+function generate_translation_configurations_cuda_hm()
+{
+    if [ $# -gt 0 ]; then
+		echo $1
+    else
+		generate_empty_translation_configuration
+    fi
+}
+
 function generate_translation_configurations_mpi()
 {
     if [ $# -gt 0 ]; then
@@ -516,6 +525,9 @@ function generate_translation_configurations()
 		cuda)
 			generate_translation_configurations_cuda
 			;;
+		cuda-hm)
+			generate_translation_configurations_cuda_hm
+			;;
 		mpi|mpi2)
 			generate_translation_configurations_mpi
 			;;
@@ -619,7 +631,7 @@ function compile()
 				return 1
 			fi
 			;;
-		cuda)
+		cuda|cuda-hm)
 			if [ "@CUDA_FOUND@" != "TRUE" ]; then
 				echo "[COMPILE] Skipping CUDA compilation (not supported)"
 				return 0
@@ -725,7 +737,7 @@ function get_reference_exe_name()
 		mpi|mpi2)
 			target=ref
 			;;
-		mpi-cuda)
+		cuda-hm|mpi-cuda)
 			target=cuda
 			;;
 		opencl)
@@ -800,7 +812,7 @@ function execute()
 		ref)
 			./$exename $TRACE > $exename.out 2> $exename.err
 			;;
-		cuda)
+		cuda|cuda-hm)
 			./$exename $TRACE > $exename.out 2> $exename.err    
 			;;
 		mpi|mpi2)
@@ -977,7 +989,7 @@ function is_skipped_module_test()
 {
 	if is_module_test $1; then
 		case "$2" in
-			mpi|mpi2|mpi-cuda|opencl|mpi-opencl|mpi-openmp|mpi-openmp-numa)
+			cuda-hm|mpi|mpi2|mpi-cuda|opencl|mpi-opencl|mpi-openmp|mpi-openmp-numa)
 				return 0
 		esac
 	fi
