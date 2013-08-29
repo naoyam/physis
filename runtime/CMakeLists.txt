@@ -1,5 +1,7 @@
 set (CUDA_RUNTIME_ENABLED TRUE CACHE BOOL
   "Flag to enable CUDA target")  
+set (CUDA_HM_RUNTIME_ENABLED FALSE CACHE BOOL
+  "Flag to enable CUDA HM target")  
 set (MPI_RUNTIME_ENABLED TRUE CACHE BOOL
   "Flag to enable MPI target")
 set (MPI_OPENMP_RUNTIME_ENABLED FALSE CACHE BOOL
@@ -19,7 +21,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 set(RUNTIME_COMMON_SRC runtime_common.cc runtime.cc runtime_ref.cc buffer.cc timing.cc)
 
-add_library(physis_rt_ref ${RUNTIME_COMMON_SRC} reference_runtime.cc)
+add_library(physis_rt_ref ${RUNTIME_COMMON_SRC} libphysis_rt_ref.cc)
 install(TARGETS physis_rt_ref DESTINATION lib)
 
 if (MPI_FOUND AND MPI_RUNTIME_ENABLED)
@@ -28,7 +30,7 @@ if (MPI_FOUND AND MPI_RUNTIME_ENABLED)
   add_definitions(-pthread)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
   add_library(physis_rt_mpi ${RUNTIME_COMMON_SRC}
-    mpi_runtime.cc
+    libphysis_rt_mpi.cc
     runtime.cc runtime_mpi.cc
     grid.cc grid_mpi.cc grid_space_mpi.cc grid_util.cc
     proc.cc rpc.cc 
@@ -66,13 +68,21 @@ if (CUDA_FOUND AND CUDA_RUNTIME_ENABLED)
   endif ()
   cuda_add_library(physis_rt_cuda ${RUNTIME_COMMON_SRC}
     runtime.cc runtime_cuda.cc
-    cuda_runtime.cc reduce_cuda.cu)
+    libphysis_rt_cuda.cc reduce_cuda.cu)
   install(TARGETS physis_rt_cuda DESTINATION lib)
+endif()
+
+if (CUDA_FOUND AND CUDA_HM_RUNTIME_ENABLED)
+  include_directories(${CUDA_INCLUDE_DIR})
+  cuda_add_library(physis_rt_cuda_hm ${RUNTIME_COMMON_SRC}
+    runtime.cc runtime_cuda.cc runtime_cuda_hm.cc
+    libphysis_rt_cuda_hm.cc reduce_cuda.cu)
+  install(TARGETS physis_rt_cuda_hm DESTINATION lib)
 endif()
 
 if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
   cuda_add_library(physis_rt_mpi_cuda ${RUNTIME_COMMON_SRC}
-    mpi_cuda_runtime.cc grid.cc grid_mpi.cc grid_mpi_cuda.cc
+    libphysis_rt_mpi_cuda.cc grid.cc grid_mpi.cc grid_mpi_cuda.cc
     grid_util.cc rpc_mpi.cc rpc_mpi_cuda.cc mpi_wrapper.cc
     inter_proc_comm_mpi.cc
     buffer_cuda.cu reduce_mpi_cuda.cu)
@@ -97,7 +107,7 @@ if (OPENCL_FOUND AND OPENCL_RUNTIME_ENABLED)
       ${RUNTIME_OPENCL_COMMON_SRC}
       opencl_gridcp.cc
       opencl_gridinit.cc
-      opencl_runtime.cc
+      libphysis_rt_opencl.cc
     )
   install(
     TARGETS physis_rt_opencl
@@ -114,8 +124,8 @@ if (MPI_FOUND AND OPENCL_FOUND AND MPI_OPENCL_RUNTIME_ENABLED)
       buffer_opencl.cc
       grid_mpi_opencl.cc
       rpc_opencl_mpi.cc
-      mpi_opencl_runtime_extra.cc
-      mpi_opencl_runtime.cc
+      libphysis_rt_mpi_opencl_extra.cc
+      libphysis_rt_mpi_opencl.cc
       rpc_mpi_opencl.cc
   )
   install(
@@ -133,8 +143,8 @@ if (MPI_FOUND AND MPI_OPENMP_RUNTIME_ENABLED)
     buffer_mpi_openmp.cc
     buffer_mpi_openmp_numa.cc
     #mpi_runtime.cc
-    mpi_openmp_runtime.cc
-    mpi_openmp_runtime_numa.cc
+    libphysis_rt_mpi_openmp.cc
+    libphysis_rt_mpi_openmp_numa.cc    
     grid.cc
     grid_util.cc
     grid_util_mpi_openmp.cc

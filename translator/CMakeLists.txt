@@ -1,5 +1,7 @@
 set (CUDA_TRANSLATOR_ENABLED TRUE CACHE BOOL
   "Flag to enable CUDA target")  
+set (CUDA_HM_TRANSLATOR_ENABLED FALSE CACHE BOOL
+  "Flag to enable CUDA-HM target")  
 set (MPI_TRANSLATOR_ENABLED TRUE CACHE BOOL
   "Flag to enable MPI target")
 set (MPI_OPENMP_TRANSLATOR_ENABLED FALSE CACHE BOOL
@@ -158,6 +160,22 @@ if (MPI_OPENMP_TRANSLATOR_ENABLED)
     )
   install(PROGRAMS
     ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-openmp
+    DESTINATION bin
+    )
+endif ()
+
+if (CUDA_HM_TRANSLATOR_ENABLED)
+  set(PHYSISC_SRC
+    ${PHYSISC_SRC}
+    cuda_hm_translator.cc
+    cuda_hm_runtime_builder.cc
+    )
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/physisc-cuda-hm.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda-hm
+    )
+  install(PROGRAMS
+    ${CMAKE_CURRENT_BINARY_DIR}/physisc-cuda-hm
     DESTINATION bin
     )
 endif ()

@@ -4,6 +4,7 @@
 #include "common/config.h"
 
 #cmakedefine CUDA_TRANSLATOR_ENABLED
+#cmakedefine CUDA_HM_TRANSLATOR_ENABLED
 #cmakedefine MPI_TRANSLATOR_ENABLED
 #cmakedefine MPI_OPENMP_TRANSLATOR_ENABLED
 #cmakedefine MPI_CUDA_TRANSLATOR_ENABLED

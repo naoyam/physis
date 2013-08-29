@@ -17,6 +17,8 @@
 #include "physis/physis_ref.h"
 #elif defined(PHYSIS_CUDA)
 #include "physis/physis_cuda.h"
+#elif defined(PHYSIS_CUDA_HM)
+#include "physis/physis_cuda_hm.h"
 #elif defined(PHYSIS_MPI)
 #include "physis/physis_mpi.h"
 #elif defined(PHYSIS_MPI_CUDA)

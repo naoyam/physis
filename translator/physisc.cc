@@ -36,7 +36,10 @@
 #ifdef MPI_OPENMP_TRANSLATOR_ENABLED
 #include "translator/mpi_openmp_translator.h"
 #endif
-
+#ifdef CUDA_HM_TRANSLATOR_ENABLED
+#include "translator/cuda_hm_translator.h"
+#include "translator/cuda_hm_runtime_builder.h"
+#endif
 
 using std::string;
 namespace bpo = boost::program_options;
@@ -56,6 +59,7 @@ struct CommandLineOptions {
   bool mpi_opencl_trans;
   bool mpi_openmp_trans;
   bool mpi_openmp_numa_trans;
+  bool cuda_hm_trans;
   std::pair<bool, string> config_file_path;
   CommandLineOptions(): ref_trans(false), cuda_trans(false),
                         mpi_trans(false),
@@ -65,6 +69,7 @@ struct CommandLineOptions {
                         mpi_opencl_trans(false),
                         mpi_openmp_trans(false),
                         mpi_openmp_numa_trans(false),
+                        cuda_hm_trans(false),
                         config_file_path(std::make_pair(false, "")) {}
 };
 
@@ -72,18 +77,35 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
                   vector<string> &rem) {
   // Declare the supported options.
   bpo::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message");
-  desc.add_options()("ref", "reference translation");
+  desc.add_options()("help", "Produce help message");
   desc.add_options()("config", bpo::value<string>(),
-                     "read configuration file");  
+                     "Read configuration file");
+  desc.add_options()("ref", "Reference translation");
+#ifdef CUDA_TRANSLATOR_ENABLED  
   desc.add_options()("cuda", "CUDA translation");
+#endif  
+#ifdef CUDA_HM_TRANSLATOR_ENABLED  
+  desc.add_options()(
+      "cuda-hm", "*EXPERIMENTAL* CUDA with host memory translation");
+#endif
+#ifdef MPI_TRANSLATOR_ENABLED
   desc.add_options()("mpi", "MPI translation");
+#endif  
   //desc.add_options()("mpi2", "MPI translation v2");
+#ifdef MPI_CUDA_TRANSLATOR_ENABLED  
   desc.add_options()("mpi-cuda", "MPI-CUDA translation");
+#endif
+#ifdef OPENCL_TRANSLATOR_ENABLED
   desc.add_options()("opencl", "*EXPERIMENTAL* OpenCL translation");
+#endif
+#ifdef MPI_OPENCL_TRANSLATOR_ENABLED
   desc.add_options()("mpi-opencl", "*EXPERIMENTAL* MPI-OpenCL translation");
+#endif
+#ifdef MPI_OPENMP_TRANSLATOR_ENABLED  
   desc.add_options()("mpi-openmp", "*EXPERIMENTAL* MPI-OpenMP translation");
-  desc.add_options()("mpi-openmp-numa", "*EXPERIMENTAL* NUMA-aware MPI-OpenMP translation");
+  desc.add_options()(
+      "mpi-openmp-numa", "*EXPERIMENTAL* NUMA-aware MPI-OpenMP translation");
+#endif  
   desc.add_options()("list-targets", "List available targets");
 
   bpo::variables_map vm;
@@ -119,6 +141,12 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
   if (vm.count("cuda")) {
     LOG_DEBUG() << "CUDA translation.\n";
     opts.cuda_trans = true;
+    return;
+  }
+
+  if (vm.count("cuda-hm")) {
+    LOG_DEBUG() << "CUDA with host memory translation.\n";
+    opts.cuda_hm_trans = true;
     return;
   }
 
@@ -174,6 +202,9 @@ void parseOptions(int argc, char *argv[], CommandLineOptions &opts,
     sj << "mpi";
     //    sj << "mpi2";    
     sj << "cuda";
+#ifdef CUDA_HM_TRANSLATOR_ENABLED
+    sj << "cuda-hm";
+#endif
 #ifdef MPI_CUDA_TRANSLATOR_ENABLED    
     sj << "mpi-cuda";
 #endif
@@ -225,6 +256,10 @@ static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
     builder = new pt::ReferenceRuntimeBuilder(gs);
   } else if (opts.cuda_trans) {
     builder = new pt::CUDARuntimeBuilder(gs);
+#ifdef CUDA_HM_TRANSLATOR_ENABLED    
+  } else if (opts.cuda_hm_trans) {
+    builder = new pt::CUDAHMRuntimeBuilder(gs);
+#endif    
   } else if (opts.mpi_trans) {
     builder = new pt::MPIRuntimeBuilder(gs);
   // } else if (opts.mpi2_trans) {
@@ -440,6 +475,13 @@ int main(int argc, char *argv[]) {
     /* set dynamic link library source suffix */
     dl_filename_suffix = "cuda_dl.cu";
   }
+#ifdef CUDA_HM_TRANSLATOR_ENABLED
+  if (opts.cuda_hm_trans) {
+    trans = new pt::CUDAHMTranslator(config);
+    filename_target_suffix = "cuda-hm";
+    argvec.push_back("-DPHYSIS_CUDA_HM");
+  }
+#endif  
 
   if (opts.mpi_trans) {
     trans = new pt::MPITranslator(config);
@@ -606,7 +648,7 @@ int main(int argc, char *argv[]) {
   delete optimizer;
 
   filename_suffix = pt::GetInputFileSuffix(proj);
-  if (opts.cuda_trans || opts.mpi_cuda_trans) {
+  if (opts.cuda_trans || opts.cuda_hm_trans || opts.mpi_cuda_trans) {
     filename_suffix = "cu";
   }
   
