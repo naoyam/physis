@@ -60,6 +60,8 @@ EXECUTE_WITH_VALGRIND=0
 
 PRIORITY=1
 CONFIG_ARG=""
+CONFIG_ALL=0
+DEFAULT_CONFIG=/dev/null
 
 EMAIL_TO=""
 
@@ -889,7 +891,9 @@ function print_usage()
     echo -e "\t-m, --mpirun"
     echo -e "\t\tThe mpirun command for testing MPI-based runs."
     echo -e "\t--config <file-path>"
-    echo -e "\t\tConfiguration file passed to the translator."
+    echo -e "\t\tConfiguration file passed to the translator (/dev/null by default)."
+    echo -e "\t--config-all"
+    echo -e "\t\tTest with all variants of configurations."
     echo -e "\t--proc-dim <proc-dim-list>"
     echo -e "\t\tProcess dimension. E.g., to run 16 processes, specify this \n\t\toption like '16,4x4,1x4x4'. This way, 16 processes are mapped\n\t\tto the overall problem domain with the decomposition for\n\t\th dimensionality. Multiple values can be passed with quotations."
     echo -e "\t--physis-nlp <number-of-gpus-per-node>"
@@ -1223,7 +1227,7 @@ fi
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,email:,list,parallel::, -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,config-all,email:,list,parallel::, -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Error in getopt. Invalid options: $@"
@@ -1290,6 +1294,10 @@ fi
 				CONFIG_ARG=$(abs_path "$2")
 				shift 2
 				;;
+			--config-all)
+				CONFIG_ALL=1
+				shift
+				;;
 			--email)
 				EMAIL_TO=$2
 				shift 2
@@ -1353,10 +1361,12 @@ fi
 				continue;
 			fi
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
-			if [ "x$CONFIG_ARG" = "x" ]; then
+			if [ "$CONFIG_ARG" != "" ]; then
+				CONFIG=$CONFIG_ARG
+			elif [ $CONFIG_ALL -eq 1 ]; then
 				CONFIG=$(generate_translation_configurations $TARGET)
 			else
-				CONFIG=$CONFIG_ARG
+				CONFIG=$DEFAULT_CONFIG
 			fi
 			do_test_parallel $TARGET $TEST "$CONFIG" $DIM $SHORTNAME $STAGE
 		done
