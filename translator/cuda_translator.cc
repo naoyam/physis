@@ -271,7 +271,7 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
   }
 
   // build a function call to gt->aux_emit_decl(g, offset, v)
-  int nd = gt->getNumDim();
+  int nd = gt->rank();
   SgExpressionPtrList args;
   SgInitializedNamePtrList &params =
       getContainingFunction(node)->get_args();  
@@ -802,15 +802,12 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
         block);
   } else if (dim == 3) {
     SgExpression *loop_begin =
-        sb::buildPntrArrRefExp(
-            BuildDomMinRef(sb::buildVarRefExp(dom_arg)),
-            sb::buildIntVal(loop_dim));
+        rt_builder_->BuildDomMinRef(sb::buildVarRefExp(dom_arg),
+                                    loop_dim);
     SgStatement *loop_init = sb::buildAssignStatement(
         sb::buildVarRefExp(loop_index), loop_begin);
     SgExpression *loop_end =
-        sb::buildPntrArrRefExp(
-            BuildDomMaxRef(sb::buildVarRefExp(dom_arg)),
-            sb::buildIntVal(loop_dim));
+        rt_builder_->BuildDomMaxRef(sb::buildVarRefExp(dom_arg), loop_dim);
     SgStatement *loop_test = sb::buildExprStatement(
         sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
                             loop_end));

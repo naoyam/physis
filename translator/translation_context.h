@@ -36,17 +36,13 @@ class TranslationContext {
   typedef map<SgInitializedName*, GridSet> GridVarMap;
   typedef map<SgFunctionCallExp*, Grid*> CallGridMap;
   typedef map<SgFunctionDeclaration*, Kernel*> KernelMap;
-  typedef map<SgExpression*, DomainSet> DomainMap;
   typedef map<SgExpression*, StencilMap*> MapCallMap;
   typedef map<SgFunctionCallExp*, Run*> RunMap;
-  typedef map<SgFunctionCallExp*, StencilIndexList> StencilIndexMap;
 
  public:
   explicit TranslationContext(SgProject *project): project_(project) {
     Build();
   }
-
-
   
  protected:
   SgProject *project_;
@@ -59,16 +55,6 @@ class TranslationContext {
   GridVarMap grid_var_map_;
   // grid_new call -> grid object
   CallGridMap grid_new_map_;
-  // AST expression -> domain object
-  // Note: grid objects are associated with variables rather
-  // than expressions. Domains used as arguments to function
-  // calls can be an call expression, so this mapping needs to
-  // be able to hold mapping from expressions. GridMap can also
-  // be changed to hold mapping from expressions to grid
-  // objects.
-  DomainMap domain_map_;
-  // grid calls (e.g., grid_get) -> grid object
-  // allGridMap gridCallMap;
 
   KernelMap entry_kernels_;
   KernelMap inner_kernels_;
@@ -76,27 +62,25 @@ class TranslationContext {
   SgType *dom1d_type_;
   SgType *dom2d_type_;
   SgType *dom3d_type_;
+  //SgType *f_dom_type_;
 
   MapCallMap stencil_map_;
 
   RunMap run_map_;
 
-  // Mapping from grid_get to its StencilIndex
-  StencilIndexMap stencil_indices_;
-
   void Build();
   // No dependency
   void AnalyzeGridTypes();
   // Depends on analyzeDomainExpr, analyzeMap
-  void AnalyzeGridVars(DefUseAnalysis &dua);
+  void AnalyzeGridVars();
   // No dependency
-  void AnalyzeDomainExpr(DefUseAnalysis &dua);
+  void AnalyzeDomainExpr();
   // No dependency
   void AnalyzeMap();
   void locateDomainTypes();
   // Depends on analyzeMap, analyzeGridVars
   void AnalyzeKernelFunctions();
-  void AnalyzeRun(DefUseAnalysis &dua);
+  void AnalyzeRun();
   // Depends on analyzeGridVars, analyzeKernelFunctions
   //void MarkReadWriteGrids();
 
@@ -166,16 +150,12 @@ class TranslationContext {
   bool isInnerKernel(SgFunctionDeclaration *fd);
   bool isKernel(SgFunctionDeclaration *fd);
   Kernel *findKernel(SgFunctionDeclaration *fd);
-  bool associateExpWithDomain(SgExpression *exp, Domain *d);
-  const DomainSet *findDomainAll(SgExpression *exp);
-  Domain *findDomain(SgExpression *exp);
-  DomainMap &domain_map() { return domain_map_; }
-
+  
   void registerMap(SgExpression *e, StencilMap *mc) {
     assert(stencil_map_.insert(std::make_pair(e, mc)).second);
   }
 
-  bool isMap(SgExpression *e) {
+  bool IsMap(SgExpression *e) {
     return stencil_map_.find(e) != stencil_map_.end();
   }
 
@@ -213,10 +193,6 @@ class TranslationContext {
   SgVarRefExp *IsCopyin(SgFunctionCallExp *ce);
   SgVarRefExp *IsCopyout(SgFunctionCallExp *ce);
 
-  // ool isGridTypeSpecificCall(SgFunctionCallExp *ce);
-  // gInitializedName* getGridVarUsedInFuncCall(SgFunctionCallExp *call);
-  string getGridFuncName(SgFunctionCallExp *call);
-
   SgFunctionCallExpPtrList getGridEmitCalls(SgScopeStatement *scope);
   SgFunctionCallExpPtrList getGridGetCalls(SgScopeStatement *scope);
   SgFunctionCallExpPtrList getGridGetPeriodicCalls(SgScopeStatement *scope);  
@@ -226,9 +202,6 @@ class TranslationContext {
   CallGridMap &grid_new_map() { return grid_new_map_; }
 
   bool IsInit(SgFunctionCallExp *call) const;
-
-  void registerStencilIndex(SgFunctionCallExp *call, const StencilIndexList &sil);
-  const StencilIndexList* findStencilIndex(SgFunctionCallExp *call);
 
  protected:
   SgFunctionCallExpPtrList getGridCalls(SgScopeStatement *scope,

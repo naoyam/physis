@@ -38,7 +38,7 @@ bool Run::isRun(SgFunctionCallExp *call) {
   SgFunctionRefExp *f = isSgFunctionRefExp(call->get_function());
   if (!f) return false;
   SgName name = f->get_symbol()->get_name();
-  return name == RUN_NAME;
+  return name == PS_STENCIL_RUN_NAME;
 }
 
 SgExpression *Run::findCountArg(SgFunctionCallExp *call) {

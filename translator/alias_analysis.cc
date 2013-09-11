@@ -8,7 +8,9 @@
 
 #include "translator/alias_analysis.h"
 
+#include <boost/foreach.hpp>
 #include "translator/rose_util.h"
+
 
 namespace si = SageInterface;
 
@@ -81,10 +83,15 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
   AliasVarNode *av = createOrFindAliasVar(in);
 
   if (!initializer) {
-    LOG_DEBUG() << "No definition\n";
+    LOG_DEBUG() << "No init found: "
+                << in->unparseToString()
+                << " at line " << in->get_file_info()->get_line()
+                << "\n";
     if (rose_util::IsFuncParam(in)) {
+      LOG_DEBUG() << "Func param\n";
       changed |= av->addOrigin(AliasFuncParamNode::getInstance());
     } else {
+      LOG_DEBUG() << "Null init\n";
       changed |= av->addOrigin(AliasNullInitNode::getInstance());
     }
     return changed;
@@ -122,16 +129,15 @@ bool AliasGraph::handleVarAssignment(SgExpression *lhs, SgExpression *rhs) {
 
 
 void AliasGraph::build(const SgTypePtrList &relevantTypes) {
-  SgNodePtrList vars = NodeQuery::querySubTree(topLevelNode,
-                                               V_SgInitializedName);
-  SgNodePtrList asns = NodeQuery::querySubTree(topLevelNode,
-                                               V_SgAssignOp);
+  vector<SgInitializedName*> vars =
+      si::querySubTree<SgInitializedName>(topLevelNode);
+  vector<SgAssignOp*> asns =
+      si::querySubTree<SgAssignOp>(topLevelNode);
   bool changed = true;
   while (changed) {
     changed = false;
 
-    FOREACH(it, vars.begin(), vars.end()) {
-      SgInitializedName *in = isSgInitializedName(*it);
+    BOOST_FOREACH(SgInitializedName *in, vars) {
       SgType *type = in->get_type();
       if (std::find(relevantTypes.begin(), relevantTypes.end(),
                     type) == relevantTypes.end())
@@ -139,9 +145,7 @@ void AliasGraph::build(const SgTypePtrList &relevantTypes) {
       changed |= handleVarDecl(in);
     }
 
-    FOREACH(it, asns.begin(), asns.end()) {
-      SgAssignOp *aop = isSgAssignOp(*it);
-      assert(aop);
+    BOOST_FOREACH(SgAssignOp *aop, asns) {
       SgType *type = aop->get_type();
       if (std::find(relevantTypes.begin(), relevantTypes.end(),
                     type) == relevantTypes.end())

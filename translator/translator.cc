@@ -25,14 +25,11 @@ Translator::Translator(const Configuration &config):
     global_scope_(NULL),
     tx_(NULL),
     ivec_type_(NULL),
-    index_type_(NULL),    
     grid_decl_(NULL),
     grid_type_(NULL),
     grid_ptr_type_(NULL),
     dom_type_(NULL),
     dom_ptr_type_(NULL),
-    grid_swap_(NULL),
-    grid_dim_get_func_(NULL),
     grid_type_name_("__PSGrid"),
     rt_builder_(NULL) {
 }
@@ -44,6 +41,7 @@ void Translator::SetUp(SgProject *project, TranslationContext *context,
   src_ = isSgSourceFile((*project_)[0]);
   assert(src_);
   tx_ = context;
+  is_fortran_ = rose_util::IsFortran(project);
 
   global_scope_ = src_->get_globalScope();
   PSAssert(global_scope_);
@@ -53,24 +51,19 @@ void Translator::SetUp(SgProject *project, TranslationContext *context,
 
   ivec_type_ = sb::buildArrayType(sb::buildIntType(),
                                   sb::buildIntVal(PS_MAX_DIM));
-  index_type_ = sb::buildOpaqueType(PS_INDEX_TYPE_NAME,
-                                    global_scope_);
   buildGridDecl();
 
   dom_type_ = isSgTypedefType(
-      si::lookupNamedTypeInParentScopes(PSDOMAIN_TYPE_NAME, global_scope_));
-  PSAssert(dom_type_);
-  LOG_DEBUG() << "dom base type: "
-              << dom_type_->get_base_type()->class_name()
-              << "\n";
-  dom_ptr_type_ = sb::buildPointerType(dom_type_);
-  
-  PSAssert(grid_swap_ = 
-         si::lookupFunctionSymbolInParentScopes("__PSGridSwap",
-                                                global_scope_));
-  PSAssert(grid_dim_get_func_ =
-           si::lookupFunctionSymbolInParentScopes("PSGridDim",
-                                                global_scope_));
+      si::lookupNamedTypeInParentScopes(PS_DOMAIN_INTERNAL_TYPE_NAME,
+                                        global_scope_));
+  // TODO: dom_type_ should be moved to the rt builder classes
+  if (!is_fortran_) {
+    PSAssert(dom_type_);
+    LOG_DEBUG() << "dom base type: "
+                << dom_type_->get_base_type()->class_name()
+                << "\n";
+    dom_ptr_type_ = sb::buildPointerType(dom_type_);
+  }
 
   // Visit each of user-defined grid element types
   NodeQuerySynthesizedAttributeType struct_decls =
@@ -91,14 +84,11 @@ void Translator::Finish() {
   tx_ = NULL;
   global_scope_ = NULL;
   ivec_type_ = NULL;
-  index_type_ = NULL;  
   grid_decl_ = NULL;
   grid_type_ = NULL;
   grid_ptr_type_ = NULL;
   dom_type_ = NULL;
   dom_ptr_type_ = NULL;
-  grid_swap_ = NULL;
-  grid_dim_get_func_ = NULL;
 }
 
 void Translator::defineMacro(const string &name,
@@ -167,7 +157,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   if (GridType::isGridTypeSpecificCall(node)) {
     SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(node);
     assert(gv);
-    string methodName = tx_->getGridFuncName(node);
+    string methodName = GridType::GetGridFuncName(node);
     if (methodName == GridType::get_name ||
         methodName == GridType::get_periodic_name) {
       LOG_DEBUG() << "translating " << methodName << "\n";
@@ -210,7 +200,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   }
 
 
-  if (tx_->isMap(node)) {
+  if (tx_->IsMap(node)) {
     LOG_DEBUG() << "Translating map\n";
     LOG_DEBUG() << node->unparseToString() << "\n";
     TranslateMap(node, tx_->findMap(node));

@@ -29,7 +29,7 @@ StencilMap::StencilMap(SgFunctionCallExp *call, TranslationContext *tx)
   assert(kernel);
   dom = StencilMap::getDomFromMapCall(fc_);
   assert(dom);
-  numDim = tx->findDomain(dom)->num_dims();
+  numDim = rose_util::GetASTAttribute<Domain>(dom)->num_dims();
   SgExpressionPtrList &args = fc_->get_args()->get_expressions();
   SgInitializedNamePtrList &params = kernel->get_args();
   int param_index = numDim; // skip the index parameters
@@ -85,16 +85,18 @@ string StencilMap::toString() const {
   return ss.str();
 }
 
-bool StencilMap::isMap(SgFunctionCallExp *call) {
+bool StencilMap::IsMap(SgFunctionCallExp *call) {
   SgFunctionRefExp *f = isSgFunctionRefExp(call->get_function());
   if (!f) return false;
   SgName name = f->get_symbol()->get_name();
-  return name == PS_STENCIL_MAP_NAME ||
-      name == PS_STENCIL_MAP_RB_NAME ||
-      name == PS_STENCIL_MAP_R_NAME ||
-      name == PS_STENCIL_MAP_B_NAME;
+  return
+      ((si::is_C_language() || si::is_Cxx_language()) &&
+       (name == PS_STENCIL_MAP_NAME ||
+        name == PS_STENCIL_MAP_RB_NAME ||
+        name == PS_STENCIL_MAP_R_NAME ||
+        name == PS_STENCIL_MAP_B_NAME)) ||
+      (si::is_Fortran_language() && name == PSF_STENCIL_MAP_NAME);
 }
-
 
 #if 0
 void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {

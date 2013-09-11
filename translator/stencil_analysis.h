@@ -19,7 +19,12 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
                          SgFunctionDeclaration *kernel);
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx);
 
-void AnalyzeEmit(SgFunctionDeclaration *func);
+//void AnalyzeEmit(SgFunctionDeclaration *func);
+
+void AnalyzeGet(SgNode *top_level_node,
+                TranslationContext &tx);
+void AnalyzeEmit(SgNode *top_level_node,
+                 TranslationContext &tx);
 
 /*!
   

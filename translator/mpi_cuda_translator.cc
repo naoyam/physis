@@ -870,7 +870,7 @@ void MPICUDATranslator::translateKernelDeclaration(
   FOREACH (it, gdim_calls.begin(), gdim_calls.end()) {
     SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
     PSAssert(fc);
-    if (fc->getAssociatedFunctionSymbol() != grid_dim_get_func_)
+    if (rose_util::getFuncName(fc) != PS_GRID_DIM_NAME) 
       continue;
     rose_util::RedirectFunctionCall(
         fc, sb::buildFunctionRefExp(gdim_dev));               
@@ -1242,7 +1242,9 @@ bool MPICUDATranslator::translateGetKernel(SgFunctionCallExp *node,
   string get_address_name = get_addr_name_ +  GetTypeDimName(gt);
   string get_address_no_halo_name = get_addr_no_halo_name_ +  GetTypeDimName(gt);
   SgFunctionRefExp *get_address = NULL;
-  const StencilIndexList *sil = tx_->findStencilIndex(node);
+  //const StencilIndexList *sil = tx_->findStencilIndex(node);
+  const StencilIndexList *sil = rose_util::GetASTAttribute<GridGetAttribute>(
+      node)->GetStencilIndexList();
   PSAssert(sil);
   LOG_DEBUG() << "Stencil index: " << *sil << "\n";
   if (StencilIndexSelf(*sil, nd)) {

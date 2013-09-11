@@ -10,8 +10,6 @@
 
 #define PHYSIS_TRANSLATOR
 
-#define PS_INDEX_TYPE_NAME "PSIndex"
-
 #include <set>
 #include <list>
 #include <vector>
@@ -26,6 +24,7 @@
 #include "physis/internal_common.h"
 #include "physis/physis_util.h"
 #include "translator/physis_exception.h"
+#include "translator/physis_names.h"
 
 namespace physis {
 namespace translator {

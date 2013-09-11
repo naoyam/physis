@@ -195,7 +195,7 @@ static void do_offset_cse(RuntimeBuilder *builder,
   }
   SgExpression *base_offset = builder->BuildGridOffset(
       gref,
-      attr->num_dim(), &base_offset_list,
+      attr->rank(), &base_offset_list,
       true, false, &sil);
   LOG_DEBUG() << "base_offset: " << base_offset->unparseToString() << "\n";
   SgScopeStatement *func_scope =

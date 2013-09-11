@@ -9,23 +9,26 @@
 #include "translator/kernel.h"
 
 #include <utility>
+#include <boost/foreach.hpp>
 
 #include "translator/translation_context.h"
 #include "translator/alias_analysis.h"
+
+namespace si = SageInterface;
 
 namespace physis {
 namespace translator {
 
 static void analyzeGridAccess(SgFunctionDeclaration *decl,
                               TranslationContext &tx,
-                              SgFunctionCallExpPtrList &calls,
+                              const set<SgInitializedName*> &gvs,
                               GridSet &grid_set,
                               SgInitializedNamePtrSet &grid_var_set) {
   SgTypePtrList relevantTypes;
-  FOREACH(it, calls.begin(), calls.end()) {
-    SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(*it);
+  BOOST_FOREACH(SgInitializedName *gv, gvs) {
     relevantTypes.push_back(gv->get_type());
-    LOG_DEBUG() << "Modified grid found: "
+    LOG_DEBUG() << "Relevant type: " << gv->get_type()->unparseToString() << "\n";
+    LOG_DEBUG() << "Used grid: "
                 << gv->unparseToString() << "\n";
     const GridSet *gs = tx.findGrid(gv);
     assert(gs);
@@ -52,8 +55,7 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
     abort();
   }
 
-  FOREACH(it, calls.begin(), calls.end()) {
-    SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(*it);
+  BOOST_FOREACH(SgInitializedName *gv, gvs) {
     SgInitializedName* originalVar = ag.findOriginalVar(gv);
     grid_var_set.insert(originalVar);
   }
@@ -62,16 +64,54 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
 void Kernel::analyzeGridWrites(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
       tx.getGridEmitCalls(decl->get_definition());
-  analyzeGridAccess(decl, tx, calls, wGrids, wGridVars);
+  set<SgInitializedName*> gvs;
+  BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
+    gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
+  }
+  analyzeGridAccess(decl, tx, gvs, wGrids, wGridVars);
 }
+
 
 void Kernel::analyzeGridReads(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
       tx.getGridGetCalls(decl->get_definition());
-  analyzeGridAccess(decl, tx, calls, rGrids, rGridVars);
+  set<SgInitializedName*> gvs;
+  BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
+    gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
+  }
+  analyzeGridAccess(decl, tx, gvs, rGrids, rGridVars);
   calls =
       tx.getGridGetPeriodicCalls(decl->get_definition());
-  analyzeGridAccess(decl, tx, calls, rGrids, rGridVars);
+  gvs.clear();
+  BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
+    gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
+  }
+  analyzeGridAccess(decl, tx, gvs, rGrids, rGridVars);
+}
+
+static void CollectionReadWriteGrids(SgFunctionDefinition *fdef,
+                                     set<SgInitializedName*> &read_grids,
+                                     set<SgInitializedName*> &written_grids) {
+  vector<SgDotExp*> grid_reads =
+      si::querySubTree<SgDotExp>(fdef);
+  BOOST_FOREACH(SgDotExp *de, grid_reads) {
+    SgVarRefExp *gr = isSgVarRefExp(de->get_lhs_operand());
+    PSAssert(gr);
+    SgInitializedName *gv = si::convertRefToInitializedName(gr);
+    if (!rose_util::GetASTAttribute<GridType>(gv)) {
+      // Not a grid 
+      continue;
+    }
+    LOG_DEBUG() << "Access to grid var found: "
+                << de->unparseToString() << "\n";
+    // write access if located as lhs of assign op
+    if (isSgAssignOp(de->get_parent()) &&
+        isSgAssignOp(de->get_parent())->get_lhs_operand() == de) {
+      written_grids.insert(gv);
+    } else {
+      read_grids.insert(gv);
+    }
+  }
 }
 
 Kernel::Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,
@@ -79,8 +119,15 @@ Kernel::Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,
   this->decl =
       isSgFunctionDeclaration(decl->get_definingDeclaration());
   assert(this->decl);
-  analyzeGridWrites(*tx);
-  analyzeGridReads(*tx);
+  if (si::is_C_language() || si::is_Cxx_language()) {
+    analyzeGridWrites(*tx);
+    analyzeGridReads(*tx);
+  } else if (si::is_Fortran_language()) {
+    set<SgInitializedName*> rg, wg;
+    CollectionReadWriteGrids(decl->get_definition(), rg, wg);
+    analyzeGridAccess(decl, *tx, rg, rGrids, rGridVars);
+    analyzeGridAccess(decl, *tx, wg, wGrids, wGridVars);    
+  }  
 }
 
 const GridSet& Kernel::getInGrids() const {

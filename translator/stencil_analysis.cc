@@ -157,12 +157,12 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
       // with external variables. That happens if a stencil kernel is
       // not designated as static.
       if (g == NULL) {
-        LOG_INFO() << "Externally passed grid not set with stencil range info.\n";
+        LOG_INFO() << "Cannot set stencil range info to externally passed grid.\n";
         continue;
       } 
       g->SetStencilRange(gva->sr());
       LOG_DEBUG() << "Grid stencil range: "
-                  << *g << ", " << gva->sr() << "\n";
+                  << *g << ", " << g->stencil_range() << "\n";
     }
   }
 }
@@ -178,10 +178,10 @@ static void ExtractArrayIndices(SgNode *n, IntVector &v) {
   return ExtractArrayIndices(p->get_parent(), v);
 }
 
-static bool GetGridMember(SgFunctionCallExp *get_call,
+static bool GetGridMember(SgExpression *get,
                           string &member,
                           IntVector &indices) {
-  SgDotExp *dot = isSgDotExp(get_call->get_parent());
+  SgDotExp *dot = isSgDotExp(get->get_parent());
   if (dot == NULL) return false;
   SgVarRefExp *rhs = isSgVarRefExp(dot->get_rhs_operand());
   PSAssert(rhs);
@@ -190,14 +190,13 @@ static bool GetGridMember(SgFunctionCallExp *get_call,
   return true;
 }
 
-static void AddIndex(SgFunctionCallExp *get_call,
+static void AddIndex(SgExpression *get,
                      SgInitializedName *gv,
-                     StencilIndexList &sil, int nd) {
-
+                     StencilIndexList &sil) {
   string member;
   IntVector indices;
   // Collect member-specific information
-  if (GetGridMember(get_call, member, indices)) {
+  if (GetGridMember(get, member, indices)) {
     LOG_DEBUG() << "Access to member: " << member << "\n";
     GridVarAttribute *gva =
         rose_util::GetASTAttribute<GridVarAttribute>(gv);
@@ -209,61 +208,76 @@ static void AddIndex(SgFunctionCallExp *get_call,
   return;
 }
 
+static void ExtractStencilIndices(SgExprListExp *el,
+                                  StencilIndexList &indices,
+                                  SgFunctionDeclaration *kernel) {
+  SgExpressionPtrList &exps = el->get_expressions();
+  ENUMERATE (dim, it, exps.begin(), exps.end()) {
+    LOG_DEBUG() << "get index: " <<
+        dim << ", " << (*it)->unparseToString() << "\n";
+    StencilIndex si;
+    SgExpression *exp = *it;
+    // Simplify the analysis
+    LOG_DEBUG() << "Analyzing " << exp->unparseToString() << "\n";
+    si::constantFolding(exp->get_parent());
+    LOG_VERBOSE() << "Constant folded: " << exp->unparseToString() << "\n";
+    if (!AnalyzeStencilIndex(exp, si, kernel)) {
+      PSAbort(1);
+    }
+    indices.push_back(si);
+  }
+}
+
+static void ExtractStencilIndices(SgExpression *get,
+                                  StencilIndexList &indices,
+                                  SgFunctionDeclaration *kernel) {
+  if (isSgFunctionCallExp(get)) {
+    ExtractStencilIndices(
+        isSgFunctionCallExp(get)->get_args(), indices, kernel);    
+  } else if (isSgDotExp(get)) {
+    SgPntrArrRefExp *rhs = isSgPntrArrRefExp(
+        isSgDotExp(get)->get_rhs_operand());
+    SgExprListExp *index_exps =
+        isSgExprListExp(rhs->get_rhs_operand());
+    PSAssert(index_exps);
+    ExtractStencilIndices(index_exps, indices, kernel);
+  }
+}
+
+// Assumption: GridGetAttributes are set on all grid get accesses
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing stencil range of a stencil map\n";
   SgFunctionDeclaration *kernel = sm.getKernel();
-  SgFunctionCallExpPtrList get_calls
-      = tx.getGridGetCalls(kernel->get_definition());
-  SgFunctionCallExpPtrList get_periodic_calls
-      = tx.getGridGetPeriodicCalls(kernel->get_definition());
-  get_calls.insert(get_calls.end(), get_periodic_calls.begin(),
-                   get_periodic_calls.end());
-  FOREACH (it, get_calls.begin(), get_calls.end()) {
-    SgFunctionCallExp *get_call = *it;
-    LOG_DEBUG() << "Get call detected: "
-                << get_call->unparseToString() << "\n";
-    SgInitializedName *gv = GridType::getGridVarUsedInFuncCall(get_call);
-    SgExpressionPtrList &args = get_call->get_args()->get_expressions();
-    int nd = args.size();
+  BOOST_FOREACH (
+      SgNode *node,
+      rose_util::QuerySubTreeAttribute<GridGetAttribute>(kernel)) {
+    SgExpression *get = isSgExpression(node);
+    PSAssert(get);
+    LOG_DEBUG() << "GET: " << get->unparseToString() << "\n";
+    GridGetAttribute *gga =
+        rose_util::GetASTAttribute<GridGetAttribute>(get);
+    PSAssert(gga);
+    if (gga->GetStencilIndexList()) {
+      LOG_DEBUG() << "Grid get already analyzed: "
+                  << get->unparseToString() << "\n";
+      continue;
+    }
     // Extracts a list of stencil indices
+    bool is_periodic = false;
+    SgInitializedName *gv = GridGetAnalysis::IsGet(get, is_periodic);
+    PSAssert(gv);
     StencilIndexList stencil_indices;
-    ENUMERATE (dim, ait, args.begin(), args.end()) {
-      LOG_DEBUG() << "get argument: " <<
-          dim << ", " << (*ait)->unparseToString() << "\n";
-      StencilIndex si;
-      SgExpression *arg = *ait;
-      // Simplify the analysis
-      LOG_DEBUG() << "Analyzing " << arg->unparseToString() << "\n";
-      si::constantFolding(arg->get_parent());
-      LOG_VERBOSE() << "Constant folded: " << arg->unparseToString() << "\n";
-      
-      if (!AnalyzeStencilIndex(arg, si, kernel)) {
-        PSAbort(1);
-      }
-      stencil_indices.push_back(si);
-    }
+    ExtractStencilIndices(get, stencil_indices, kernel);
     // Associate gv with the stencil indices
-    AddIndex(get_call, gv, stencil_indices, nd);
-    // Associate GridGet with the stencil indices    
-    tx.registerStencilIndex(get_call, stencil_indices);
-    LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";
-    // Attach GridGetAttribute to the get expression.
-    // NOTE: registerStencilIndex will be replaced with the attribute
-    bool is_periodic = tx.getGridFuncName(get_call) ==
-        GridType::get_periodic_name;
-    // A kernel function is analyzed multiple times if it appears
-    // multiple times in use at stencil_map.
-    if (rose_util::GetASTAttribute<GridGetAttribute>(
-            get_call) == NULL) {
-      GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
-      PSAssert(gt);
-      GridGetAttribute *gga = new GridGetAttribute(
-          gt, NULL, rose_util::GetASTAttribute<GridVarAttribute>(gv),
-          tx.isKernel(kernel), is_periodic, &stencil_indices);
-      rose_util::AddASTAttribute(get_call, gga);
-    }
+    AddIndex(isSgExpression(get), gv, stencil_indices);
+    LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";    
+    LOG_DEBUG() << "Setting stencil index list for "
+                << get->unparseToString() << "\n";
+    gga->SetStencilIndexList(&stencil_indices);
     if (is_periodic) sm.SetGridPeriodic(gv);
   }
   PropagateStencilRangeToGrid(sm, tx);
+  LOG_DEBUG() << "Analysis of a stencil map done\n";
 }
 
 static SgInitializedName *FindInitializedName(const string &name,
@@ -338,6 +352,86 @@ static GridEmitAttribute *AnalyzeEmitCall(SgFunctionCallExp *fc) {
   return attr;
 }
 
+static void AnalyzeEmitArrayStore(SgFunctionDeclaration *func) {
+  LOG_DEBUG() << "Analyzing emit array store form\n";
+  vector<SgAssignOp*> asns =
+      si::querySubTree<SgAssignOp>(func);
+  BOOST_FOREACH (SgAssignOp *aop, asns) {
+    SgDotExp *lhs = isSgDotExp(aop->get_lhs_operand());
+    if (!lhs) continue;
+    LOG_DEBUG() << "Store to array: " << lhs->unparseToString() << "\n";
+    SgVarRefExp *grid_ref = isSgVarRefExp(lhs->get_lhs_operand());
+    PSAssert(grid_ref);
+    SgInitializedName *gv = si::convertRefToInitializedName(grid_ref);
+    if (!gv) continue;
+    GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+    if (!gt) continue;
+    GridEmitAttribute *attr = new GridEmitAttribute(gt, gv);
+    LOG_DEBUG() << "Emit array store detected: "
+                << aop->unparseToString() << "\n";
+    rose_util::AddASTAttribute(aop, attr);
+  }
+  LOG_DEBUG() << "Done\n";
+  return;
+}
+
+static void AnalyzeGetCall(SgNode *top_level_node,
+                           TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing grid get call\n";  
+  BOOST_FOREACH (SgFunctionCallExp *call,
+                 si::querySubTree<SgFunctionCallExp>(top_level_node)) {
+    bool is_periodic;
+    SgInitializedName *gv = GridGetAnalysis::IsGetCall(call, is_periodic);
+    if (!gv) continue;
+    GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+    PSAssert(gt);
+    GridVarAttribute *gva = rose_util::GetASTAttribute<GridVarAttribute>(gv);
+    PSAssert(gva);
+    GridGetAttribute *gga = new GridGetAttribute(
+        gt, NULL, gva, tx.isKernel(si::getEnclosingFunctionDeclaration(call)),
+        is_periodic, NULL);
+    rose_util::AddASTAttribute(call, gga);
+  }
+  LOG_DEBUG() << "Analysis of get call done\n";    
+}
+
+static void AnalyzeGetArrayRead(SgNode *top_level_node,
+                                TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing grid get array read form\n";
+  vector<SgDotExp*> array_accesses =
+      si::querySubTree<SgDotExp>(top_level_node);
+  BOOST_FOREACH (SgDotExp *dot, array_accesses) {
+    bool is_periodic = false;
+    SgInitializedName *gv = GridGetAnalysis::IsGetArrayRead(dot, is_periodic);
+    if (!gv) continue;
+    GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+    if (!gt) continue;
+    LOG_DEBUG() << "Read from grid: " << dot->unparseToString() << "\n";
+    GridVarAttribute *gva =
+        rose_util::GetASTAttribute<GridVarAttribute>(gv);
+    bool is_kernel = tx.isKernel(si::getEnclosingFunctionDeclaration(dot));
+    LOG_DEBUG() << "Get in kernel?: " << is_kernel << "\n";
+    GridGetAttribute *gga = new GridGetAttribute(
+        gt, NULL, gva, is_kernel, is_periodic, NULL);
+    rose_util::AddASTAttribute(dot, gga);    
+  }
+  LOG_DEBUG() << "Done\n";
+  return;
+}
+
+void AnalyzeGet(SgNode *top_level_node,
+                TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing grid get\n";
+  if (rose_util::IsCLikeLanguage()) {
+    AnalyzeGetCall(top_level_node, tx);
+  }
+  if (si::is_Fortran_language()) {
+    AnalyzeGetArrayRead(top_level_node, tx);
+  }
+  LOG_DEBUG() << "Analysis of grid get done\n";
+}
+
+#if 0
 void AnalyzeEmit(SgFunctionDeclaration *func) {
   LOG_DEBUG() << "AnalyzeEmit\n";
   SgNodePtrList calls =
@@ -361,6 +455,69 @@ void AnalyzeEmit(SgFunctionDeclaration *func) {
                 << fc->unparseToString() << "\n";
     rose_util::AddASTAttribute(fc, attr);
   }
+  AnalyzeEmitArrayStore(func);
+}
+#endif
+
+static void AnalyzeEmitCall(SgNode *top_level_node,
+                            TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing emit call\n";
+  BOOST_FOREACH (SgFunctionCallExp *call,
+                 si::querySubTree<SgFunctionCallExp>(top_level_node)) {
+    if (!tx.isKernel(si::getEnclosingFunctionDeclaration(call))) {
+      continue;
+    }
+    GridEmitAttribute *attr = NULL;
+    if (GridType::isGridTypeSpecificCall(call) &&
+        GridType::GetGridFuncName(call) == PS_GRID_EMIT_NAME) {
+      SgInitializedName *gv = GridType::getGridVarUsedInFuncCall(call);
+      GridType *gt = rose_util::GetASTAttribute<GridType>(gv);      
+      attr = new GridEmitAttribute(gt, gv);
+    } else if (isSgFunctionRefExp(call->get_function()) &&
+               rose_util::getFuncName(call) == PS_GRID_EMIT_UTYPE_NAME) {
+      attr = AnalyzeEmitCall(call);
+    } else {
+      continue;
+    }
+    LOG_DEBUG() << "Emit call detected: " << call->unparseToString() << "\n";
+    rose_util::AddASTAttribute(call, attr);
+  }
+  LOG_DEBUG() << "Analysis of get call done\n";    
+}
+
+static void AnalyzeEmitArrayStore(SgNode *top_level_node,
+                                  TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing grid emit array store form\n";
+  vector<SgAssignOp*> asns =
+      si::querySubTree<SgAssignOp>(top_level_node);
+  BOOST_FOREACH (SgAssignOp *aop, asns) {
+    SgDotExp *lhs = isSgDotExp(aop->get_lhs_operand());
+    if (!lhs) continue;
+    LOG_DEBUG() << "Store to array: " << lhs->unparseToString() << "\n";
+    SgVarRefExp *grid_ref = isSgVarRefExp(lhs->get_lhs_operand());
+    PSAssert(grid_ref);
+    SgInitializedName *gv = si::convertRefToInitializedName(grid_ref);
+    if (!gv) continue;
+    GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+    if (!gt) continue;
+    GridEmitAttribute *attr = new GridEmitAttribute(gt, gv);
+    LOG_DEBUG() << "Emit array store detected: "
+                << aop->unparseToString() << "\n";
+    rose_util::AddASTAttribute(aop, attr);
+  }
+  LOG_DEBUG() << "Done\n";
+}
+
+void AnalyzeEmit(SgNode *top_level_node,
+                 TranslationContext &tx) {
+  LOG_DEBUG() << "Analyzing grid emit\n";
+  if (rose_util::IsCLikeLanguage()) {
+    AnalyzeEmitCall(top_level_node, tx);
+  }
+  if (si::is_Fortran_language()) {
+    AnalyzeEmitArrayStore(top_level_node, tx);
+  }
+  LOG_DEBUG() << "Analysis of grid emit done\n";
 }
 
 bool AnalyzeGetArrayMember(SgDotExp *get, SgExpressionVector &indices,

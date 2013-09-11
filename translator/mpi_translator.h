@@ -61,7 +61,9 @@ class MPITranslator: public ReferenceTranslator {
   virtual void FixGridAddresses(StencilMap *smap,
                                 SgVariableDeclaration *stencil_decl,
                                 SgScopeStatement *scope);
+#if 0  
   virtual void CheckSizes();
+#endif  
 
   int global_num_dims_;
   //IntArray global_size_;

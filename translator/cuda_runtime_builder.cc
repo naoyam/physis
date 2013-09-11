@@ -149,7 +149,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
 
   // Build a function call to gt->aux_get_decl
   SgExpression *offset =
-      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+      BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       is_kernel, is_periodic, sil);
   
   SgFunctionCallExp *get_call =
@@ -182,7 +182,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   // Build an expression like "g->x[offset]"
   
   SgExpression *offset =
-      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+      BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       is_kernel, is_periodic, sil);
 
   gvref = si::copyExpression(gvref);
@@ -235,7 +235,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
   SgExpression *g_dim = BuildGridMember(gvref, dim_ref);
       
   SgExpression *num_elms = BuildNumElmsExpr(
-      g_dim, gt->num_dim());
+      g_dim, gt->rank());
 
   SgVariableDeclaration *md = FindMember(gt->point_def(),
                                          member_name);
@@ -291,7 +291,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   // Build an expression like "g->x[offset]"
 
   SgExpression *offset =
-      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+      BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       is_kernel, is_periodic, sil);
 
   SgExpression *offset_with_array = sb::buildAddOp(
@@ -334,7 +334,7 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
   // Add member dim
   SgType *dim_type = 
       sb::buildArrayType(BuildIndexType2(gs_),
-                         sb::buildIntVal(gt->num_dim()));
+                         sb::buildIntVal(gt->rank()));
   si::appendStatement(sb::buildVariableDeclaration(DIM_STR, dim_type),
                       dev_def);
                                
@@ -415,7 +415,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   si::appendStatement(p_decl, body);
   
   // p->dim[i]  = dim[i];
-  for (unsigned i = 0; i < gt->num_dim(); ++i) {
+  for (unsigned i = 0; i < gt->rank(); ++i) {
     SgExpression *lhs = sb::buildPntrArrRefExp(
         sb::buildArrowExp(sb::buildVarRefExp(p_decl),
                           sb::buildVarRefExp(DIM_STR)),
@@ -429,7 +429,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   // size_t num_elms = dim[0] * ...;
   SgVariableDeclaration *num_elms_decl =
       BuildNumElmsDecl(sb::buildVarRefExp(dim_p),
-                       gt->num_dim());
+                       gt->rank());
   si::appendStatement(num_elms_decl, body);
   
   // cudaMalloc(&(p->x), sizeof(typeof(p->x)) * dim[i]);
@@ -811,7 +811,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   si::appendStatement(tbuf_decl, body);
   // size_t num_elms = dim[0] * ...;
   SgVariableDeclaration *num_elms_decl =
-      BuildNumElmsDecl(p_decl, type_decl, gt->num_dim());
+      BuildNumElmsDecl(p_decl, type_decl, gt->rank());
   si::appendStatement(num_elms_decl, body);
   // cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
   AppendCUDAMallocHost(
@@ -904,7 +904,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
 
   SgVariableDeclaration *num_elms_decl =
       BuildNumElmsDecl(sb::buildVarRefExp(g_p),
-                       type_decl, gt->num_dim());
+                       type_decl, gt->rank());
   bool has_array_type = false;
   
   const SgDeclarationStatementPtrList &members =
@@ -988,7 +988,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
 
   SgVariableDeclaration *num_elms_decl =
       BuildNumElmsDecl(sb::buildVarRefExp(g_p),
-                       type_decl, gt->num_dim());
+                       type_decl, gt->rank());
   bool has_array_type = false;
   
   // g->x[offset] = v.x;
@@ -1053,7 +1053,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
         grid_exp, attr, offset_exprs, emit_val, scope);
   }
 
-  int nd = gt->num_dim();
+  int nd = gt->rank();
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);  
   

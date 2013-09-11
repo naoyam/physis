@@ -20,11 +20,11 @@ namespace translator {
 // Returns number of dimensions if t is a name of domain types.
 // Otherwise, a negative value is returned.
 inline int getNumDimOfDomain(const string &t) {
-  if (t == PSDOMAIN1D_TYPE_NAME) {
+  if (t == PS_DOMAIN1D_TYPE_NAME) {
     return 1;
-  } else if (t == PSDOMAIN2D_TYPE_NAME) {
+  } else if (t == PS_DOMAIN2D_TYPE_NAME) {
     return 2;
-  } else if (t == PSDOMAIN3D_TYPE_NAME) {
+  } else if (t == PS_DOMAIN3D_TYPE_NAME) {
     return 3;
   } else {
     return -1;
@@ -52,13 +52,18 @@ class RegularDomain {
   const SizeVector &min_point() const { return min_point_; }
   const SizeVector &max_point() const { return max_point_; }
   int num_dims() const { return num_dims_; }
+  bool operator==(const RegularDomain &rd) const {
+    return num_dims_ == rd.num_dims_ &&
+        min_point_ == rd.min_point_ &&
+        max_point_ == rd.max_point_;
+  }
 };
 
-class Domain {
+class Domain: public AstAttribute {
  public:
  private:
   const int num_dims_;
-  const bool has_static_constant_size_;
+  bool has_static_constant_size_;
   const RegularDomain regular_domain_;
   explicit Domain(int num_dims)
       : num_dims_(num_dims), has_static_constant_size_(false),
@@ -67,8 +72,13 @@ class Domain {
       : num_dims_(r.num_dims()),
         has_static_constant_size_(true), regular_domain_(r) {}
   // tatic Domain *getStaticDomain(DeclRefExpr *exp);
+  Domain(const Domain &d);
  public:
-
+  static const std::string name;
+  Domain *copy() {
+    return new Domain(*this);
+  }
+  
   static Domain *GetDomain(int numDim);
   static Domain *GetDomain(SgFunctionCallExp *callToDomNew);
 
@@ -86,6 +96,8 @@ class Domain {
     return has_static_constant_size_;
   }
   virtual const RegularDomain &regular_domain() const { return regular_domain_; }
+  //! Merges multiple domain definitions
+  virtual void Merge(const Domain &dom);
 };
 
 typedef std::set<Domain*> DomainSet;

@@ -108,7 +108,7 @@ SgExprListExp *RuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
 SgExprListExp *RuntimeBuilder::BuildSizeExprList(const Grid *g) {
   SgExprListExp *exp_list = sb::buildExprListExp();
   SgExpressionPtrList &args = g->new_call()->get_args()->get_expressions();  
-  int nd = g->getType()->getNumDim();
+  int nd = g->getType()->rank();
   for (int i = 0; i < PS_MAX_DIM; ++i) {
     SgExpression *e = i >= nd ?
         sb::buildIntVal(1) : si::copyExpression(args[i]);

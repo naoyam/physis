@@ -93,11 +93,52 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
     TranslationContext *tx, bool is_kernel,
     bool is_periodic);
   */
+
+  virtual SgExpression *BuildDomMinRef(
+      SgExpression *domain, int dim);
+  virtual SgExpression *BuildDomMaxRef(
+      SgExpression *domain, int dim);
+  //! Build a domain min expression
+  /*!
+    \param domain Domain expression
+    \return Domain min expression
+   */
+  virtual SgExpression *BuildDomMinRef(
+      SgExpression *domain);
+  //! Build a domain max expression
+  /*!
+    \param domain Domain expression
+    \return Domain max expression
+   */
+  virtual SgExpression *BuildDomMaxRef(
+      SgExpression *domain);
+  
+  virtual string GetStencilDomName();
+  
+  virtual SgExpression *BuildStencilFieldRef(
+      SgExpression *stencil_ref, std::string name);
+  virtual SgExpression *BuildStencilFieldRef(
+      SgExpression *stencil_ref, SgExpression *field);
+  //! Build a domain min expression for a dimension from a stencil      
+  virtual SgExpression *BuildStencilDomMinRef(
+      SgExpression *stencil);
+  virtual SgExpression *BuildStencilDomMinRef(
+      SgExpression *stencil, int dim);
+  //! Build a domain max expression for a dimension from a stencil    
+  virtual SgExpression *BuildStencilDomMaxRef(
+      SgExpression *stencil);
+  virtual SgExpression *BuildStencilDomMaxRef(
+      SgExpression *stencil, int dim);
+  
   
  protected:
-  SgType *index_t_;
   static const std::string  grid_type_name_;
+  SgTypedefType *dom_type_;
   SgClassDeclaration *GetGridDecl();
+  virtual SgExpression *BuildDomFieldRef(SgExpression *domain,
+                                         string fname);
+  
+  
 };
 
 } // namespace translator

@@ -92,7 +92,7 @@ const string getName(const T &x) {
   return x->get_name().getString();
 }
 
-SgType *getType(SgNode *topLevelNode, const string &typeName);
+SgType *FindType(SgNode *topLevelNode, const string &typeName);
 // For debugging
 void printAllTypeNames(SgNode *topLevelNode, std::ostream &os);
 // recursively removes all casts
@@ -252,6 +252,7 @@ SgExpression *GetVariableDefinitionRHS(SgVariableDeclaration *vdecl);
 SgType *GetType(SgVariableDeclaration *decl);
 SgName GetName(SgVariableDeclaration *decl);
 SgName GetName(const SgVarRefExp *decl);
+SgName GetName(const SgFunctionDeclaration *func);
 
 SgExpression *ParseString(const string &s, SgScopeStatement *scope);
 
@@ -284,6 +285,18 @@ bool IsInSameFile(SgLocatedNode *n1, SgLocatedNode *n2);
 SgVarRefExp *GetUniqueVarRefExp(SgExpression *exp);
 
 SgDeclarationStatement *GetDecl(SgVarRefExp *vref);
+
+string GetInputFileSuffix(SgProject *proj);
+bool IsFortran(SgProject *proj);
+
+SgDeclarationStatement *FindMember(const SgClassType *ct,
+                                   const string &member);
+SgDeclarationStatement *FindMember(const SgClassDeclaration *cdecl,
+                                   const string &member);
+SgDeclarationStatement *FindMember(const SgClassDefinition *cdef,
+                                   const string &member);
+
+bool IsCLikeLanguage();
 
 }  // namespace rose_util
 }  // namespace translator

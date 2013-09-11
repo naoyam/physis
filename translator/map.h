@@ -31,7 +31,7 @@ class StencilMap {
   
   StencilMap(SgFunctionCallExp *call, TranslationContext *tx);
 
-  static bool isMap(SgFunctionCallExp *call);
+  static bool IsMap(SgFunctionCallExp *call);
   static Type AnalyzeType(SgFunctionCallExp *call);
   static SgFunctionDeclaration *getKernelFromMapCall(SgFunctionCallExp *call);
   static SgExpression *getDomFromMapCall(SgFunctionCallExp *call);

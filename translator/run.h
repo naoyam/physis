@@ -15,8 +15,6 @@
 #include "physis/physis_util.h"
 #include "translator/map.h"
 
-#define RUN_NAME ("PSStencilRun")
-
 namespace physis {
 namespace translator {
 
@@ -33,7 +31,7 @@ class Run {
   virtual ~Run() {}
 
   string GetName() const {
-    return "__" + string(RUN_NAME) + "_" + toString(id_);
+    return "__" + string(PS_STENCIL_MAP_NAME) + "_" + toString(id_);
   }
 
   const StencilMapArgVector &stencils() const { return stencils_; }

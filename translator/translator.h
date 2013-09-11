@@ -53,20 +53,17 @@ class Translator: public rose_util::RoseASTTraversal {
   // types in physis_common.h
   //SgType *uvec_type_;
   SgType *ivec_type_;
-  SgType *index_type_;
   SgClassDeclaration *grid_decl_;
   SgTypedefType *grid_type_;
   SgType *grid_ptr_type_;
   SgTypedefType *dom_type_;
   SgType *dom_ptr_type_;
-  //SgFunctionDeclaration *grid_swap_decl_;
-  SgFunctionSymbol *grid_swap_;
-  SgFunctionSymbol *grid_dim_get_func_;
 
   string grid_type_name_;
   string target_specific_macro_;
 
   RuntimeBuilder *rt_builder_;
+  bool is_fortran_;
 
   virtual void buildGridDecl();
   virtual void ProcessUserDefinedPointType(

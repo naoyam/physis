@@ -7,9 +7,11 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/rose_util.h"
-#include "translator/ast_traversal.h"
 
 #include <cctype>
+#include <boost/foreach.hpp>
+
+#include "translator/ast_traversal.h"
 
 namespace sb = SageBuilder;
 namespace si = SageInterface;
@@ -18,8 +20,7 @@ namespace physis {
 namespace translator {
 namespace rose_util {
 
-// TODO: Rename to FindType
-SgType *getType(SgNode *topLevelNode, const string &typeName) {
+SgType *FindType(SgNode *topLevelNode, const string &typeName) {
   SgName typeNameNode(typeName);
   Rose_STL_Container<SgNode*> types =
       NodeQuery::querySubTree(topLevelNode, V_SgNamedType);
@@ -122,8 +123,9 @@ SgVarRefExp *buildFieldRefExp(SgClassDeclaration *decl, string name) {
 }
 
 bool IsFuncParam(SgInitializedName *in) {
-  SgDeclarationStatement *decl = in->get_declaration();
-  return isSgFunctionParameterList(decl);
+  const SgInitializedNamePtrList &params =
+      si::getEnclosingFunctionDeclaration(in)->get_args();
+  return isContained(params, in);
 }
 
 static int unique_name_var_index = 0;
@@ -373,6 +375,10 @@ SgName GetName(const SgVarRefExp *x) {
   return x->get_symbol()->get_name();
 }
 
+SgName GetName(const SgFunctionDeclaration *func) {
+  return func->get_name();
+}
+
 // TODO: Complete string parsing
 // Currently only limited string value is supported.
 // - just an integer
@@ -440,6 +446,54 @@ SgDeclarationStatement *GetDecl(SgVarRefExp *vref) {
   SgInitializedName *in = vref->get_symbol()->get_declaration();
   PSAssert(in);
   return in->get_declaration();
+}
+
+string GetInputFileSuffix(SgProject *proj) {
+  string name = proj->get_sourceFileNameList()[0];
+  string suffix = name.substr(name.rfind(".")+1);
+  return suffix;
+}
+
+bool IsFortran(SgProject *proj) {
+  string suffix = GetInputFileSuffix(proj);
+  return suffix == "f90" || suffix == "F90";
+}
+
+SgDeclarationStatement *FindMember(const SgClassType *ct,
+                                   const string &member) {
+  SgClassDeclaration *decl =
+      isSgClassDeclaration(ct->get_declaration());
+  return FindMember(decl, member);
+}
+
+SgDeclarationStatement *FindMember(const SgClassDeclaration *cdecl,
+                                   const string &member) {
+  SgClassDefinition *def =
+      isSgClassDeclaration(cdecl->get_definingDeclaration())->
+      get_definition();
+  return FindMember(def, member);
+}
+
+SgDeclarationStatement *FindMember(const SgClassDefinition *cdef,
+                                   const string &member) {
+  const SgDeclarationStatementPtrList &members =
+      cdef->get_members();
+  BOOST_FOREACH (SgDeclarationStatement *decl, members) {
+    string name = "";
+    if (isSgVariableDeclaration(decl)) {
+      name = rose_util::GetName(isSgVariableDeclaration(decl));
+    } else if (isSgFunctionDeclaration(decl)) {
+      name = rose_util::GetName(isSgFunctionDeclaration(decl));
+    }
+    if (name != "" && name == member) {
+      return decl;
+    }
+  }
+  return NULL;
+}
+
+bool IsCLikeLanguage() {
+  return si::is_C_language() || si::is_Cxx_language();
 }
 
 }  // namespace rose_util

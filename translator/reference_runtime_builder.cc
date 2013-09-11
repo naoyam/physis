@@ -19,7 +19,10 @@ namespace translator {
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
     SgScopeStatement *global_scope):
     RuntimeBuilder(global_scope) {
-  PSAssert(index_t_ = si::lookupNamedTypeInParentScopes(PS_INDEX_TYPE_NAME, gs_));
+  dom_type_ = isSgTypedefType(
+      si::lookupNamedTypeInParentScopes(PS_DOMAIN_INTERNAL_TYPE_NAME,
+                                        gs_));
+  
 }
 
 const std::string
@@ -51,9 +54,7 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
       grid_var, sb::buildAddressOfOp(sb::buildVarRefExp(decl)));
   for (int i = 0; i < num_dims; ++i) {
     si::appendExpression(args,
-                         sb::buildCastExp(
-                             si::copyExpression(indices[i]),
-                             index_t_));
+                         si::copyExpression(indices[i]));
   }
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
   rose_util::AppendExprStatement(tb, fc);
@@ -69,7 +70,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
     bool is_kernel,
     bool is_periodic) {
   SgExpression *offset =
-      BuildGridOffset(gvref, gt->num_dim(), offset_exprs,
+      BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       is_kernel, is_periodic, sil);
   gvref = si::copyExpression(gvref);
   SgExpression *field = sb::buildVarRefExp("p0");
@@ -139,7 +140,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   /*
     g->p1[offset] = value;
   */
-  int nd = attr->gt()->num_dim();
+  int nd = attr->gt()->rank();
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
   string dst_buf_name = "p0";
@@ -247,6 +248,130 @@ SgClassDeclaration *ReferenceRuntimeBuilder::GetGridDecl() {
   PSAssert(anont);
   return isSgClassDeclaration(anont->get_declaration());
 }
+
+SgExpression *ReferenceRuntimeBuilder::BuildDomFieldRef(SgExpression *domain,
+                                                        string fname) {
+  SgClassDeclaration *dom_decl =
+      isSgClassDeclaration(
+          isSgClassType(dom_type_->get_base_type())->get_declaration()->
+          get_definingDeclaration());
+  LOG_DEBUG() << "domain: " << domain->unparseToString() << "\n";
+  SgExpression *field = sb::buildVarRefExp(fname,
+                                           dom_decl->get_definition());
+  SgType *ty = domain->get_type();
+  PSAssert(ty && !isSgTypeUnknown(ty));
+  if (si::isPointerType(ty)) {
+    return sb::buildArrowExp(domain, field);
+  } else {
+    return sb::buildDotExp(domain, field);
+  }
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildDomMinRef(SgExpression *domain) {
+  return BuildDomFieldRef(domain, "local_min");
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildDomMaxRef(SgExpression *domain) {
+  return BuildDomFieldRef(domain, "local_max");
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildDomMinRef(SgExpression *domain,
+                                                      int dim) {
+  SgExpression *exp = BuildDomMinRef(domain);
+  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  return exp;
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildDomMaxRef(SgExpression *domain,
+                                                      int dim) {
+  SgExpression *exp = BuildDomMaxRef(domain);
+  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  return exp;
+}
+
+
+string ReferenceRuntimeBuilder::GetStencilDomName() {
+  return string("dom");
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
+    SgExpression *stencil_ref, SgExpression *field) {
+  SgType *ty = stencil_ref->get_type();
+  PSAssert(ty && !isSgTypeUnknown(ty));
+  if (si::isPointerType(ty)) {
+    return sb::buildArrowExp(stencil_ref, field);
+  } else {
+    return sb::buildDotExp(stencil_ref, field);
+  }
+}
+
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
+    SgExpression *stencil_ref, string name) {
+  SgType *ty = stencil_ref->get_type();
+  LOG_DEBUG() << "ty: " << ty->unparseToString() << "\n";
+  PSAssert(ty && !isSgTypeUnknown(ty));
+  SgType *stencil_type = NULL;
+  if (si::isPointerType(ty)) {
+    stencil_type = si::getElementType(stencil_ref->get_type());
+  } else {
+    stencil_type = stencil_ref->get_type();
+  }
+  if (isSgModifierType(stencil_type)) {
+    stencil_type = isSgModifierType(stencil_type)->get_base_type();
+  }
+  SgClassType *stencil_class_type = isSgClassType(stencil_type);
+  // If the type is resolved to the actual class type, locate the
+  // actual definition of field. Otherwise, temporary create an
+  // unbound reference to the name.
+  SgVarRefExp *field = NULL;
+  if (stencil_class_type) {
+    SgClassDefinition *stencil_def =
+        isSgClassDeclaration(
+            stencil_class_type->get_declaration()->get_definingDeclaration())->
+        get_definition();
+    field = sb::buildVarRefExp(name, stencil_def);
+  } else {
+    // Temporary create an unbound reference; this does not pass the
+    // AST consistency tests unless fixed.
+    field = sb::buildVarRefExp(name);    
+  }
+  return BuildStencilFieldRef(stencil_ref, field);
+}
+
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
+    SgExpression *stencil) {
+  SgExpression *exp =
+      BuildStencilFieldRef(stencil, GetStencilDomName());
+  // s.dom.local_max
+  return BuildDomMinRef(exp);  
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
+    SgExpression *stencil, int dim) {
+  SgExpression *exp = BuildStencilDomMinRef(stencil);
+  // s.dom.local_max[dim]
+  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  return exp;
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMaxRef(
+    SgExpression *stencil) {
+  SgExpression *exp =
+      BuildStencilFieldRef(stencil, GetStencilDomName());
+  // s.dom.local_max
+  return BuildDomMaxRef(exp);  
+}
+
+SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMaxRef(
+    SgExpression *stencil, int dim) {
+  SgExpression *exp = BuildStencilDomMaxRef(stencil);
+  // s.dom.local_max[dim]
+  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  return exp;
+}
+
 
 } // namespace translator
 } // namespace physis

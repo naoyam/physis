@@ -136,10 +136,6 @@ class RuntimeBuilder {
       const SgExpressionPtrList &indices, SgExpression *val) = 0;
 
   virtual SgFunctionCallExp *BuildGridGetID(SgExpression *grid_var) = 0;
-  
-  virtual SgType *GetIndexType() {
-    return sb::buildOpaqueType(PS_INDEX_TYPE_NAME, gs_);
-  }
 
   virtual SgExprListExp *BuildStencilOffsetMax(const StencilRange &sr);
   virtual SgExprListExp *BuildStencilOffsetMin(const StencilRange &sr);
@@ -150,6 +146,37 @@ class RuntimeBuilder {
     \return ivec expression of the grid size
    */
   virtual SgExprListExp *BuildSizeExprList(const Grid *g);
+
+
+  //! Build a domain min expression for a dimension.
+  /*!
+    \param domain Domain expression
+    \param dim Dimension
+    \return Domain min expression
+   */
+  virtual SgExpression *BuildDomMinRef(
+      SgExpression *domain, int dim) = 0;
+  //! Build a domain max expression for a dimension.
+  /*!
+    \param domain Domain expression
+    \param dim Dimension
+    \return Domain max expression
+   */
+  virtual SgExpression *BuildDomMaxRef(
+      SgExpression *domain, int dim) = 0;
+
+  //! Build a stencil field reference expression
+  virtual SgExpression *BuildStencilFieldRef(
+      SgExpression *stencil_ref, std::string name) = 0;
+  //! Build a stencil field reference expression  
+  virtual SgExpression *BuildStencilFieldRef(
+      SgExpression *stencil_ref, SgExpression *field) = 0;
+  //! Build a domain min expression for a dimension from a stencil
+  virtual SgExpression *BuildStencilDomMinRef(
+      SgExpression *stencil, int dim) = 0;
+  //! Build a domain max expression for a dimension from a stencil  
+  virtual SgExpression *BuildStencilDomMaxRef(
+      SgExpression *stencil, int dim) = 0;
       
  protected:
   SgScopeStatement *gs_;

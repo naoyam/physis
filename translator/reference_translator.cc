@@ -158,7 +158,7 @@ SgExprListExp *ReferenceTranslator::generateNewArg(
     GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
   SgExprListExp *new_args
       = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
-                             sb::buildIntVal(gt->getNumDim()),
+                             sb::buildIntVal(gt->rank()),
                              sb::buildVarRefExp(dim_decl));
   //SgExpression *attr = g->BuildAttributeExpr();
   //if (!attr) attr = sb::buildIntVal(0);
@@ -257,7 +257,7 @@ void ReferenceTranslator::TranslateEmit(SgFunctionCallExp *node,
       GridType::isGridTypeSpecificCall(node);
 
   GridType *gt = attr->gt();
-  int nd = gt->num_dim();
+  int nd = gt->rank();
   SgInitializedNamePtrList &params = getContainingFunction(node)->get_args();
   SgExpressionPtrList args;
   for (int i = 0; i < nd; ++i) {
@@ -286,7 +286,7 @@ SgFunctionDeclaration *ReferenceTranslator::GenerateMap(StencilMap *stencil) {
   si::appendArg(parlist, sb::buildInitializedName("dom", dom_type_));
   SgInitializedNamePtrList &args = stencil->getKernel()->get_args();
   SgInitializedNamePtrList::iterator arg_begin = args.begin();
-  arg_begin += tx_->findDomain(stencil->getDom())->num_dims();
+  arg_begin += rose_util::GetASTAttribute<Domain>(stencil->getDom())->num_dims();
   FOREACH(it, arg_begin, args.end()) {
     si::appendArg(parlist,
                   isSgInitializedName(si::deepCopyNode(*it)));
@@ -392,7 +392,7 @@ void ReferenceTranslator::defineMapSpecificTypesAndFunctions() {
     SgInitializedNamePtrList &args = s->getKernel()->get_args();
     SgInitializedNamePtrList::iterator arg_begin = args.begin();
     // skip the index args
-    arg_begin += tx_->findDomain(s->getDom())->num_dims();
+    arg_begin += rose_util::GetASTAttribute<Domain>(s->getDom())->num_dims();
 
     FOREACH(it, arg_begin, args.end()) {
       SgInitializedName *a = *it;
@@ -548,9 +548,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
     rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
         index_decl,  new RunKernelIndexVarAttribute(i+1));
     SgExpression *loop_begin =
-        sb::buildPntrArrRefExp(
-            BuildStencilDomMinRef(sb::buildVarRefExp(stencil_param)),
-            sb::buildIntVal(i));
+        rt_builder_->BuildStencilDomMinRef(sb::buildVarRefExp(stencil_param), i);
     if (i == 0 && s->IsRedBlackVariant()) {
       loop_begin = sb::buildAddOp(
           loop_begin,
@@ -561,9 +559,7 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
     SgStatement *init = sb::buildAssignStatement(
           sb::buildVarRefExp(index_decl), loop_begin);
     SgExpression *loop_end =
-        sb::buildPntrArrRefExp(
-            BuildStencilDomMaxRef(sb::buildVarRefExp(stencil_param)),
-            sb::buildIntVal(i));
+        rt_builder_->BuildStencilDomMaxRef(sb::buildVarRefExp(stencil_param), i);
     SgStatement *test =
         sb::buildExprStatement(
             sb::buildLessThanOp(
@@ -1318,155 +1314,10 @@ string ReferenceTranslator::GetStencilDomName() const {
   return string("dom");
 }
 
-// TODO: These build functions should be moved to the RuntimeBuilder
-// class. 
-SgExpression *ReferenceTranslator::BuildStencilDomRef(
-    SgExpression *stencil) const {
-  return BuildStencilFieldRef(stencil, GetStencilDomName());
-}
-/*
-SgVarRefExp *ReferenceTranslator::BuildDomainMinRef(
-    SgClassDeclaration *d) const {
-  return rose_util::buildFieldRefExp(d, "local_min");
-}
-
-SgVarRefExp *ReferenceTranslator::BuildDomainMaxRef(
-    SgClassDeclaration *d) const {
-  return rose_util::buildFieldRefExp(d, "local_max");
-}
-*/
-
-SgExpression *ReferenceTranslator::BuildDomMaxRef(SgExpression *domain)
-    const {
-  SgClassDeclaration *dom_decl =
-      isSgClassDeclaration(
-          isSgClassType(dom_type_->get_base_type())->get_declaration()->
-          get_definingDeclaration());
-  SgExpression *field = sb::buildVarRefExp("local_max",
-                                           dom_decl->get_definition());
-  //SgExpression *field = sb::buildVarRefExp("local_max");
-  if (si::isPointerType(domain->get_type())) {
-    return sb::buildArrowExp(domain, field);
-  } else {
-    return sb::buildDotExp(domain, field);
-  }
-}
-
-SgExpression *ReferenceTranslator::BuildDomMinRef(SgExpression *domain)
-    const {
-  //SgExpression *field = sb::buildVarRefExp("local_min");
-  SgClassDeclaration *dom_decl =
-      isSgClassDeclaration(
-          isSgClassType(dom_type_->get_base_type())->get_declaration()->
-          get_definingDeclaration());
-  LOG_DEBUG() << "domain: " << domain->unparseToString() << "\n";
-  SgExpression *field = sb::buildVarRefExp("local_min",
-                                           dom_decl->get_definition());
-  SgType *ty = domain->get_type();
-  PSAssert(ty && !isSgTypeUnknown(ty));
-  if (si::isPointerType(ty)) {
-    return sb::buildArrowExp(domain, field);
-  } else {
-    return sb::buildDotExp(domain, field);
-  }
-}
-
-SgExpression *ReferenceTranslator::BuildDomMaxRef(SgExpression *domain,
-                                                  int dim)
-    const {
-  SgExpression *exp = BuildDomMaxRef(domain);
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
-  return exp;
-}
-
-SgExpression *ReferenceTranslator::BuildDomMinRef(SgExpression *domain,
-                                                  int dim)
-    const {
-  SgExpression *exp = BuildDomMinRef(domain);
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
-  return exp;
-}
-
-SgExpression *ReferenceTranslator::BuildStencilDomMaxRef(
-    SgExpression *stencil) const {
-  SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
-  // s.dom.local_max
-  return BuildDomMaxRef(exp);
-}
-
-SgExpression *ReferenceTranslator::BuildStencilDomMaxRef(
-    SgExpression *stencil, int dim) const {
-  SgExpression *exp = BuildStencilDomMaxRef(stencil);
-  // s.dom.local_max[dim]
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
-  return exp;
-}
-
-SgExpression *ReferenceTranslator::BuildStencilDomMinRef(
-    SgExpression *stencil) const {
-  SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
-  // s.dom.local_max
-  return BuildDomMinRef(exp);  
-}
-
-SgExpression *ReferenceTranslator::BuildStencilDomMinRef(
-    SgExpression *stencil, int dim) const {
-  SgExpression *exp = BuildStencilDomMinRef(stencil);
-  // s.dom.local_max[dim]
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
-  return exp;
-}
-
-SgExpression *ReferenceTranslator::BuildStencilFieldRef(
-    SgExpression *stencil_ref, SgExpression *field) const {
-  SgType *ty = stencil_ref->get_type();
-  PSAssert(ty && !isSgTypeUnknown(ty));
-  if (si::isPointerType(ty)) {
-    return sb::buildArrowExp(stencil_ref, field);
-  } else {
-    return sb::buildDotExp(stencil_ref, field);
-  }
-}
-
-SgExpression *ReferenceTranslator::BuildStencilFieldRef(
-    SgExpression *stencil_ref, string name) const {
-  SgType *ty = stencil_ref->get_type();
-  LOG_DEBUG() << "ty: " << ty->unparseToString() << "\n";
-  PSAssert(ty && !isSgTypeUnknown(ty));
-  SgType *stencil_type = NULL;
-  if (si::isPointerType(ty)) {
-    stencil_type = si::getElementType(stencil_ref->get_type());
-  } else {
-    stencil_type = stencil_ref->get_type();
-  }
-  if (isSgModifierType(stencil_type)) {
-    stencil_type = isSgModifierType(stencil_type)->get_base_type();
-  }
-  SgClassType *stencil_class_type = isSgClassType(stencil_type);
-  // If the type is resolved to the actual class type, locate the
-  // actual definition of field. Otherwise, temporary create an
-  // unbound reference to the name.
-  SgVarRefExp *field = NULL;
-  if (stencil_class_type) {
-    SgClassDefinition *stencil_def =
-        isSgClassDeclaration(
-            stencil_class_type->get_declaration()->get_definingDeclaration())->
-        get_definition();
-    field = sb::buildVarRefExp(name, stencil_def);
-  } else {
-    // Temporary create an unbound reference; this does not pass the
-    // AST consistency tests unless fixed.
-    field = sb::buildVarRefExp(name);    
-  }
-  return BuildStencilFieldRef(stencil_ref, field);
-}
-
 void ReferenceTranslator::TranslateSet(SgFunctionCallExp *node,
                                        SgInitializedName *gv) {
   GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
+  int nd = gt->rank();
   SgScopeStatement *scope = getContainingScopeStatement(node);    
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpressionPtrList &

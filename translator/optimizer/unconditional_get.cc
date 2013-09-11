@@ -96,7 +96,7 @@ static SgExpression *BuildGetOffsetCenter(
     SgScopeStatement *scope) {
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
-  int nd = grid_get_attr->num_dim();
+  int nd = grid_get_attr->rank();
   SgExpressionPtrList center_exp;
   for (int i = 1; i <= nd; ++i) {
     SgExpression *center_index =
@@ -117,7 +117,7 @@ static SgExpression *BuildGetOffset(
     SgExpression *paired_get_exp) {
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(paired_get_exp);
-  int nd = grid_get_attr->num_dim();
+  int nd = grid_get_attr->rank();
   const StencilIndexList *sil = grid_get_attr->GetStencilIndexList();
   PSAssert(StencilIndexRegularOrder(*sil));
   StencilRegularIndexList sril(*sil);

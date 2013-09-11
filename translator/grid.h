@@ -26,9 +26,9 @@ static const char *gridIndexNames[3] = {"x", "y", "z"};
 // Represents a grid type, not a particular grid object.
 // Grid objects are handled by class Grid.
 class GridType: public AstAttribute {
-  SgClassType *struct_type_;
-  SgTypedefType *user_type_;
-  unsigned num_dim_;
+  SgClassType *real_type_;
+  SgNamedType *user_type_;
+  unsigned rank_;
   string type_name_;
   SgType *point_type_;
   SgClassDefinition *point_def_;
@@ -45,14 +45,11 @@ class GridType: public AstAttribute {
 
  public:
   
-  GridType(SgClassType *struct_type, SgTypedefType *user_type);
+  GridType(SgClassType *real_type, SgNamedType *user_type);
   GridType(const GridType &gt);
   GridType *copy();
-  
-  unsigned getNumDim() const {
-    return num_dim_;
-  }
-  unsigned num_dim() const { return num_dim_; }
+
+  unsigned rank() const { return rank_; }
   const string& type_name() const { return type_name_; };  
   SgType *point_type() const { return point_type_; }
   SgClassDefinition *point_def() const { return point_def_; }  
@@ -88,7 +85,8 @@ class GridType: public AstAttribute {
   }
 
   static string getTypeNameFromFuncName(const string &funcName);
-  static unsigned getNumDimFromTypeName(const string &tname);
+  static unsigned GetRankFromTypeName(const string &tname);
+  static unsigned GetRankFromFortranType(const SgClassType *type);
   static bool isGridType(SgType *ty);
   static bool isGridType(const string &t);
   static bool isGridTypeSpecificCall(SgFunctionCallExp *ce);
@@ -102,6 +100,7 @@ class GridType: public AstAttribute {
   static const string emit_name;
   static const string set_name;  
  private:
+  //! Identify the type of the grid points
   void FindPointType();
 };
 
@@ -119,10 +118,10 @@ class Grid {
  public:
   
   Grid(GridType *gt, SgFunctionCallExp *newCall):
-      gt(gt), newCall(newCall), stencil_range_(gt->getNumDim()),
+      gt(gt), newCall(newCall), stencil_range_(gt->rank()),
       _isReadWrite(false), attribute_(NULL) {
     SgExpressionPtrList &args = newCall->get_args()->get_expressions();
-    size_t num_dims = gt->getNumDim();
+    size_t num_dims = gt->rank();
     PSAssert(args.size() == num_dims ||
              args.size() == num_dims+1);
     if (num_dims+1 == args.size()) {
@@ -145,7 +144,7 @@ class Grid {
   const SgFunctionCallExp *new_call() const { return newCall; }
   string toString() const;
   int getNumDim() const {
-    return gt->getNumDim();
+    return gt->rank();
   }
   bool has_static_size() const {
     return has_static_size_;
@@ -267,7 +266,7 @@ class GridOffsetAttribute: public AstAttribute {
  public:
   GridOffsetAttribute(int num_dim, bool periodic,
                       const StencilIndexList *sil): 
-    num_dim_(num_dim), periodic_(periodic), sil_(NULL) {
+    rank_(num_dim), periodic_(periodic), sil_(NULL) {
     if (sil) {
       sil_ = new StencilIndexList();
       *sil_ = *sil;
@@ -276,12 +275,12 @@ class GridOffsetAttribute: public AstAttribute {
   virtual ~GridOffsetAttribute() {}
   GridOffsetAttribute *copy() {
     GridOffsetAttribute *a= new GridOffsetAttribute(
-        num_dim_, periodic_, sil_);
+        rank_, periodic_, sil_);
     return a;
   }
   static const std::string name;
   bool periodic() const { return periodic_; }
-  int num_dim() const { return num_dim_; }
+  int rank() const { return rank_; }
   /*  
   void SetStencilIndexList(const StencilIndexList &sil) {
     sil_ = sil;
@@ -289,18 +288,28 @@ class GridOffsetAttribute: public AstAttribute {
   const StencilIndexList *GetStencilIndexList() { return sil_; }
   
  protected:
-  int num_dim_;
+  int rank_;
   bool periodic_;  
   StencilIndexList *sil_;
 };
 
 class GridGetAnalysis {
  public:
+  //! Returns grid var if a call to GridGet is given
+  static SgInitializedName *IsGetCall(SgExpression *exp, bool &is_periodic);
+  //! Returns grid var if a call to GridGet is given
+  static SgInitializedName *IsGetCall(SgExpression *exp);
+  //! Returns grid var if an expression is an grid array access
+  static SgInitializedName *IsGetArrayRead(SgExpression *exp, bool &is_periodic);
+  static SgInitializedName *IsGetArrayRead(SgExpression *exp);
+  static SgInitializedName *IsGet(SgExpression *exp, bool &is_periodic);
+  static SgInitializedName *IsGet(SgExpression *exp);    
   //! Returns the offset expression in a get expression
   static SgExpression *GetOffset(SgExpression *get_exp);
   //! Returns the grid variable in a get expression
   static SgInitializedName *GetGridVar(SgExpression *get_exp);
   static SgExpression *GetGridExp(SgExpression *get_exp);
+  
 };
 
 class GridGetAttribute: public AstAttribute {
@@ -322,7 +331,7 @@ class GridGetAttribute: public AstAttribute {
   bool &is_periodic() { return is_periodic_; }
   void SetStencilIndexList(const StencilIndexList *sil);
   const StencilIndexList *GetStencilIndexList() { return sil_; }
-  int num_dim() const { return gt_->num_dim(); }
+  int rank() const { return gt_->rank(); }
   const string &member_name() const { return member_name_; }
   GridType *gt() { return gt_; }
   SgInitializedName *gv() { return gv_; }

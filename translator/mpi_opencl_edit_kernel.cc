@@ -50,7 +50,7 @@ void MPIOpenCLTranslator::translateKernelDeclaration(
   FOREACH (it, gdim_calls.begin(), gdim_calls.end()) {
     SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
     PSAssert(fc);
-    if (fc->getAssociatedFunctionSymbol() != grid_dim_get_func_)
+    if (rose_util::getFuncName(fc) != PS_GRID_DIM_NAME)     
       continue;
     fc->set_function(sb::buildFunctionRefExp(gdim_dev));
   }

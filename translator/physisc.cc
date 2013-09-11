@@ -45,6 +45,7 @@ using std::string;
 namespace bpo = boost::program_options;
 namespace pt = physis::translator;
 namespace pto = physis::translator::optimizer;
+namespace rose_util = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -239,13 +240,6 @@ void set_output_filename(SgFile *file, string suffix) {
                                          suffix);
   file->set_unparse_output_filename(name);
   return;
-}
-
-static string GetInputFileSuffix(SgProject *proj) {
-  SgFile *ifile = proj->get_fileList()[0];
-  string name = ifile->get_sourceFileNameWithoutPath();
-  string suffix = name.substr(name.rfind(".")+1);
-  return suffix;
 }
 
 static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
@@ -564,6 +558,11 @@ int main(int argc, char *argv[]) {
   AstTests::runAllTests(proj);
   LOG_INFO() << "AST validated successfully.\n";
 
+  bool is_fortran = rose_util::IsFortran(proj);
+  if (is_fortran) {
+    LOG_DEBUG() << "Fortran input\n";
+  }
+
   pt::TranslationContext tx(proj);
   pt::RuntimeBuilder *rt_builder = GetRTBuilder(proj, opts);
   pto::Optimizer *optimizer =
@@ -641,15 +640,22 @@ int main(int argc, char *argv[]) {
   }
 
   LOG_INFO() << "Performing optimization Stage 2\n";
-  if (optimizer) optimizer->Stage2();
+  if (is_fortran) {
+    LOG_WARNING() << "No optimization implemented for Fortran\n";
+  } else if (optimizer) {
+    optimizer->Stage2();
+  } else {
+    LOG_INFO() << "No optimizer defined\n";
+  }
   LOG_INFO() << "Optimization Stage 2 done\n";
   
   trans->Finish();
   delete optimizer;
 
-  filename_suffix = pt::GetInputFileSuffix(proj);
+  filename_suffix = rose_util::GetInputFileSuffix(proj);
   if (opts.cuda_trans || opts.cuda_hm_trans || opts.mpi_cuda_trans) {
     filename_suffix = "cu";
+    if (is_fortran) filename_suffix += "f";
   }
   
   pt::set_output_filename(

@@ -38,7 +38,7 @@ void TranslationContext::AnalyzeGridTypes() {
       // < " is not class def\n";
       continue;
     }
-
+    
     if (def->get_file_info()->isCompilerGenerated()) {
       // skip
       continue;
@@ -46,15 +46,23 @@ void TranslationContext::AnalyzeGridTypes() {
     SgClassDeclaration *decl = def->get_declaration();
     SgClassType *type = decl->get_type();
     const string typeName = type->get_name().getString();
-    
-    //LOG_DEBUG() << "type name: " << typeName << "\n";
 
     if (!GridType::isGridType((typeName))) continue;
-
-    SgPointerType *gridPtr = type->get_ptr_to();
     
-    SgTypedefType *utype =
-        isSgTypedefType(*(gridPtr->get_typedefs()->get_typedefs().begin()));
+    LOG_DEBUG() << "type name: " << typeName << "\n";
+
+    // Find the user-visile type 
+    SgNamedType *utype = NULL;
+    if (rose_util::IsFortran(project_)) {
+      // In Fortran, the same type is used in the user code
+      utype = type;
+    } else {
+      // In C, typedef'ed type is used
+      SgPointerType *gridPtr = type->get_ptr_to();
+      utype =
+          isSgTypedefType(*(gridPtr->get_typedefs()->get_typedefs().begin()));
+    }
+    
     const string utypeName = utype->get_name().getString();
 
     LOG_DEBUG() << "Grid type found: " << utypeName
@@ -62,8 +70,9 @@ void TranslationContext::AnalyzeGridTypes() {
                 << ")\n";
 
     GridType *gt = new GridType(type, utype);
-    LOG_DEBUG() << gt->toString() << "\n";
+    LOG_DEBUG() << "Created grid type: " << gt->toString() << "\n";
     registerGridType(utype, gt);
+    rose_util::AddASTAttribute<GridType>(utype, gt);
     rose_util::AddASTAttribute<GridType>(decl, gt);
   }
 }
@@ -97,6 +106,17 @@ static bool HandleGridNew(SgInitializedName *in,
   Grid *g = tx.getOrCreateGrid(callExp);
   return tx.associateVarWithGrid(in, g);
 }
+
+static bool HandleGridNewFortran(SgFunctionCallExp *callExp,
+                                 TranslationContext &tx) {
+  Grid *g = tx.getOrCreateGrid(callExp);
+  SgInitializedName *gv =
+      si::convertRefToInitializedName(
+          callExp->get_args()->get_expressions()[0]);
+  LOG_DEBUG() << "Fortran GridNew to " << gv->unparseToString() << "\n";  
+  return tx.associateVarWithGrid(gv, g);
+}
+
 
 static bool HandleGridAlias(SgInitializedName *dst,
                             SgInitializedName *src,
@@ -152,8 +172,7 @@ static bool IsInGlobalScope(SgInitializedName *in) {
 }
 
 static bool HandleGridDeclaration(SgInitializedName *in,
-                                  TranslationContext &tx,
-                                  DefUseAnalysis &dua) {
+                                  TranslationContext &tx) {
 
   EnsureGridVarAttribute(in);
   
@@ -179,9 +198,13 @@ static bool HandleGridDeclaration(SgInitializedName *in,
     // Case: Local variable declaration
     SgAssignInitializer *asn = isSgAssignInitializer(
         in->get_initializer());
-    PSAssert(asn);
-    SgExpression *rhs = asn->get_operand();
-    changed |= HandleGridAssignment(in, rhs, tx);    
+    if (asn) {
+      SgExpression *rhs = asn->get_operand();
+      changed |= HandleGridAssignment(in, rhs, tx);
+    } else {
+      // when not assigned
+      changed |= tx.associateVarWithGrid(in, NULL);
+    }
   } else {
     LOG_ERROR() << "Unsupported InitializedName: "
                 << in->unparseToString()
@@ -246,20 +269,20 @@ static bool PropagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
   // No grid argument passed
   if (!grid_is_used) return false;
 
-  // These are not taken care here.
-  if (StencilMap::isMap(c) ||
-      Reduce::IsReduce(c)) return false;
-  
-  LOG_DEBUG() << "Grid var propagation: " <<
-      c->get_function()->unparseToString() << "\n";  
-  
   SgFunctionDeclaration *callee_decl =
       si::getDeclarationOfNamedFunction(c->get_function());
-
   if (!callee_decl) {
     LOG_ERROR() << "Callee not found: " << c->unparseToString() << "\n";
     PSAbort(1);
   }
+
+  // These are not taken care here.
+  if (StencilMap::IsMap(c) || Reduce::IsReduce(c) ||
+      callee_decl->get_name() == PSF_GRID_NEW_NAME ||
+      tx.IsCopyin(c) || tx.IsCopyout(c)) return false;
+  
+  LOG_DEBUG() << "Grid var propagation: " <<
+      callee_decl->unparseToString() << "\n";  
   
   callee_decl = isSgFunctionDeclaration(
       callee_decl->get_definingDeclaration());
@@ -269,8 +292,8 @@ static bool PropagateGridVarMapAcrossOrdinaryCall(SgFunctionCallExp *c,
   return PropagateGridVarMapAcrossCall(args, params, tx);
 }
 
-
-void TranslationContext::AnalyzeGridVars(DefUseAnalysis &dua) {
+void TranslationContext::AnalyzeGridVars() {
+  LOG_DEBUG() << "Analyzing Grid variables\n";
   vector<SgInitializedName*> vars =
       si::querySubTree<SgInitializedName>(project_);
   vector<SgAssignOp*> asns =
@@ -290,7 +313,7 @@ void TranslationContext::AnalyzeGridVars(DefUseAnalysis &dua) {
       if (!rose_util::GetASTAttribute<GridType>(in)) {
           rose_util::AddASTAttribute(in, gt);
       }
-      changed |= HandleGridDeclaration(in, *this, dua);
+      changed |= HandleGridDeclaration(in, *this);
     }
     BOOST_FOREACH(SgAssignOp *aop, asns) {
       // Skip non-grid assignments
@@ -314,28 +337,47 @@ void TranslationContext::AnalyzeGridVars(DefUseAnalysis &dua) {
     
     // Note: grids are read-only in reduction kernels, so no need to
     // analyze them
-    
+
     // Handle normal function call
     BOOST_FOREACH (SgFunctionCallExp *c, calls) {
-      changed |= PropagateGridVarMapAcrossOrdinaryCall(c, *this);
+      SgFunctionDeclaration *callee_decl =
+          si::getDeclarationOfNamedFunction(c->get_function());
+      if (callee_decl && callee_decl->get_name() == PSF_GRID_NEW_NAME) {
+        changed |= HandleGridNewFortran(c, *this);
+      } else {
+        changed |= PropagateGridVarMapAcrossOrdinaryCall(c, *this);
+      }
     }
+  }
+  LOG_DEBUG() << "Grid variable analysis done\n";
+}
+
+static void AssociateDomainAttr(SgExpression *exp, Domain *dom,
+                                TranslationContext *tx) {
+  LOG_DEBUG() << "Domain attr: "
+              << dom->toString() << "\n";
+  Domain *old = rose_util::GetASTAttribute<Domain>(exp);
+  if (old) {
+    old->Merge(*dom);
+    delete dom;
+  } else {
+    //tx->associateExpWithDomain(exp, dom);
+    rose_util::AddASTAttribute<Domain>(exp, dom);
   }
 }
 
-void TranslationContext::AnalyzeDomainExpr(DefUseAnalysis &dua) {
+void TranslationContext::AnalyzeDomainExpr() {
   assert(PS_MAX_DIM == 3);
   SgType* domTypes[] = {dom1d_type_, dom2d_type_, dom3d_type_};
-  vector<SgType*> v(domTypes, domTypes+3);
+  vector<SgType*> v(domTypes, domTypes+4);
   auto_ptr<DefMap> defMap = findDefinitions(project_, v);
   
-  LOG_DEBUG() << "Domain DefMap: " << toString(*defMap);
+  LOG_DEBUG() << "Domain DefMap: " << toString(*defMap) << "\n";
 
-  Rose_STL_Container<SgNode*> exps =
-      NodeQuery::querySubTree(project_, V_SgExpression);
-  FOREACH(it, exps.begin(), exps.end()) {
-    SgExpression *exp = isSgExpression(*it);
-    assert(exp);
-    if (!Domain::isDomainType(exp->get_type())) continue;
+  vector<SgExpression*> exps = si::querySubTree<SgExpression>(project_);
+  BOOST_FOREACH(SgExpression *exp, exps) {
+    SgType *dom_type = exp->get_type();
+    if (!Domain::isDomainType(dom_type)) continue;
 
     if (isSgVarRefExp(exp)) {
       SgInitializedName *in =
@@ -344,17 +386,21 @@ void TranslationContext::AnalyzeDomainExpr(DefUseAnalysis &dua) {
       FOREACH(defIt, defs.begin(), defs.end()) {
         SgExpression *def = *defIt;
         LOG_DEBUG() << "Dom Def: "
-                    << def->unparseToString() << "\n";
-        assert(isSgFunctionCallExp(def));
-        Domain *dom =
-            Domain::GetDomain(isSgFunctionCallExp(def));
-        associateExpWithDomain(exp, dom);
+                    << (def ? def->unparseToString() : string("<NULL>"))
+                    << "\n";
+        Domain *dom = NULL;
+        if (isSgFunctionCallExp(def)) {
+          dom = Domain::GetDomain(isSgFunctionCallExp(def));
+        } else if (dom == NULL) {
+          dom = Domain::GetDomain(getNumDimOfDomain(dom_type));
+        }
+        AssociateDomainAttr(exp, dom, this);
       }
-
     } else if (isSgFunctionCallExp(exp)) {
       SgFunctionCallExp *call = isSgFunctionCallExp(exp);
       Domain *dom = Domain::GetDomain(call);
-      associateExpWithDomain(call, dom);
+      //associateExpWithDomain(call, dom);
+      rose_util::AddASTAttribute<Domain>(call, dom);      
     } else {
       // OG_DEBUG() << "Ignoring domain expression of type: "
       // < exp->class_name() << "\n";
@@ -363,28 +409,28 @@ void TranslationContext::AnalyzeDomainExpr(DefUseAnalysis &dua) {
 }
 
 void TranslationContext::AnalyzeMap() {
-  Rose_STL_Container<SgNode*> calls =
-      NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
-  FOREACH(it, calls.begin(), calls.end()) {
-    SgFunctionCallExp *call = isSgFunctionCallExp(*it);
-    assert(call);
-    if (!StencilMap::isMap(call)) continue;
+  LOG_DEBUG() << "Analyzing Map\n";
+  vector<SgFunctionCallExp*> calls =
+      si::querySubTree<SgFunctionCallExp>(project_);
+  BOOST_FOREACH(SgFunctionCallExp *call, calls) {
+    if (!StencilMap::IsMap(call)) continue;
     LOG_DEBUG() << "Call to stencil_map found: "
                 << call->unparseToString() << "\n";
     StencilMap *mc = new StencilMap(call, this);
     registerMap(call, mc);
   }
+  LOG_DEBUG() << "Map analysis done\n";
 }
 
 void TranslationContext::locateDomainTypes() {
-  dom1d_type_ = rose_util::getType(project_, PSDOMAIN1D_TYPE_NAME);
+  dom1d_type_ = rose_util::FindType(project_, PS_DOMAIN1D_TYPE_NAME);
+  dom2d_type_ = rose_util::FindType(project_, PS_DOMAIN2D_TYPE_NAME);
+  dom3d_type_ = rose_util::FindType(project_, PS_DOMAIN3D_TYPE_NAME);
+  //f_dom_type_ = rose_util::FindType(project_, PSF_DOMAIN_TYPE_NAME);
   assert(dom1d_type_);
-  dom2d_type_ = rose_util::getType(project_, PSDOMAIN2D_TYPE_NAME);
   assert(dom2d_type_);
-  dom3d_type_ = rose_util::getType(project_, PSDOMAIN3D_TYPE_NAME);
   assert(dom3d_type_);
 }
-
 
 // TODO: Now all types are predefined.
 void TranslationContext::Build() {
@@ -413,25 +459,24 @@ void TranslationContext::Build() {
   // preparation
   locateDomainTypes();
 
-  DefUseAnalysis *dua = new DefUseAnalysis(project_);
-  dua->run(false);
-  //dua->dfaToDOT();
-
   AnalyzeGridTypes();
-  AnalyzeDomainExpr(*dua);
+  AnalyzeDomainExpr();
   AnalyzeMap();
   AnalyzeReduce();
 
-  AnalyzeGridVars(*dua);
+  AnalyzeGridVars();
   LOG_DEBUG() << "grid variable analysis done\n";
   print(std::cout);
 
-  AnalyzeRun(*dua);
+  AnalyzeRun();
   AnalyzeKernelFunctions();
 #ifdef UNUSED_CODE
   markReadWriteGrids();
 #endif
   LOG_INFO() << "Analyzing stencil range\n";
+
+  AnalyzeGet(project_, *this);
+  AnalyzeEmit(project_, *this);
   
   FOREACH (it, stencil_map_.begin(), stencil_map_.end()) {
     AnalyzeStencilRange(*(it->second), *this);
@@ -542,6 +587,7 @@ static void AttachStencilIndexVarAttribute(SgFunctionDeclaration *kernel_decl) {
 }
 
 void TranslationContext::AnalyzeKernelFunctions(void) {
+  LOG_DEBUG() << "Analyzing kernel functions\n";
   /*
    * NOTE: Using call graphs would be much simpler. analyzeCallToMap
    * can be simply extended so that after finding calls to map, it
@@ -563,7 +609,8 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
       if (m) {
         if (registerEntryKernel(m->getKernel())) {
           done = false;
-          AnalyzeEmit(m->getKernel());
+          //AnalyzeEmit(m->getKernel());
+          //AnalyzeGet(m->getKernel());
           AttachStencilIndexVarAttribute(m->getKernel());          
         }
         // For some reason, attribute attached to kernel body causes
@@ -607,64 +654,22 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
       }
     }
   }
+  LOG_DEBUG() << "Kernel function analysis done\n";  
 }
 
-/*
-  bool TranslationContext::isGridTypeSpecificCall(SgFunctionCallExp *ce) {
-  return getGridVarUsedInFuncCall(ce) != NULL;
-  }
-
-  SgInitializedName*
-  TranslationContext::getGridVarUsedInFuncCall(SgFunctionCallExp *call) {
-  SgPointerDerefExp *pdref =
-  isSgPointerDerefExp(call->get_function());
-  if (!pdref) return false;
-
-  SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
-  if (!exp) return NULL;
-
-  SgExpression *lhs = exp->get_lhs_operand();
-  SgVarRefExp *vre = isSgVarRefExp(lhs);
-  if (!vre) return NULL;
-
-  SgInitializedName *in = vre->get_symbol()->get_declaration();
-  assert(in);
-
-  if (!GridType::isGridType(in->get_type())) return NULL;
-
-  assert(findGrid(in));
-  return in;
-  }
-*/
-
-string TranslationContext::getGridFuncName(SgFunctionCallExp *call) {
-  if (!GridType::isGridTypeSpecificCall(call)) {
-    throw PhysisException("Not a grid function call");
-  }
-  SgPointerDerefExp *pdref =
-      isSgPointerDerefExp(call->get_function());
-  SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
-
-  SgVarRefExp *rhs = isSgVarRefExp(exp->get_rhs_operand());
-  assert(rhs);
-  const string name = rhs->get_symbol()->get_name().getString();
-  LOG_VERBOSE() << "method name: " << name << "\n";
-
-  return name;
-}
-
-void TranslationContext::AnalyzeRun(DefUseAnalysis &dua) {
-  Rose_STL_Container<SgNode*> calls =
-      NodeQuery::querySubTree(project_, V_SgFunctionCallExp);
-  FOREACH(it, calls.begin(), calls.end()) {
-    SgFunctionCallExp *call = isSgFunctionCallExp(*it);
-    assert(call);
+// TODO: Fortran
+void TranslationContext::AnalyzeRun() {
+  LOG_DEBUG() << "Analyzing Stencil run\n";
+  vector<SgFunctionCallExp*> calls =
+      si::querySubTree<SgFunctionCallExp>(project_);
+  BOOST_FOREACH(SgFunctionCallExp *call, calls) {
     if (!Run::isRun(call)) continue;
     LOG_DEBUG() << "Call to stencil_run found: "
                 << call->unparseToString() << "\n";
     Run *x = new Run(call, this);
     registerRun(call, x);
   }
+  LOG_DEBUG() << "Stencil run analysis done\n";
 }
 
 SgFunctionCallExpPtrList
@@ -719,23 +724,6 @@ void TranslationContext::print(ostream &os) const {
     }
     os << sj << "\n";
   }
-  os << "Exp-Dom associations:\n";
-  FOREACH(domIt, domain_map_.begin(), domain_map_.end()) {
-    const SgExpression *exp = domIt->first;
-    const DomainSet &ds = domIt->second;
-    StringJoin sj(", ");
-    os << exp->unparseToString()
-       << " -> ";
-    FOREACH(dit, ds.begin(), ds.end()) {
-      Domain *d = *dit;
-      if (d) {
-        sj << (*dit)->toString();
-      } else {
-        sj << "NULL";
-      }
-    }
-    os << sj << "\n";
-  }
   // Map calls
   os << "Stencils:\n";
   FOREACH(it, stencil_map_.begin(), stencil_map_.end()) {
@@ -783,7 +771,14 @@ Grid *TranslationContext::getOrCreateGrid(SgFunctionCallExp *newCall) {
   if (isContained(grid_new_map_, newCall)) {
     g = grid_new_map_[newCall];
   } else {
-    GridType *gt = findGridType(newCall->get_type());
+    GridType *gt = NULL;
+    if (si::is_C_language() || si::is_Cxx_language()) {
+      gt = rose_util::GetASTAttribute<GridType>(
+          newCall->get_type());
+    } else if (si::is_Fortran_language()) {
+      gt = rose_util::GetASTAttribute<GridType>(
+          newCall->get_args()->get_expressions()[0]->get_type());
+    }
     assert(gt);
     g = new Grid(gt, newCall);
     grid_new_map_.insert(std::make_pair(newCall, g));
@@ -843,50 +838,12 @@ Kernel *TranslationContext::findKernel(SgFunctionDeclaration *fd) {
   return NULL;
 }
 
-bool TranslationContext::associateExpWithDomain(SgExpression *exp,
-                                                Domain *d) {
-  return makeAssociation(exp, d, domain_map_);
-}
-
-const DomainSet *TranslationContext::findDomainAll(SgExpression *exp) {
-  DomainMap::const_iterator it = domain_map_.find(exp);
-  if (it == domain_map_.end()) {
-    return NULL;
-  } else {
-    return &(it->second);
-  }
-}
-
-Domain *TranslationContext::findDomain(SgExpression *exp) {
-  DomainMap::const_iterator it = domain_map_.find(exp);
-  if (it == domain_map_.end()) {
-    return NULL;
-  } else {
-    return *(it->second.begin());
-  }
-}
-
 StencilMap *TranslationContext::findMap(SgExpression *e) {
   MapCallMap::iterator it = stencil_map_.find(e);
   if (it == stencil_map_.end()) {
     return NULL;
   } else {
     return it->second;
-  }
-}
-
-void TranslationContext::registerStencilIndex(SgFunctionCallExp *call,
-                                              const StencilIndexList &sil) {
-  stencil_indices_.insert(make_pair(call, sil));
-}
-
-const StencilIndexList* TranslationContext::findStencilIndex(
-    SgFunctionCallExp *call) {
-  StencilIndexMap::iterator it = stencil_indices_.find(call);
-  if (it == stencil_indices_.end()) {
-    return NULL;
-  } else {
-    return &(it->second);
   }
 }
 

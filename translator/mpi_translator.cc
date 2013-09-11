@@ -40,7 +40,7 @@ MPITranslator::MPITranslator(const Configuration &config):
   
   validate_ast_ = true;
 }
-
+#if 0
 void MPITranslator::CheckSizes() {
   // Check the grid sizes and dimensions
   global_num_dims_ = 0;
@@ -96,6 +96,7 @@ void MPITranslator::CheckSizes() {
 
   //LOG_DEBUG() << "Global size: " << global_size_ << "\n";
 }
+#endif
 
 void MPITranslator::Translate() {
   LOG_DEBUG() << "Translating to MPI\n";
@@ -273,7 +274,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     bool is_periodic = smap->IsGridPeriodic(grid_param);
     LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
 
-    SgExpression *gvref = BuildStencilFieldRef(
+    SgExpression *gvref = rt_builder_->BuildStencilFieldRef(
         sb::buildVarRefExp(stencil_decl),
         grid_param->get_name());
     
@@ -332,7 +333,7 @@ void MPITranslator::DeactivateRemoteGrids(
   //  smap->grid_args().end()) {
   FOREACH (gai, remote_grids.begin(), remote_grids.end()) {
     SgInitializedName *gv = *gai;
-    SgExpression *gvref = BuildStencilFieldRef(
+    SgExpression *gvref = rt_builder_->BuildStencilFieldRef(
         sb::buildVarRefExp(stencil_decl),
         gv->get_name());
     rose_util::AppendExprStatement(
@@ -350,8 +351,8 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
   // stencil
   SgVariableDeclaration *d = isSgVariableDeclaration(*members.begin());
   SgExpression *dom_var =
-      BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
-                           sb::buildVarRefExp(d));
+      rt_builder_->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
+                                        sb::buildVarRefExp(d));
   rose_util::AppendExprStatement(
       scope, mpi_rt_builder_->BuildDomainSetLocalSize(dom_var));
   
@@ -370,8 +371,8 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
     LOG_DEBUG() << "grid var created\n";
     SgFunctionCallExp *grid_real_addr
         = mpi_rt_builder_->BuildGetGridByID(
-            BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
-                                 sb::buildVarRefExp(grid_id)));
+            rt_builder_->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
+                                              sb::buildVarRefExp(grid_id)));
     si::appendStatement(
         sb::buildAssignStatement(grid_var, grid_real_addr),
         scope);
@@ -535,7 +536,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
 bool MPITranslator::TranslateGetHost(SgFunctionCallExp *node,
                                      SgInitializedName *gv) {
   GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
+  int nd = gt->rank();
   SgScopeStatement *scope = getContainingScopeStatement(node);    
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
   SgExpressionPtrList &args = node->get_args()->get_expressions();
@@ -557,7 +558,7 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
                                        SgInitializedName *gv,
                                        bool is_periodic) {
   GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
+  int nd = gt->rank();
   SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
   SgExpressionPtrList args;
   rose_util::CopyExpressionPtrList(
@@ -586,7 +587,7 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z)) = v
 
   GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->getNumDim();
+  int nd = gt->rank();
   SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
   
   SgInitializedNamePtrList &params =

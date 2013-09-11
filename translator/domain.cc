@@ -16,10 +16,20 @@
 namespace physis {
 namespace translator  {
 
+const std::string Domain::name = "Domain";
+
+Domain::Domain(const Domain &d)
+    : num_dims_(d.num_dims_),
+      has_static_constant_size_(d.has_static_constant_size_),
+      regular_domain_(d.regular_domain_) {
+}
+
 bool Domain::isDomainType(const SgType *type) {
   const SgNamedType *named_type = isSgNamedType(type);
   if (named_type) {
-    if (named_type->get_name().getString() == PSDOMAIN_TYPE_NAME) {
+    string type_name = named_type->get_name().getString();
+    if (type_name == PS_DOMAIN_INTERNAL_TYPE_NAME ||
+        type_name == PSF_DOMAIN_TYPE_NAME) {
       return true;
     }
   }
@@ -94,6 +104,16 @@ string Domain::getRealFuncName(const string &funcName,
   return ss.str();
 }
 
+void Domain::Merge(const Domain &dom) {
+  PSAssert(num_dims_ == dom.num_dims_);
+  if (has_static_constant_size_ && dom.has_static_constant_size_ &&
+      regular_domain_ == dom.regular_domain_) {
+    LOG_DEBUG() << "Exactly same static constant domain\n";
+  } else if (has_static_constant_size_) {
+    LOG_DEBUG() << "Conservatively assuming non-static domain\n";    
+    has_static_constant_size_ = false;
+  }
+}
 } // namespace translator
 } // namespace physis
 

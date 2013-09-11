@@ -26,10 +26,6 @@
 // translator. Reorganization should be applied.
 
 #define PS_MAX_DIM (3)
-#define PSDOMAIN_TYPE_NAME "__PSDomain"
-#define PSDOMAIN1D_TYPE_NAME "PSDomain1D"
-#define PSDOMAIN2D_TYPE_NAME "PSDomain2D"
-#define PSDOMAIN3D_TYPE_NAME "PSDomain3D"
 
 //#define PHYSIS_INDEX_INT64
 // Index type is 32-bit int by default

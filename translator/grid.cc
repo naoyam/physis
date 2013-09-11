@@ -9,6 +9,7 @@
 #include "translator/grid.h"
 
 #include <algorithm>
+#include <boost/foreach.hpp>
 
 #include "translator/physis_names.h"
 
@@ -30,7 +31,7 @@ const string GridType::get_periodic_name = "get_periodic";
 const string GridType::emit_name = "emit";
 const string GridType::set_name = "set";
 
-unsigned GridType::getNumDimFromTypeName(const string &tname) {
+unsigned GridType::GetRankFromTypeName(const string &tname) {
   if (tname.find(grid1dTypeKey) == 0) {
     return 1;
   } else if (tname.find(grid2dTypeKey) == 0) {
@@ -42,8 +43,25 @@ unsigned GridType::getNumDimFromTypeName(const string &tname) {
   }
 }
 
-GridType::GridType(SgClassType *struct_type, SgTypedefType *user_type)
-    : struct_type_(struct_type), user_type_(user_type),
+unsigned GridType::GetRankFromFortranType(const SgClassType *type) {
+  SgVariableDeclaration *pt_decl = isSgVariableDeclaration(
+      rose_util::FindMember(type, PS_GRID_TYPE_PT_NAME));
+  if (pt_decl) {
+    LOG_VERBOSE() << "PT member detected: " << pt_decl->unparseToString() << "\n";
+    LOG_VERBOSE() << "PT type: " << rose_util::GetType(pt_decl)->unparseToString() << "\n";
+    SgArrayType *pt_type = isSgArrayType(rose_util::GetType(pt_decl));
+    PSAssert(pt_type);
+    unsigned rank = pt_type->get_rank();
+    LOG_VERBOSE() << "Rank: " << rank << "\n";
+    return rank;
+  } else {
+    LOG_DEBUG() << "Rank not found\n";
+    return 0;
+  }
+}
+
+GridType::GridType(SgClassType *real_type, SgNamedType *user_type)
+    : real_type_(real_type), user_type_(user_type),
       point_type_(NULL), point_def_(NULL),
       aux_type_(NULL), aux_decl_(NULL),
       aux_free_decl_(NULL), aux_new_decl_(NULL),
@@ -51,15 +69,19 @@ GridType::GridType(SgClassType *struct_type, SgTypedefType *user_type)
       aux_get_decl_(NULL), aux_emit_decl_(NULL) {
   type_name_ = user_type_->get_name().getString();
   LOG_DEBUG() << "grid type name: " << type_name_ << "\n";
-  string realName = struct_type_->get_name().getString();
-  num_dim_ = getNumDimFromTypeName(realName);
-  LOG_DEBUG() << "grid dimension: " << num_dim_ << "\n";
+  string realName = real_type_->get_name().getString();
+  if (si::is_C_language() || si::is_Cxx_language()) {
+    rank_ = GetRankFromTypeName(realName);
+  } else {
+    rank_ = GetRankFromFortranType(isSgClassType(user_type_));
+  }
+  LOG_DEBUG() << "grid dimension: " << rank_ << "\n";
   FindPointType();
 }
 
 GridType::GridType(const GridType &gt):
-    struct_type_(gt.struct_type_), user_type_(gt.user_type_),
-    num_dim_(gt.num_dim_), type_name_(gt.type_name_),
+    real_type_(gt.real_type_), user_type_(gt.user_type_),
+    rank_(gt.rank_), type_name_(gt.type_name_),
     point_type_(gt.point_type_), point_def_(gt.point_def_),
     aux_type_(gt.aux_type_), aux_decl_(gt.aux_decl_),
     aux_free_decl_(gt.aux_free_decl_),
@@ -89,18 +111,25 @@ bool GridType::isGridType(SgType *ty) {
 }
 
 bool GridType::isGridType(const string &t) {
-  if (getNumDimFromTypeName(t) == 0) return false;
+  //if (getNumDimFromTypeName(t) == 0) return false;
+  if (!(startswith(t, PS_GRID_TYPE_NAME_PREFIX) ||
+        startswith(t, string("__") + PS_GRID_TYPE_NAME_PREFIX))) {
+    return false;
+  }
   // If an underscore is used other than in the first two characters,
-  // this type is not the user grid type.
-  if (t.rfind("_") != 1) return false;
+  // this type is not the user grid type. This is necessary because
+  // type names like __PSGrid3DFloat_dev is used in some translation
+  // targets. 
+  size_t p = t.rfind("_");
+  if (p != string::npos && p != 1) return false;
   return true;
 }
 
 void Grid::identifySize(SgExpressionPtrList::const_iterator size_begin,
                         SgExpressionPtrList::const_iterator size_end) {
-  int num_dim = gt->getNumDim();
+  int rank = gt->rank();
   if (rose_util::copyConstantFuncArgs<size_t>(
-          size_begin, size_end, static_size_) == num_dim) {
+          size_begin, size_end, static_size_) == rank) {
     has_static_size_ = true;
   } else {
     has_static_size_ = false;
@@ -202,28 +231,22 @@ bool ValidatePointType(SgClassDefinition *point_def) {
 }
 
 void GridType::FindPointType() {
-  const SgClassDefinition *sdef =
-      isSgClassDeclaration(struct_type_->get_declaration()
-                           ->get_definingDeclaration())->get_definition();
-  assert(sdef);
-  const SgDeclarationStatementPtrList &members =
-      sdef->get_members();
-  SgType *pt = NULL;
-  FOREACH(it, members.begin(), members.end()) {
-    SgVariableDeclaration *m = isSgVariableDeclaration(*it);
-    assert(m);
-    SgInitializedName *v = m->get_variables().front();
-    if (v->get_name() != "_type_indicator") continue;
-    pt = v->get_type();
-    LOG_DEBUG() << "Grid point type: "
-                << pt->unparseToString() << "\n";
+  string type_indicator_name =
+      si::is_Fortran_language() ? PS_GRID_TYPE_PT_NAME :
+      "_type_indicator";
+  SgVariableDeclaration *type_indicator =
+      isSgVariableDeclaration(rose_util::FindMember(
+          real_type_, type_indicator_name));
+  PSAssert(type_indicator);
+  point_type_ = rose_util::GetType(type_indicator);
+  if (si::is_Fortran_language()) {
+    PSAssert(isSgArrayType(point_type_));
+    point_type_ = isSgArrayType(point_type_)->get_base_type();
   }
-  if (pt == NULL) {
-    LOG_ERROR() << "Point type not found.\n";
-    PSAbort(1);
-  }
-  point_type_ = pt;
+  LOG_DEBUG() << "Point type: " << point_type_->unparseToString() << "\n";
+  
   point_def_ = NULL;
+  
   if (!isSgClassType(point_type_)) return;
   
   SgClassDeclaration *point_decl =
@@ -254,7 +277,7 @@ string GridType::getRealFuncName(const string &funcName) const {
   if (funcName == "copyin" || funcName == "copyout" ||
       funcName == "dimx" || funcName == "dimy" ||
       funcName == "dimz" || funcName == "free") {
-    ss << "grid" << num_dim_
+    ss << "grid" << rank_
        << "d_" << funcName;
   } else {
     ss << type_name_ << "_" << funcName;
@@ -332,7 +355,7 @@ bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
 const std::string GridVarAttribute::name = "GridVar";
 
 GridVarAttribute::GridVarAttribute(GridType *gt):
-    gt_(gt), sr_(gt_->num_dim()) {}
+    gt_(gt), sr_(gt_->rank()) {}
 
 GridVarAttribute::GridVarAttribute(const GridVarAttribute &x):
     gt_(x.gt_), sr_(x.sr_), member_sr_(x.member_sr_) {}
@@ -348,7 +371,7 @@ void GridVarAttribute::AddMemberStencilIndexList(
   if (!isContained<pair<string, IntVector>, StencilRange>(
           member_sr_, make_pair(member, indices))) {
     member_sr_.insert(make_pair(make_pair(member, indices),
-                                StencilRange(gt_->num_dim())));
+                                StencilRange(gt_->rank())));
   }
   StencilRange &sr = member_sr_.find(make_pair(member, indices))->second;
   sr.insert(sil);
@@ -507,6 +530,71 @@ void GridGetAttribute::SetStencilIndexList(
 
 bool GridGetAttribute::IsUserDefinedType() const {
   return gt_->IsUserDefinedPointType();
+}
+
+SgInitializedName *GridGetAnalysis::IsGetCall(SgExpression *call) {
+  bool is_periodic;
+  return IsGetCall(call, is_periodic);
+}
+
+SgInitializedName *GridGetAnalysis::IsGetCall(SgExpression *exp,
+                                              bool &is_periodic) {
+  SgFunctionCallExp *call = isSgFunctionCallExp(exp);
+  if (!call) return NULL;
+  if (GridType::isGridTypeSpecificCall(call)) {
+    SgInitializedName* gv = GridType::getGridVarUsedInFuncCall(call);
+    assert(gv);
+    string methodName = GridType::GetGridFuncName(call);
+    if (methodName == GridType::get_name ||
+        methodName == GridType::get_periodic_name) {
+      LOG_DEBUG() << "Grid get: " << call->unparseToString() << "\n";
+      is_periodic = methodName == "get_periodic";
+      return gv;
+    }
+  }
+  return NULL;
+}
+
+
+SgInitializedName *GridGetAnalysis::IsGetArrayRead(SgExpression *exp) {
+  bool is_periodic;
+  return IsGetArrayRead(exp, is_periodic);
+}
+
+// Depends on GridType attribute
+// TODO: is_periodic not supported
+SgInitializedName *GridGetAnalysis::IsGetArrayRead(SgExpression *exp,
+                                                   bool &is_periodic) {
+  SgDotExp *dot = isSgDotExp(exp);
+  if (!dot) return NULL;
+  SgVarRefExp *grid_ref = isSgVarRefExp(dot->get_lhs_operand());
+  if (!grid_ref) return NULL;
+  SgInitializedName *gv = si::convertRefToInitializedName(grid_ref);
+  if (!gv) return NULL;
+  GridType *gt = rose_util::GetASTAttribute<GridType>(gv);
+  if (!gt) return NULL;
+  SgAssignOp *parent = isSgAssignOp(exp->get_parent());
+  if (parent && parent->get_lhs_operand() == exp) {
+    // this is emit
+    return NULL;
+  }
+  return gv;
+}
+
+SgInitializedName *GridGetAnalysis::IsGet(SgExpression *exp) {
+  bool is_periodic;
+  return IsGet(exp, is_periodic);
+}
+
+SgInitializedName *GridGetAnalysis::IsGet(SgExpression *exp,
+                                          bool &is_periodic) {
+  if (isSgDotExp(exp)) {
+    return IsGetArrayRead(exp, is_periodic);
+  } else if (isSgFunctionCallExp(exp)) {
+    return IsGetCall(isSgFunctionCallExp(exp), is_periodic);
+  } else {
+    return NULL;
+  }
 }
 
 SgExpression *GridGetAnalysis::GetOffset(SgExpression *get_exp) {

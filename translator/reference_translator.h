@@ -162,26 +162,6 @@ class ReferenceTranslator : public Translator {
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
   virtual std::string GetStencilDomName() const;
-  virtual SgExpression *BuildDomMaxRef(SgExpression *domain) const;
-  virtual SgExpression *BuildDomMinRef(SgExpression *domain) const;
-  virtual SgExpression *BuildDomMaxRef(SgExpression *domain, int dim) const;
-  virtual SgExpression *BuildDomMinRef(SgExpression *domain, int dim) const;
-  virtual SgExpression *BuildStencilDomRef(SgExpression *stencil) const;
-  virtual SgExpression *BuildStencilDomMaxRef(SgExpression *stencil) const;
-  virtual SgExpression *BuildStencilDomMaxRef(SgExpression *stencil,
-                                              int dim) const;
-  virtual SgExpression *BuildStencilDomMinRef(SgExpression *stencil) const;
-  virtual SgExpression *BuildStencilDomMinRef(SgExpression *stencil,
-                                              int dim) const;
-  /*
-  virtual SgVarRefExp *BuildDomainMinRef(SgClassDeclaration* dom_decl) const;
-  virtual SgVarRefExp *BuildDomainMaxRef(SgClassDeclaration* dom_decl)
-  const;
-  */
-  virtual SgExpression *BuildStencilFieldRef(SgExpression *stencil_ref,
-                                             std::string name) const;
-  virtual SgExpression *BuildStencilFieldRef(SgExpression *stencil_ref,
-                                             SgExpression *field) const;
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
   virtual void FixGridType();
