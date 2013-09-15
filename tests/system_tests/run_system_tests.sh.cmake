@@ -1017,10 +1017,12 @@ function count_num_all_tests()
 			if is_skipped_module_test $TEST $TARGET; then
 				continue;
 			fi
-			if [ "x$CONFIG_ARG" = "x" ]; then
+			if [ "$CONFIG_ARG" != "" ]; then
+				CONFIG=$CONFIG_ARG
+			elif [ $CONFIG_ALL -eq 1 ]; then
 				CONFIG=$(generate_translation_configurations $TARGET)
 			else
-				CONFIG=$CONFIG_ARG
+				CONFIG=$DEFAULT_CONFIG
 			fi
 			num=$((num + $(echo $CONFIG | wc -w)))
 		done
