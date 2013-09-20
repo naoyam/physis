@@ -5,6 +5,7 @@
 // details.
 
 #include <boost/program_options.hpp>
+#include <boost/foreach.hpp>
 
 #include "translator/config.h"
 #include "translator/reference_translator.h"
@@ -40,12 +41,13 @@
 #include "translator/cuda_hm_translator.h"
 #include "translator/cuda_hm_runtime_builder.h"
 #endif
+#include "translator/fortran_output_fix.h"
 
 using std::string;
 namespace bpo = boost::program_options;
 namespace pt = physis::translator;
 namespace pto = physis::translator::optimizer;
-namespace rose_util = physis::translator::rose_util;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -238,6 +240,7 @@ string generate_output_filename(string srcname, string suffix) {
 void set_output_filename(SgFile *file, string suffix) {
   string name = generate_output_filename(file->get_sourceFileNameWithoutPath(),
                                          suffix);
+  LOG_INFO() << "Output file name: " << name << "\n";
   file->set_unparse_output_filename(name);
   return;
 }
@@ -428,6 +431,21 @@ static void SetDynamicLinkLib(
 } // namespace translator
 } // namespace physis
 
+// In Fortran, rmod files are read before the source file, so they
+// need to be skipped.
+static SgFile *GetMainSourceFile(SgProject *proj) {
+  for (int i = 0; i < proj->numberOfFiles(); ++i) {
+    SgFile *file = (*proj)[i];
+    Sg_File_Info *finfo = file->get_file_info();
+    if (physis::endswith(finfo->get_filenameString(), ".rmod"))
+      continue;
+    return file;
+  }
+  LOG_ERROR() << "No main source file found.\n";
+  PSAbort(1);
+  return NULL;
+}
+
 int main(int argc, char *argv[]) {
   pt::Translator *trans = NULL;
   string filename_target_suffix;
@@ -558,7 +576,7 @@ int main(int argc, char *argv[]) {
   AstTests::runAllTests(proj);
   LOG_INFO() << "AST validated successfully.\n";
 
-  bool is_fortran = rose_util::IsFortran(proj);
+  bool is_fortran = ru::IsFortran(proj);
   if (is_fortran) {
     LOG_DEBUG() << "Fortran input\n";
   }
@@ -590,7 +608,7 @@ int main(int argc, char *argv[]) {
 
     delete optimizer;
 
-    pt::set_output_filename(proj->get_fileList()[0], filename_suffix);
+    pt::set_output_filename(GetMainSourceFile(proj), filename_suffix);
 
     int b = backend(proj);  /* without kernel function */
     LOG_INFO() << "Base code generation complete.\n";
@@ -624,7 +642,7 @@ int main(int argc, char *argv[]) {
                         debug_comment, PreprocessingInfo::after);
 #endif
       snprintf(buf, sizeof(buf), "%05d.", i);
-      pt::set_output_filename(proj->get_fileList()[0],
+      pt::set_output_filename(GetMainSourceFile(proj),
                               buf + dl_filename_suffix);
       b = backend(proj);  /* optimized kernel function */
       LOG_INFO() << i << ": Code generation complete.\n";
@@ -652,17 +670,21 @@ int main(int argc, char *argv[]) {
   trans->Finish();
   delete optimizer;
 
-  filename_suffix = rose_util::GetInputFileSuffix(proj);
+  filename_suffix = ru::GetInputFileSuffix(proj);
   if (opts.cuda_trans || opts.cuda_hm_trans || opts.mpi_cuda_trans) {
     filename_suffix = "cu";
     if (is_fortran) filename_suffix += "f";
   }
-  
+
   pt::set_output_filename(
-      proj->get_fileList()[0],
+      GetMainSourceFile(proj),
       filename_target_suffix + "." + filename_suffix);
 
   int b = backend(proj);
   LOG_INFO() << "Code generation complete.\n";
+
+  pt::FixFortranOutput(
+      GetMainSourceFile(proj)->get_unparse_output_filename());
+  
   return b;
 }

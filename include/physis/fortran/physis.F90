@@ -36,7 +36,9 @@ module physis
   end interface
 #endif
   
-
+  type PSStencil
+  end type PSStencil
+  
   type PSGrid3DReal
      real, dimension(:,:,:), allocatable :: pt
   end type PSGrid3DReal
@@ -51,7 +53,7 @@ module physis
   external PSGridCopyout
   external PSStencilMap
   external PSStencilRun
-
+  
   interface
      subroutine PSInit()
      end subroutine PSInit
@@ -69,5 +71,17 @@ contains
   type(PSDomain3D) function PSDomain3DNew(i1, i2, j1, j2, k1, k2)
     integer :: i1, i2, j1, j2, k1, k2
   end function PSDomain3DNew
+
+
+  ! subroutine PSStencilRun(s, c)
+  !   type(PSStencil), dimension(:) :: s
+  !   integer c
+  !   integer i, j
+  !   do i = 1, C
+  !      do j = 1, size(s, 1)
+  !         call s(j)%run()
+  !      end do
+  !   end do
+  ! end subroutine PSStencilRun
   
 end module physis

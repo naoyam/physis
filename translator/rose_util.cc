@@ -12,9 +12,11 @@
 #include <boost/foreach.hpp>
 
 #include "translator/ast_traversal.h"
+#include "translator/rose_fortran.h"
 
 namespace sb = SageBuilder;
 namespace si = SageInterface;
+namespace rf = physis::translator::rose_fortran;
 
 namespace physis {
 namespace translator {
@@ -302,7 +304,8 @@ SgNode *FindCommonParent(SgNode *n1, SgNode *n2) {
 
 SgExpression *BuildFieldRef(
     SgExpression *struct_var, SgExpression *field) {
-  if (si::isPointerType(struct_var->get_type())) {
+  if (!IsFortranLikeLanguage() &&
+      si::isPointerType(struct_var->get_type())) {
     return sb::buildArrowExp(struct_var, field);
   } else {
     return sb::buildDotExp(struct_var, field);
@@ -495,6 +498,98 @@ SgDeclarationStatement *FindMember(const SgClassDefinition *cdef,
 bool IsCLikeLanguage() {
   return si::is_C_language() || si::is_Cxx_language();
 }
+
+bool IsFortranLikeLanguage() {
+  return si::is_Fortran_language();
+}
+
+void SetAccessModifierUnspecified(SgDeclarationStatement *d) {
+  if (IsFortranLikeLanguage()) {
+    SetAccessModifier(d, SgAccessModifier::e_undefined);
+  }
+}
+
+void SetAccessModifier(SgDeclarationStatement *d,
+                       SgAccessModifier::access_modifier_enum mod) {
+  SgAccessModifier &am = d->get_declarationModifier().get_accessModifier();
+  am.set_modifier(mod);
+}
+
+SgFunctionDeclaration *BuildFunctionDeclaration(
+    const string &name, SgType *ret_type, SgFunctionParameterList *parlist,
+    SgScopeStatement *scope) {
+  SgFunctionDeclaration *func = NULL;
+  if (IsCLikeLanguage()) {
+    func = sb::buildDefiningFunctionDeclaration(
+        name, ret_type, parlist, scope);
+  } else {
+    // If the ret_type is void, builds a subroutine.
+    SgProcedureHeaderStatement::subprogram_kind_enum kind =
+        isSgTypeVoid(ret_type) ?
+        SgProcedureHeaderStatement::e_subroutine_subprogram_kind :
+        SgProcedureHeaderStatement::e_function_subprogram_kind;
+    func = sb::buildProcedureHeaderStatement(
+        name.c_str(), ret_type, parlist, kind, scope);
+  }
+  PSAssert(func);
+  return func;
+}
+
+SgScopeStatement *BuildForLoop(SgInitializedName *ivar,
+                               SgExpression *begin,
+                               SgExpression *end,
+                               SgExpression *incr,
+                               SgBasicBlock *body) {
+  SgAssignOp *init_expr = sb::buildAssignOp(
+      sb::buildVarRefExp(ivar), begin);
+  SgScopeStatement *loop = NULL;
+  bool is_static_incr = false;
+  int static_incr = 0;
+  if (isSgIntVal(incr)) {
+    is_static_incr = true;
+    static_incr = isSgIntVal(incr)->get_value();
+  }
+  if (IsCLikeLanguage()) {
+    SgExpression *cmp = NULL;
+    SgExpression *for_incr = NULL;    
+    if (is_static_incr) {
+      if (static_incr > 0) {
+        cmp = sb::buildLessOrEqualOp(
+            sb::buildVarRefExp(ivar), end);
+        for_incr = sb::buildPlusAssignOp(
+            sb::buildVarRefExp(ivar), incr);
+      } else {
+        cmp = sb::buildGreaterOrEqualOp(
+            sb::buildVarRefExp(ivar), end);
+        for_incr = sb::buildMinusAssignOp(
+            sb::buildVarRefExp(ivar),
+            sb::buildIntVal(-static_incr));
+      }
+    } else {
+      cmp = sb::buildNotEqualOp(sb::buildVarRefExp(ivar), end);
+      for_incr = sb::buildPlusAssignOp(
+          sb::buildVarRefExp(ivar), incr);
+    }
+    loop = sb::buildForStatement(
+        sb::buildExprStatement(init_expr),
+        sb::buildExprStatement(cmp), for_incr, body);
+  } else if (IsFortranLikeLanguage()) {
+    loop = rf::BuildFortranDo(init_expr, end, incr, body);
+  }
+  PSAssert(loop);
+  return loop;
+}
+
+SgVariableDeclaration *BuildVariableDeclaration(const string &name,
+                                                SgType *type,
+                                                SgInitializer *initializer,
+                                                SgScopeStatement *scope) {
+  SgVariableDeclaration *d =
+      sb::buildVariableDeclaration(name, type, initializer, scope);
+  if (IsFortranLikeLanguage()) SetAccessModifierUnspecified(d);
+  return d;
+}
+
 
 }  // namespace rose_util
 }  // namespace translator

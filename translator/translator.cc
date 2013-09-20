@@ -7,13 +7,15 @@
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
 #include "translator/translator.h"
-
 #include "translator/grid.h"
 #include "translator/translation_context.h"
 #include "translator/rose_ast_attribute.h"
 
+#include <boost/foreach.hpp>
+
 namespace si = SageInterface;
 namespace sb = SageBuilder;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -41,7 +43,7 @@ void Translator::SetUp(SgProject *project, TranslationContext *context,
   src_ = isSgSourceFile((*project_)[0]);
   assert(src_);
   tx_ = context;
-  is_fortran_ = rose_util::IsFortran(project);
+  is_fortran_ = ru::IsFortran(project);
 
   global_scope_ = src_->get_globalScope();
   PSAssert(global_scope_);
@@ -70,11 +72,23 @@ void Translator::SetUp(SgProject *project, TranslationContext *context,
       NodeQuery::querySubTree(project_, NodeQuery::StructDeclarations);
   FOREACH(it, struct_decls.begin(), struct_decls.end()) {
     SgClassDeclaration *decl = isSgClassDeclaration(*it);
-    GridType *gt = rose_util::GetASTAttribute<GridType>(decl);
+    GridType *gt = ru::GetASTAttribute<GridType>(decl);
     if (gt == NULL) continue;
     if (!gt->IsUserDefinedPointType()) continue;
     LOG_DEBUG() << "User-defined point type found.\n";
     ProcessUserDefinedPointType(decl, gt);
+  }
+
+  if (ru::IsFortranLikeLanguage()) {
+    BOOST_FOREACH (SgClassDeclaration *cd, si::querySubTree<SgClassDeclaration>(global_scope_)) {
+      LOG_DEBUG() << "Class decl: " << cd->get_name() << " (" << cd->class_name() << ")\n";
+    }
+    BOOST_FOREACH (SgNamedType *nd, si::querySubTree<SgNamedType>(global_scope_)) {
+      LOG_DEBUG() << "Named type: " << nd->get_name() << " (" << nd->class_name() << ")\n";
+    }
+    BOOST_FOREACH (SgFunctionDeclaration *cd, si::querySubTree<SgFunctionDeclaration>(global_scope_)) {
+      LOG_DEBUG() << "Function decl: " << cd->get_name() << " (" << cd->class_name() << ")\n";
+    }
   }
 }
 
@@ -138,7 +152,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   
   if (tx_->isNewCall(node)) {
     LOG_DEBUG() << "call to grid new found\n";
-    const string name = rose_util::getFuncName(node);
+    const string name = ru::getFuncName(node);
     GridType *gt = tx_->findGridTypeByNew(name);
     assert(gt);
     TranslateNew(node, gt);
@@ -146,7 +160,7 @@ void Translator::Visit(SgFunctionCallExp *node) {
   }
 
   GridEmitAttribute *emit_attr=
-      rose_util::GetASTAttribute<GridEmitAttribute>(node);
+      ru::GetASTAttribute<GridEmitAttribute>(node);
   if (emit_attr) {
     LOG_DEBUG() << "Translating emit\n";
     TranslateEmit(node, emit_attr);

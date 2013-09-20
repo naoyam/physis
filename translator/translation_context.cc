@@ -24,6 +24,7 @@ using std::ostream;
 
 namespace sb = SageBuilder;
 namespace si = SageInterface;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -246,8 +247,11 @@ static bool PropagateGridVarMapAcrossStencilCall(SgFunctionCallExp *c,
                                                  StencilMap *m,
                                                  TranslationContext &tx) {
   LOG_DEBUG() << "StencilMap: " << m->getKernel()->get_name().str() << "\n";
+  int param_skip = 2;
+  // Skip parameter PSStencil in Fortran
+  if (ru::IsFortranLikeLanguage()) ++param_skip;
   SgExpressionPtrList args(
-      c->get_args()->get_expressions().begin() + 2,
+      c->get_args()->get_expressions().begin() + param_skip,
       c->get_args()->get_expressions().end());
   SgInitializedNamePtrList params(
       m->getKernel()->get_args().begin() + m->getNumDim(),
@@ -657,9 +661,12 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
   LOG_DEBUG() << "Kernel function analysis done\n";  
 }
 
-// TODO: Fortran
 void TranslationContext::AnalyzeRun() {
   LOG_DEBUG() << "Analyzing Stencil run\n";
+  if (ru::IsFortranLikeLanguage()) {
+    LOG_DEBUG() << "No analysis for run needed in Fortran\n";
+    return;
+  }
   vector<SgFunctionCallExp*> calls =
       si::querySubTree<SgFunctionCallExp>(project_);
   BOOST_FOREACH(SgFunctionCallExp *call, calls) {

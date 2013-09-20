@@ -41,15 +41,11 @@ class StencilMap {
   int getID() const { return id; }
   SgFunctionDeclaration *getKernel() { return kernel; }
   int getNumDim() const { return numDim; }
-  string getTypeName() const {
-    return "__PSStencil" + dimStr() + "_" + kernel->get_name();
-  }
-  string getMapName() const {
-    return "__PSStencil" + dimStr() + "Map_" + kernel->get_name();
-  }
-  string getRunName() const {
-    return "__PSStencil" + dimStr() + "Run_" + kernel->get_name();
-  }
+
+  string GetTypeName() const;
+  string GetMapName() const;
+  string GetRunName() const;
+
   SgClassType*& stencil_type() { return stencil_type_; };
   SgClassDefinition *GetStencilTypeDefinition() {
     SgClassDeclaration *decl
@@ -135,6 +131,8 @@ class StencilMap {
     //return physis::toString(getNumDim()) + "D";
     return "";
   }
+  static string GetInternalNamePrefix();
+
 };
 
 typedef vector<StencilMap*> StencilMapVector;

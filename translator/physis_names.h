@@ -31,6 +31,8 @@
 #define PS_INDEX_TYPE_NAME "PSIndex"
 #define PS_GRID_DIM_NAME "PSGridDim"
 #define PSF_GRID_NEW_NAME "PSGridNew"
+#define PS_GRID_GET_ID_NAME "__PSGridGetID"
+#define PSF_GRID_GET_ID_NAME "PSGridGetID"
 
 
 #endif /* PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_ */

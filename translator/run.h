@@ -31,7 +31,7 @@ class Run {
   virtual ~Run() {}
 
   string GetName() const {
-    return "__" + string(PS_STENCIL_MAP_NAME) + "_" + toString(id_);
+    return "__" + string(PS_STENCIL_RUN_NAME) + "_" + toString(id_);
   }
 
   const StencilMapArgVector &stencils() const { return stencils_; }

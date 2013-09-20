@@ -12,6 +12,7 @@
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -21,11 +22,26 @@ Counter Run::c;
 Run::Run(SgFunctionCallExp *call, TranslationContext *tx)
     : call(call), id_(Run::c.next()) {
   count_ = Run::findCountArg(call);
-  SgExpressionPtrList &args =
-      call->get_args()->get_expressions();
-  SgExpressionPtrList::iterator end = args.end();
-  if (count_) --end;
-  FOREACH(it, args.begin(), end) {
+  SgExpressionPtrList::iterator begin, end;
+  if (ru::IsCLikeLanguage()) {
+    SgExpressionPtrList &args =
+        call->get_args()->get_expressions();
+    begin = args.begin();
+    end = args.end();
+    if (count_) --end;
+  } else if (ru::IsFortranLikeLanguage()) {
+    SgAggregateInitializer *smap_expr =
+        isSgAggregateInitializer(call->get_args()->get_expressions()[0]);
+    PSAssert(smap_expr);
+    LOG_DEBUG() << "Smap arg: " << smap_expr->unparseToString() << "\n";
+    SgExpressionPtrList &smap_args =
+        isSgExprListExp(smap_expr->get_initializers()->get_expressions()[0])
+        ->get_expressions();
+    begin = smap_args.begin();
+    end = smap_args.end();
+  }
+    
+  FOREACH(it, begin, end) {
     LOG_DEBUG() << "stencil_run stencil arg: "
                 << (*it)->unparseToString() << "\n";
     StencilMap *s = tx->findMap(*it);

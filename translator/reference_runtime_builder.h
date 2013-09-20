@@ -130,6 +130,8 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgExpression *BuildStencilDomMaxRef(
       SgExpression *stencil, int dim);
   
+  virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s);
+  virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil);
   
  protected:
   static const std::string  grid_type_name_;

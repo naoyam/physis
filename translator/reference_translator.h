@@ -66,28 +66,7 @@ class ReferenceTranslator : public Translator {
                              GridEmitAttribute *attr);
   virtual void RemoveEmitDummyExp(SgExpression *emit);
   virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);
-#if 0  
-  //! Build an offset expression.
-  /*!
-    @param gv The grid to get a offset.
-    @param num_dim The number of dimensions.
-    @param args The index argument list.
-    @param is_kernel True if the expression is used in a stencil
-    kernel. 
-    @param is_periodic True if it is a periodic access.
-    @param sil The stencil index list of this access.
-    @param scope The scope this node is used.
-   */
-  virtual SgExpression *BuildOffset(SgInitializedName *gv,
-                                    int num_dim,
-                                    SgExprListExp *args,
-                                    bool is_kernel,
-                                    bool is_periodic,                                    
-                                    const StencilIndexList *sil,
-                                    SgScopeStatement *scope);
-#endif  
   virtual void TranslateMap(SgFunctionCallExp *node, StencilMap *s);
-  virtual SgFunctionDeclaration *GenerateMap(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s) {
     return NULL;
@@ -104,7 +83,8 @@ class ReferenceTranslator : public Translator {
     \return The body of the run function.
    */
   virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *s, SgFunctionParameterList *param);
+      StencilMap *s, SgFunctionParameterList *param,
+      vector<SgVariableDeclaration*> &indices);
 #ifdef DEPRECATED  
   virtual void appendGridSwap(StencilMap *mc, const string &stencil,
                               bool is_stencil_ptr,
@@ -113,7 +93,13 @@ class ReferenceTranslator : public Translator {
   virtual SgFunctionCallExp* BuildKernelCall(
       StencilMap *s, SgExpressionPtrList &indexArgs,
       SgInitializedName *stencil_param);
-  virtual void defineMapSpecificTypesAndFunctions();
+
+  virtual void DefineMapSpecificTypesAndFunctions();
+  virtual void InsertStencilSpecificType(StencilMap *s,
+                                         SgClassDeclaration *type_decl);
+  virtual void InsertStencilSpecificFunc(StencilMap *s,
+                                         SgFunctionDeclaration *func);
+  
   virtual void BuildRunBody(
       SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   virtual SgFunctionDeclaration *BuildRun(Run *run);

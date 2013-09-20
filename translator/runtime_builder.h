@@ -177,7 +177,12 @@ class RuntimeBuilder {
   //! Build a domain max expression for a dimension from a stencil  
   virtual SgExpression *BuildStencilDomMaxRef(
       SgExpression *stencil, int dim) = 0;
-      
+
+  //! Build the type to hold map arguments for a given stencil
+  virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s) = 0;
+  //! Build the real map function for a given stencil
+  virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil) = 0;
+  
  protected:
   SgScopeStatement *gs_;
   

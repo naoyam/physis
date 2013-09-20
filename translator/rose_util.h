@@ -297,6 +297,36 @@ SgDeclarationStatement *FindMember(const SgClassDefinition *cdef,
                                    const string &member);
 
 bool IsCLikeLanguage();
+bool IsFortranLikeLanguage();
+
+void SetAccessModifierUnspecified(SgDeclarationStatement *d);
+void SetAccessModifier(SgDeclarationStatement *d,
+                       SgAccessModifier::access_modifier_enum mod);
+
+//! Builds a function declaration for C and Fortran
+/*!
+
+  Transparently hnandles the difference of C and Fortran function
+  declrations. The parameters are mostly the same as
+  SageBuilder::buildDefiningFunctionDeclaration. 
+ */
+SgFunctionDeclaration *BuildFunctionDeclaration(
+    const string &name, SgType *ret_type, SgFunctionParameterList *parlist,
+    SgScopeStatement *scope=NULL);
+
+//! Builds an either C for loop or Fortran do loop
+SgScopeStatement *BuildForLoop(SgInitializedName *ivar,
+                               SgExpression *begin,
+                               SgExpression *end,
+                               SgExpression *incr,
+                               SgBasicBlock *body);
+
+//! Builds an either C or Fortran variable declration
+SgVariableDeclaration *BuildVariableDeclaration(const string &name,
+                                                SgType *type,
+                                                SgInitializer *initializer=NULL,
+                                                SgScopeStatement *scope=NULL);
+
 
 }  // namespace rose_util
 }  // namespace translator

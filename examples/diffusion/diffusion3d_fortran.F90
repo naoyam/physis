@@ -75,6 +75,7 @@ program diffusion3d
   type(PSGrid3DReal) :: p0d, p1d
   !type(ps_grid_real) :: p0d, p1d
   type(PSDomain3D) :: dom
+  type(PSStencil), pointer :: s1, s2
   
   kappa = 0.1
   dx = 1.0 / nx
@@ -108,15 +109,13 @@ program diffusion3d
      stop
   end if
 
-  call system_clock(clock_start, clock_rate)
+  call PSStencilMap(s1, diffusion, dom, &
+       p0d, p1d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
+  call PSStencilMap(s2, diffusion, dom, &
+       p1d, p0d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
   
-  do i = 1, COUNT / 2
-     !call diffusion(p0, p1, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
-     call PSStencilMap(diffusion, dom, &
-          p0d, p1d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
-     call PSStencilMap(diffusion, dom, &
-          p1d, p0d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
-  end do
+  call system_clock(clock_start, clock_rate)
+  call PSStencilRun((/s1, s2/), COUNT / 2)
   call system_clock(clock_end, clock_rate)
 
   call PSGridCopyout(p0d, p0)

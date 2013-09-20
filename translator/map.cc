@@ -14,6 +14,7 @@
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -30,11 +31,16 @@ StencilMap::StencilMap(SgFunctionCallExp *call, TranslationContext *tx)
   dom = StencilMap::getDomFromMapCall(fc_);
   assert(dom);
   numDim = rose_util::GetASTAttribute<Domain>(dom)->num_dims();
-  SgExpressionPtrList &args = fc_->get_args()->get_expressions();
+  SgExpressionPtrList &args
+      = fc_->get_args()->get_expressions();
+  SgExpressionPtrList::iterator args_it = args.begin();
   SgInitializedNamePtrList &params = kernel->get_args();
   int param_index = numDim; // skip the index parameters
   // skip the first two args (kernel and domain)
-  FOREACH (it, args.begin()+2, args.end()) {
+  args_it += 2;
+  // Additionally, skip one for PSStencil param in Fortran
+  if (ru::IsFortranLikeLanguage()) ++args_it;
+  FOREACH (it, args_it, args.end()) {
     SgExpression *a = *it;
     if (GridType::isGridType(a->get_type())) {
       SgVarRefExp *gv = isSgVarRefExp(a);
@@ -63,7 +69,7 @@ StencilMap::Type StencilMap::AnalyzeType(SgFunctionCallExp *call) {
 
 SgExpression *StencilMap::getDomFromMapCall(SgFunctionCallExp *call) {
   SgExpressionPtrList &args = call->get_args()->get_expressions();
-  SgExpression *domExp = args[1];
+  SgExpression *domExp = args[ru::IsCLikeLanguage()? 1 : 2];
   LOG_DEBUG() << "dom: " << domExp->unparseToString() << "\n";
   return domExp;
 }
@@ -71,7 +77,7 @@ SgExpression *StencilMap::getDomFromMapCall(SgFunctionCallExp *call) {
 SgFunctionDeclaration *StencilMap::getKernelFromMapCall(
     SgFunctionCallExp *call) {
   SgExpressionPtrList &args = call->get_args()->get_expressions();
-  SgExpression *kernelExp = args.front();
+  SgExpression *kernelExp = args[ru::IsCLikeLanguage()? 0 : 1];
   SgFunctionDeclaration *kernel = rose_util::getFuncDeclFromFuncRef(kernelExp);
   LOG_DEBUG() << "kernel: " << kernel->unparseToString() << "\n";
   return kernel;
@@ -103,6 +109,29 @@ void StencilMap::AnalyzeGridWrites(TranslationContext &tx) {
   
 }
 #endif
+
+string StencilMap::GetTypeName() const {
+  return GetInternalNamePrefix() + "PSStencil" + dimStr() +
+      "_" + kernel->get_name();
+}
+
+string StencilMap::GetMapName() const {
+  return GetInternalNamePrefix() + "PSStencil" + dimStr() +
+      "Map_" + kernel->get_name();
+}
+
+string StencilMap::GetRunName() const {
+  return GetInternalNamePrefix() + "PSStencil" + dimStr() +
+      "Run_" + kernel->get_name();
+}
+
+string StencilMap::GetInternalNamePrefix() {
+  if (ru::IsCLikeLanguage()) {
+    return string("__");
+  } else {
+    return string("");
+  } 
+}
 
 
 const std::string RunKernelLoopAttribute::name = "RunKernelLoop";
@@ -160,7 +189,8 @@ SgExpression *KernelLoopAnalysis::GetLoopEnd(SgForStatement *loop) {
   SgExprStatement *test = isSgExprStatement(loop->get_test());
   PSAssert(test);
   SgBinaryOp *test_exp = isSgBinaryOp(test->get_expression());
-  PSAssert(isSgLessThanOp(test_exp));
+  PSAssert(isSgLessOrEqualOp(test_exp) ||
+           isSgLessThanOp(test_exp));
   SgExpression *end_exp = test_exp->get_rhs_operand();
   return end_exp;
 }
