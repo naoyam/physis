@@ -328,6 +328,8 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
                                                 SgScopeStatement *scope=NULL);
 
 
+void ResetUseModule(SgUseStatement *stmt, const string &mod);
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

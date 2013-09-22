@@ -34,6 +34,9 @@
 #define PS_GRID_GET_ID_NAME "__PSGridGetID"
 #define PSF_GRID_GET_ID_NAME "PSGridGetID"
 
+#define PSF_MODULE_USER_NAME "physis"
+#define PSF_MODULE_REF_NAME "physis_ref"
+#define PSF_MODULE_CUDA_NAME "physis_cuda"
 
 #endif /* PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_ */
 

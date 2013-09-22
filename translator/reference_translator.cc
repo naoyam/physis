@@ -31,6 +31,7 @@ ReferenceTranslator::ReferenceTranslator(const Configuration &config):
     validate_ast_(true),
     grid_create_name_("__PSGridNew") {
   target_specific_macro_ = "PHYSIS_REF";
+  module_real_name_ = PSF_MODULE_REF_NAME;
 }
 
 ReferenceTranslator::~ReferenceTranslator() {
@@ -81,6 +82,7 @@ void ReferenceTranslator::Translate() {
       rose_util::RemoveUnusedFunction(project_);
   
   FixAST();
+  FixFortranModuleInclude();
   ValidateASTConsistency();
 }
 
@@ -1388,6 +1390,18 @@ void ReferenceTranslator::FixGridType() {
     }
   }
   
+}
+
+void ReferenceTranslator::FixFortranModuleInclude() {
+  vector<SgUseStatement*> use_stmts = si::querySubTree<SgUseStatement>(
+      project_);
+  BOOST_FOREACH (SgUseStatement *use_stmt, use_stmts) {
+    if (use_stmt->get_name() == PSF_MODULE_USER_NAME) {
+      LOG_DEBUG() << "Fixing use: " << use_stmt->unparseToString() << "\n";
+      ru::ResetUseModule(use_stmt, module_real_name_);
+      LOG_DEBUG() << "After: " << use_stmt->unparseToString() << "\n";
+    }
+  }
 }
 
 } // namespace translator

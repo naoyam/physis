@@ -590,6 +590,10 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
   return d;
 }
 
+void ResetUseModule(SgUseStatement *stmt, const string &mod_name) {
+  LOG_DEBUG() << "Resetting module to " << mod_name << "\n"; 
+  stmt->set_name(mod_name);
+}
 
 }  // namespace rose_util
 }  // namespace translator

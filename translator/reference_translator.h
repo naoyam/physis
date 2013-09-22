@@ -44,6 +44,8 @@ class ReferenceTranslator : public Translator {
 
  protected:
   bool validate_ast_;
+  string module_real_name_;
+  
   //! Fixes inconsistency in AST.
   virtual void FixAST();
   //! Validates AST consistency.
@@ -151,6 +153,7 @@ class ReferenceTranslator : public Translator {
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
   virtual void FixGridType();
+  virtual void FixFortranModuleInclude();
 };
 
 } // namespace translator
