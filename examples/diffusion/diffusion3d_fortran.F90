@@ -94,7 +94,7 @@ program diffusion3d
   cc = 1.0 - (ce + cw + cn + cs + ct + cb)
 
   call initialize(p0, nx, ny, nz, kx, ky, kz, dx, dy, dz, kappa, 0.0)
-  call ps_init()
+  call PSInit()
 
   call PSGridNew(p0d, nx, ny, nz)
   call PSGridNew(p1d, nx, ny, nz)  
