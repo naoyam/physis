@@ -519,12 +519,13 @@ SgBasicBlock* ReferenceTranslator::BuildRunKernelBody(
                                   s->getNumDim()));
     }
     SgInitializedName *loop_var = index_decl->get_variables()[0];
-    // <= dom.local_max -1
+    // <= dom.local_max -1 in C; <= dom.local_max in Fortran
     SgExpression *loop_end =
-        sb::buildSubtractOp(
-            rt_builder_->BuildStencilDomMaxRef(
-                sb::buildVarRefExp(stencil_param), i+1),
-            sb::buildIntVal(1));
+        rt_builder_->BuildStencilDomMaxRef(
+            sb::buildVarRefExp(stencil_param), i+1);
+    if (ru::IsCLikeLanguage()) {
+      loop_end = sb::buildSubtractOp(loop_end, sb::buildIntVal(1));
+    }
     SgExpression *incr =
         sb::buildIntVal((i == 0 && s->IsRedBlackVariant()) ? 2 : 1);
     SgBasicBlock *inner_block = sb::buildBasicBlock();
