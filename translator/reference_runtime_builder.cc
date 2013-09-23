@@ -432,6 +432,9 @@ SgClassDeclaration *ReferenceRuntimeBuilder::BuildStencilMapType(StencilMap *s) 
   FOREACH(it, arg_begin, args.end()) {
     SgInitializedName *a = *it;
     SgType *type = a->get_type();
+    // Use pointer type in Fortran
+    if (GridType::isGridType(type) && ru::IsFortranLikeLanguage())
+      type = sb::buildPointerType(type);
     si::appendStatement(
         ru::BuildVariableDeclaration(a->get_name(),
                                      type, NULL, def),
@@ -490,8 +493,13 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildMap(StencilMap *stencil) {
   // is not executed.
   if (ru::IsFortranLikeLanguage()) {
     BOOST_FOREACH (SgInitializedName *p, parlist->get_args()) {
+      SgType *type = p->get_type();
+      // Use target attribute for grid type in Fortran
       SgVariableDeclaration *vd = ru::BuildVariableDeclaration(
-          p->get_name(), p->get_type(), NULL, mapDef);
+          p->get_name(), type, NULL, mapDef);
+      if (GridType::isGridType(type) && ru::IsFortranLikeLanguage()) {
+        vd->get_declarationModifier().get_typeModifier().setTarget();
+      }
       si::appendStatement(vd, bb);
     }
   }
