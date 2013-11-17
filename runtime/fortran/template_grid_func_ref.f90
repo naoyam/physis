@@ -1,3 +1,14 @@
+#define DeclareGridFuncInterface(dim, name)
+  interface PSGridNew
+     module procedure PSGridNew_${dim}D${name}
+  end interface PSGridNew
+  interface PSGridCopyin
+     module procedure PSGridCopyin_${dim}D${name}
+  end interface PSGridCopyin
+  interface PSGridCopyout
+     module procedure PSGridCopyout_${dim}D${name}
+  end interface PSGridCopyout
+#end
 
 #define DeclareGridFuncs1D(name, type)
   subroutine PSGridNew_1D${name}(g, x)

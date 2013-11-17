@@ -20,22 +20,22 @@ module physis_ref
 #DeclareGridType3D(Real, real)
 #DeclareGridType3D(Double, double precision)
   
-  interface PSGridNew
-     module procedure PSGridNew_3DReal
-  end interface PSGridNew
-
-  interface PSGridCopyin
-     module procedure PSGridCopyin_3DReal
-  end interface PSGridCopyin
-  
-  interface PSGridCopyout
-     module procedure PSGridCopyout_3DReal
-  end interface PSGridCopyout
+#DeclareGridFuncInterface(1, Real)
+#DeclareGridFuncInterface(2, Real)
+#DeclareGridFuncInterface(3, Real)  
+#DeclareGridFuncInterface(1, Double)
+#DeclareGridFuncInterface(2, Double)
+#DeclareGridFuncInterface(3, Double)  
 
   type PSStencil
      contains
        procedure :: run
   end type PSStencil
+
+  interface PSStencilRun
+     module procedure PSStencilRun1, PSStencilRun2, PSStencilRun3,&
+          PSStencilRun4, PSStencilRun5
+  end interface PSStencilRun
 
 contains
 
@@ -72,16 +72,60 @@ contains
   subroutine run(s)
     class(PSStencil) :: s
   end subroutine run
-  
-  subroutine PSStencilRun(s, c)
-    type(PSStencil), dimension(:) :: s
-    integer c
-    integer i, j
-    do i = 1, C
-       do j = 1, size(s, 1)
-          call s(j)%run()
-       end do
-    end do
-  end subroutine PSStencilRun
 
+  subroutine PSStencilRun1(s1, c)
+    class(PSStencil), pointer :: s1
+    integer c
+    integer i
+    do i = 1, C
+       call s1%run()
+    end do
+  end subroutine PSStencilRun1
+
+  subroutine PSStencilRun2(s1, s2, c)
+    class(PSStencil), pointer :: s1, s2
+    integer c
+    integer i
+    do i = 1, C
+       call s1%run()
+       call s2%run()       
+    end do
+  end subroutine PSStencilRun2
+
+  subroutine PSStencilRun3(s1, s2, s3, c)
+    class(PSStencil), pointer :: s1, s2, s3
+    integer c
+    integer i
+    do i = 1, C
+       call s1%run()
+       call s2%run()
+       call s3%run()              
+    end do
+  end subroutine PSStencilRun3
+
+  subroutine PSStencilRun4(s1, s2, s3, s4, c)
+    class(PSStencil), pointer :: s1, s2, s3, s4
+    integer c
+    integer i
+    do i = 1, C
+       call s1%run()
+       call s2%run()
+       call s3%run()
+       call s4%run()                     
+    end do
+  end subroutine PSStencilRun4
+
+  subroutine PSStencilRun5(s1, s2, s3, s4, s5, c)
+    class(PSStencil), pointer :: s1, s2, s3, s4, s5
+    integer c
+    integer i
+    do i = 1, C
+       call s1%run()
+       call s2%run()
+       call s3%run()
+       call s4%run()
+       call s5%run()
+    end do
+  end subroutine PSStencilRun5
+  
 end module physis_ref

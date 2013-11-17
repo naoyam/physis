@@ -115,7 +115,7 @@ program diffusion3d
        p1d, p0d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc)
   
   call system_clock(clock_start, clock_rate)
-  call PSStencilRun((/s1, s2/), COUNT / 2)
+  call PSStencilRun(s1, s2, COUNT / 2)
   call system_clock(clock_end, clock_rate)
 
   call PSGridCopyout(p0d, p0)
