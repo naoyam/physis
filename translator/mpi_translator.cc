@@ -583,10 +583,10 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
 }
 
 void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
-                                  SgInitializedName *gv) {
+                                  GridEmitAttribute *attr) {
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z)) = v
-
-  GridType *gt = tx_->findGridType(gv->get_type());
+  
+  GridType *gt = attr->gt();
   int nd = gt->rank();
   SgScopeStatement *scope = si::getEnclosingFunctionDefinition(node);
   
@@ -601,11 +601,11 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
   SgExpression *offset = rt_builder_->BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()),
+      sb::buildVarRefExp(attr->gv()->get_name()),
       nd, &args, true, false, &sil);
   SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
       si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
-      sb::buildExprListExp(sb::buildVarRefExp(gv->get_name(),
+      sb::buildExprListExp(sb::buildVarRefExp(attr->gv()->get_name(),
                                               scope)));
   SgExpression *lhs = sb::buildPntrArrRefExp(
       sb::buildCastExp(base_addr,

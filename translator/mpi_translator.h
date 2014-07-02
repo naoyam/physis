@@ -40,7 +40,8 @@ class MPITranslator: public ReferenceTranslator {
                                   bool is_periodic);
   virtual bool TranslateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv);
-  virtual void TranslateEmit(SgFunctionCallExp *node, SgInitializedName *gv);
+  virtual void TranslateEmit(SgFunctionCallExp *node,
+                             GridEmitAttribute *attr);
   virtual void GenerateLoadRemoteGridRegion(
       StencilMap *smap,
       SgVariableDeclaration *stencil_decl,
