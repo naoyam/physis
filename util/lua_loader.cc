@@ -76,7 +76,7 @@ LuaTable *LuaLoader::LoadFile(const string &lua_file_path) const {
   // http://www.lua.org/pil/25.html
   
   LOG_DEBUG_LUA() << "Starting LUA interpreter\n";
-  lua_State *L = lua_open();
+  lua_State *L = luaL_newstate();
   luaL_openlibs(L);
 
   LOG_DEBUG_LUA() << "Loading LUA file: " << lua_file_path << "\n";
