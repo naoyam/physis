@@ -683,8 +683,10 @@ int main(int argc, char *argv[]) {
   int b = backend(proj);
   LOG_INFO() << "Code generation complete.\n";
 
-  pt::FixFortranOutput(
-      GetMainSourceFile(proj)->get_unparse_output_filename());
+  if (is_fortran) {
+    pt::FixFortranOutput(
+        GetMainSourceFile(proj)->get_unparse_output_filename());
+  }
   
   return b;
 }
