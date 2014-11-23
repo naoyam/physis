@@ -24,9 +24,9 @@ namespace translator {
 // BEFORE: TYPE (PSStencil_kernel)
 // FIXED:  TYPE (PSStencil_kernel), extends(PSStencil)
 static bool FixStencilMapDecl(string &line, const vector<string> &tokens) {
+  if (tokens.size() != 3) return false;  
   if (tokens[0] != "TYPE" ||
       tokens[1] != "::") return false;
-  if (tokens.size() != 3) return false;
   
   if (!startswith(tokens[2], "PSStencil_")) return false;
 
