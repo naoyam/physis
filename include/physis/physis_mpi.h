@@ -110,6 +110,10 @@ extern "C" {
                                   __PSGridMPI *g);
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                   __PSGridMPI *g);
+  extern void __PSReduceGridInt(void *buf, enum PSReduceOp op,
+				__PSGridMPI *g);
+  extern void __PSReduceGridLong(void *buf, enum PSReduceOp op,
+				 __PSGridMPI *g);
 
 #ifdef __cplusplus
 }

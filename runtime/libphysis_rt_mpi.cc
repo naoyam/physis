@@ -282,14 +282,29 @@ extern "C" {
     return;
   }
 
+  static void __PSReduceGrid(void *buf, enum PSReduceOp op,
+				   __PSGridMPI *g) {
+    master->GridReduce(buf, op, (GridMPI*)g);
+  }
+
   void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                            __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPI*)g);
+    __PSReduceGrid(buf, op, g);
   }
   
   void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                             __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPI*)g);    
+    __PSReduceGrid(buf, op, g);    
+  }
+
+  void __PSReduceGridInt(void *buf, enum PSReduceOp op,
+			 __PSGridMPI *g) {
+    __PSReduceGrid(buf, op, g);        
+  }
+  
+  void __PSReduceGridLong(void *buf, enum PSReduceOp op,
+			  __PSGridMPI *g) {
+    __PSReduceGrid(buf, op, g);            
   }
 
 #if 0

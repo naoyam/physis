@@ -257,6 +257,12 @@ int GridMPI::Reduce(PSReduceOp op, void *out) {
     case PS_DOUBLE:
       rv = ReduceGridMPI3D<double>(this, op, (double*)out);
       break;
+    case PS_INT:
+      rv = ReduceGridMPI3D<int>(this, op, (int*)out);
+      break;
+    case PS_LONG:
+      rv = ReduceGridMPI3D<long>(this, op, (long*)out);
+      break;
     default:
       PSAbort(1);
   }

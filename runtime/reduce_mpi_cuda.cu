@@ -181,6 +181,12 @@ int GridMPICUDA3D::Reduce(PSReduceOp op, void *out) {
     case PS_DOUBLE:
       rv = ReduceGridMPICUDA<double>(this, op, (double*)out);
       break;
+    case PS_FLOAT:
+      rv = ReduceGridMPICUDA<int>(this, op, (int*)out);
+      break;
+    case PS_DOUBLE:
+      rv = ReduceGridMPICUDA<long>(this, op, (long*)out);
+      break;
     default:
       PSAbort(1);
   }

@@ -123,6 +123,12 @@ int Grid::Reduce(PSReduceOp op, void *out) {
     case PS_DOUBLE:
       rv = ReduceGrid<double>(this, op, (double*)out);
       break;
+    case PS_INT:
+      rv = ReduceGrid<int>(this, op, (int*)out);
+      break;
+    case PS_LONG:
+      rv = ReduceGrid<long>(this, op, (long*)out);
+      break;
     default:
       PSAbort(1);
   }
