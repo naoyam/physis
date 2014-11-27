@@ -83,8 +83,13 @@ extern "C" {
   typedef void (*ReducerFunc)();
   
   //extern void __PSReduceGrid(void *buf, __PSGrid *g, ReducerFunc f);
+  
   //! Reduces a grid with an operator.
   /*!
+    Different functions for different grid-element types. Can use the
+    templated function if ROSE reliably supports template
+    instantiation code generation (not in ROSE edg3).
+    
     \param buf A pointer to the output buffer.
     \param op A binary operator to reduce elements.
     \param g A grid.
@@ -93,6 +98,10 @@ extern "C" {
                                   __PSGrid *g);
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                   __PSGrid *g);
+  extern void __PSReduceGridInt(void *buf, enum PSReduceOp op,
+                                __PSGrid *g);
+  extern void __PSReduceGridLong(void *buf, enum PSReduceOp op,
+                                 __PSGrid *g);
   
 #ifdef __cplusplus
 }

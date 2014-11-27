@@ -1335,6 +1335,16 @@ void ReferenceTranslator::TranslateReduceGrid(Reduce *rd) {
              si::lookupFunctionSymbolInParentScopes(
                  "__PSReduceGridDouble",
                  global_scope_));
+  } else if (isSgTypeInt(elm_type)) {
+    PSAssert(reduce_grid_func = 
+             si::lookupFunctionSymbolInParentScopes(
+                 "__PSReduceGridInt",
+                 global_scope_));
+  } else if (isSgTypeLong(elm_type)) {
+    PSAssert(reduce_grid_func = 
+             si::lookupFunctionSymbolInParentScopes(
+                 "__PSReduceGridLong",
+                 global_scope_));
   } else {
     LOG_ERROR() << "Unsupported element type.";
     PSAbort(1);

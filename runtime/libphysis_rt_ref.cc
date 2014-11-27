@@ -157,6 +157,15 @@ extern "C" {
     PSReduceGridTemplate<double>(buf, op, g);
   }
   
+  void __PSReduceGridInt(void *buf, PSReduceOp op,
+                         __PSGrid *g) {
+    PSReduceGridTemplate<int>(buf, op, g);
+  }
+
+  void __PSReduceGridLong(void *buf, PSReduceOp op,
+                          __PSGrid *g) {
+    PSReduceGridTemplate<long>(buf, op, g);
+  }
 
 #ifdef __cplusplus
 }
