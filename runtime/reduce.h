@@ -12,6 +12,7 @@
 #include <functional>
 #include <boost/function.hpp>
 #include <float.h>
+#include <limits.h>
 
 namespace physis {
 namespace runtime {
@@ -104,6 +105,53 @@ double GetReductionDefaultValue<double>(PSReduceOp op) {
   }
   return v;
 }
+
+template <> inline
+int GetReductionDefaultValue<int>(PSReduceOp op) {
+  int v;
+  switch (op) {
+    case PS_MAX:
+      v = INT_MIN;
+      break;
+    case PS_MIN:
+      v = INT_MAX;
+      break;
+    case PS_SUM:
+      v = 0;
+      break;
+    case PS_PROD:
+      v = 1;
+      break;
+    default:
+      PSAbort(1);
+      break;
+  }
+  return v;
+}
+
+template <> inline
+long GetReductionDefaultValue<long>(PSReduceOp op) {
+  long v;
+  switch (op) {
+    case PS_MAX:
+      v = LONG_MIN;
+      break;
+    case PS_MIN:
+      v = LONG_MAX;
+      break;
+    case PS_SUM:
+      v = 0L;
+      break;
+    case PS_PROD:
+      v = 1L;
+      break;
+    default:
+      PSAbort(1);
+      break;
+  }
+  return v;
+}
+ 
 
 } // namespace runtime
 } // namespace physis

@@ -32,6 +32,20 @@ extern "C" {
     physis::runtime::ReduceGridCUDA<double>(buf, op, g->p0, g->num_elms);
   }
 
+  void __PSReduceGridInt(void *buf, enum PSReduceOp op,
+                         __PSGrid *g) {
+    // Note: Assuming primitive-type grids. p0 is only valid for
+    // primitive types, and not valid for user-defined types.
+    physis::runtime::ReduceGridCUDA<int>(buf, op, g->p0, g->num_elms);
+  }
+
+  void __PSReduceGridLong(void *buf, enum PSReduceOp op,
+                            __PSGrid *g) {
+    // Note: Assuming primitive-type grids. p0 is only valid for
+    // primitive types, and not valid for user-defined types.
+    physis::runtime::ReduceGridCUDA<long>(buf, op, g->p0, g->num_elms);
+  }
+  
 #ifdef __cplusplus
 }
 #endif

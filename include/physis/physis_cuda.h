@@ -237,6 +237,12 @@ extern "C" {
   extern void __PSReduceGridDouble(void *buf, enum PSReduceOp op,
                                    __PSGrid *g);
 
+  extern void __PSReduceGridInt(void *buf, enum PSReduceOp op,
+                                __PSGrid *g);
+
+  extern void __PSReduceGridLong(void *buf, enum PSReduceOp op,
+                                 __PSGrid *g);
+
   // CUDA Runtime APIs. Have signatures here to verify generated
   // ASTs.
 #ifdef PHYSIS_USER
