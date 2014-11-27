@@ -596,6 +596,13 @@ void CUDATranslator::ProcessUserDefinedPointType(
   return;
 }
 
+static bool IsOnDeviceGridTypeName(const string &tn) {
+  //LOG_DEBUG() << "name: " << tn << "\n";
+  if (!endswith(tn, "_dev")) return false;
+  string host_grid_name = tn.substr(0, tn.length() - 4);
+  //LOG_DEBUG() << "Host grid name: " << host_grid_name << "\n";
+  return GridType::isGridType(host_grid_name);
+}
 
 SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
   PSAssert(gt);
@@ -676,14 +683,16 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
 // Expresions themselves in index_args are used (no copy)
 SgExprListExp *CUDATranslator::BuildKernelCallArgList(
     StencilMap *stencil,
-    SgExpressionPtrList &index_args) {
-  SgClassDefinition *stencil_def = stencil->GetStencilTypeDefinition();
+    SgExpressionPtrList &index_args,
+    SgFunctionParameterList *params) {
 
   SgExprListExp *args = sb::buildExprListExp();
   FOREACH(it, index_args.begin(), index_args.end()) {
     si::appendExpression(args, *it);
   }
-  
+
+#if 0
+  SgClassDefinition *stencil_def = stencil->GetStencilTypeDefinition();  
   // append the fields of the stencil type to the argument list  
   SgDeclarationStatementPtrList &members = stencil_def->get_members();
   FOREACH(it, ++(members.begin()), members.end()) {
@@ -702,14 +711,40 @@ SgExprListExp *CUDATranslator::BuildKernelCallArgList(
     }
     si::appendExpression(args, exp);
   }
+#else
+  const SgInitializedNamePtrList &param_ins = params->get_args();
+  SgInitializedNamePtrList::const_iterator pend = param_ins.end();
+  // skip the domain parameter
+  if (stencil->IsRedBlackVariant()) {
+    // skip the color param
+    --pend;
+  }
+  FOREACH(it, ++(param_ins.begin()), pend) {
+    SgInitializedName *in = *it;
+    SgExpression *exp = sb::buildVarRefExp(in);
+    SgType *param_type = in->get_type();
+    //LOG_DEBUG() << "Param type: " << param_type->unparseToString() << "\n";
+    // Pass a pointer if the param is a grid variable
+    if (isSgNamedType(param_type)) {
+      const string tn = isSgNamedType(param_type)->get_name().getString();
+      if (IsOnDeviceGridTypeName(tn)) {
+        //LOG_DEBUG() << "Grid parameter: " << tn << "\n";              
+        exp = sb::buildAddressOfOp(exp);
+      }
+    }
+    si::appendExpression(args, exp);
+  }
+#endif
 
   return args;
 }
 
 SgFunctionCallExp *CUDATranslator::BuildKernelCall(
     StencilMap *stencil,
-    SgExpressionPtrList &index_args) {
-  SgExprListExp *args  = BuildKernelCallArgList(stencil, index_args);
+    SgExpressionPtrList &index_args,
+    SgFunctionParameterList *params) {   
+  SgExprListExp *args  = BuildKernelCallArgList(stencil, index_args,
+                                                params);
   SgFunctionCallExp *func_call =
       sb::buildFunctionCallExp(
           sb::buildFunctionRefExp(stencil->getKernel()), args);
@@ -783,7 +818,7 @@ SgBasicBlock* CUDATranslator::BuildRunKernelBody(
 
 
   SgFunctionCallExp *kernel_call =
-      BuildKernelCall(stencil, index_args);
+      BuildKernelCall(stencil, index_args, param);
   SgScopeStatement *kernel_call_block = block;
 
   if (dim == 1) {

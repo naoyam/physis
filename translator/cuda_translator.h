@@ -139,10 +139,12 @@ class CUDATranslator : public ReferenceTranslator {
     \param stencil The stencil kernel to call.
     \param index_args The index parameters declared in the stencil
     function.
+    \param params Parameter list of the surrounding function
     \return The list of kernel call arguments.
    */
   virtual SgExprListExp* BuildKernelCallArgList(
-      StencilMap *stencil, SgExpressionPtrList &index_args);
+      StencilMap *stencil, SgExpressionPtrList &index_args,
+      SgFunctionParameterList *params);
   //! Generates a call to a stencil function.
   /*!
     Used by BuildRunKernel. 
@@ -150,10 +152,12 @@ class CUDATranslator : public ReferenceTranslator {
     \param stencil The stencil kernel to call.
     \param index_args The index parameters declared in the stencil
     function.
+    \param params Parameter list of the surrounding function    
     \return The call object to the stencil kernel.
    */
   virtual SgFunctionCallExp* BuildKernelCall(
-      StencilMap *stencil, SgExpressionPtrList &index_args);
+      StencilMap *stencil, SgExpressionPtrList &index_args,
+      SgFunctionParameterList *params);
   //! Generates an expression of the x dimension of thread blocks.
   virtual SgExpression *BuildBlockDimX(int nd);
   //! Generates an expression of the y dimension of thread blocks.  
