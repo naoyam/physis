@@ -564,7 +564,8 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
   rose_util::CopyExpressionPtrList(
       node->get_args()->get_expressions(), args);
   SgExpression *offset = rt_builder_->BuildGridOffset(
-      sb::buildVarRefExp(gv->get_name()), nd, &args,
+      sb::buildVarRefExp(gv->get_name(), si::getScope(node)),
+      nd, &args,
       true, is_periodic,
       rose_util::GetASTAttribute<GridGetAttribute>(
           node)->GetStencilIndexList());
@@ -601,7 +602,7 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
   SgExpression *offset = rt_builder_->BuildGridOffset(
-      sb::buildVarRefExp(attr->gv()->get_name()),
+      sb::buildVarRefExp(attr->gv()->get_name(), si::getScope(node)),
       nd, &args, true, false, &sil);
   SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
       si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
