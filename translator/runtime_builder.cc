@@ -111,7 +111,7 @@ SgExprListExp *RuntimeBuilder::BuildSizeExprList(const Grid *g) {
   int nd = g->getType()->rank();
   for (int i = 0; i < PS_MAX_DIM; ++i) {
     SgExpression *e = i >= nd ?
-        sb::buildIntVal(1) : si::copyExpression(args[i]);
+        sb::buildIntVal(0) : si::copyExpression(args[i]);
     si::appendExpression(exp_list, e);
   }
   return exp_list;
