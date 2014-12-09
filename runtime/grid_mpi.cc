@@ -264,6 +264,7 @@ int GridMPI::Reduce(PSReduceOp op, void *out) {
       rv = ReduceGridMPI3D<long>(this, op, (long*)out);
       break;
     default:
+      LOG_ERROR() << "Unsupported type\n";
       PSAbort(1);
   }
   return rv;
