@@ -42,12 +42,16 @@ ORIGINAL_DIRECTORY=$PWD
 NUM_ALL_TESTS=0
 NUM_SUCCESS_TRANS=0
 NUM_FAIL_TRANS=0
+NUM_SKIPPED_TRANS=0
 NUM_SUCCESS_COMPILE=0
 NUM_FAIL_COMPILE=0
+NUM_SKIPPED_COMPILE=0
 NUM_SUCCESS_EXECUTE=0
 NUM_FAIL_EXECUTE=0
+NUM_SKIPPED_EXECUTE=0
 NUM_WARNING=0
 FAILED_TESTS=""
+SKIPPED_TESTS=""
 
 PHYSISC=@CMAKE_BINARY_DIR@/translator/physisc
 MPIRUN=mpirun
@@ -102,9 +106,9 @@ function fail()
 
 function print_results_short()
 {
-    echo  -n "[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_ALL_TESTS"
-    echo  -n ", [COMPILE] $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_ALL_TESTS"
-    echo  ", [EXECUTE] $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_ALL_TESTS."
+    echo  -n "[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIPPED_TRANS/$NUM_ALL_TESTS"
+    echo  -n ", [COMPILE] $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIPPED_COMPILE/$NUM_ALL_TESTS"
+    echo  ", [EXECUTE] $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIPPED_EXECUTE/$NUM_ALL_TESTS."
 }
 
 function email_results()
@@ -125,13 +129,17 @@ EOF
 function print_results()
 {
 	local msg=""
-	msg+="[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_ALL_TESTS."
-	msg+="\n[COMPILE]   $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_ALL_TESTS."
-	msg+="\n[EXECUTE]   $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_ALL_TESTS."
+	msg+="[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIPPED_TRANS/$NUM_ALL_TESTS."
+	msg+="\n[COMPILE]   $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIPPED_COMPILE/$NUM_ALL_TESTS."
+	msg+="\n[EXECUTE]   $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIPPED_EXECUTE/$NUM_ALL_TESTS."
 	msg+="\n"
 	if [ "x" != "x$FAILED_TESTS" ]; then
 		msg+="\n!!! $(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
 		msg+="\nFailed tests: $FAILED_TESTS"
+	elif [ $NUM_SKIPPED_TRANS -gt 0 -o $NUM_SKIPPED_COMPILE -gt 0 \
+							  -o $NUM_SKIPPED_EXECUTE -gt 0 ]; then
+		msg+="\nCompleted successfully with some tests skipped."
+		msg+="\nSkipped tests: $SKIPPED_TESTS"
 	else
 		msg+="\nAll tests completed successfully."
 	fi
@@ -1360,7 +1368,16 @@ fi
 			SHORTNAME=$(basename $TEST)			
 			if is_skipped_module_test $TEST $TARGET; then
 				echo "Skipping $SHORTNAME for $TARGET target"
+				inc NUM_SKIPPED_TRANS
+				SKIPPED_TESTS="$SKIPPED_TESTS $SHORTNAME"
 				continue;
+			fi
+			echo $SHORTNAME
+			if [ $TARGET = mpi -a $SHORTNAME = test_cplusplus.cc ] ; then
+				echo "Translation of C++ not supported in MPI"
+				inc NUM_SKIPPED_TRANS
+				SKIPPED_TESTS="$SKIPPED_TESTS $SHORTNAME"				
+				continue
 			fi
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
 			if [ "$CONFIG_ARG" != "" ]; then
