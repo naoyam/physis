@@ -1109,7 +1109,7 @@ function do_test()
 			else
 				echo "[EXECUTE] FAIL"
 				#fail $SHORTNAME $TARGET execute $cfg $np
-				rm -f $(get_exe_name $SHORTNAME $TARGET)
+				#rm -f $(get_exe_name $SHORTNAME $TARGET)
 				do_test_finish $FAIL_EXECUTE
 				popd > /dev/null
 				return $FAIL_EXECUTE
