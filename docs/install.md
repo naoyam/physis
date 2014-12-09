@@ -27,6 +27,7 @@
  On Tsubame, the following CMake variable might need to be defined.
     * JAVA_JVM_LIBRARY_DIRECTORIES=/usr/lib64/jvm/java/jre/bin/classic
     * JAVA_INCLUDE_PATH2=/usr/lib64/jvm/java/include
+  CMake option Boost_NO_SYSTEM_PATHS may need to be set to True.
 4. Cmake then will search for the location of Boost, Java, and Rose. If
   Boost and JDK are already installed, they should be detected by
   Cmake.
