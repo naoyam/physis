@@ -300,6 +300,10 @@ SgExpression *GridType::BuildElementTypeExpr() {
     e = sb::buildIntVal(PS_FLOAT);
   } else if (isSgTypeDouble(point_type_)) {
     e = sb::buildIntVal(PS_DOUBLE);
+  } else if (isSgTypeInt(point_type_)) {
+    e = sb::buildIntVal(PS_INT);
+  } else if (isSgTypeLong(point_type_)) {
+    e = sb::buildIntVal(PS_LONG);
   } else {
     // Assumes user-defined type
     e = sb::buildIntVal(PS_USER);
