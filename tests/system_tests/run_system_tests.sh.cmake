@@ -662,7 +662,10 @@ function compile()
 				return 0
 			fi
 			local src_file="$src_file_base".$input_suffix
-			c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS &&
+			if ! c_compile $src_file -c -I@CMAKE_SOURCE_DIR@/include $MPI_CFLAGS $CFLAGS ; then
+				print_error "Compiling generated MPI failed"
+				return 1
+			fi
 			local lib_name=physis_rt_mpi
 			if [ $target = "mpi2" ]; then lib_name=physis_rt_mpi2; fi
 			mpic++ "$src_file_base".o -l$lib_name $LDFLAGS -o $exe_name
