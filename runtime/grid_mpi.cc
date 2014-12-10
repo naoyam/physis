@@ -83,12 +83,10 @@ void GridMPI::InitHaloBuffers() {
   // Note that the halo for the last dimension is continuously located
   // in memory, so no separate buffer is necessary.
 
-  if (num_dims_ > 1) {
-    halo_self_fw_ = new char*[num_dims_-1];
-    halo_self_bw_ = new char*[num_dims_-1];
-    halo_peer_fw_ = new char*[num_dims_-1];
-    halo_peer_bw_ = new char*[num_dims_-1];
-  }
+  halo_self_fw_ = new char*[num_dims_];
+  halo_self_bw_ = new char*[num_dims_];
+  halo_peer_fw_ = new char*[num_dims_];
+  halo_peer_bw_ = new char*[num_dims_];
   
   for (int i = 0; i < num_dims_ - 1; ++i) {
     // Initialize to NULL by default
