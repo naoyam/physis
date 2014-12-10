@@ -516,7 +516,10 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   // This may be solved in the latest EDG4 version.
   SgExprListExp *stencil_min_val =
       mpi_rt_builder_->BuildStencilOffsetMin(sr);
-  assert(stencil_min_val);
+  if (stencil_min_val == NULL) {
+    LOG_ERROR() << "Analyzing stencil for finding left-most offset failed\n";
+    PSAbort(1);
+  }
   SgVariableDeclaration *stencil_min_var
       = sb::buildVariableDeclaration(
           "stencil_offset_min", ivec_type_,
@@ -526,7 +529,10 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
 
   SgExprListExp *stencil_max_val =
       mpi_rt_builder_->BuildStencilOffsetMax(sr);
-  assert(stencil_max_val);
+  if (stencil_max_val == NULL) {
+    LOG_ERROR() << "Analyzing stencil for finding right-most offset failed\n";
+    PSAbort(1);
+  }
   SgVariableDeclaration *stencil_max_var
       = sb::buildVariableDeclaration(
           "stencil_offset_max", ivec_type_,
