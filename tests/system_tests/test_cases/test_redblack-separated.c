@@ -1,7 +1,8 @@
 /*
  * TEST: 7-point stencil with red-black ordering
  * DIM: 3
- * PRIORITY: 1 
+ * PRIORITY: 1
+ * TARGETS: ref cuda 
  */
 
 #include <stdio.h>
