@@ -509,9 +509,9 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
 
   const StencilRange &sr = g->stencil_range();
 
-  // ROSE-EDG3 fails to unparse this AST. According to a message to
-  // the ROSE ML, ROSE-EDG3 seems to have some problems in unparsing
-  // C++ code.
+  // ROSE-EDG3 fails to unparse this AST in C++ mode. According to a
+  // message to the ROSE ML, ROSE-EDG3 seems to have some problems in
+  // unparsing C++ code.
   // https://mailman.nersc.gov/pipermail/rose-public/2011-July/001063.html
   // This may be solved in the latest EDG4 version.
   SgExprListExp *stencil_min_val =
