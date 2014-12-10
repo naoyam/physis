@@ -2,6 +2,7 @@
  * TEST: C++ test
  * DIM: 3
  * PRIORITY: 1
+ * TARGETS: ref cuda
  */
 
 #include <stdio.h>
