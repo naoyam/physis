@@ -624,11 +624,26 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
                        sb::buildPointerType(gt->point_type())),
       offset);
 
-  SgExpression *rhs =
-      si::copyExpression(node->get_args()->get_expressions()[0]);
+  if (attr->is_member_access()) {
+    lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
+    const vector<string> &array_offsets = attr->array_offsets();
+    FOREACH (it, array_offsets.begin(), array_offsets.end()) {
+      LOG_DEBUG() << "Parsing '" << *it << "'\n";
+      SgExpression *e = rose_util::ParseString(
+          *it, si::getScope(node));
+      lhs = sb::buildPntrArrRefExp(lhs, e);
+    }
+  }
 
-  SgExpression *emit = sb::buildAssignOp(lhs, rhs);
+  SgExpression *emit_val =
+      si::copyExpression(node->get_args()->get_expressions().back());
+
+  SgExpression *emit = sb::buildAssignOp(lhs, emit_val);
   si::replaceExpression(node, emit);
+
+  if (attr->is_member_access()) {
+    RemoveEmitDummyExp(emit);
+  }
 }
 
 void MPITranslator::FixAST() {
