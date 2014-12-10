@@ -42,13 +42,13 @@ ORIGINAL_DIRECTORY=$PWD
 NUM_ALL_TESTS=0
 NUM_SUCCESS_TRANS=0
 NUM_FAIL_TRANS=0
-NUM_SKIPPED_TRANS=0
+NUM_SKIP_TRANS=0
 NUM_SUCCESS_COMPILE=0
 NUM_FAIL_COMPILE=0
-NUM_SKIPPED_COMPILE=0
+NUM_SKIP_COMPILE=0
 NUM_SUCCESS_EXECUTE=0
 NUM_FAIL_EXECUTE=0
-NUM_SKIPPED_EXECUTE=0
+NUM_SKIP_EXECUTE=0
 NUM_WARNING=0
 FAILED_TESTS=""
 SKIPPED_TESTS=""
@@ -76,6 +76,9 @@ RETURN_SUCCESS=0
 FAIL_TRANSLATE=1
 FAIL_COMPILE=2
 FAIL_EXECUTE=3
+SKIP_TRANSLATE=4
+SKIP_COMPILE=5
+SKIP_EXECUTE=6
 ###############################################################
 
 function print_error()
@@ -106,9 +109,9 @@ function fail()
 
 function print_results_short()
 {
-    echo  -n "[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIPPED_TRANS/$NUM_ALL_TESTS"
-    echo  -n ", [COMPILE] $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIPPED_COMPILE/$NUM_ALL_TESTS"
-    echo  ", [EXECUTE] $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIPPED_EXECUTE/$NUM_ALL_TESTS."
+    echo  -n "[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIP_TRANS/$NUM_ALL_TESTS"
+    echo  -n ", [COMPILE] $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIP_COMPILE/$NUM_ALL_TESTS"
+    echo  ", [EXECUTE] $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIP_EXECUTE/$NUM_ALL_TESTS."
 }
 
 function email_results()
@@ -129,15 +132,15 @@ EOF
 function print_results()
 {
 	local msg=""
-	msg+="[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIPPED_TRANS/$NUM_ALL_TESTS."
-	msg+="\n[COMPILE]   $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIPPED_COMPILE/$NUM_ALL_TESTS."
-	msg+="\n[EXECUTE]   $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIPPED_EXECUTE/$NUM_ALL_TESTS."
+	msg+="[TRANSLATE] $NUM_SUCCESS_TRANS/$NUM_FAIL_TRANS/$NUM_SKIP_TRANS/$NUM_ALL_TESTS."
+	msg+="\n[COMPILE]   $NUM_SUCCESS_COMPILE/$NUM_FAIL_COMPILE/$NUM_SKIP_COMPILE/$NUM_ALL_TESTS."
+	msg+="\n[EXECUTE]   $NUM_SUCCESS_EXECUTE/$NUM_FAIL_EXECUTE/$NUM_SKIP_EXECUTE/$NUM_ALL_TESTS."
 	msg+="\n"
 	if [ "x" != "x$FAILED_TESTS" ]; then
 		msg+="\n!!! $(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
 		msg+="\nFailed tests: $FAILED_TESTS"
-	elif [ $NUM_SKIPPED_TRANS -gt 0 -o $NUM_SKIPPED_COMPILE -gt 0 \
-							  -o $NUM_SKIPPED_EXECUTE -gt 0 ]; then
+	elif [ $NUM_SKIP_TRANS -gt 0 -o $NUM_SKIP_COMPILE -gt 0 \
+							  -o $NUM_SKIP_EXECUTE -gt 0 ]; then
 		msg+="\nCompleted successfully with some tests skipped."
 		msg+="\nSkipped tests: $SKIPPED_TESTS"
 	else
@@ -201,6 +204,18 @@ function abs_path()
 		fi
     done
 	echo $ap
+}
+
+function find_in_array()
+{
+	local haystack=${1}[@]
+	local needle=${2}
+	for i in ${!haystack}; do
+		if [ ${i} = ${needle} ]; then
+			return 0
+		fi
+	done
+	return 1
 }
 
 function generate_empty_translation_configuration()
@@ -943,6 +958,18 @@ function get_description()
 	echo $DESC
 }
 
+function get_targets()
+{
+	local test=$1
+	TARGETS=$(grep -o '\WTARGETS: .*$' $test | sed 's/\WTARGETS: \(.*\)$/\1/')
+	if [ "$TARGETS" ]; then
+		echo $TARGETS
+	else
+		# assume all targets
+		echo $DEFAULT_TARGETS
+	fi
+}
+
 function list_tests()
 {
 	echo "Available test cases"
@@ -1056,6 +1083,7 @@ function do_test()
 	local STAGE=$5
 	local cfg=$6
 	local DESC=$(get_desc $TEST)
+	local SUPPORTED_TARGETS=($(get_targets $TEST))
 	
 	local test_wd=$WD/$TARGET/$SHORTNAME/$(basename $cfg)
 	mkdir -p $test_wd
@@ -1070,6 +1098,15 @@ function do_test()
 		fi
 		cat $cfg	
 		echo "Dimension: $DIM"
+		echo "Supported targets:" ${SUPPORTED_TARGETS[@]}
+
+		if ! find_in_array SUPPORTED_TARGETS $TARGET; then
+			# skip
+			echo "Target $TARGET not supported for this test"
+			do_test_finish $SKIP_TRANSLATE
+			popd > /dev/null
+			return $SKIP_TRANSLATE
+		fi
 
 		echo "[TRANSLATE] Processing $SHORTNAME for $TARGET target"
 		#echo $PHYSISC --$TARGET -I@CMAKE_SOURCE_DIR@/include \
@@ -1148,17 +1185,29 @@ function update_results()
 			;;
 		$FAIL_TRANSLATE)
 			inc NUM_FAIL_TRANS
+			FAILED_TESTS="$FAILED_TESTS $test_sig"
 			;;
 		$FAIL_COMPILE)
 			inc NUM_FAIL_COMPILE
+			FAILED_TESTS="$FAILED_TESTS $test_sig"
 			;;
 		$FAIL_EXECUTE)
 			inc NUM_FAIL_EXECUTE
+			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			;;
+		$SKIP_TRANSLATE)
+			inc NUM_SKIP_TRANS
+			SKIPPED_TESTS="$SKIPPED_TESTS $test_sig"
+			;;
+		$SKIP_COMPILE)
+			inc NUM_SKIP_COMPILE
+			SKIPPED_TESTS="$SKIPPED_TESTS $test_sig"			
+			;;
+		$SKIP_EXECUTE)
+			inc NUM_SKIP_EXECUTE
+			SKIPPED_TESTS="$SKIPPED_TESTS $test_sig"			
 			;;
 	esac
-	if [ "$code" != $RETURN_SUCCESS ]; then
-		FAILED_TESTS="$FAILED_TESTS $test_sig"
-	fi
 }
 
 function fetch_results()
@@ -1371,16 +1420,9 @@ fi
 			SHORTNAME=$(basename $TEST)			
 			if is_skipped_module_test $TEST $TARGET; then
 				echo "Skipping $SHORTNAME for $TARGET target"
-				inc NUM_SKIPPED_TRANS
+				inc NUM_SKIP_TRANS
 				SKIPPED_TESTS="$SKIPPED_TESTS $SHORTNAME"
 				continue;
-			fi
-			echo $SHORTNAME
-			if [ $TARGET = mpi -a $SHORTNAME = test_cplusplus.cc ] ; then
-				echo "Translation of C++ not supported in MPI"
-				inc NUM_SKIPPED_TRANS
-				SKIPPED_TESTS="$SKIPPED_TESTS $SHORTNAME"				
-				continue
 			fi
 			DIM=$(grep -o '\WDIM: .*$' $TEST | sed 's/\WDIM: \(.*\)$/\1/')
 			if [ "$CONFIG_ARG" != "" ]; then
