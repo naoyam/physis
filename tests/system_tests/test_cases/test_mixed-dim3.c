@@ -1,8 +1,11 @@
 /*
  * TEST: Grids with different dimensions
  * DIM: 3
- * PRIORITY: 1 
+ * PRIORITY: 1
+ * TARGETS: ref cuda
  */
+
+// NOTE: Mixing dimensions with distributed memory not supported
 
 #include <stdio.h>
 #include "physis/physis.h"
