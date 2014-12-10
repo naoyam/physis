@@ -50,6 +50,11 @@ void RuntimeMPI::Init(int *argc, char ***argv, int grid_num_dims,
 
   LOG_INFO() << "Process size: " << proc_size << "\n";
 
+  if (proc_num_dims > grid_num_dims) {
+    LOG_ERROR() << "Decomposition dimension must not exceed problem dimension\n";
+    PSAbort(1);
+  }
+
   gs_ = new GridSpaceMPI(grid_num_dims, grid_size,
                          proc_num_dims, proc_size, rank);
 
