@@ -147,11 +147,13 @@ class GridMPI: public Grid {
     \param indices Position of the element.
     \return Address of the element.
    */
+  // TODO: Why we have GetAddress and CalcOffset? GetAddress should
+  // use CalcOffset internatlly at least.
   void *GetAddress(const IndexArray &indices) {
     IndexArray t = indices;
     t -= local_real_offset_;
     return (void*)(_data() +
-                   GridCalcOffset3D(t, local_real_size_)
+                   GridCalcOffset(t, local_real_size_, num_dims_)
                    * elm_size());
   }
   
@@ -160,6 +162,7 @@ class GridMPI: public Grid {
     \param indices Position of the element.
     \return Offset of the element in length.
    */
+  // TODO: PSIndex might not be enough large for offset
   template <int dim>
   PSIndex CalcOffset(const IndexArray &indices) {
     PSIndex off = indices[0] - local_real_offset_[0];

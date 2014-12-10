@@ -48,7 +48,7 @@ static void CopyContinuousSubgrid(
     const IndexArray &subgrid_size,
     bool is_copyin) {
   intptr_t linear_offset =
-      GridCalcOffset3D(subgrid_offset, grid_size) * elm_size;
+      GridCalcOffset(subgrid_offset, grid_size, num_dims) * elm_size;
   size_t size = 
       subgrid_size.accumulate(num_dims) * elm_size;
   if (is_copyin) {

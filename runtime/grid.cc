@@ -69,7 +69,7 @@ void *Grid::GetAddress(const IndexArray &indices) {
   PSAssert(_data() == buffer()->Get());
 #endif
   return (void*)(_data() +
-                 GridCalcOffset3D(indices, size())
+                 GridCalcOffset(indices, size(), num_dims())
                  * elm_size());
 }
 

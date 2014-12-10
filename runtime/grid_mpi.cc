@@ -82,13 +82,16 @@ void GridMPI::InitBuffers() {
 void GridMPI::InitHaloBuffers() {
   // Note that the halo for the last dimension is continuously located
   // in memory, so no separate buffer is necessary.
-  
-  halo_self_fw_ = new char*[num_dims_-1];
-  halo_self_bw_ = new char*[num_dims_-1];
-  halo_peer_fw_ = new char*[num_dims_-1];
-  halo_peer_bw_ = new char*[num_dims_-1];
+
+  if (num_dims_ > 1) {
+    halo_self_fw_ = new char*[num_dims_-1];
+    halo_self_bw_ = new char*[num_dims_-1];
+    halo_peer_fw_ = new char*[num_dims_-1];
+    halo_peer_bw_ = new char*[num_dims_-1];
+  }
   
   for (int i = 0; i < num_dims_ - 1; ++i) {
+    // Initialize to NULL by default
     halo_self_fw_[i] = halo_self_bw_[i] = NULL;
     halo_peer_fw_[i] = halo_peer_bw_[i] = NULL;
     if (halo_.fw[i]) {
@@ -134,7 +137,7 @@ void GridMPI::DeleteHaloBuffers() {
   PS_XDELETEA(halo_peer_fw_);
   PS_XDELETEA(halo_peer_bw_);
 }
-    
+
 char *GridMPI::GetHaloPeerBuf(int dim, bool fw, unsigned width) {
   if (dim == num_dims_ - 1) {
     IndexArray offset(0);
@@ -143,7 +146,8 @@ char *GridMPI::GetHaloPeerBuf(int dim, bool fw, unsigned width) {
     } else {
       offset[dim] = halo_.fw[dim] - width;
     }
-    return _data() + GridCalcOffset3D(offset, local_real_size_) * elm_size_;
+    return _data() + GridCalcOffset(offset, local_real_size_, num_dims_)
+        * elm_size_;
   } else {
     if (fw) return halo_peer_fw_[dim];
     else  return halo_peer_bw_[dim];
@@ -199,7 +203,7 @@ void GridMPI::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal) {
   // because its halo region is physically continuous.
   if (dim == (num_dims_ - 1)) {
     char *p = data_[0]
-        + GridCalcOffset3D(halo_offset, local_real_size_) * elm_size_;
+        + GridCalcOffset(halo_offset, local_real_size_, num_dims_) * elm_size_;
     LOG_DEBUG() << "halo_offset: " << halo_offset << "\n";
     *halo_buf = p;
     LOG_DEBUG() << "p: " << (void*)p << "\n";
@@ -216,6 +220,7 @@ void GridMPI::CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal) {
 
 std::ostream &GridMPI::Print(std::ostream &os) const {
   os << "GridMPI {"
+     << "num_dims: " << num_dims_
      << "elm_size: " << elm_size_
      << ", size: " << size_
      << ", global offset: " << global_offset_
@@ -227,18 +232,28 @@ std::ostream &GridMPI::Print(std::ostream &os) const {
 }
 
 template <class T>
-int ReduceGridMPI3D(GridMPI *g, PSReduceOp op, T *out) {
+int ReduceGridMPI(GridMPI *g, PSReduceOp op, T *out, int dim) {
+  PSAssert(dim <= 3);
   size_t nelms = g->local_size().accumulate(g->num_dims());
   if (nelms == 0) return 0;
   boost::function<T (T, T)> func = GetReducer<T>(op);
   T *d = (T *)g->_data();
   T v = GetReductionDefaultValue<T>(op);
-  for (int k = 0; k < g->local_size()[2]; ++k) {
-    for (int j = 0; j < g->local_size()[1]; ++j) {
-      for (int i = 0; i < g->local_size()[0]; ++i) {
+  int imax = g->local_size()[0];
+  int jmax = g->local_size()[1];
+  int kmax = g->local_size()[2];
+  if (dim == 1) {
+    jmax = kmax = 1;
+  } else if (dim == 2) {
+    kmax = 1;
+  }
+  for (int k = 0; k < kmax; ++k) {
+    for (int j = 0; j < jmax; ++j) {
+      for (int i = 0; i < imax; ++i) {
+        IndexArray p(i, j, k);
+        p += g->halo().bw;
         intptr_t offset =
-            GridCalcOffset3D(i + g->halo().bw[0], j + g->halo().bw[1],
-                             k + g->halo().bw[2], g->local_real_size());
+            GridCalcOffset(p, g->local_real_size(), dim);
         v = func(v, d[offset]);
       }
     }
@@ -249,19 +264,19 @@ int ReduceGridMPI3D(GridMPI *g, PSReduceOp op, T *out) {
 
 int GridMPI::Reduce(PSReduceOp op, void *out) {
   int rv = 0;
-  PSAssert(num_dims_ == 3);
+  PSAssert(num_dims_ <= 3);
   switch (type_) {
     case PS_FLOAT:
-      rv = ReduceGridMPI3D<float>(this, op, (float*)out);
+      rv = ReduceGridMPI<float>(this, op, (float*)out, num_dims_);
       break;
     case PS_DOUBLE:
-      rv = ReduceGridMPI3D<double>(this, op, (double*)out);
+      rv = ReduceGridMPI<double>(this, op, (double*)out, num_dims_);
       break;
     case PS_INT:
-      rv = ReduceGridMPI3D<int>(this, op, (int*)out);
+      rv = ReduceGridMPI<int>(this, op, (int*)out, num_dims_);
       break;
     case PS_LONG:
-      rv = ReduceGridMPI3D<long>(this, op, (long*)out);
+      rv = ReduceGridMPI<long>(this, op, (long*)out, num_dims_);
       break;
     default:
       LOG_ERROR() << "Unsupported type\n";

@@ -52,6 +52,17 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
 // TODO: Create two distinctive types: offset_type and index_type
 //#define _OFFSET_TYPE intprt_t
 #define _OFFSET_TYPE PSIndex
+
+inline _OFFSET_TYPE GridCalcOffset(PSIndex x, PSIndex y, 
+                                   PSIndex xsize) {
+  return ((_OFFSET_TYPE)x) + ((_OFFSET_TYPE)y) * ((_OFFSET_TYPE)xsize);
+}
+
+inline _OFFSET_TYPE GridCalcOffset(PSIndex x, PSIndex y, 
+                                   const IndexArray &size) {
+  return GridCalcOffset(x, y, size[0]);
+}
+
 inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z, 
                                      PSIndex xsize, PSIndex ysize) {
   return ((_OFFSET_TYPE)x) + ((_OFFSET_TYPE)y) * ((_OFFSET_TYPE)xsize)
@@ -66,6 +77,41 @@ inline _OFFSET_TYPE GridCalcOffset3D(PSIndex x, PSIndex y, PSIndex z,
 inline intptr_t GridCalcOffset3D(const IndexArray &index,
                                  const IndexArray &size) {
   return GridCalcOffset3D(index[0], index[1], index[2], size[0], size[1]);  
+}
+
+#if 0
+template <int DIM>
+inline intptr_t GridCalcOffset(const IndexArray &index,
+                               const IndexArray &size) {
+  if (DIM == 1) {
+    return index[0];
+  } else if (DIM == 2) {
+    return GridCalcOffset(index[0], index[1], size[0]);
+  } else if (DIM == 3) {
+    return GridCalcOffset3D(index[0], index[1], index[2],
+                            size[0], size[1]);
+  } else {
+    LOG_ERROR() << "Unsupported dimensionality: " << DIM << "\n";
+    PSAbort(1);
+  }
+}
+#endif
+
+inline intptr_t GridCalcOffset(const IndexArray &index,
+                               const IndexArray &size,
+                               int dim) {
+  if (dim == 1) {
+    return index[0];
+  } else if (dim == 2) {
+    return GridCalcOffset(index[0], index[1], size[0]);
+  } else if (dim == 3) {
+    return GridCalcOffset3D(index[0], index[1], index[2],
+                            size[0], size[1]);
+  } else {
+    LOG_ERROR() << "Unsupported dimensionality: " << dim << "\n";
+    PSAbort(1);
+    return 0; // to suppress warning about no return
+  }
 }
 
 } // namespace runtime
