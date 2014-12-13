@@ -1,14 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "runtime/runtime_common.h"
 #include "runtime/reduce_cuda.h"
-#include "runtime/grid_mpi_cuda.h"
+#include "runtime/grid_mpi_cuda_exp.h"
 #include "physis/physis_mpi_cuda.h"
 
 #include <thrust/transform_reduce.h>
@@ -151,7 +145,9 @@ void ReduceGridCUDAPitch(void *buf, PSReduceOp op,
 
 
 template <class T>
-int ReduceGridMPICUDA(GridMPICUDA3D *g, PSReduceOp op, T *out) {
+int ReduceGridMPICUDA(GridMPICUDAExp *g, PSReduceOp op, T *out) {
+  // TODO (Reduction)
+#if 0 
   size_t nelms = g->local_size().accumulate(g->num_dims());
   if (nelms == 0) return 0;
   int pitch = g->GetDev()->pitch;
@@ -168,9 +164,14 @@ int ReduceGridMPICUDA(GridMPICUDA3D *g, PSReduceOp op, T *out) {
         g->local_size()[0], pitch);
   }
   return nelms;
+#else
+  return 0;
+#endif  
 }
 
-int GridMPICUDA3D::Reduce(PSReduceOp op, void *out) {
+int GridMPICUDAExp::Reduce(PSReduceOp op, void *out) {
+  // TODO (Reduction)  
+#if 0
   int rv = 0;
   switch (type_) {
     case PS_FLOAT:
@@ -181,16 +182,19 @@ int GridMPICUDA3D::Reduce(PSReduceOp op, void *out) {
     case PS_DOUBLE:
       rv = ReduceGridMPICUDA<double>(this, op, (double*)out);
       break;
-    case PS_FLOAT:
+    case PS_INT:
       rv = ReduceGridMPICUDA<int>(this, op, (int*)out);
       break;
-    case PS_DOUBLE:
+    case PS_LONG:
       rv = ReduceGridMPICUDA<long>(this, op, (long*)out);
       break;
     default:
       PSAbort(1);
   }
   return rv;
+#else
+  return 0;
+#endif  
 }
 
 } // namespace runtime

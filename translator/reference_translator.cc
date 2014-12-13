@@ -110,8 +110,6 @@ void ReferenceTranslator::SetUp(SgProject *project,
 }
 
 void ReferenceTranslator::Finish() {
-  if (rt_builder_) delete rt_builder_;
-  rt_builder_ = NULL;
   Translator::Finish();
 }
 

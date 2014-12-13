@@ -96,7 +96,8 @@ find_package(CUDA)
 if (CUDA_FOUND AND
     (CUDA_VERSION VERSION_EQUAL "4.0") OR
     (CUDA_VERSION VERSION_GREATER "4.0"))
-  set (CUDA_NVCC_FLAGS -arch sm_20)
+  # Suppress warning on assert(expr && "message")
+  set (CUDA_NVCC_FLAGS -arch sm_20;-Xcudafe --diag_suppress=boolean_controlling_expr_is_constant)
   set(CUDA_INCLUDE_DIR ${CUDA_INCLUDE_DIRS})
   foreach(i ${CUDA_LIBRARIES})
     if (i MATCHES libcudart)

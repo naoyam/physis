@@ -12,8 +12,7 @@
 #include "translator/translator_common.h"
 #include "translator/mpi_cuda_translator.h"
 
-// TODO: Merge this to optimizer/mpi_cuda_optimizer.h
-
+#if 0 // TODO: Merge this to optimizer/mpi_cuda_optimizer.h
 namespace physis {
 namespace translator {
 
@@ -26,7 +25,10 @@ class MPICUDAOptimizer {
   const MPICUDATranslator &trans_;
 };
 
+
 } // namespace translator
 } // namespace physis
+
+#endif
 
 #endif /* PHYSIS_TRANSLATOR_MPI_CUDA_OPTIMIZER_H_ */

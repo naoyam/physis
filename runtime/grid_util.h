@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_GRID_UTIL_H_
 #define PHYSIS_RUNTIME_GRID_UTIL_H_
@@ -49,7 +43,8 @@ void CopyinSubgrid(size_t elm_size, int num_dims,
                    const IndexArray &subgrid_size);
 
 
-// TODO: Create two distinctive types: offset_type and index_type
+// TODO (Index range): Create two distinctive types: offset_type and
+//index_type.
 //#define _OFFSET_TYPE intprt_t
 #define _OFFSET_TYPE PSIndex
 
@@ -79,7 +74,6 @@ inline intptr_t GridCalcOffset3D(const IndexArray &index,
   return GridCalcOffset3D(index[0], index[1], index[2], size[0], size[1]);  
 }
 
-#if 0
 template <int DIM>
 inline intptr_t GridCalcOffset(const IndexArray &index,
                                const IndexArray &size) {
@@ -93,9 +87,28 @@ inline intptr_t GridCalcOffset(const IndexArray &index,
   } else {
     LOG_ERROR() << "Unsupported dimensionality: " << DIM << "\n";
     PSAbort(1);
+    return 0; // just to suppress compiler warning
   }
 }
-#endif
+
+template <int DIM>
+inline intptr_t GridCalcOffset(const IndexArray &index,
+                               const IndexArray &size,
+                               const IndexArray &offset) {
+  if (DIM == 1) {
+    return index[0] - offset[0];
+  } else if (DIM == 2) {
+    return GridCalcOffset(index[0]-offset[0], index[1]-offset[1], size[0]);
+  } else if (DIM == 3) {
+    return GridCalcOffset3D(index[0]-offset[0], index[1]-offset[1],
+                            index[2]-offset[2], size[0], size[1]);
+  } else {
+    LOG_ERROR() << "Unsupported dimensionality: " << DIM << "\n";
+    PSAbort(1);
+    return 0; // just to suppress compiler warning
+  }
+}
+
 
 inline intptr_t GridCalcOffset(const IndexArray &index,
                                const IndexArray &size,
@@ -113,6 +126,32 @@ inline intptr_t GridCalcOffset(const IndexArray &index,
     return 0; // to suppress warning about no return
   }
 }
+
+inline intptr_t GridCalcOffset(const IndexArray &index,
+                               const IndexArray &size,
+                               const IndexArray &offset,
+                               int dim) {
+  if (dim == 1) {
+    return index[0]-offset[0];
+  } else if (dim == 2) {
+    return GridCalcOffset(index[0]-offset[0], index[1]-offset[1], size[0]);
+  } else if (dim == 3) {
+    return GridCalcOffset3D(index[0]-offset[0], index[1]-offset[1],
+                            index[2]-offset[2], size[0], size[1]);
+  } else {
+    LOG_ERROR() << "Unsupported dimensionality: " << dim << "\n";
+    PSAbort(1);
+    return 0; // to suppress warning about no return
+  }
+}
+
+void PartitionSpace(int num_dims, int num_procs,
+                    const IndexArray &size, 
+                    const IntArray &num_partitions,
+                    PSIndex **partitions, PSIndex **offsets,
+                    std::vector<IntArray> &proc_indices,
+                    IndexArray &min_partition);
+
 
 } // namespace runtime
 } // namespace physis

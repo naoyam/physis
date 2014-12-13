@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_GRID_H_
 #define PHYSIS_RUNTIME_GRID_H_
@@ -19,24 +15,22 @@ namespace runtime {
 class Grid {
  protected:
   Grid(PSType type, int elm_size, int num_dims,
-       const IndexArray &size,
-       bool double_buffering, int attr);
+       const IndexArray &size, int attr);
   PSType type_;
  public:
   virtual ~Grid();
 
   static Grid* Create(PSType type, int elm_size, int num_dims,
                       const IndexArray &size,
-                      bool double_buffering, int attr) {
+                      int attr) {
     Grid *g = new Grid(type, elm_size, num_dims, size,
-                       double_buffering, attr);
+                       attr);
     g->InitBuffer();
     return g;
   }
   
   virtual std::ostream &Print(std::ostream &os) const;
   int &id() { return id_; }
-  void Swap();
   PSType type() { return type_; }
   int elm_size_;
   int elm_size() const { return elm_size_; }
@@ -46,11 +40,10 @@ class Grid {
   virtual size_t num_elms() {return num_elms_; }
   IndexArray size_;
   const IndexArray &size() const { return size_; }
-  bool double_buffering_;
-  char *_data() { return data_[0]; }
-  char *_data_emit() { return data_[1]; }  
-  Buffer *buffer() { return data_buffer_[0]; }
-  const Buffer *buffer() const { return data_buffer_[0]; }  
+  char *_data() { return data_; }
+  char *_data_emit() { return data_; }  
+  Buffer *buffer() { return data_buffer_; }
+  const Buffer *buffer() const { return data_buffer_; }  
   virtual void *GetAddress(const IndexArray &indices);    
   virtual void Set(const IndexArray &indices, const void *buf);
   virtual void Get(const IndexArray &indices, void *buf); 
@@ -74,13 +67,15 @@ class Grid {
 
   virtual void InitBuffer();
   virtual void DeleteBuffers();
-  Buffer *data_buffer_[2];
-  char *data_[2];
+  Buffer *data_buffer_;
+  char *data_;
   int attr_;
+#if 0  
   // the source is address of ordinary memory region
   virtual void Copyin(void *dst, const void *src, size_t size);
   // the dstination is address of ordinary memory region  
   virtual void Copyout(void *dst, const void *src, size_t size);
+#endif  
 #ifdef CHECKPOINTING_ENABLED  
   virtual void SaveToFile(const void *buf, size_t len) const;
   virtual void RestoreFromFile(void *buf, size_t len);

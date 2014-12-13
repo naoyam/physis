@@ -1,16 +1,10 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_RPC_MPI_CUDA_H_
 #define PHYSIS_RUNTIME_RPC_MPI_CUDA_H_
 
 #include "runtime/runtime_common.h"
-#include "runtime/rpc_mpi.h"
+#include "runtime/rpc.h"
 #include "runtime/grid_mpi_cuda.h"
 #include "runtime/buffer_cuda.h"
 

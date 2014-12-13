@@ -13,7 +13,7 @@ void kernel(float *g1, float *g2) {
     for (y = halo_width; y < N-halo_width; ++y) {
       for (x = halo_width; x < N-halo_width; ++x) {
         float v = g1[OFFSET(x, y, z)] +
-            g1[OFFSET(x+1, y, z)] + g1[OFFSET(x-2, y, z)];
+            g1[OFFSET(x+1, y+1, z+1)] + g1[OFFSET(x-2, y-2, z-2)];
         g2[OFFSET(x, y, z)] = v;
       }
     }

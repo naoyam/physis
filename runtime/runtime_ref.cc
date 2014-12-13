@@ -10,11 +10,6 @@
 namespace physis {
 namespace runtime {
 
-RuntimeRef::RuntimeRef(): Runtime() {
-}
-
-RuntimeRef::~RuntimeRef() {
-}
 
 } // namespace runtime
 } // namespace physis

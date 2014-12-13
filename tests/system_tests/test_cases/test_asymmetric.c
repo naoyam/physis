@@ -12,7 +12,7 @@
 void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
             PSGrid3DFloat g2) {
   float v = PSGridGet(g, x, y, z) +
-      PSGridGet(g, x+1, y, z) + PSGridGet(g, x-2, y, z);
+      PSGridGet(g, x+1, y+1, z+1) + PSGridGet(g, x-2, y-2, z-2);
   PSGridEmit(g2, v);
   return;
 }

@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_PHYSIS_COMMON_H_
 #define PHYSIS_PHYSIS_COMMON_H_
 

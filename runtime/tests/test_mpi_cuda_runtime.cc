@@ -1,7 +1,8 @@
+
 #define PHYSIS_MPI_CUDA
+#include "physis/physis_common.h"
 #include "physis/physis.h"
 #include "physis/physis_util.h"
-#include "runtime/mpi_cuda_runtime.h"
 #include "runtime/grid_mpi_cuda_debug_util.h"
 #include "runtime/mpi_util.h"
 

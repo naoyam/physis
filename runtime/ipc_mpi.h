@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_IPC_MPI_H_
 #define PHYSIS_RUNTIME_IPC_MPI_H_
@@ -17,7 +13,7 @@ namespace runtime {
 
 class InterProcCommMPI: public InterProcComm {
  protected:
-  InterProcCommMPI(): comm_(MPI_COMM_WORLD) {}
+  InterProcCommMPI(): comm_(MPI_COMM_WORLD), initialized_(false) {}
   virtual ~InterProcCommMPI() {}  
  public:
   static InterProcCommMPI* GetInstance();
@@ -33,8 +29,8 @@ class InterProcCommMPI: public InterProcComm {
   virtual IPC_ERROR_T Irecv(void *buf, size_t len,
                     int src, void *req);
   virtual IPC_ERROR_T Wait(void *req);
-  virtual IPC_ERROR_T WaitAll();
-  virtual IPC_ERROR_T Test(void *req);
+  //virtual IPC_ERROR_T WaitAll();
+  virtual IPC_ERROR_T Test(void *req, bool *flag);
   virtual IPC_ERROR_T Bcast(void *buf, size_t len, int root);
   virtual IPC_ERROR_T Reduce(void *src, void *dst,
                      int count, PSType type,
@@ -44,6 +40,7 @@ class InterProcCommMPI: public InterProcComm {
  protected:
   MPI_Comm comm_;
   static InterProcCommMPI *singleton_;
+  bool initialized_;
 };
 
 } // namespace runtime

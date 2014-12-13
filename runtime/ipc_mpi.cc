@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "runtime/ipc_mpi.h"
 
@@ -25,8 +21,16 @@ InterProcCommMPI *InterProcCommMPI::GetInstance() {
 
 InterProcComm::IPC_ERROR_T InterProcCommMPI::Init(int *argc,
                                                   char ***argv) {
-  PS_MPI_Init(argc, argv);
-  return IPC_SUCCESS;
+  if (!initialized_) {
+    PS_MPI_Init(argc, argv);
+    initialized_ = true;
+    return IPC_SUCCESS;
+  } else {
+    // Trying init multiple times considered an error
+    LOG_ERROR() << "Initializing MPI multiple times not allowed\n";
+    return IPC_FAILURE;
+  }
+  
 }
 
 InterProcComm::IPC_ERROR_T InterProcCommMPI::Finalize() {
@@ -89,17 +93,19 @@ InterProcComm::IPC_ERROR_T InterProcCommMPI::Irecv(
 }
 
 InterProcComm::IPC_ERROR_T InterProcCommMPI::Wait(void *req) {
-  assert(PS_MPI_Wait() == MPI_SUCCESS);
+  assert(PS_MPI_Wait(static_cast<MPI_Request*>(req), MPI_STATUS_IGNORE)
+         == MPI_SUCCESS);
   return IPC_SUCCESS;
 }
 
+#if 0
 InterProcComm::IPC_ERROR_T InterProcCommMPI::WaitAll() {
   assert(PS_MPI_Wait() == MPI_SUCCESS);
   return IPC_SUCCESS;
 }
-
-InterProcComm::IPC_ERROR_T InterProcCommMPI::Test(void *req) {
-  assert(PS_MPI_Test(static_cast<MPI_Request*>(req))
+#endif
+InterProcComm::IPC_ERROR_T InterProcCommMPI::Test(void *req, bool *flag) {
+  assert(PS_MPI_Test(static_cast<MPI_Request*>(req), flag, MPI_STATUS_IGNORE)
          == MPI_SUCCESS);
   return IPC_SUCCESS;
 }

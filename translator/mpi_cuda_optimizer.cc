@@ -6,6 +6,8 @@
 //
 // Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
 
+#if 0
+
 #include "translator/mpi_cuda_optimizer.h"
 #include "translator/rose_ast_attribute.h"
 #include "translator/rose_util.h"
@@ -165,3 +167,5 @@ void MPICUDAOptimizer::GridPreCalcAddr(SgFunctionDeclaration *func) {
 
 } // namespace translator
 } // namespace physis
+
+#endif

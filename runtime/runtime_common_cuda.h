@@ -13,11 +13,21 @@
 #include "runtime/runtime_common.h"
 #include <cuda_runtime.h>
 
+inline void wait_for_attach() {
+  while (1) {
+    sleep(5);                                               
+  }
+}
+
 #define CUDA_SAFE_CALL(x) do {                                  \
     cudaError_t e = x;                                          \
     if (e != cudaSuccess) {                                     \
       fprintf(stderr, "CUDA ERROR at " __FILE__ "#%d: %s\n",    \
               __LINE__, cudaGetErrorString(e));                 \
+      fprintf(stderr, "PID: %d\n", getpid());                   \
+      if (getenv("CUDA_SAFE_CALL_WAIT")) {                      \
+        wait_for_attach();                                      \
+      }                                                         \
       exit(EXIT_FAILURE);                                       \
     }                                                           \
   } while (0)

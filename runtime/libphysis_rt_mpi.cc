@@ -1,11 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
-
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include <stdarg.h>
 #include <map>
@@ -13,7 +6,6 @@
 
 #include "mpi.h"
 
-#include "runtime/mpi_runtime.h"
 #include "runtime/grid_mpi_debug_util.h"
 #include "runtime/mpi_util.h"
 #include "runtime/mpi_runtime_common.h"
@@ -30,11 +22,15 @@ using physis::IndexArray;
 using physis::IntArray;
 using physis::SizeArray;
 
+typedef GridSpaceMPI<GridMPI> GridSpaceMPIType;
+typedef Master<GridSpaceMPIType> MasterType;
+typedef Client<GridSpaceMPIType> ClientType;
+
 namespace physis {
 namespace runtime {
 
-Master *master;
-GridSpaceMPI *gs;
+MasterType *master;
+GridSpaceMPIType *gs;
 
 } // namespace runtime
 } // namespace physis
@@ -67,14 +63,16 @@ extern "C" {
   // dimensions, and each of the remaining ones is the size of
   // respective dimension.
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    RuntimeMPI *rt = new RuntimeMPI();
+    RuntimeMPI<GridSpaceMPIType> *rt = new RuntimeMPI<GridSpaceMPIType>();
     va_list vl;
     va_start(vl, grid_num_dims);
     rt->Init(argc, argv, grid_num_dims, vl);
+    va_end(vl);    
     gs = rt->gs();
     if (rt->IsMaster()) {
-      master = static_cast<Master*>(rt->proc());
+      master = static_cast<MasterType*>(rt->proc());
     } else {
+      master = NULL;
       rt->Listen();
     }
   }
@@ -89,7 +87,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx));
     // No corresponding local region
-    if (local_min >= local_max) {
+    if (!(local_min.LessThan(local_max, 1))) {    
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -104,7 +102,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx, maxy));
     // No corresponding local region
-    if (local_min >= local_max) {
+    if (!(local_min.LessThan(local_max, 2))) {    
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -122,7 +120,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx, maxy, maxz));    
     // No corresponding local region
-    if (local_min >= local_max) {
+    if (!(local_min.LessThan(local_max, 3))) {    
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -132,6 +130,14 @@ extern "C" {
     return d;
   }
 
+
+  //! Set the local domain size for child processes.
+  /*!
+    This is only relevant for non-root MPI processes. The root process
+    has the correct local size for this dom, which is computed when
+    calling PSDomainNew. The child processes do not execute
+    PSDomainNew, so its local size are not correctly initialized yet. 
+   */
   void __PSDomainSetLocalSize(__PSDomain *dom) {
     IndexArray local_min = gs->my_offset();
     IndexArray global_min(dom->min);
@@ -139,12 +145,15 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(dom->max));
     // No corresponding local region
-    if (local_min >= local_max) {
+    // TODO (Mixed dimension): dom may have a smaller number of
+    // dimensions than the grid space, but __PSDomain does not know
+    // number of dimension. 
+    if (!(local_min.LessThan(local_max, gs->num_dims()))) {    
       local_min.Set(0);
       local_max.Set(0);
     }
-    local_min.Set(dom->local_min);
-    local_max.Set(dom->local_max);
+    local_min.CopyTo(dom->local_min);
+    local_max.CopyTo(dom->local_max);
   }
   
   void PSPrintInternalInfo(FILE *out) {
@@ -275,7 +284,7 @@ extern "C" {
                         const PSVectorInt offset_max,
                         int diagonal, int reuse, int overlap,
                         int periodic) {
-    if (overlap) LOG_WARNING() << "Overlap possible, but not implemented\n";
+    if (overlap) LOG_INFO() << "Overlap possible, but not implemented\n";
     GridMPI *gm = (GridMPI*)g;
     gs->LoadNeighbor(gm, IndexArray(offset_min), IndexArray(offset_max),
                      (bool)diagonal, reuse, periodic);

@@ -668,6 +668,7 @@ int main(int argc, char *argv[]) {
   LOG_INFO() << "Optimization Stage 2 done\n";
   
   trans->Finish();
+  delete rt_builder;
   delete optimizer;
 
   filename_suffix = ru::GetInputFileSuffix(proj);

@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_GRID_MPI_H_
 #define PHYSIS_RUNTIME_GRID_MPI_H_
@@ -17,12 +13,13 @@
 namespace physis {
 namespace runtime {
 
+template <class GridType>
 class GridSpaceMPI;
 
-// TODO: Replace MPI with class IPC.
+// REFACTORING: Replace MPI with class IPC.
 class GridMPI: public Grid {
-  friend class GridSpaceMPI;
-  template <class T> friend std::ostream& print_grid(
+  friend class GridSpaceMPI<GridMPI>;
+  template <class T> friend std::ostream& PrintGrid(
       GridMPI *, int, std::ostream&);
  protected:
   GridMPI(PSType type, int elm_size, int num_dims,
@@ -60,6 +57,7 @@ class GridMPI: public Grid {
   //! Length of the actual buffer with halo
   IndexArray local_real_size_;
 
+  // REFACTORING: Use Buffer abstraction
   //! Buffer for sending halo for forward accesses
   char **halo_self_fw_;
   //! Buffer for sending halo for backward accesses
@@ -69,8 +67,8 @@ class GridMPI: public Grid {
   //! Buffer for receiving halo for backward accesses  
   char **halo_peer_bw_;
 
-  size_t CalcHaloSize(int dim, unsigned width);    
-  
+  // Make these public for testing
+ public:   
   //! Allocates buffers, including halo buffers.
   virtual void InitBuffers();
   //! Allocates buffers for halo communications.
@@ -79,6 +77,32 @@ class GridMPI: public Grid {
   virtual void DeleteBuffers();
   //! Deletes halo buffers.
   virtual void DeleteHaloBuffers();
+
+  virtual char *&GetHaloSelf(int dim, bool fw) {
+    return fw ? halo_self_fw_[dim] : halo_self_bw_[dim];
+  }
+  virtual char *&GetHaloPeer(int dim, bool fw) {
+    return fw ? halo_peer_fw_[dim] : halo_peer_bw_[dim];
+  }
+
+  size_t CalcHaloSize(int dim, unsigned width, bool diagonal);
+  //! Copy halo from the grid buffer into the send buffer.
+  /*!
+    \param dim Dimension to copy.
+    \param width Halo length.
+    \param fw True if the received halo is for forward accesses. 
+    \param diagonal Flag to indicate diagonal point is used.
+   */
+  virtual void CopyoutHalo(int dim, const Width2 &width, bool fw, bool diagonal);
+  
+  //! Copy remote halo from the recv buffer into the grid buffer.
+  /*!
+    \param dim Dimension to copy.
+    \param width Halo length.
+    \param fw True if the received halo is for forward accesses. 
+    \param diagonal Flag to indicate diagonal point is used.
+   */
+  virtual void CopyinHalo(int dim, const Width2 &width, bool fw, bool diagonal);
 
   // Returns buffer for remote halo
   /*
@@ -89,23 +113,6 @@ class GridMPI: public Grid {
   */
   char *GetHaloPeerBuf(int dim, bool fw, unsigned width);
 
-  //! Copy halo from the grid buffer into the send buffer.
-  /*!
-    \param dim Dimension to copy.
-    \param width Halo length.
-    \param fw True if the received halo is for forward accesses. 
-    \param diagonal Flag to indicate diagonal point is used.
-   */
-  virtual void CopyoutHalo(int dim, unsigned width, bool fw, bool diagonal);
-  
-  //! Copy remote halo from the recv buffer into the grid buffer.
-  /*!
-    \param dim Dimension to copy.
-    \param width Halo length.
-    \param fw True if the received halo is for forward accesses. 
-    \param diagonal Flag to indicate diagonal point is used.
-   */
-  virtual void CopyinHalo(int dim, unsigned width, bool fw, bool diagonal);
 
  public:
   static GridMPI *Create(
@@ -121,11 +128,13 @@ class GridMPI: public Grid {
   virtual std::ostream &Print(std::ostream &os) const;
   
   bool empty() const { return empty_; }
+  const IndexArray& global_offset() const { return global_offset_; }
   const IndexArray& local_size() const { return local_size_; }  
   const IndexArray& local_offset() const { return local_offset_; }
+  const IndexArray& local_real_offset() const { return local_real_offset_; }  
   const IndexArray& local_real_size() const { return local_real_size_; }
   const Width2 &halo() const { return halo_; }
-  bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }  
+  bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
   
   virtual int Reduce(PSReduceOp op, void *out);
 
@@ -140,6 +149,18 @@ class GridMPI: public Grid {
    */
   virtual void Copyin(const void *src);
 
+  //! Get the offset of an grid element.
+  /*!
+    \param indices Position of the element.
+    \return Offset of the element in length.
+   */
+  // TODO (Index range): PSIndex might not be enough large for
+  // offset. 
+  template <int DIM>
+  PSIndex CalcOffset(const IndexArray &indices) {
+    return GridCalcOffset<DIM>(indices, local_real_size_, local_real_offset_);
+  }
+
   //! Get the address of an grid element.
   /*!
     Keep definition here to make it inlined.
@@ -147,33 +168,16 @@ class GridMPI: public Grid {
     \param indices Position of the element.
     \return Address of the element.
    */
-  // TODO: Why we have GetAddress and CalcOffset? GetAddress should
-  // use CalcOffset internatlly at least.
+  // Why we have GetAddress and CalcOffset? GetAddress should?
+  // GetAddress is used by the runtime code, while CalcOffset is used
+  // by the generated user code. CalcOffset is also a template with
+  // the grid rank as a parameter.
   void *GetAddress(const IndexArray &indices) {
-    IndexArray t = indices;
-    t -= local_real_offset_;
     return (void*)(_data() +
-                   GridCalcOffset(t, local_real_size_, num_dims_)
+                   GridCalcOffset(indices, local_real_size_, local_real_offset_, num_dims_)
                    * elm_size());
   }
   
-  //! Get the offset of an grid element.
-  /*!
-    \param indices Position of the element.
-    \return Offset of the element in length.
-   */
-  // TODO: PSIndex might not be enough large for offset
-  template <int dim>
-  PSIndex CalcOffset(const IndexArray &indices) {
-    PSIndex off = indices[0] - local_real_offset_[0];
-    if (dim > 1)
-      off += (indices[1] - local_real_offset_[1]) * local_real_size_[0];
-    if (dim > 2)
-      off +=
-          (indices[2] - local_real_offset_[2]) *
-          local_real_size_[0] *local_real_size_[1];
-    return off;
-  }
 
   //! Get the offset of an grid element with periodic access.
   /*!

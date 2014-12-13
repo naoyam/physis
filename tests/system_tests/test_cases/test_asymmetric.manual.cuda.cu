@@ -16,7 +16,7 @@
        z <= 1 || z >= N-2) return;
   
    float v = g1[OFFSET(x, y, z)] +
-       g1[OFFSET(x+1, y, z)] + g1[OFFSET(x-2, y, z)];
+       g1[OFFSET(x+1, y+1, z+1)] + g1[OFFSET(x-2, y-2, z-2)];
    g2[OFFSET(x, y, z)] = v;
    return;
 }

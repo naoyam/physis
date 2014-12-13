@@ -35,11 +35,6 @@ SgVariableDeclaration *BuildPSGridRange(std::string name,
 SgExpression *BuildFunctionCall(const std::string &name,
                                 SgExpression *arg1);
 
-#if 0 // Unused
-std::string GetTypeName(SgType *ty);
-std::string GetTypeDimName(GridType *gt);
-#endif
-  
 SgType *GetBaseType(SgType *ty);
   
 } // namespace translator

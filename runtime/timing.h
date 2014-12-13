@@ -13,7 +13,6 @@
 
 namespace physis {
 namespace runtime {
-namespace performance {
 
 struct DataCopyProfile {
   double gpu_to_cpu;
@@ -34,13 +33,12 @@ struct Stopwatch {
   }
 };
 
-} // namespace performance
 } // namespace runtime
 } // namespace physis
 
 inline std::ostream& operator<<(
     std::ostream &os,
-    const physis::runtime::performance::DataCopyProfile &prof) {
+    const physis::runtime::DataCopyProfile &prof) {
   return prof.print(os);
 }
 
