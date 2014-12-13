@@ -20,13 +20,14 @@ class Proc {
   InterProcComm *ipc_;
   __PSStencilRunClientFunction *stencil_runs_;
  public:
-  Proc(int rank, int num_procs, InterProcComm *ipc,
+  Proc(InterProcComm *ipc,
        __PSStencilRunClientFunction *stencil_runs):
-      rank_(rank), num_procs_(num_procs), ipc_(ipc),
+      rank_(ipc->GetRank()), num_procs_(ipc->GetNumProcs()), ipc_(ipc),
       stencil_runs_(stencil_runs) {}
   virtual ~Proc() {}
   std::ostream &print(std::ostream &os) const;
   int rank() const { return rank_; }
+  int num_procs() const { return num_procs_; }
   InterProcComm *ipc() { return ipc_; }  
   static int GetRootRank() { return 0; }
   bool IsRoot() const { return rank_ == GetRootRank(); }

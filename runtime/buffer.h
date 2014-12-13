@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_BUFFER_H_
 #define PHYSIS_RUNTIME_BUFFER_H_
@@ -37,12 +33,33 @@ class Buffer {
    */
   void Free();
   virtual void EnsureCapacity(size_t size);
-  virtual void Shrink(size_t size);
+  //virtual void Shrink(size_t size);
+  virtual void CopyoutAll(void *dst) {
+    Copyout(dst, size());
+  }
+  virtual void Copyout(void *dst, size_t size) = 0;
+  virtual void Copyout(size_t elm_size, int rank,
+                       const IndexArray  &grid_size,
+                       void *subgrid,
+                       const IndexArray &subgrid_offset,
+                       const IndexArray &subgrid_size) = 0;
+  virtual void CopyinAll(const void *src) {
+    Copyin(src, size());
+  }
+  virtual void Copyin(const void *src, size_t size) = 0;
+  virtual void Copyin(size_t elm_size, int rank,
+                      const IndexArray  &grid_size,
+                      const void *subgrid,
+                      const IndexArray &subgrid_offset,
+                      const IndexArray &subgrid_size) = 0;
+
  protected:
   virtual void *GetChunk(size_t size) = 0;
 
-  //! Size of the buffer in bytes.
+  //! Logical size of the buffer in bytes.
   size_t size_;
+  //! Actual size of the buffer in bytes.
+  size_t actual_size_;
   //! Memory chunk for the buffer data.
   void *buf_;
  private:
@@ -52,7 +69,7 @@ class Buffer {
     it is called from the destructor. We still want to use a
     class-specific delete method so it is set in this variable when
     each object is constructed. For example, it is set to the free
-    function in libc for BufferHOst object.
+    function in libc for BufferHost object.
   */
   void (*deleter_)(void *ptr);
 };
@@ -72,7 +89,21 @@ class BufferHost: public Buffer {
     return os;
   }
   
+  virtual void Copyout(void *dst, size_t size);
+  virtual void Copyout(size_t elm_size, int rank,
+                       const IndexArray  &grid_size,
+                       void *subgrid,
+                       const IndexArray &subgrid_offset,
+                       const IndexArray &subgrid_size);
+  virtual void Copyin(const void *src, size_t size);
+  virtual void Copyin(size_t elm_size, int rank,
+                      const IndexArray  &grid_size,
+                      const void *subgrid,
+                      const IndexArray &subgrid_offset,
+                      const IndexArray &subgrid_size);
+
  protected:
+  explicit BufferHost(BufferDeleter deleter);
   virtual void *GetChunk(size_t size);
 };
 

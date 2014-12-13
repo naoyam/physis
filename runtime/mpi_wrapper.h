@@ -48,9 +48,10 @@ extern int PS_MPI_Reduce(void *sendbuf, void *recvbuf, int count,
 
 extern int PS_MPI_Barrier(MPI_Comm comm);
 
-extern int PS_MPI_Test(MPI_Request *req);
+extern int PS_MPI_Test(MPI_Request *req, int *flag, MPI_Status *status);
+extern int PS_MPI_Test(MPI_Request *req, bool *flag, MPI_Status *status);
 
-extern int PS_MPI_Wait();
+extern int PS_MPI_Wait(MPI_Request *req, MPI_Status *status);
                          
 
 } // namespace runtime

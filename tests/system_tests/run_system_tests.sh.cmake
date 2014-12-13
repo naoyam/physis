@@ -1010,7 +1010,7 @@ function get_test_cases()
     tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.manual\.'; done)
     tests=$(for t in $tests; do echo -e "$t\n" | grep -v 'test_.*\.module_base\.'; done)
 	# Filter out emacs backup files
-    tests=$(for t in $tests; do echo -e "$t\n" | grep -v '*~'; done)		
+    tests=$(for t in $tests; do echo -e "$t\n" | grep -v '.*~'; done)		
     set -e
 	echo $tests
 }

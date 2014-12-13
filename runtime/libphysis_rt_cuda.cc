@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include <stdarg.h>
 
@@ -11,6 +7,7 @@
 #include "runtime/runtime_common.h"
 #include "runtime/runtime_cuda.h"
 #include "runtime/runtime_common_cuda.h"
+#include "runtime/grid.h"
 #include "runtime/cuda_util.h"
 #include "runtime/reduce.h"
 #include "physis/physis_cuda.h"
@@ -18,7 +15,7 @@
 using namespace physis::runtime;
 
 namespace {
-RuntimeCUDA *rt;
+RuntimeCUDA<GridSpace> *rt;
 }
 
 #ifdef __cplusplus
@@ -26,7 +23,7 @@ extern "C" {
 #endif
 
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    rt = new RuntimeCUDA();
+    rt = new RuntimeCUDA<GridSpace>();
     va_list vl;
     va_start(vl, grid_num_dims);
     rt->Init(argc, argv, grid_num_dims, vl);

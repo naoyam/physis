@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "runtime/mpi_wrapper.h"
 #include "physis/physis_util.h"
@@ -80,16 +76,23 @@ int PS_MPI_Barrier(MPI_Comm comm) {
   return MPI_SUCCESS;
 }
 
-int PS_MPI_Test(MPI_Request *req) {
-  // TODO
-  //CHECK_MPI(MPI_Test(req));
+int PS_MPI_Test(MPI_Request *req, int *flag, MPI_Status *status) {
+  CHECK_MPI(MPI_Test(req, flag, status));
   return MPI_SUCCESS;
 }
 
-int PS_MPI_Wait() {
-  // TODO
+int PS_MPI_Test(MPI_Request *req, bool *flag, MPI_Status *status) {
+  int i_flag;
+  int r = PS_MPI_Test(req, &i_flag, status);
+  *flag = i_flag ? true : false;
+  return r;
+}
+
+int PS_MPI_Wait(MPI_Request *req, MPI_Status *status) {
+  CHECK_MPI(MPI_Wait(req, status));
   return MPI_SUCCESS;
 }
+
 } // namespace runtime
 } // namespace physis
 

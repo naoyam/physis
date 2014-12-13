@@ -169,6 +169,8 @@ class CUDATranslator : public ReferenceTranslator {
 
   //! Generates an IF block to exclude indices outside a domain.
   /*!
+    TODO: move to the builder class
+    
     \param indices The indices to check.
     \param dom_arg Name of the domain parameter.
     \param true_stmt Statement to execute if outside the domain

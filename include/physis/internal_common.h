@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_INTERNAL_COMMON_H_
 #define PHYSIS_INTERNAL_COMMON_H_
@@ -14,6 +8,7 @@
 #include <functional>
 
 #include <boost/array.hpp>
+#include <boost/foreach.hpp>
 
 #include "physis/physis_common.h"
 #include "physis/physis_util.h"
@@ -100,15 +95,15 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
   }
   ty accumulate(int len) const {
     ty v = 1;
-    FOREACH (it, this->begin(), this->begin() + len) {
-      v *= *it;
+    BOOST_FOREACH (ty i, std::make_pair(this->begin(), this->begin() + len)) {
+      v *= i;
     }
     return v;
   }
   std::ostream& print(std::ostream &os) const {
     physis::StringJoin sj;
-    FOREACH(i, this->begin(), this->end()) {
-      sj << *i;
+    BOOST_FOREACH (ty i, std::make_pair(this->begin(), this->end())) {
+      sj << i;
     }
     os << "{" << sj << "}";
     return os;
@@ -232,7 +227,7 @@ class IntegerArray: public boost::array<ty, PS_MAX_DIM> {
       (*this)[i] = std::min((*this)[i], x[i]);
     }
   }
-  void Set(PSIndex *buf) const {
+  void CopyTo(PSIndex *buf) const {
     for (int i = 0; i < PS_MAX_DIM; ++i) {
       buf[i] = (*this)[i];
     }
@@ -281,7 +276,7 @@ template <typename ty>
 inline std::ostream &operator<<(std::ostream &os,
                                 const std::vector<ty> &x) {
   physis::StringJoin sj;
-  FOREACH (i, x.begin(), x.end()) { sj << *i; }
+  BOOST_FOREACH (ty i, x) { sj << i; }
   os << "{" << sj << "}";  
   return os;
 }

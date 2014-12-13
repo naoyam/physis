@@ -17,8 +17,6 @@
 namespace physis {
 namespace translator {
 
-class MPICUDAOptimizer;
-
 class MPICUDATranslator: public MPITranslator {
  protected:
   //! Used to generate CUDA-related code.
@@ -33,8 +31,8 @@ class MPICUDATranslator: public MPITranslator {
  public:
   MPICUDATranslator(const Configuration &config);
   virtual ~MPICUDATranslator();
-  friend class MPICUDAOptimizer;
-  virtual void SetUp(SgProject *project, TranslationContext *context);
+  virtual void SetUp(SgProject *project, TranslationContext *context,
+                     RuntimeBuilder *rt_builder);
   virtual void Finish();
   //! Generates an IF block to exclude indices outside an inner domain.
   /*!
@@ -48,13 +46,26 @@ class MPICUDATranslator: public MPITranslator {
       const vector<SgVariableDeclaration*> &indices,
       SgInitializedName *dom_ref, SgExpression *width,
       SgStatement *ifclause) const;
-  virtual void ProcessStencilMap(StencilMap *smap, SgVarRefExp *stencils,
+  virtual void ProcessStencilMap(StencilMap *smap, 
                                  int stencil_index, Run *run,
                                  SgScopeStatement *function_body,
-                                 SgScopeStatement *loop_body,
-                                 SgVariableDeclaration *block_dim);
+                                 SgScopeStatement *loop_body);
+
   virtual void BuildRunBody(SgBasicBlock *block, Run *run,
-                            SgFunctionDeclaration *run_func); 
+                            SgFunctionDeclaration *run_func);
+  //! Generates a basic block of the run loop body.
+  /*!
+    This is a helper function for BuildRunBody. The run parameter
+    contains stencil kernel calls and the number of iteration. This
+    function generates a sequence of code to call the stencil kernels,
+    which is then included in the for loop that iterates the given
+    number of times. 
+    
+    \param run The stencil run object.
+    \return outer_block The outer block where the for loop is included.
+   */
+  virtual SgBasicBlock *BuildRunLoopBody(Run *run,
+                                         SgScopeStatement *outer_block);
   virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
   //! Generates a CUDA function declaration that runs a stencil map. 
   /*!
@@ -65,11 +76,11 @@ class MPICUDATranslator: public MPITranslator {
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil The stencil map object.
-    \param dom_arg The stencil domain.
+    \param param Parameters for the run function.    
     \return The body of the run function.
    */
   virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *stencil, SgInitializedName *dom_arg);
+      StencilMap *stencil, SgFunctionParameterList *param);
   //! Generates CUDA functions that run a boundary stencil.
   /*!
     \param s The stencil map object.
@@ -82,11 +93,11 @@ class MPICUDATranslator: public MPITranslator {
     A helper function for BuildRunBoundaryKernel.
     
     \param stencil The stencil map object.
-    \param dom_arg The whole domain.
+    \param param Parameter list for the run function
     \return The basic block.
    */
   virtual SgBasicBlock *BuildRunBoundaryKernelBody(
-      StencilMap *stencil, SgInitializedName *dom_arg);
+      StencilMap *stencil, SgFunctionParameterList *param);
   //! Generates CUDA functions that run boundary stencils.
   /*!
     This is used to generate calls to multiple boundary kernels.
@@ -98,7 +109,8 @@ class MPICUDATranslator: public MPITranslator {
       StencilMap *s);
   virtual SgBasicBlock *BuildRunMultiStreamBoundaryKernelBody(
       StencilMap *stencil, SgInitializedName *grid_arg,
-      SgInitializedName *dom_arg, int dim, bool fw);
+      SgInitializedName *dom_arg, SgFunctionParameterList *params,
+      int dim, bool fw);
   //! Generates a CUDA function executing an interior stencil.
   /*!
     \param s The stencil map.
@@ -110,11 +122,11 @@ class MPICUDATranslator: public MPITranslator {
     A helper function for BuildRunInteriorKernel.
     
     \param stencil a stencil map object to generate calls.
-    \param dom_arg the domain argument for the stencil map.
+    \param param Parameters for the run function
     \return The basic block containing the generated code.
   */
   virtual SgBasicBlock *BuildRunInteriorKernelBody(
-      StencilMap *stencil,  SgInitializedName *dom_arg);
+      StencilMap *stencil,  SgFunctionParameterList *param);
   //! Generates a kernel declaration optimized for interior domains.
   /*
     \param original The original kernel declaration.

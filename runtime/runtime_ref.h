@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_RUNTIME_REF_H_
 #define PHYSIS_RUNTIME_RUNTIME_REF_H_
@@ -13,10 +9,11 @@
 namespace physis {
 namespace runtime {
 
-class RuntimeRef: public Runtime {
+template <class GridSpaceType>
+class RuntimeRef: public Runtime<GridSpaceType> {
  public:
-  RuntimeRef();
-  virtual ~RuntimeRef();
+  RuntimeRef() {}
+  virtual ~RuntimeRef() {}
 };
 
 } // namespace runtime

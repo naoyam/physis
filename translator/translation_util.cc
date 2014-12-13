@@ -180,25 +180,6 @@ SgExpression *BuildFunctionCall(const std::string &name,
   return call;
 }
 
-#if 0
-std::string GetTypeName(SgType *ty) {
-  if (isSgTypeFloat(ty)) {
-    return string("Float");
-  } else if (isSgTypeDouble(ty)) {
-    return string("Double");
-  } else {
-    LOG_ERROR() << "Unsupported type\n";
-    PSAbort(1);
-    return ""; // just to suppress compiler warning
-  }
-}
-
-std::string GetTypeDimName(GridType *gt) {
-  return GetTypeName(gt->getElmType())
-      + toString(gt->getNumDim()) + "D";
-}
-#endif
-
 SgType *GetBaseType(SgType *ty) {
   if (si::isPointerType(ty)) {
     ty = si::getElementType(ty);

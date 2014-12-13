@@ -36,13 +36,13 @@ ClientMPICUDA::~ClientMPICUDA() {}
 
 // Finalize
 void MasterMPICUDA::Finalize() {
-  CUDA_SAFE_CALL(cudaThreadExit());
+  CUDA_SAFE_CALL(cudaDeviceReset());
   static_cast<GridSpaceMPICUDA*>(gs_)->PrintLoadNeighborProf(std::cerr);  
   Master::Finalize();
 }
 
 void ClientMPICUDA::Finalize() {
-  CUDA_SAFE_CALL(cudaThreadExit());
+  CUDA_SAFE_CALL(cudaDeviceReset());
   static_cast<GridSpaceMPICUDA*>(gs_)->PrintLoadNeighborProf(std::cerr);   
   Client::Finalize();
 }

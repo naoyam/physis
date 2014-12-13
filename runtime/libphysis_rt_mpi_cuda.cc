@@ -1,15 +1,13 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
-#include "runtime/mpi_cuda_runtime.h"
+//#include "runtime/mpi_cuda_runtime.h"
 #include "runtime/runtime_common.h"
 #include "runtime/runtime_common_cuda.h"
+#include "runtime/runtime_mpi_cuda.h"
+#include "runtime/rpc_cuda.h"
 #include "physis/physis_mpi_cuda.h"
+#include "runtime/grid_mpi_cuda_exp.h"
+#include "runtime/grid_space_mpi.h"
 
 #include <cuda_runtime.h>
 
@@ -21,6 +19,12 @@ using physis::IntArray;
 using physis::IndexArray;
 using namespace physis::runtime;
 
+typedef GridMPICUDAExp GridType;
+typedef GridSpaceMPICUDA<GridType> GridSpaceType;
+typedef MasterCUDA<GridSpaceType> MasterType;
+typedef ClientCUDA<GridSpaceType> ClientType;
+
+#if 0
 namespace physis {
 namespace runtime {
 
@@ -33,45 +37,15 @@ __PSStencilRunClientFunction *__PS_stencils;
 } // namespace runtime
 } // namespace physis
 
+#endif
+
 namespace {
 
+MasterType *master;
+GridSpaceType *gs;
+
+#ifdef CHECKPOINT_ENABLED
 int num_local_processes;
-
-int GetNumberOfLocalProcesses(int *argc, char ***argv) {
-  vector<string> opts;
-  string option_string = "physis-nlp";
-  int nlp = 1; // default
-  if (ParseOption(argc, argv, option_string,
-                  1, opts)) {
-    LOG_VERBOSE() << option_string << ": " << opts[1] << "\n";
-    nlp = physis::toInteger(opts[1]);
-  }
-  LOG_DEBUG() << "Number of local processes: "  << nlp << "\n";
-  return nlp;
-}
-
-
-void InitCUDA(int my_rank, int num_local_processes) {
-  // Assumes each local process has successive process rank
-  int dev_id = my_rank % num_local_processes;
-  cudaDeviceProp dp;
-  CUDA_SAFE_CALL(cudaGetDeviceProperties(&dp, dev_id));
-  LOG_INFO() << "Using device " << dev_id
-             << ": " << dp.name << "\n";
-  CUDA_SAFE_CALL(cudaSetDeviceFlags(cudaDeviceMapHost));
-  CUDA_SAFE_CALL(cudaSetDevice(dev_id));
-  CUDA_CHECK_ERROR("CUDA initialization");
-  if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
-    PSAbort(1);
-  }
-  CUDA_SAFE_CALL(cudaStreamCreate(&stream_inner));
-  CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_copy));
-  for (int i = 0; i < num_stream_boundary_kernel; ++i) {
-    CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_kernel[i]));
-  }
-  return;
-}
-
 //! Preliminary checkpoint support
 /*!
   Not well tested.
@@ -88,10 +62,11 @@ void Restart() {
   InitCUDA(pinfo->rank(), num_local_processes);
   gs->Restore();
 }
+#endif
 
 template <class T>
 T __PSGridGet(__PSGridMPI *g, va_list args) {
-  GridMPI *gm = (GridMPI*)g;
+  GridType *gm = (GridType*)g;
   int nd = gm->num_dims();
   IndexArray index;
   for (int i = 0; i < nd; ++i) {
@@ -116,7 +91,21 @@ extern "C" {
   // Assumes extra arguments. The first argument is the number of
   // dimensions, and each of the remaining ones is the size of
   // respective dimension.
-  void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
+  void PSInit(int *argc, char ***argv, int domain_num_dims, ...) {
+#if 1    
+    RuntimeMPICUDA<GridSpaceType> *rt = new RuntimeMPICUDA<GridSpaceType>();
+    va_list vl;
+    va_start(vl, domain_num_dims);
+    rt->Init(argc, argv, domain_num_dims, vl);
+    va_end(vl);
+    gs = rt->gs();
+    if (rt->IsMaster()) {
+      master = static_cast<MasterType*>(rt->proc());
+    } else {
+      master = NULL;
+      rt->Listen();
+    }
+#else     
     int rank;
     int num_procs;
     // by default the number of dimensions of processes and grids is
@@ -183,7 +172,7 @@ extern "C" {
       master = new MasterMPICUDA(*pinfo, gs, MPI_COMM_WORLD);
       client = NULL;
     }
-    
+#endif    
   }
 
   void PSFinalize() {
@@ -196,7 +185,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx));
     // No corresponding local region
-    if (local_min >= local_max) {
+    if (!(local_min.LessThan(local_max, 1))) {
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -211,7 +200,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx, maxy));
     // No corresponding local region
-    if (local_min >= local_max) {
+    if (!(local_min.LessThan(local_max, 2))) {
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -229,9 +218,7 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(maxx, maxy, maxz));    
     // No corresponding local region
-    // TODO: dom may have a smaller number of dimensions than
-    // the grid space, but __PSDomain does not know number of dimension.    
-    if (!(local_min.LessThan(local_max, gs->num_dims()))) {
+    if (!(local_min.LessThan(local_max, 3))) {
       local_min.Set(0);
       local_max.Set(0);
     }
@@ -241,8 +228,10 @@ extern "C" {
     return d;
   }
 
-  // TODO: why this is required? The above DomainNew method sets
-  // the local size too. 
+  //! Set the local domain size for child processes.
+  /*!
+    See also libphysis_rt_mpi.cc
+  */
   void __PSDomainSetLocalSize(__PSDomain *dom) {
     IndexArray local_min = gs->my_offset();
     IndexArray global_min(dom->min);
@@ -250,48 +239,52 @@ extern "C" {
     IndexArray local_max = gs->my_offset() + gs->my_size();
     local_max.SetNoMoreThan(IndexArray(dom->max));
     // No corresponding local region
-    // TODO: dom may have a smaller number of dimensions than
-    // the grid space, but __PSDomain does not know number of dimension.
+    // TODO (Mixed dimension): dom may have a smaller number of
+    // dimensions than the grid space, but __PSDomain does not know
+    // number of dimension. 
     if (!(local_min.LessThan(local_max, gs->num_dims()))) {
       local_min.Set(0);
       local_max.Set(0);
     }
-    local_min.Set(dom->local_min);
-    local_max.Set(dom->local_max);
+    local_min.CopyTo(dom->local_min);
+    local_max.CopyTo(dom->local_max);
   }
   
 
   __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                               const PSVectorInt size,
-                              int double_buffering,
                               int attr,
-                              const PSVectorInt global_offset) {
+                              const PSVectorInt global_offset,
+                              const PSVectorInt stencil_offset_min,
+                              const PSVectorInt stencil_offset_max) {
+    // Same as libphysis_rt_mpi.cc
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 
     // ensure the grid size is within the global grid space size
-    IndexArray gsize(size);
+    IndexArray gsize = IndexArray(size);
     if (gsize > gs->global_size()) {
       LOG_ERROR() << "Cannot create grids (size: " << gsize
                   << " larger than the grid space ("
                   << gs->global_size() << "\n";
       return NULL;
     }
-    
-    __PSGridMPI *g = master->GridNew(type, elm_size, dim, gsize,
-                                     double_buffering, IndexArray(), attr);
-
-    return g;
+    return master->GridNew(
+        type, elm_size, dim, gsize,
+        IndexArray(), stencil_offset_min, stencil_offset_max,
+        attr);
   }
 
+#if 0  
   // same as mpi_runtime.cc
   void __PSGridSwap(void *p) {
-    ((GridMPI *)p)->Swap();
+    ((GridType *)p)->Swap();
   }
+#endif  
 
   // same as mpi_runtime.cc  
   int __PSGridGetID(__PSGridMPI *g) {
-    return ((GridMPI *)g)->id();
+    return ((GridType *)g)->id();
   }
 
   // same as mpi_runtime.cc  
@@ -318,7 +311,7 @@ extern "C" {
 
   // same as mpi_runtime.cc  
   void __PSGridSet(__PSGridMPI *g, void *buf, ...) {
-    GridMPI *gm = (GridMPI*)g;
+    GridType *gm = (GridType*)g;
     int nd = gm->num_dims();
     va_list vl;
     va_start(vl, buf);
@@ -339,18 +332,18 @@ extern "C" {
 
   // same as mpi_runtime.cc  
   void PSGridFree(void *p) {
-    master->GridDelete((GridMPI*)p);
+    master->GridDelete((GridType*)p);
   }
 
   // same as mpi_runtime.cc  
   void PSGridCopyin(void *g, const void *buf) {
-    master->GridCopyin((GridMPI*)g, buf);
+    master->GridCopyin((GridType*)g, buf);
     return;
   }
 
   // same as mpi_runtime.cc  
   void PSGridCopyout(void *g, void *buf) {
-    master->GridCopyout((GridMPI*)g, buf);;
+    master->GridCopyout((GridType*)g, buf);;
     return;
   }
 
@@ -375,10 +368,12 @@ extern "C" {
     return;
   }
 
+#if 0 // When used?  
   // same as mpi_runtime.cc
   void __PSRegisterStencilRunClient(int id, void *fptr) {
     __PS_stencils[id] = (__PSStencilRunClientFunction)fptr;
   }
+#endif  
 
   // same as mpi_runtime.cc  
   void __PSLoadNeighbor(__PSGridMPI *g,
@@ -386,7 +381,7 @@ extern "C" {
                         const PSVectorInt offset_max,
                         int diagonal, int reuse, int overlap,
                         int periodic) {
-    GridMPI *gm = (GridMPI*)g;
+    GridType *gm = (GridType*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
@@ -398,12 +393,13 @@ extern "C" {
     return;
   }
 
+#ifdef NEIGHBOR_EXCHANGE_MULTI_STAGE  
   void __PSLoadNeighborStage1(__PSGridMPI *g,
                               const PSVectorInt offset_min,
                               const PSVectorInt offset_max,
                               int diagonal, int reuse,
                               int overlap, int periodic) {
-    GridMPI *gm = (GridMPI*)g;
+    GridType *gm = (GridType*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
@@ -420,7 +416,7 @@ extern "C" {
                               const PSVectorInt offset_max,
                               int diagonal, int reuse,
                               int overlap, int periodic) {
-    GridMPI *gm = (GridMPI*)g;
+    GridType *gm = (GridType*)g;
     cudaStream_t strm = 0;
     if (overlap) {
       strm = stream_boundary_copy;
@@ -431,7 +427,7 @@ extern "C" {
                            strm);
     return;
   }
-  
+#endif  
 
   // same as mpi_runtime.cc  
   void __PSLoadSubgrid(__PSGridMPI *g, const __PSGridRange *gr,
@@ -442,6 +438,7 @@ extern "C" {
     return;
   }
 
+#if 0  
   // same as mpi_runtime.cc  
   void __PSLoadSubgrid2D(__PSGridMPI *g, 
                          int min_dim1, PSIndex min_offset1,
@@ -452,7 +449,7 @@ extern "C" {
     PSAssert(min_dim1 == max_dim1);
     PSAssert(min_dim2 == max_dim2);
     int dims[] = {min_dim1, min_dim2};
-    LoadSubgrid((GridMPI*)g, gs, dims, IndexArray(min_offset1, min_offset2),
+    LoadSubgrid((GridType*)g, gs, dims, IndexArray(min_offset1, min_offset2),
                 IndexArray(max_offset1, max_offset2), reuse);
     return;
   }
@@ -470,25 +467,30 @@ extern "C" {
     PSAssert(min_dim2 == max_dim2);
     PSAssert(min_dim3 == max_dim3);
     int dims[] = {min_dim1, min_dim2, min_dim3};
-    LoadSubgrid((GridMPI*)g, gs, dims, IndexArray(min_offset1, min_offset2, min_offset3),
+    LoadSubgrid((GridType*)g, gs, dims, IndexArray(min_offset1, min_offset2, min_offset3),
                 IndexArray(max_offset1, max_offset2, max_offset3), reuse);
     return;
   }
-  
+#endif  
+
+#if 0  
   void __PSActivateRemoteGrid(__PSGridMPI *g, int active) {
-    GridMPI *gm = (GridMPI*)g;
+    GridType *gm = (GridType*)g;
     gm->remote_grid_active() = active;
   }
-
+#endif
+  
   int __PSIsRoot() {
-    return pinfo->IsRoot();
+    return master != NULL;
   }
 
+#if 0
   void *__PSGridGetDev(void *g) {
-    GridMPICUDA3D *gm = (GridMPICUDA3D*)g;
+    GridType *gm = (GridType*)g;
     return gm->GetDev();
   }
-
+#endif
+  
   PSIndex __PSGetLocalSize(int dim) {
     return gs->my_size()[dim];
   }
@@ -508,7 +510,7 @@ extern "C" {
 
   static void __PSReduceGrid(void *buf, enum PSReduceOp op,
 			     __PSGridMPI *g) {
-    master->GridReduce(buf, op, (GridMPI*)g);
+    master->GridReduce(buf, op, (GridType*)g);
   }
 
   // Have different functions for different grid types since the REF/CUDA runtimes do. 

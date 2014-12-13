@@ -95,7 +95,7 @@ if (MPI_CUDA_TRANSLATOR_ENABLED)
   set(PHYSISC_SRC ${PHYSISC_SRC}
     mpi_cuda_translator.cc
     mpi_cuda_runtime_builder.cc
-    mpi_cuda_optimizer.cc
+    #mpi_cuda_optimizer.cc
     optimizer/mpi_cuda_optimizer.cc)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/physisc-mpi-cuda.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/physisc-mpi-cuda)

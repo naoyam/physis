@@ -1,8 +1,4 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_RUNTIME_H_
 #define PHYSIS_RUNTIME_RUNTIME_H_
@@ -15,25 +11,29 @@
 namespace physis {
 namespace runtime {
 
-// Returns the number of process grid dimensions. Returns negative
-// value on failure.
-int GetProcessDim(int *argc, char ***argv, IntArray &proc_size);
 
-bool ParseOption(int *argc, char ***argv, const string &opt_name,
-                 int num_additional_args, vector<string> &opts);
-
+template <class GridSpaceType>
 class Runtime {
  public:
-  Runtime();
-  virtual ~Runtime();
+  Runtime(): gs_(NULL) {}
+  virtual ~Runtime() {}
   virtual void Init(int *argc, char ***argv, int grid_num_dims,
-                    va_list vl);
-  virtual GridSpace *gs() {
+                    va_list vl) {
+    // Set __ps_trace if physis-trace option is given
+    __ps_trace = NULL;
+    string opt_name = "physis-trace";
+    vector<string> opts;
+    if (ParseOption(argc, argv, opt_name, 0, opts)) {
+      __ps_trace = stderr;
+      LOG_INFO() << "Tracing enabled\n";
+    }
+  }
+    
+  virtual GridSpaceType *gs() {
     return gs_;
   }
  protected:
-  GridSpace *gs_;
-  
+  GridSpaceType *gs_;
   
 };
 

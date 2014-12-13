@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "runtime/grid.h"
 
@@ -19,15 +13,10 @@ namespace runtime {
 
 Grid::Grid(PSType type, int elm_size, int num_dims,
            const IndexArray &size,
-           bool double_buffering, int attr):
+           int attr):
     type_(type), elm_size_(elm_size), num_dims_(num_dims),
-    size_(size),
-    double_buffering_(double_buffering), attr_(attr) {
-  num_elms_ = size.accumulate(num_dims_);
-  data_[0] = NULL;
-  data_[1] = NULL;
-  data_buffer_[0] = NULL;
-  data_buffer_[1] = NULL;
+    num_elms_(size.accumulate(num_dims)),
+    size_(size), data_buffer_(NULL), data_(NULL), attr_(attr) {
 }
 
 Grid::~Grid() {
@@ -36,32 +25,16 @@ Grid::~Grid() {
 
 void Grid::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
-  data_buffer_[0] = new BufferHost();
-  data_buffer_[0]->Allocate(num_elms_ * elm_size_);
-  if (double_buffering_) {
-    data_buffer_[1] = new BufferHost();
-    data_buffer_[1]->Allocate(num_elms_ * elm_size_);
-  } else {
-    data_buffer_[1] = data_buffer_[0];
-  }
-  data_[0] = (char*)data_buffer_[0]->Get();
-  data_[1] = (char*)data_buffer_[1]->Get();
+  data_buffer_ = new BufferHost();
+  data_buffer_->Allocate(num_elms_ * elm_size_);
+  data_ = (char*)data_buffer_->Get();
 }
 
 void Grid::DeleteBuffers() {
-  if (data_[0]) {
-    delete data_buffer_[0];
-    data_[0] = NULL;
+  if (data_) {
+    delete data_buffer_;
+    data_ = NULL;
   }
-  if (double_buffering_ && data_[1]) {
-    delete data_buffer_[1];
-    data_[1] = NULL;
-  }
-}
-
-void Grid::Swap() {
-  std::swap(data_[0], data_[1]);
-  std::swap(data_buffer_[0], data_buffer_[1]);
 }
 
 void *Grid::GetAddress(const IndexArray &indices) {
@@ -72,7 +45,7 @@ void *Grid::GetAddress(const IndexArray &indices) {
                  GridCalcOffset(indices, size(), num_dims())
                  * elm_size());
 }
-
+#if 0
 void Grid::Copyin(void *dst, const void *src, size_t size) {
   memcpy(dst, src, size);
 }
@@ -80,13 +53,13 @@ void Grid::Copyin(void *dst, const void *src, size_t size) {
 void Grid::Copyout(void *dst, const void *src, size_t size) {
   memcpy(dst, src, size);
 }
-
+#endif
 void Grid::Set(const IndexArray &indices, const void *buf) {
-  Copyin(GetAddress(indices), buf, elm_size());
+  memcpy(GetAddress(indices), buf, elm_size());
 }
 
 void Grid::Get(const IndexArray &indices, void *buf) {
-  Copyout(buf, GetAddress(indices), elm_size());
+  memcpy(buf, GetAddress(indices), elm_size());
 }
 
 bool Grid::AttributeSet(enum PS_GRID_ATTRIBUTE a) {

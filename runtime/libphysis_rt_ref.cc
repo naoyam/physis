@@ -9,18 +9,18 @@
 #include "runtime/runtime_common.h"
 #include "physis/physis_ref.h"
 #include "runtime/reduce.h"
+#include "runtime/runtime_ref.h"
+#include "runtime/grid.h"
 
 #include <stdarg.h>
 #include <functional>
 #include <boost/function.hpp>
 
-#include "runtime/runtime_ref.h"
-
 using namespace physis::runtime;
 
 namespace {
 
-RuntimeRef *rt;
+RuntimeRef<GridSpace> *rt;
 
 template <class T>
 void PSReduceGridTemplate(void *buf, PSReduceOp op,
@@ -42,7 +42,7 @@ extern "C" {
 #endif
 
   void PSInit(int *argc, char ***argv, int grid_num_dims, ...) {
-    rt = new RuntimeRef();
+    rt = new RuntimeRef<GridSpace>();
     va_list vl;
     va_start(vl, grid_num_dims);
     rt->Init(argc, argv, grid_num_dims, vl);

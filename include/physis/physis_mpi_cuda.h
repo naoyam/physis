@@ -31,7 +31,7 @@ extern "C" {
   typedef void __PSGridMPI;
   
 #ifdef PHYSIS_USER
- extern __PSGridDimDev(void *p, int);
+  extern __PSGridDimDev(void *p, int);
   extern void dim3(int, ...);
 #else
   typedef __PSGridMPI *PSGrid1DFloat;
@@ -50,9 +50,6 @@ extern "C" {
 
   typedef struct {
     void *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    void *p1;
-#endif    
     int dim[3];
     int local_size[3];
     int local_offset[3];        
@@ -64,9 +61,6 @@ extern "C" {
 
   typedef struct {
     float *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    float *p1;
-#endif    
     int dim[3];
     int local_size[3];
     int local_offset[3];            
@@ -78,9 +72,6 @@ extern "C" {
 
   typedef struct {
     double *p0;
-#ifdef AUTO_DOUBLE_BUFFERING    
-    double *p1;
-#endif    
     int dim[3];
     int local_size[3];
     int local_offset[3];    
@@ -339,9 +330,10 @@ extern "C" {
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
                                      const PSVectorInt size,
-                                     int double_buffering,
                                      int attr,
-                                     const PSVectorInt global_offset);
+                                     const PSVectorInt global_offset,
+                                     const PSVectorInt stencil_offset_min,
+                                     const PSVectorInt stencil_offset_max);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

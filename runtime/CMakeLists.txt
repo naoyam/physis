@@ -19,7 +19,7 @@ set (MPI_OPENCL_RUNTIME_ENABLED FALSE CACHE BOOL
 find_package(Boost REQUIRED program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 
-set(RUNTIME_COMMON_SRC runtime_common.cc runtime.cc runtime_ref.cc buffer.cc timing.cc)
+set(RUNTIME_COMMON_SRC runtime_common.cc buffer.cc timing.cc)
 
 add_library(physis_rt_ref ${RUNTIME_COMMON_SRC} libphysis_rt_ref.cc)
 install(TARGETS physis_rt_ref DESTINATION lib)
@@ -31,21 +31,10 @@ if (MPI_FOUND AND MPI_RUNTIME_ENABLED)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
   add_library(physis_rt_mpi ${RUNTIME_COMMON_SRC}
     libphysis_rt_mpi.cc
-    runtime.cc runtime_mpi.cc
-    grid.cc grid_mpi.cc grid_space_mpi.cc grid_util.cc
-    proc.cc rpc.cc 
+    grid.cc grid_mpi.cc grid_util.cc
+    proc.cc 
     ipc_mpi.cc mpi_wrapper.cc)
   install(TARGETS physis_rt_mpi DESTINATION lib)
-  #add_executable(test_mpi_runtime_2d test_mpi_runtime_2d.cc)
-  #target_link_libraries(test_mpi_runtime_2d physis_rt_mpi ${MPI_LIBRARIES})  
-  #add_executable(test_mpi_runtime_3d test_mpi_runtime_3d.cc)
-  #target_link_libraries(test_mpi_runtime_3d physis_rt_mpi ${MPI_LIBRARIES})  
-  #add_executable(test_grid_mpi_2d test_grid_mpi_2d.cc)
-  #target_link_libraries(test_grid_mpi_2d physis_rt_mpi ${MPI_LIBRARIES})  
-  #add_executable(test_grid_mpi_3d test_grid_mpi_3d.cc)
-  #target_link_libraries(test_grid_mpi_3d physis_rt_mpi ${MPI_LIBRARIES})  
-  #add_executable(test_grid_mpi_2d_3d test_grid_mpi_2d_3d.cc)
-  #target_link_libraries(test_grid_mpi_2d_3d physis_rt_mpi ${MPI_LIBRARIES})
   # if (FALSE)
   # add_library(physis_rt_mpi2 ${RUNTIME_COMMON_SRC}
   #   mpi_runtime2.cc
@@ -67,7 +56,6 @@ if (CUDA_FOUND AND CUDA_RUNTIME_ENABLED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   endif ()
   cuda_add_library(physis_rt_cuda ${RUNTIME_COMMON_SRC}
-    runtime.cc runtime_cuda.cc
     libphysis_rt_cuda.cc reduce_cuda.cu)
   install(TARGETS physis_rt_cuda DESTINATION lib)
 endif()
@@ -75,24 +63,21 @@ endif()
 if (CUDA_FOUND AND CUDA_HM_RUNTIME_ENABLED)
   include_directories(${CUDA_INCLUDE_DIR})
   cuda_add_library(physis_rt_cuda_hm ${RUNTIME_COMMON_SRC}
-    runtime.cc runtime_cuda.cc runtime_cuda_hm.cc
     libphysis_rt_cuda_hm.cc reduce_cuda.cu)
   install(TARGETS physis_rt_cuda_hm DESTINATION lib)
 endif()
 
 if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
   cuda_add_library(physis_rt_mpi_cuda ${RUNTIME_COMMON_SRC}
-    libphysis_rt_mpi_cuda.cc grid.cc grid_mpi.cc grid_mpi_cuda.cc
-    grid_util.cc rpc_mpi.cc rpc_mpi_cuda.cc mpi_wrapper.cc
-    inter_proc_comm_mpi.cc
+    libphysis_rt_mpi_cuda.cc
+    runtime_mpi_cuda.cc
+    grid.cc grid_mpi.cc
+    grid_mpi_cuda_exp.cc
+    grid_util.cc
+    proc.cc rpc_cuda.cc 
+    ipc_mpi.cc mpi_wrapper.cc
     buffer_cuda.cu reduce_mpi_cuda.cu)
   install(TARGETS physis_rt_mpi_cuda DESTINATION lib)
-  add_executable(test_mpi_cuda_runtime test_mpi_cuda_runtime.cc)
-  target_link_libraries(test_mpi_cuda_runtime physis_rt_mpi_cuda
-    ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
-  add_executable(test_grid_mpi_cuda_3d test_grid_mpi_cuda_3d.cc)
-  target_link_libraries(test_grid_mpi_cuda_3d physis_rt_mpi_cuda
-    ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
 endif()
 
 set(RUNTIME_OPENCL_COMMON_SRC
@@ -119,7 +104,7 @@ if (MPI_FOUND AND OPENCL_FOUND AND MPI_OPENCL_RUNTIME_ENABLED)
   include_directories(${OPENCL_INCLUDE_PATH})
   add_library(physis_rt_mpi_opencl ${RUNTIME_COMMON_SRC}
       grid.cc grid_mpi.cc grid_util.cc rpc_mpi.cc mpi_wrapper.cc
-      inter_proc_comm_mpi.cc
+      ipc_mpi.cc
       ${RUNTIME_OPENCL_COMMON_SRC}
       buffer_opencl.cc
       grid_mpi_opencl.cc
@@ -154,7 +139,7 @@ if (MPI_FOUND AND MPI_OPENMP_RUNTIME_ENABLED)
     rpc_mpi.cc
     rpc_mpi_openmp.cc
     mpi_wrapper.cc
-    inter_proc_comm_mpi.cc
+    ipc_mpi.cc
   )
   set_target_properties(
     physis_rt_mpi_openmp PROPERTIES COMPILE_FLAGS "-UUSE_OPENMP_NUMA"
@@ -179,10 +164,12 @@ if (MPI_FOUND AND NUMA_FOUND AND MPI_OPENMP_RUNTIME_ENABLED)
     rpc_mpi.cc
     rpc_mpi_openmp.cc
     mpi_wrapper.cc
-    inter_proc_comm_mpi.cc
+    ipc_mpi.cc
   )
   set_target_properties(
     physis_rt_mpi_openmp_numa PROPERTIES COMPILE_FLAGS "-DUSE_OPENMP_NUMA"
   )
   install(TARGETS physis_rt_mpi_openmp_numa DESTINATION lib)
 endif()
+
+add_subdirectory(tests)

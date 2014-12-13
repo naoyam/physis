@@ -1,25 +1,10 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_RUNTIME_COMMON_H_
 #define PHYSIS_RUNTIME_RUNTIME_COMMON_H_
 
 #define PHYSIS_RUNTIME
 
-//#ifndef ENABLE_LOG_DEBUG
-//#define ENABLE_LOG_DEBUG
-//#endif
-#ifdef ENABLE_LOG_DEBUG
-#undef ENABLE_LOG_DEBUG
-#endif
-#ifdef ENABLE_LOG_VERBOSE
-#undef ENABLE_LOG_VERBOSE
-#endif
 #include "physis/physis_util.h"
 #include "physis/physis_common.h"
 #include "physis/internal_common.h"
@@ -31,13 +16,30 @@ namespace runtime {
 struct Width2 {
   UnsignedArray bw;
   UnsignedArray fw;
+  const UnsignedArray &operator()(bool is_fw) const {
+    return is_fw ? fw : bw;
+  }
+  unsigned operator()(int dim, bool is_fw) const {
+    return operator()(is_fw)[dim];
+  }
 };
 
 typedef void (*__PSStencilRunClientFunction)(int, void **);
 
+// Returns the number of process grid dimensions. Returns negative
+// value on failure.
+int GetProcessDim(int *argc, char ***argv, IntArray &proc_size);
+
+bool ParseOption(int *argc, char ***argv, const string &opt_name,
+                 int num_additional_args, vector<string> &opts);
 
 
 } // namespace runtime
 } // namespace physis
+
+inline
+std::ostream &operator<<(std::ostream &os, const physis::runtime::Width2 &w) {
+  return os << "{bw: " << w.bw << ", fw: " << w.fw << "}";
+}
 
 #endif /* PHYSIS_RUNTIME_RUNTIME_COMMON_H_ */
