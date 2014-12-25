@@ -48,7 +48,7 @@ MPICUDATranslator::MPICUDATranslator(const Configuration &config)
   if (flag_multistream_boundary_) {
     LOG_INFO() << "Multistream boundary enabled\n";
   }
-  validate_ast_ = true;
+  validate_ast_ = false; // TODO (MPI-CUDA AST validation)
 }
 
 MPICUDATranslator::~MPICUDATranslator() {
@@ -1249,7 +1249,7 @@ static std::string GetTypeDimName(GridType *gt) {
       + toString(gt->rank()) + "D";
 }
 
-bool MPICUDATranslator::translateGetKernel(SgFunctionCallExp *node,
+bool MPICUDATranslator::TranslateGetKernel(SgFunctionCallExp *node,
                                            SgInitializedName *gv,
                                            bool is_periodic) {
   // 

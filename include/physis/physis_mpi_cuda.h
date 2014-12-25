@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_PHYSIS_MPI_CUDA_H_
 #define PHYSIS_PHYSIS_MPI_CUDA_H_
@@ -57,7 +51,7 @@ extern "C" {
     void *halo[3][2];
     int halo_width[3][2];        
     int diag;    
-  } __PSGridDev3D;
+  } __PSGrid3D_dev;
 
   typedef struct {
     float *p0;
@@ -68,7 +62,7 @@ extern "C" {
     float *halo[3][2];    
     int halo_width[3][2];    
     int diag;    
-  } __PSGridDev3DFloat;
+  } __PSGrid3DFloat_dev;
 
   typedef struct {
     double *p0;
@@ -79,7 +73,7 @@ extern "C" {
     double *halo[3][2];    
     int halo_width[3][2];
     int diag;
-  } __PSGridDev3DDouble;
+  } __PSGrid3DDouble_dev;
 
 #ifdef __CUDACC__
 #define PS_FUNCTION_DEVICE __device__
@@ -94,7 +88,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3D(
-      __PSGridDev3DFloat *g,
+      __PSGrid3DFloat_dev *g,
       int x, int y, int z) {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
@@ -104,7 +98,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3DLocal(
-      __PSGridDev3DFloat *g,
+      __PSGrid3DFloat_dev *g,
       int x, int y, int z) {
     return g->p0 + __PSGridCalcOffset3D(
         x, y, z, g->pitch, g->local_size[1]);    
@@ -112,7 +106,7 @@ extern "C" {
   
 
   PS_FUNCTION_DEVICE float* __PSGridEmitAddrFloat3D(
-      __PSGridDev3DFloat *g,
+      __PSGrid3DFloat_dev *g,
       int x, int y, int z) {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
@@ -124,7 +118,7 @@ extern "C" {
 
   // z
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_2_fw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[2] < g->local_size[2]) {
@@ -140,7 +134,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_2_bw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[2] >= 0) {
@@ -157,7 +151,7 @@ extern "C" {
 
   // y
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_1_fw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[1] < g->local_size[1]) {
@@ -181,7 +175,7 @@ extern "C" {
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_1_bw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[1] >= 0) {
@@ -206,7 +200,7 @@ extern "C" {
 
   // x
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_0_fw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[0] < g->local_size[0]) {
@@ -246,10 +240,10 @@ extern "C" {
   
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
   extern float* __PSGridGetAddrFloat3D_0_bw(
-      __PSGridDev3DFloat *g, int x, int y, int z);
+      __PSGrid3DFloat_dev *g, int x, int y, int z);
 #else
   __device__ float* __PSGridGetAddrFloat3D_0_bw(
-      __PSGridDev3DFloat *g, int x, int y, int z) {
+      __PSGrid3DFloat_dev *g, int x, int y, int z) {
     int indices[] = {x - g->local_offset[0], y - g->local_offset[1],
 		     z - g->local_offset[2]};
     if (indices[0] >= 0) { // not in the halo region of this dimension
@@ -287,10 +281,10 @@ extern "C" {
 #endif  
 
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
-  extern float* __PSGridGetAddrFloat3D(__PSGridDev3DFloat *g,
+  extern float* __PSGridGetAddrFloat3D(__PSGrid3DFloat_dev *g,
                                        int x, int y, int z);
 #else  
-  __device__ float* __PSGridGetAddrFloat3D(__PSGridDev3DFloat *g,
+  __device__ float* __PSGridGetAddrFloat3D(__PSGrid3DFloat_dev *g,
                                            int x, int y, int z) {
     int indices[] = {x - g->local_offset[0],
 		     y - g->local_offset[1],
@@ -325,7 +319,16 @@ extern "C" {
     }
     return __PSGridGetAddrNoHaloFloat3D(g, x, y, z);
   }
-#endif  
+#endif
+
+#if defined(PHYSIS_USER)  
+  extern PSIndex __PSGridGetOffset1DDev(const void *g, PSIndex i1);
+  extern PSIndex __PSGridGetOffset2DDev(const void *g, PSIndex i1,
+                                               PSIndex i2);
+  extern PSIndex __PSGridGetOffset3DDev(const void *g, PSIndex i1,
+                                               PSIndex i2, PSIndex i3);
+  extern void *__PSGridGetBaseAddr(__PSGridMPI *g);  
+#endif
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,

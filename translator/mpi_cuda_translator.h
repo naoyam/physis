@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_MPI_CUDA_TRANSLATOR_H_
 #define PHYSIS_TRANSLATOR_MPI_CUDA_TRANSLATOR_H_
@@ -143,7 +137,7 @@ class MPICUDATranslator: public MPITranslator {
   BuildBoundaryKernel(SgFunctionDeclaration *original);  
   std::string GetBoundarySuffix(int dim, bool fw);
   std::string GetBoundarySuffix();
-  virtual bool translateGetKernel(SgFunctionCallExp *node,
+  virtual bool TranslateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic);
   void BuildFunctionParamList(SgClassDefinition *param_struct_def,
