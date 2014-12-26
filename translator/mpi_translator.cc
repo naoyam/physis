@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/mpi_translator.h"
 
@@ -542,7 +536,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   
   return;
 }
-
+#if 0
 // REFACTORING: This should be common among all translators.
 bool MPITranslator::TranslateGetHost(SgFunctionCallExp *node,
                                      SgInitializedName *gv) {
@@ -593,7 +587,32 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
   si::replaceExpression(node, x);
   return true;
 }
+#else
+void MPITranslator::TranslateGet(SgFunctionCallExp *node,
+                                 SgInitializedName *gv,
+                                 bool is_kernel,
+                                 bool is_periodic) {
+  GridType *gt = tx_->findGridType(gv->get_type());
+  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(),  si::getScope(node));
+  SgExpressionPtrList args;
+  rose_util::CopyExpressionPtrList(
+      node->get_args()->get_expressions(), args);
 
+  SgExpression *get = rt_builder_->BuildGridGet(
+      g, rose_util::GetASTAttribute<GridVarAttribute>(gv),
+      gt, &args, rose_util::GetASTAttribute<GridGetAttribute>(
+          node)->GetStencilIndexList(), is_kernel, is_periodic);
+
+  // Keep the reference to InitializedName for the grid variable. Is
+  // this necessary?
+  rose_util::GetASTAttribute<GridGetAttribute>(get)->gv() = gv;
+  
+  //si::replaceExpression(node, get, true);
+  si::replaceExpression(node, get);
+  return;
+}
+
+#endif
 void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
                                   GridEmitAttribute *attr) {
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z)) = v
@@ -614,7 +633,7 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
   StencilIndexListInitSelf(sil, nd);
   SgExpression *offset = rt_builder_->BuildGridOffset(
       sb::buildVarRefExp(attr->gv()->get_name(), si::getScope(node)),
-      nd, &args, true, false, &sil);
+      nd, &args, &sil, true, false);
   SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
       si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
       sb::buildExprListExp(sb::buildVarRefExp(attr->gv()->get_name(),

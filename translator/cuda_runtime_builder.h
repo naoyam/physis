@@ -21,9 +21,9 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       SgExpression *gv,
       int num_dim,
       const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
       bool is_kernel,
-      bool is_periodic,
-      const StencilIndexList *sil);
+      bool is_periodic);
 
   virtual SgExpression *BuildGridArrayMemberOffset(
     SgExpression *gvref,

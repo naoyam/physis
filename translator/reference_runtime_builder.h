@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_REFERENCE_RUNTIME_BUILDER_H_
 #define PHYSIS_TRANSLATOR_REFERENCE_RUNTIME_BUILDER_H_
@@ -29,6 +23,16 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);
+
+  //!
+  /*!
+   */
+  virtual SgExpression *BuildGridOffset(
+      SgExpression *gvref, int num_dim,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic);
 
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
@@ -77,13 +81,6 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       SgScopeStatement *scope=NULL);
   
   
-  //!
-  /*!
-   */
-  virtual SgExpression *BuildGridOffset(
-      SgExpression *gvref, int num_dim,
-      const SgExpressionPtrList *offset_exprs, bool is_kernel,
-      bool is_periodic, const StencilIndexList *sil);
 
   /*
   virtual SgExpression *BuildGet(  

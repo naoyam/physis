@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_GRID_H_
 #define PHYSIS_TRANSLATOR_GRID_H_
@@ -334,14 +328,15 @@ class GridGetAttribute: public AstAttribute {
   int rank() const { return gt_->rank(); }
   const string &member_name() const { return member_name_; }
   GridType *gt() { return gt_; }
-  SgInitializedName *gv() { return gv_; }
+  SgInitializedName *gv() const { return gv_; }
+  SgInitializedName *&gv() { return gv_; }
   GridVarAttribute *gva() { return gva_; }  
   string &member_name() { return member_name_; }
   bool IsUserDefinedType() const;
   
  protected:
   GridType *gt_;
-  SgInitializedName *gv_;
+  SgInitializedName *gv_; // necessary?
   GridVarAttribute *gva_;
   bool in_kernel_;
   bool is_periodic_;

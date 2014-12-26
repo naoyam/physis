@@ -838,7 +838,7 @@ MPICUDATranslator::BuildBoundaryKernel(SgFunctionDeclaration *original) {
   return bkernels;
 }
 
-void MPICUDATranslator::translateKernelDeclaration(
+void MPICUDATranslator::TranslateKernelDeclaration(
     SgFunctionDeclaration *node) {
   LOG_DEBUG() << "Translating to CUDA kernel\n";
   node->get_functionModifier().setCudaDevice();
@@ -1248,7 +1248,7 @@ static std::string GetTypeDimName(GridType *gt) {
   return GetTypeName(gt->point_type())
       + toString(gt->rank()) + "D";
 }
-
+#if 0
 bool MPICUDATranslator::TranslateGetKernel(SgFunctionCallExp *node,
                                            SgInitializedName *gv,
                                            bool is_periodic) {
@@ -1302,7 +1302,7 @@ bool MPICUDATranslator::TranslateGetKernel(SgFunctionCallExp *node,
   si::replaceExpression(node, x);
   return true;
 }
-
+#endif
 void MPICUDATranslator::FixAST() {
   if (validate_ast_) {
     si::fixVariableReferences(project_);

@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/mpi_runtime_builder.h"
 #include "translator/rose_util.h"
@@ -130,6 +124,33 @@ SgFunctionCallExp *MPIRuntimeBuilder::BuildDomainSetLocalSize(
   return fc;
 }
 
+
+SgExpression *MPIRuntimeBuilder::BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic) {
+  
+  SgExpression *offset = BuildGridOffset(
+      gvref, gt->rank(), offset_exprs, sil,
+      is_kernel, is_periodic);
+
+  SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
+      si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
+      sb::buildExprListExp(si::copyExpression(gvref)));
+  
+  SgExpression *x = sb::buildPntrArrRefExp(
+      sb::buildCastExp(base_addr,
+                       sb::buildPointerType(gt->point_type())),
+      offset);
+  GridGetAttribute *gga = new GridGetAttribute(
+      gt, NULL, gva, is_kernel, is_periodic, sil);
+  rose_util::AddASTAttribute<GridGetAttribute>(x, gga);
+  return x;
+}
 
 
 } // namespace translator
