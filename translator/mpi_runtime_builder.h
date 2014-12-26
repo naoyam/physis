@@ -24,6 +24,15 @@ class MPIRuntimeBuilder: public ReferenceRuntimeBuilder {
   virtual SgFunctionCallExp *BuildIsRoot();
   virtual SgFunctionCallExp *BuildGetGridByID(SgExpression *id_exp);
   virtual SgFunctionCallExp *BuildDomainSetLocalSize(SgExpression *dom);
+
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic);
 };
 
 SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression *grid_var,

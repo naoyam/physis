@@ -246,6 +246,7 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
       rose_util::GetASTAttribute<GridVarAttribute>(gv),
       gt,
       &args, sil, is_kernel, is_periodic);
+  rose_util::GetASTAttribute<GridGetAttribute>(p0)->gv() = gv;  
   si::replaceExpression(node, p0);
 }
 

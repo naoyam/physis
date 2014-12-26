@@ -124,9 +124,9 @@ extern "C" {
   //#define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])
 #define PSGridDim(p, d) ((p)->dim[(d)])
 #define __PSGridDimDev(p, d) ((p)->dim[d])
-#else
+#else  // PHYSIS_USER
   extern __PSGridDimDev(void *p, int);
-#endif
+#endif // PHYSIS_USER
   
   typedef void * (*__PSGrid_devNewFunc)(int num_dims, PSVectorInt dim);
   extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
@@ -150,9 +150,9 @@ extern "C" {
   extern void __PSCheckCudaError(const char *message);
 
 #ifdef PHYSIS_USER
-#define CUDA_DEVICE
+#define PS_FUNCTION_DEVICE
 #else
-#define CUDA_DEVICE __device__
+#define PS_FUNCTION_DEVICE __device__
 #endif
 
   // Forward declartions. These are the only available function
@@ -219,20 +219,20 @@ extern "C" {
         (i3 + PSGridDim(g, 2)) % PSGridDim(g, 2) * PSGridDim(g, 0) * PSGridDim(g, 1);
   }
   
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset1DDev(const void *g,
                                                PSIndex i1) {
     return i1;
   }
   
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset2DDev(const void *g,
                                                PSIndex i1,
                                                PSIndex i2) {
     return i1 + i2 * PSGridDim((__PSGrid_dev *)g, 0);
   }
 
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset3DDev(const void *g,
                                                PSIndex i1,
                                                PSIndex i2,
@@ -242,13 +242,13 @@ extern "C" {
         * PSGridDim((__PSGrid_dev*)g, 1);
   }
 
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
                                                        PSIndex i1) {
     return (i1 + PSGridDim((__PSGrid_dev*)g, 0)) % PSGridDim((__PSGrid_dev*)g, 0);    
   }
   
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2) {
@@ -257,7 +257,7 @@ extern "C" {
         * PSGridDim((__PSGrid_dev*)g, 0);
   }
 
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2,

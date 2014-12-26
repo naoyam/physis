@@ -79,7 +79,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
     bool is_periodic) {
   SgExpression *offset =
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
-                      is_kernel, is_periodic, sil);
+                      sil, is_kernel, is_periodic);
   gvref = si::copyExpression(gvref);
   SgExpression *field = sb::buildOpaqueVarRefExp("p0");
   SgExpression *p0 =
@@ -157,7 +157,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   p1 = sb::buildCastExp(p1, sb::buildPointerType(attr->gt()->point_type()));
   SgExpression *offset = BuildGridOffset(
       si::copyExpression(grid_exp),
-      nd, offset_exprs, true, false, &sil);
+      nd, offset_exprs, &sil, true, false);
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   
   if (attr->is_member_access()) {
@@ -222,9 +222,9 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
     SgExpression *gvref,
     int num_dim,
     const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
     bool is_kernel,
-    bool is_periodic,
-    const StencilIndexList *sil) {
+    bool is_periodic) {
   /*
     __PSGridGetOffsetND(g, i)
   */

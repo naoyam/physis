@@ -101,9 +101,9 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
     SgExpression *gvref,
     int num_dim,
     const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
     bool is_kernel,
-    bool is_periodic,
-    const StencilIndexList *sil) {
+    bool is_periodic) {
   LOG_DEBUG() << "build offset: " << gvref->unparseToString() << "\n";
   /*
     __PSGridGetOffsetND(g, i)
@@ -150,7 +150,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   // Build a function call to gt->aux_get_decl
   SgExpression *offset =
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
-                      is_kernel, is_periodic, sil);
+                      sil, is_kernel, is_periodic);
   
   SgFunctionCallExp *get_call =
       sb::buildFunctionCallExp(
@@ -183,7 +183,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
   
   SgExpression *offset =
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
-                      is_kernel, is_periodic, sil);
+                      sil, is_kernel, is_periodic);
 
   gvref = si::copyExpression(gvref);
   SgExpression *member_exp = sb::buildVarRefExp(member_name);
@@ -292,7 +292,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
 
   SgExpression *offset =
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
-                      is_kernel, is_periodic, sil);
+                      sil, is_kernel, is_periodic);
 
   SgExpression *offset_with_array = sb::buildAddOp(
       offset,
@@ -1058,7 +1058,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
   StencilIndexListInitSelf(sil, nd);  
   
   SgExpression *offset = BuildGridOffset(
-      grid_exp, nd, offset_exprs, true, false, &sil);
+      grid_exp, nd, offset_exprs, &sil, true, false);
 
   SgExpression *emit_expr = NULL;
   if (attr->is_member_access()) {

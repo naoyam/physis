@@ -30,12 +30,13 @@ class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
 
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      const SgExpressionPtrList *offset_exprs, bool is_kernel,
-      bool is_periodic,
-      const StencilIndexList *sil) {
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic) {
     return cuda_rt_builder_->BuildGridOffset(
-        gvref, num_dim, offset_exprs, is_kernel,
-        is_periodic, sil);
+        gvref, num_dim, offset_exprs, sil, is_kernel,
+        is_periodic);
   }
 
   

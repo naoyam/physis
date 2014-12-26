@@ -25,8 +25,9 @@ extern "C" {
   typedef void __PSGridMPI;
   
 #ifdef PHYSIS_USER
-  extern __PSGridDimDev(void *p, int);
+  extern __PSGridDimDev(const void *p, int);
   extern void dim3(int, ...);
+  extern void *__PSGridGetBaseAddr(const void *g);  
 #else
   typedef __PSGridMPI *PSGrid1DFloat;
   typedef __PSGridMPI *PSGrid2DFloat;
@@ -35,55 +36,110 @@ extern "C" {
   typedef __PSGridMPI *PSGrid2DDouble;
   typedef __PSGridMPI *PSGrid3DDouble;
   extern PSIndex PSGridDim(void *p, int d);
-#define __PSGridDimDev(p, d) ((p)->dim[d])
   extern cudaStream_t stream_inner;
   extern cudaStream_t stream_boundary_copy;
   extern int num_stream_boundary_kernel;
   extern cudaStream_t stream_boundary_kernel[];
+#define __PSGridDimDev(p, d) ((p)->dim[d])
+#define __PSGridGetBaseAddr(p) ((p)->p0)  
 #endif
 
-  typedef struct {
-    void *p0;
-    int dim[3];
-    int local_size[3];
-    int local_offset[3];        
-    int pitch;
-    void *halo[3][2];
-    int halo_width[3][2];        
-    int diag;    
-  } __PSGrid3D_dev;
+#define DEFINE_GRID_DEV_GENERIC_TYPE(DIM)        \
+  typedef struct {                               \
+    void *p0;                                    \
+    int dim[DIM];                                \
+    int local_size[DIM];                         \
+    int local_offset[DIM];                       \
+  } __PSGrid##DIM##D_dev;             
 
-  typedef struct {
-    float *p0;
-    int dim[3];
-    int local_size[3];
-    int local_offset[3];            
-    int pitch;
-    float *halo[3][2];    
-    int halo_width[3][2];    
-    int diag;    
-  } __PSGrid3DFloat_dev;
+#define DEFINE_GRID_DEV_TYPE(DIM, TY, TY_NAME)   \
+  typedef struct {                               \
+    TY *p0;                                      \
+    int dim[DIM];                                \
+    int local_size[DIM];                         \
+    int local_offset[DIM];                       \
+  } __PSGrid##DIM##D##TY_NAME##_dev;             
 
-  typedef struct {
-    double *p0;
-    int dim[3];
-    int local_size[3];
-    int local_offset[3];    
-    int pitch;
-    double *halo[3][2];    
-    int halo_width[3][2];
-    int diag;
-  } __PSGrid3DDouble_dev;
+  DEFINE_GRID_DEV_GENERIC_TYPE(1);
+  DEFINE_GRID_DEV_TYPE(1, float, Float);
+  DEFINE_GRID_DEV_TYPE(1, double, Double);  
+  DEFINE_GRID_DEV_TYPE(1, int, Int);
+  DEFINE_GRID_DEV_TYPE(1, long, Long);  
+  DEFINE_GRID_DEV_GENERIC_TYPE(2);
+  DEFINE_GRID_DEV_TYPE(2, float, Float);
+  DEFINE_GRID_DEV_TYPE(2, double, Double);  
+  DEFINE_GRID_DEV_TYPE(2, int, Int);
+  DEFINE_GRID_DEV_TYPE(2, long, Long);  
+  DEFINE_GRID_DEV_GENERIC_TYPE(3);
+  DEFINE_GRID_DEV_TYPE(3, float, Float);
+  DEFINE_GRID_DEV_TYPE(3, double, Double);  
+  DEFINE_GRID_DEV_TYPE(3, int, Int);
+  DEFINE_GRID_DEV_TYPE(3, long, Long);  
+
 
 #ifdef __CUDACC__
 #define PS_FUNCTION_DEVICE __device__
 #else
-#define PS_FUNCTION_DEVICE static inline
+#define PS_FUNCTION_DEVICE 
 #endif
+
+#define __PSGridLocalSizeDev(p, d) ((p)->local_size[d])
+
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffset1DDev(const void *g,
+                                               PSIndex i1) {
+    return i1;
+  }
+  
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffset2DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2) {
+    return i1 + i2 * __PSGridLocalSizeDev((__PSGrid2D_dev *)g, 0);
+  }
+
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffset3DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2,
+                                               PSIndex i3) {
+    return i1 + i2 * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
+        + i3 * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
+        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 1);
+  }
+
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
+                                                       PSIndex i1) {
+    return (i1 + __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0))
+    % __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0);
+  }
+  
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2) {
+    return __PSGridGetOffsetPeriodic1DDev(g, i1) +
+        (i2 + __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1))
+        % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1)
+        * __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 0);
+  }
+
+  PS_FUNCTION_DEVICE
+  static inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2,
+                                                       PSIndex i3) {
+    return __PSGridGetOffsetPeriodic2DDev(g, i1, i2) +
+        (i3 + __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 2))
+        % __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 2)
+        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
+        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 1);
+  }
 
 #if ! defined(PHYSIS_RUNTIME) && ! defined(PHYSIS_USER)
   PS_FUNCTION_DEVICE size_t __PSGridCalcOffset3D(int x, int y, int z,
-                                            int pitch, int dimy) {
+                                                 int pitch, int dimy) {
     return x + y * pitch + z * pitch * dimy;
   }
 
@@ -321,14 +377,6 @@ extern "C" {
   }
 #endif
 
-#if defined(PHYSIS_USER)  
-  extern PSIndex __PSGridGetOffset1DDev(const void *g, PSIndex i1);
-  extern PSIndex __PSGridGetOffset2DDev(const void *g, PSIndex i1,
-                                               PSIndex i2);
-  extern PSIndex __PSGridGetOffset3DDev(const void *g, PSIndex i1,
-                                               PSIndex i2, PSIndex i3);
-  extern void *__PSGridGetBaseAddr(__PSGridMPI *g);  
-#endif
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,

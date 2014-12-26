@@ -67,9 +67,10 @@ class RuntimeBuilder {
    */
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
-      const SgExpressionPtrList *offset_exprs, bool is_kernel,
-      bool is_periodic,
-      const StencilIndexList *sil) = 0;
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic) = 0;
   //!
 #if 0  
   /*!

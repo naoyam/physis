@@ -35,11 +35,17 @@ class MPITranslator: public ReferenceTranslator {
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
                                  SgVariableDeclaration *dim_decl);
+#if 0  
   virtual bool TranslateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic);
   virtual bool TranslateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv);
+#else
+  virtual void TranslateGet(SgFunctionCallExp *node,
+                            SgInitializedName *gv,
+                            bool is_kernel, bool is_periodic);
+#endif
   virtual void TranslateEmit(SgFunctionCallExp *node,
                              GridEmitAttribute *attr);
   virtual void GenerateLoadRemoteGridRegion(

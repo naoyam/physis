@@ -107,7 +107,7 @@ static SgExpression *BuildGetOffsetCenter(
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
   return builder->BuildGridOffset(si::copyExpression(GetGridFromGet(get_exp)),
-                                  nd, &center_exp, true, false, &sil);
+                                  nd, &center_exp, &sil, true, false);
 }
 
 static SgExpression *BuildGetOffset(
@@ -140,7 +140,7 @@ static SgExpression *BuildGetOffset(
   }
   return builder->BuildGridOffset(
       si::copyExpression(GetGridFromGet(base_get_exp)),
-      nd, &offset_exprs, true, false, sil);
+      nd, &offset_exprs, sil, true, false);
 }
 
 

@@ -60,7 +60,7 @@ class MPICUDATranslator: public MPITranslator {
    */
   virtual SgBasicBlock *BuildRunLoopBody(Run *run,
                                          SgScopeStatement *outer_block);
-  virtual void translateKernelDeclaration(SgFunctionDeclaration *node);
+  virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
   //! Generates a CUDA function declaration that runs a stencil map. 
   /*!
     \param s The stencil map object.
@@ -137,9 +137,11 @@ class MPICUDATranslator: public MPITranslator {
   BuildBoundaryKernel(SgFunctionDeclaration *original);  
   std::string GetBoundarySuffix(int dim, bool fw);
   std::string GetBoundarySuffix();
+#if 0  // use the parent class implementation
   virtual bool TranslateGetKernel(SgFunctionCallExp *node,
                                   SgInitializedName *gv,
                                   bool is_periodic);
+#endif   
   void BuildFunctionParamList(SgClassDefinition *param_struct_def,
                               SgFunctionParameterList *&params,
                               SgInitializedName *&grid_arg,
