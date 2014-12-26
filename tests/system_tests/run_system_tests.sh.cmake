@@ -73,12 +73,14 @@ RUN_PARALLEL=0
 PARALLEL_NP=""
 
 RETURN_SUCCESS=0
-FAIL_TRANSLATE=1
-FAIL_COMPILE=2
-FAIL_EXECUTE=3
-SKIP_TRANSLATE=4
-SKIP_COMPILE=5
-SKIP_EXECUTE=6
+RETURN_TRANSLATE=1
+RETURN_COMPILE=2
+FAIL_TRANSLATE=3
+FAIL_COMPILE=4
+FAIL_EXECUTE=5
+SKIP_TRANSLATE=6
+SKIP_COMPILE=7
+SKIP_EXECUTE=8
 ###############################################################
 
 function print_error()
@@ -1052,9 +1054,9 @@ function count_num_all_tests()
     for TARGET in $TARGETS; do
 		for TEST in $TESTS; do
 			SHORTNAME=$(basename $TEST)			
-			if is_skipped_module_test $TEST $TARGET; then
-				continue;
-			fi
+			#if is_skipped_module_test $TEST $TARGET; then
+			#continue;
+			#fi
 			if [ "$CONFIG_ARG" != "" ]; then
 				CONFIG=$CONFIG_ARG
 			elif [ $CONFIG_ALL -eq 1 ]; then
@@ -1122,7 +1124,11 @@ function do_test()
 			popd > /dev/null
 			return $FAIL_TRANSLATE
 		fi
-		if [ "$STAGE" = "TRANSLATE" ]; then return; fi
+		if [ "$STAGE" = "TRANSLATE" ]; then
+			do_test_finish $RETURN_TRANSLATE
+			continue
+		fi
+		
 		echo "[COMPILE] Processing $SHORTNAME for $TARGET target"
 		if compile $SHORTNAME $TARGET; then
 			echo "[COMPILE] SUCCESS"
@@ -1133,7 +1139,11 @@ function do_test()
 			popd > /dev/null
 			return $FAIL_COMPILE
 		fi
-		if [ "$STAGE" = "COMPILE" ]; then continue; fi
+		
+		if [ "$STAGE" = "COMPILE" ]; then
+			do_test_finish $RETURN_COMPILE
+			continue
+		fi
 		
 		case "$TARGET" in
 			mpi|mpi2|mpi-*)
@@ -1182,6 +1192,13 @@ function update_results()
 			inc NUM_SUCCESS_TRANS
 			inc NUM_SUCCESS_COMPILE
 			inc NUM_SUCCESS_EXECUTE
+			;;
+		$RETURN_TRANSLATE)
+			inc NUM_SUCCESS_TRANS
+			;;
+		$RETURN_COMPILE)
+			inc NUM_SUCCESS_TRANS
+			inc NUM_SUCCESS_COMPILE
 			;;
 		$FAIL_TRANSLATE)
 			inc NUM_FAIL_TRANS
