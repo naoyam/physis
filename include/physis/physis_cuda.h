@@ -17,87 +17,87 @@ extern "C" {
 
   typedef struct {
     int dim[1];        
-    void *p0;    
+    void *p;    
   } __PSGrid1D_dev;
 
   typedef struct {
     int dim[1];            
-    float *p0;    
+    float *p;    
   } __PSGrid1DFloat_dev;
 
   typedef struct {
     int dim[1];           
-    double *p0;    
+    double *p;    
   } __PSGrid1DDouble_dev;
 
   typedef struct {
     int dim[1];            
-    int *p0;    
+    int *p;    
   } __PSGrid1DInt_dev;
 
   typedef struct {
     int dim[1];            
-    long *p0;    
+    long *p;    
   } __PSGrid1DLong_dev;
 
   // Note: int may not be enough for dim
   typedef struct {
     int dim[2];        
-    void *p0;    
+    void *p;    
   } __PSGrid2D_dev;
 
   typedef struct {
     int dim[2];
-    float *p0;    
+    float *p;    
   } __PSGrid2DFloat_dev;
 
   typedef struct {
     int dim[2];
-    double *p0;    
+    double *p;    
   } __PSGrid2DDouble_dev;
 
   typedef struct {
     int dim[2];
-    int *p0;    
+    int *p;    
   } __PSGrid2DInt_dev;
 
   typedef struct {
     int dim[2];
-    long *p0;    
+    long *p;    
   } __PSGrid2DLong_dev;
 
   typedef struct {
     int dim[3];    
-    void *p0;    
+    void *p;    
   } __PSGrid3D_dev;
 
   typedef struct {
     int dim[3];    
-    float *p0;    
+    float *p;    
   } __PSGrid3DFloat_dev;
 
   typedef struct {
     int dim[3];
-    double *p0;    
+    double *p;    
   } __PSGrid3DDouble_dev;
 
   typedef struct {
     int dim[3];    
-    int *p0;    
+    int *p;    
   } __PSGrid3DInt_dev;
 
   typedef struct {
     int dim[3];    
-    long *p0;    
+    long *p;    
   } __PSGrid3DLong_dev;
 
   typedef struct {
     int dim[3];    
-    void *p0;
+    void *p;
   } __PSGrid_dev;
 
   typedef struct {
-    void *p0; // same as dev->p0. used only for grids with primitive point type
+    void *p; // same as dev->p. used only for grids with primitive point type
     PSVectorInt dim;    
     int elm_size;
     int num_dims;

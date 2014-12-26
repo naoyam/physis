@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/reference_runtime_builder.h"
 #include "translator/translation_util.h"
@@ -46,6 +40,20 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGetID(
   return fc;
 }
 
+SgExpression *ReferenceRuntimeBuilder::BuildGridBaseAddr(
+    SgExpression *gvref, SgType *point_type) {
+  
+  SgExpression *field = sb::buildVarRefExp(PS_GRID_RAW_PTR_NAME);
+  SgExpression *p =
+      (si::isPointerType(gvref->get_type())) ?
+      isSgExpression(sb::buildArrowExp(gvref, field)) :
+      isSgExpression(sb::buildDotExp(gvref, field));
+  if (point_type != NULL) {
+    p = sb::buildCastExp(p, sb::buildPointerType(point_type));
+  }
+  return p;
+}
+
 SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
     SgExpression *grid_var, int num_dims, const SgExpressionPtrList &indices,
     SgExpression *val) {
@@ -80,20 +88,13 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
   SgExpression *offset =
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       sil, is_kernel, is_periodic);
-  gvref = si::copyExpression(gvref);
-  SgExpression *field = sb::buildOpaqueVarRefExp("p0");
-  SgExpression *p0 =
-      (si::isPointerType(gvref->get_type())) ?
-      isSgExpression(sb::buildArrowExp(gvref, field)) :
-      isSgExpression(sb::buildDotExp(gvref, field));
-  //si::fixVariableReferences(p0);
-  //GridType *gt = ru::GetASTAttribute<GridType>(gv);
-  p0 = sb::buildCastExp(p0, sb::buildPointerType(gt->point_type()));
-  p0 = sb::buildPntrArrRefExp(p0, offset);
+  SgExpression *p = BuildGridBaseAddr(
+      si::copyExpression(gvref), gt->point_type());
+  p = sb::buildPntrArrRefExp(p, offset);
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil);
-  ru::AddASTAttribute<GridGetAttribute>(p0, gga);
-  return p0;
+  ru::AddASTAttribute<GridGetAttribute>(p, gga);
+  return p;
 }
 
 SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
@@ -151,10 +152,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   int nd = attr->gt()->rank();
   StencilIndexList sil;
   StencilIndexListInitSelf(sil, nd);
-  string dst_buf_name = "p0";
-  SgExpression *p1 =
-      sb::buildArrowExp(grid_exp, sb::buildVarRefExp(dst_buf_name));
-  p1 = sb::buildCastExp(p1, sb::buildPointerType(attr->gt()->point_type()));
+  SgExpression *p1 = BuildGridBaseAddr(grid_exp, attr->gt()->point_type());
   SgExpression *offset = BuildGridOffset(
       si::copyExpression(grid_exp),
       nd, offset_exprs, &sil, true, false);

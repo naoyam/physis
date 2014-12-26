@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_MPI_TRANSLATOR_H_
 #define PHYSIS_TRANSLATOR_MPI_TRANSLATOR_H_
@@ -41,13 +35,11 @@ class MPITranslator: public ReferenceTranslator {
                                   bool is_periodic);
   virtual bool TranslateGetHost(SgFunctionCallExp *node,
                                 SgInitializedName *gv);
-#else
-  virtual void TranslateGet(SgFunctionCallExp *node,
-                            SgInitializedName *gv,
-                            bool is_kernel, bool is_periodic);
 #endif
+#if 0  
   virtual void TranslateEmit(SgFunctionCallExp *node,
                              GridEmitAttribute *attr);
+#endif  
   virtual void GenerateLoadRemoteGridRegion(
       StencilMap *smap,
       SgVariableDeclaration *stencil_decl,

@@ -25,7 +25,7 @@ extern "C" {
     int num_dims;
     int64_t num_elms;
     PSVectorInt dim;
-    void *p0, *p1;
+    void *p;
   } __PSGrid;
 
 #ifndef PHYSIS_USER
@@ -48,8 +48,6 @@ extern "C" {
 #endif
   
   extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim);
-  extern void __PSGridSwap(__PSGrid *g);
-  extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   extern void __PSGridGet(__PSGrid *g, void *buf, ...);

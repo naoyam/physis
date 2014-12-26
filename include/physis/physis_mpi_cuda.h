@@ -46,7 +46,7 @@ extern "C" {
 
 #define DEFINE_GRID_DEV_GENERIC_TYPE(DIM)        \
   typedef struct {                               \
-    void *p0;                                    \
+    void *p;                                     \
     int dim[DIM];                                \
     int local_size[DIM];                         \
     int local_offset[DIM];                       \
@@ -54,7 +54,7 @@ extern "C" {
 
 #define DEFINE_GRID_DEV_TYPE(DIM, TY, TY_NAME)   \
   typedef struct {                               \
-    TY *p0;                                      \
+    TY *p;                                       \
     int dim[DIM];                                \
     int local_size[DIM];                         \
     int local_offset[DIM];                       \

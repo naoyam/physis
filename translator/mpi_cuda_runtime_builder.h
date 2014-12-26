@@ -10,6 +10,7 @@
 namespace physis {
 namespace translator {
 
+// REFACTORING: move these into the builder class
 SgFunctionCallExp *BuildGridGetDev(SgExpression *grid_var);
 SgFunctionCallExp *BuildGetLocalSize(SgExpression *dim);
 SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim);
@@ -27,6 +28,9 @@ class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
   virtual ~MPICUDARuntimeBuilder() {
     delete cuda_rt_builder_;
   }
+
+  virtual SgExpression *BuildGridBaseAddr(
+      SgExpression *gvref, SgType *point_type);
 
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,

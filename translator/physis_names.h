@@ -1,8 +1,5 @@
-// Copyright 2011-2012, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_
 #define PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_
 
@@ -33,6 +30,9 @@
 #define PSF_GRID_NEW_NAME "PSGridNew"
 #define PS_GRID_GET_ID_NAME "__PSGridGetID"
 #define PSF_GRID_GET_ID_NAME "PSGridGetID"
+
+#define PS_GRID_RAW_PTR_NAME "p"
+#define PS_GRID_GET_BASE_ADDR "__PSGridGetBaseAddr"
 
 
 #endif /* PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_ */

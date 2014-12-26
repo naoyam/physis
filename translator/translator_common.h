@@ -1,10 +1,5 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_TRANSLATOR_TRANSLATOR_COMMON_H_
 #define PHYSIS_TRANSLATOR_TRANSLATOR_COMMON_H_
 
@@ -43,6 +38,11 @@ typedef std::vector<SgExpression*> SgExpressionVector;
 //using physis::util::IntVector;
 //using physis::util::IntArray;
 //using physis::util::SizeArray;
+
+inline 
+SgAddOp operator+(SgExpression *op1, SgExpression *op2) {
+  return SageBuilder::buildAddOp(op1, op2);
+}
 
 } // namespace translator
 } // namespace physis
