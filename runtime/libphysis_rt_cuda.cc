@@ -73,18 +73,18 @@ extern "C" {
       switch (g->num_dims) {
         case 1:
           g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid1D_dev));
-          ((__PSGrid1D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid1D_dev*)g->dev)->p = buf;
           ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
           break;
         case 2:
           g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid2D_dev));
-          ((__PSGrid2D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid2D_dev*)g->dev)->p = buf;
           ((__PSGrid2D_dev*)g->dev)->dim[0] = g->dim[0];
           ((__PSGrid2D_dev*)g->dev)->dim[1] = g->dim[1];        
           break;
         case 3:
           g->dev = (__PSGrid_dev*)malloc(sizeof(__PSGrid3D_dev));
-          ((__PSGrid3D_dev*)g->dev)->p0 = buf;
+          ((__PSGrid3D_dev*)g->dev)->p = buf;
           ((__PSGrid3D_dev*)g->dev)->dim[0] = g->dim[0];
           ((__PSGrid3D_dev*)g->dev)->dim[1] = g->dim[1];
           ((__PSGrid3D_dev*)g->dev)->dim[2] = g->dim[2];        

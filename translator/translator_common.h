@@ -39,9 +39,24 @@ typedef std::vector<SgExpression*> SgExpressionVector;
 //using physis::util::IntArray;
 //using physis::util::SizeArray;
 
+template <class T>
+SgIntVal *Int(T x) {
+  return SageBuilder::buildIntVal(x);
+}
+
 inline 
-SgAddOp operator+(SgExpression *op1, SgExpression *op2) {
+SgAddOp *Add(SgExpression *op1, SgExpression* op2) {
   return SageBuilder::buildAddOp(op1, op2);
+}
+
+inline 
+SgMultiplyOp *Mul(SgExpression *op1, SgExpression* op2) {
+  return SageBuilder::buildMultiplyOp(op1, op2);
+}
+
+inline 
+SgPntrArrRefExp *ArrayRef(SgExpression *op1, SgExpression* op2) {
+  return SageBuilder::buildPntrArrRefExp(op1, op2);
 }
 
 } // namespace translator
