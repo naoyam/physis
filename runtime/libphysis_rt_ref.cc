@@ -26,7 +26,7 @@ template <class T>
 void PSReduceGridTemplate(void *buf, PSReduceOp op,
                           __PSGrid *g) {
   boost::function<T (T, T)> func = GetReducer<T>(op);
-  T *d = (T *)g->p0;
+  T *d = (T *)g->p;
   T v = d[0];
   for (int64_t i = 1; i < g->num_elms; ++i) {
     v = func(v, d[i]);
@@ -67,47 +67,30 @@ extern "C" {
       g->num_elms *= dim[i];
     }
 
-    g->p0 = calloc(g->num_elms, g->elm_size);
-    if (!g->p0) {
+    g->p = calloc(g->num_elms, g->elm_size);
+    if (!g->p) {
       return INVALID_GRID;
     }
 
-    g->p1 = g->p0;
-    
     return g;
   }
 
   void PSGridFree(void *p) {
     __PSGrid *g = (__PSGrid *)p;        
-    if (g->p0) {
-      free(g->p0);
+    if (g->p) {
+      free(g->p);
     }
-    if (g->p0 != g->p1 && g->p1) {
-      free(g->p1);
-    }
-    g->p0 = g->p1 = NULL;
+    g->p = NULL;
   }
 
   void PSGridCopyin(void *p, const void *src_array) {
     __PSGrid *g = (__PSGrid *)p;
-    memcpy(g->p0, src_array, g->elm_size * g->num_elms);
+    memcpy(g->p, src_array, g->elm_size * g->num_elms);
   }
 
   void PSGridCopyout(void *p, void *dst_array) {
     __PSGrid *g = (__PSGrid *)p;
-    memcpy(dst_array, g->p0, g->elm_size * g->num_elms);
-  }
-
-  void __PSGridSwap(__PSGrid *g) {
-    void *t = g->p1;
-    g->p1 = g->p0;
-    g->p0 = t;
-  }
-
-  void __PSGridMirror(__PSGrid *g) {
-    if (g->p0 != g->p1) {
-      memcpy(g->p1, g->p0, g->elm_size * g->num_elms);
-    }
+    memcpy(dst_array, g->p, g->elm_size * g->num_elms);
   }
 
   PSDomain1D PSDomain1DNew(PSIndex minx, PSIndex maxx) {
@@ -143,7 +126,7 @@ extern "C" {
     }
     va_end(vl);
     offset *= g->elm_size;
-    memcpy(((char *)g->p0) + offset, buf, g->elm_size);
+    memcpy(((char *)g->p) + offset, buf, g->elm_size);
   }
 
   

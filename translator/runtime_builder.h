@@ -53,6 +53,17 @@ class RuntimeBuilder {
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel) = 0;
 
+  //! Build a pointer expression to the raw array
+  /*!
+    Example: (float*)(a->p)
+    
+    \param gvref unused grid variable expression
+    \param point_type point type
+    \return a pointer to the array casted to the point type
+  */
+  virtual SgExpression *BuildGridBaseAddr(
+      SgExpression *gvref, SgType *point_type) = 0;
+  
   //! Build an offset expression.
   /*!
     Parameter offset_exprs will be used in the returned offset 

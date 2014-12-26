@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_MPI_RUNTIME_BUILDER_H_
 #define PHYSIS_TRANSLATOR_MPI_RUNTIME_BUILDER_H_
@@ -25,6 +19,9 @@ class MPIRuntimeBuilder: public ReferenceRuntimeBuilder {
   virtual SgFunctionCallExp *BuildGetGridByID(SgExpression *id_exp);
   virtual SgFunctionCallExp *BuildDomainSetLocalSize(SgExpression *dom);
 
+  virtual SgExpression *BuildGridBaseAddr(
+      SgExpression *gvref, SgType *point_type);
+
   virtual SgExpression *BuildGridGet(
       SgExpression *gvref,
       GridVarAttribute *gva,                  
@@ -33,6 +30,14 @@ class MPIRuntimeBuilder: public ReferenceRuntimeBuilder {
       const StencilIndexList *sil,
       bool is_kernel,
       bool is_periodic);
+
+  virtual SgExpression *BuildGridEmit(
+      SgExpression *grid_exp,
+      GridEmitAttribute *attr,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL);
+  
 };
 
 SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression *grid_var,

@@ -8,6 +8,12 @@ namespace si = SageInterface;
 namespace physis {
 namespace translator {
 
+SgExpression *MPICUDARuntimeBuilder::BuildGridBaseAddr(
+    SgExpression *gvref, SgType *point_type) {
+  return ReferenceRuntimeBuilder::BuildGridBaseAddr(gvref, point_type);
+}
+
+
 SgFunctionCallExp *BuildGridGetDev(SgExpression *grid_var) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSGridGetDev");

@@ -587,32 +587,8 @@ bool MPITranslator::TranslateGetKernel(SgFunctionCallExp *node,
   si::replaceExpression(node, x);
   return true;
 }
-#else
-void MPITranslator::TranslateGet(SgFunctionCallExp *node,
-                                 SgInitializedName *gv,
-                                 bool is_kernel,
-                                 bool is_periodic) {
-  GridType *gt = tx_->findGridType(gv->get_type());
-  SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(),  si::getScope(node));
-  SgExpressionPtrList args;
-  rose_util::CopyExpressionPtrList(
-      node->get_args()->get_expressions(), args);
-
-  SgExpression *get = rt_builder_->BuildGridGet(
-      g, rose_util::GetASTAttribute<GridVarAttribute>(gv),
-      gt, &args, rose_util::GetASTAttribute<GridGetAttribute>(
-          node)->GetStencilIndexList(), is_kernel, is_periodic);
-
-  // Keep the reference to InitializedName for the grid variable. Is
-  // this necessary?
-  rose_util::GetASTAttribute<GridGetAttribute>(get)->gv() = gv;
-  
-  //si::replaceExpression(node, get, true);
-  si::replaceExpression(node, get);
-  return;
-}
-
 #endif
+#if 0
 void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
                                   GridEmitAttribute *attr) {
   // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z)) = v
@@ -658,13 +634,14 @@ void MPITranslator::TranslateEmit(SgFunctionCallExp *node,
       si::copyExpression(node->get_args()->get_expressions().back());
 
   SgExpression *emit = sb::buildAssignOp(lhs, emit_val);
+  
   si::replaceExpression(node, emit);
 
   if (attr->is_member_access()) {
     RemoveEmitDummyExp(emit);
   }
 }
-
+#endif
 void MPITranslator::FixAST() {
   if (validate_ast_) {
     si::fixVariableReferences(project_);

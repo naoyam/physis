@@ -24,9 +24,10 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);
 
-  //!
-  /*!
-   */
+
+  virtual SgExpression *BuildGridBaseAddr(
+      SgExpression *gvref, SgType *point_type);
+
   virtual SgExpression *BuildGridOffset(
       SgExpression *gvref, int num_dim,
       const SgExpressionPtrList *offset_exprs,

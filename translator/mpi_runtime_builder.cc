@@ -124,6 +124,15 @@ SgFunctionCallExp *MPIRuntimeBuilder::BuildDomainSetLocalSize(
   return fc;
 }
 
+SgExpression *MPIRuntimeBuilder::BuildGridBaseAddr(
+    SgExpression *gvref, SgType *point_type) {
+  SgExpression *base_addr = sb::buildFunctionCallExp(
+      si::lookupFunctionSymbolInParentScopes(PS_GRID_GET_BASE_ADDR),
+      sb::buildExprListExp(si::copyExpression(gvref)));
+  base_addr = sb::buildCastExp(base_addr,
+                               sb::buildPointerType(point_type));
+  return base_addr;
+}
 
 SgExpression *MPIRuntimeBuilder::BuildGridGet(
       SgExpression *gvref,
@@ -138,20 +147,29 @@ SgExpression *MPIRuntimeBuilder::BuildGridGet(
       gvref, gt->rank(), offset_exprs, sil,
       is_kernel, is_periodic);
 
-  SgFunctionCallExp *base_addr = sb::buildFunctionCallExp(
-      si::lookupFunctionSymbolInParentScopes("__PSGridGetBaseAddr"),
-      sb::buildExprListExp(si::copyExpression(gvref)));
+  SgExpression *base_addr = BuildGridBaseAddr(
+      si::copyExpression(gvref), gt->point_type());
   
-  SgExpression *x = sb::buildPntrArrRefExp(
-      sb::buildCastExp(base_addr,
-                       sb::buildPointerType(gt->point_type())),
-      offset);
+  SgExpression *x = sb::buildPntrArrRefExp(base_addr, offset);
+      
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil);
   rose_util::AddASTAttribute<GridGetAttribute>(x, gga);
   return x;
 }
 
+SgExpression *MPIRuntimeBuilder::BuildGridEmit(
+    SgExpression *grid_exp,
+    GridEmitAttribute *attr,
+    const SgExpressionPtrList *offset_exprs,
+    SgExpression *emit_val,
+    SgScopeStatement *scope) {
+  return ReferenceRuntimeBuilder::BuildGridEmit(grid_exp,
+                                         attr,
+                                         offset_exprs,
+                                         emit_val,
+                                         scope);
+}
 
 } // namespace translator
 } // namespace physis
