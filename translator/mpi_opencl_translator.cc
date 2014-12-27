@@ -5,7 +5,6 @@
 #include "translator/mpi_runtime_builder.h"
 #include "translator/mpi_opencl_runtime_builder.h"
 #include "translator/reference_runtime_builder.h"
-#include "translator/SageBuilderEx.h"
 #include "translator/rose_util.h"
 #include "translator/runtime_builder.h"
 #include "translator/mpi_opencl_optimizer.h"
@@ -18,7 +17,6 @@
 namespace pu = physis::util;
 namespace sb = SageBuilder;
 namespace si = SageInterface;
-namespace sbx = physis::translator::SageBuilderEx;
 
 namespace physis {
 namespace translator {

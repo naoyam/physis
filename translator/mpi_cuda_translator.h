@@ -65,20 +65,6 @@ class MPICUDATranslator: public MPITranslator {
   virtual SgBasicBlock *BuildRunLoopBody(Run *run,
                                          SgScopeStatement *outer_block);
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
-  //! Generates a CUDA global function declaration that runs a stencil map. 
-  /*!
-    \param s The stencil map object.
-    \return The function declaration.
-   */
-  virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
-  //! A helper function for BuildRunKernel.
-  /*!
-    \param stencil The stencil map object.
-    \param param Parameters for the run function.    
-    \return The body of the run function.
-   */
-  virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *stencil, SgFunctionParameterList *param);
   //! Generates CUDA functions that run a boundary stencil.
   /*!
     \param s The stencil map object.

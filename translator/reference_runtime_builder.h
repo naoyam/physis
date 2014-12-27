@@ -140,7 +140,9 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *params);
 
-  virtual SgBasicBlock *BuildRunKernelBody(
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
+  
+  virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices);
 

@@ -6,7 +6,6 @@
 #include <string>
 
 #include "translator/cuda_runtime_builder.h"
-#include "translator/SageBuilderEx.h"
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"
 #include "translator/cuda_builder.h"
@@ -16,7 +15,7 @@
 namespace pu = physis::util;
 namespace sb = SageBuilder;
 namespace si = SageInterface;
-namespace sbx = physis::translator::SageBuilderEx;
+namespace ru = physis::translator::rose_util;
 
 #define BLOCK_DIM_X_DEFAULT (64)
 #define BLOCK_DIM_Y_DEFAULT (4)
@@ -131,7 +130,7 @@ void CUDATranslator::TranslateKernelDeclaration(
     GridType *gt = tx_->findGridType(cur_type);
     // not a grid type
     if (!gt) continue;
-    SgType *new_type = sb::buildPointerType(BuildOnDeviceGridType(gt));
+    SgType *new_type = sb::buildPointerType(builder()->BuildOnDeviceGridType(gt));
     exp->set_type(new_type);
   }
   return;
@@ -316,7 +315,7 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
   }
   SgExpression *dim_z = Int(1);
   SgVariableDeclaration *grid_dim =
-      sbx::buildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
+      ru::BuildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
   return grid_dim;
 }
 
@@ -419,8 +418,8 @@ SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(
     if (gt) {
       arg = sb::buildPointerDerefExp(
           sb::buildCastExp(
-              sb::buildArrowExp(arg, sb::buildOpaqueVarRefExp("dev")),
-              sb::buildPointerType(BuildOnDeviceGridType(gt))));
+              sb::buildArrowExp(arg, sb::buildVarRefExp("dev")),
+              sb::buildPointerType(builder()->BuildOnDeviceGridType(gt))));
       // skip the grid index
       ++member;
     }
@@ -447,9 +446,9 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
     // This is done device-wide at the start-up time
     // Set the SM on-chip memory to prefer the L1 cache
     SgFunctionCallExp *cache_config =
-        sbx::buildCudaCallFuncSetCacheConfig(func_sym,
-                                             sbx::cudaFuncCachePreferL1,
-                                             global_scope_);
+        ru::BuildCudaCallFuncSetCacheConfig(func_sym,
+                                            ru::cudaFuncCachePreferL1,
+                                            global_scope_);
     // Append invocation statement ahead of the loop
     si::appendStatement(sb::buildExprStatement(cache_config), outer_block);
 #endif    
@@ -462,7 +461,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         stencil_idx, sm, stencil_symbol);
 
     SgVariableDeclaration *block_dim =
-        sbx::buildDim3Declaration(
+        ru::BuildDim3Declaration(
             stencil_name + "_block_dim",
             BuildBlockDimX(nd),
             BuildBlockDimY(nd),
@@ -491,12 +490,12 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
 
     // Generate Kernel invocation code
     SgCudaKernelExecConfig *cuda_config =
-        sbx::buildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
-                                       sb::buildVarRefExp(block_dim),
-                                       NULL, NULL);
+        ru::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
+                                      sb::buildVarRefExp(block_dim),
+                                      NULL, NULL);
     SgCudaKernelCallExp *cuda_call =
-        sbx::buildCudaKernelCallExp(sb::buildFunctionRefExp(sm->run()),
-                                    args, cuda_config);
+        ru::BuildCudaKernelCallExp(sb::buildFunctionRefExp(sm->run()),
+                                   args, cuda_config);
     si::appendStatement(sb::buildExprStatement(cuda_call), loop_body);    
     if (sm->IsRedBlackVariant()) {
       if (sm->IsRedBlack()) {
@@ -574,96 +573,6 @@ void CUDATranslator::ProcessUserDefinedPointType(
   si::insertStatementAfter(get_decl, emit_decl);
   gt->aux_emit_decl() = emit_decl;
   return;
-}
-
-
-SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
-  PSAssert(gt);
-  // If this type is a user-defined type, its device type is stored at
-  // gt->aux_type when building the type definition.
-  if (gt->aux_type()) return gt->aux_type();
-  
-  string ondev_type_name = "__" + gt->type_name() + "_dev";
-  LOG_DEBUG() << "On device grid type name: "
-              << ondev_type_name << "\n";
-  SgType *t =
-      si::lookupNamedTypeInParentScopes(ondev_type_name, global_scope_);
-  PSAssert(t);
-  return t;
-}
-
-SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
-  SgFunctionParameterList *params = sb::buildFunctionParameterList();
-  SgClassDefinition *param_struct_def = stencil->GetStencilTypeDefinition();
-  PSAssert(param_struct_def);
-
-  SgInitializedName *dom_arg = NULL;
-  // Build the parameter list for the function
-  const SgDeclarationStatementPtrList &members =
-      param_struct_def->get_members();
-  FOREACH(member, members.begin(), members.end()) {
-    SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
-    const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    SgName arg_name = vars[0]->get_name();
-    SgType *arg_type = vars[0]->get_type();
-    if (GridType::isGridType(arg_type)) {
-      LOG_DEBUG() << "Grid type param\n";
-      SgType *gt = BuildOnDeviceGridType(tx_->findGridType(arg_type));
-      LOG_DEBUG() << "On dev type: " << gt->unparseToString() << "\n";
-      arg_type = gt;
-      // skip the grid index
-      ++member;
-    }
-    LOG_DEBUG() << "type: " << arg_type->unparseToString() << "\n";    
-    SgInitializedName *arg = sb::buildInitializedName(
-        arg_name, arg_type);
-    si::appendArg(params, arg);    
-    if (Domain::isDomainType(arg_type) && dom_arg == NULL) {
-      dom_arg = arg;
-    }
-  }
-  PSAssert(dom_arg);
-
-  // Append RB color param
-  if (stencil->IsRedBlackVariant()) {
-    SgInitializedName *rb_param =
-        sb::buildInitializedName(PS_STENCIL_MAP_RB_PARAM_NAME,
-                                 sb::buildIntType());
-    si::appendArg(params, rb_param);
-  }
-
-  LOG_INFO() << "Declaring and defining function named "
-             << stencil->GetRunName() << "\n";
-  SgFunctionDeclaration *run_func =
-      sb::buildDefiningFunctionDeclaration(stencil->GetRunName(),
-                                           sb::buildVoidType(),
-                                           params, global_scope_);
-  si::attachComment(run_func, "Generated by " + string(__FUNCTION__));
-  // Make this function a CUDA global function
-  LOG_DEBUG() << "Make the function a CUDA kernel\n";
-#ifdef USE_ROSE_EDG4X
-  // setting modifier of defining decl does not seem to be propagated
-  // to non-def decl, which causes assertion error when buiding
-  // SgCudaKernelCallExp. This does not happen with ROSE edg3.
-  isSgFunctionDeclaration(
-      run_func->get_firstNondefiningDeclaration())->
-      get_functionModifier().setCudaKernel();
-  // Further, the modifier of defining function needs to be set
-  run_func->get_functionModifier().setCudaKernel();  
-#else  
-  run_func->get_functionModifier().setCudaKernel();
-#endif
-  // Build and set the function body
-  vector<SgVariableDeclaration*> indices;  
-  SgBasicBlock *func_body = builder()->BuildRunKernelBody(
-      stencil, params, indices);
-  si::replaceStatement(run_func->get_definition()->get_body(),
-                       func_body);
-  // Mark this function as RunKernel
-  rose_util::AddASTAttribute(run_func,
-                             new RunKernelAttribute(stencil));
-  si::fixVariableReferences(run_func);
-  return run_func;
 }
 
 void CUDATranslator::FixAST() {

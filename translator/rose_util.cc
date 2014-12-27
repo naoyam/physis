@@ -574,6 +574,85 @@ SgScopeStatement *BuildForLoop(SgInitializedName *ivar,
   return loop;
 }
 
+namespace {
+SgClassDeclaration *cuda_dim3_decl() {
+  static SgClassDeclaration *dim3_decl = NULL;
+  if (!dim3_decl) {
+    dim3_decl = sb::buildStructDeclaration(SgName("dim3"), NULL);
+    si::appendStatement(
+        sb::buildVariableDeclaration("x", sb::buildIntType()),
+        dim3_decl->get_definition());
+    si::appendStatement(
+        sb::buildVariableDeclaration("y", sb::buildIntType()),
+        dim3_decl->get_definition());
+    si::appendStatement(
+        sb::buildVariableDeclaration("z", sb::buildIntType()),
+        dim3_decl->get_definition());
+  }
+  return dim3_decl;
+}
+
+SgClassDefinition *cuda_dim3_def() {
+  static SgClassDefinition *dim3_def = NULL;
+  if (!dim3_def) {
+    dim3_def = sb::buildClassDefinition(cuda_dim3_decl());
+  }
+  return dim3_def;
+}
+
+SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
+  static SgMemberFunctionDeclaration *ctor_decl = NULL;
+  if (!ctor_decl) {
+    /*
+    ctor_decl = buildMemberFunctionDeclaration(SgName("dim3"),
+                                               NULL,
+                                               NULL,
+                                               cuda_dim3_decl());
+    */
+    ctor_decl = sb::buildNondefiningMemberFunctionDeclaration(
+        SgName("dim3"), sb::buildVoidType(),
+        sb::buildFunctionParameterList(),
+        cuda_dim3_decl()->get_definition());
+    //si::appendStatement(ctor_decl, cuda_dim3_decl()->get_definition());
+  }
+  return ctor_decl;
+}
+
+SgEnumDeclaration *cuda_enum_cuda_func_cache(
+    SgScopeStatement *global_scope) {
+  static SgEnumDeclaration *enum_func_cache = NULL;
+  static const char *enum_names[] = {"cudaFuncCachePreferNone",
+                                     "cudaFuncCachePreferShared",
+                                     "cudaFuncCachePreferL1"};
+  if (!enum_func_cache) {
+    enum_func_cache =
+        sb::buildEnumDeclaration(SgName("cudaFuncCache"), global_scope);
+    SgInitializedNamePtrList &members = enum_func_cache->get_enumerators();
+    for (int i = 0; i < 3; i++) {
+      SgInitializedName *in =
+          sb::buildInitializedName(
+              SgName(enum_names[i]), enum_func_cache->get_type());
+      members.push_back(in);
+      in->set_parent(enum_func_cache);
+      in->set_scope(enum_func_cache->get_scope());
+    }
+  }
+  return enum_func_cache;
+}
+
+}  // namespace
+
+SgEnumVal* BuildEnumVal(unsigned int value, SgEnumDeclaration* decl) {
+  ROSE_ASSERT(decl);
+  SgInitializedNamePtrList &members = decl->get_enumerators();
+  ROSE_ASSERT(value < members.size());
+  SgInitializedName *name = members[value];
+  SgEnumVal* enum_val= sb::buildEnumVal_nfi(value, decl, name->get_name());
+  ROSE_ASSERT(enum_val);
+  si::setOneSourcePositionForTransformation(enum_val);
+  return enum_val;
+}
+
 SgVariableDeclaration *BuildVariableDeclaration(const string &name,
                                                 SgType *type,
                                                 SgInitializer *initializer,
@@ -584,6 +663,131 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
   return d;
 }
 
+SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
+    SgFunctionSymbol *kernel,
+    const CudaFuncCache cache_config,
+    SgScopeStatement *global_scope) {
+  ROSE_ASSERT(kernel);
+  SgEnumVal *enum_val = BuildEnumVal(cache_config,
+                                     cuda_enum_cuda_func_cache(global_scope));
+  SgExprListExp *args =
+      sb::buildExprListExp(sb::buildFunctionRefExp(kernel), enum_val);
+
+  // build a call to cudaFuncSetCacheConfig
+  SgFunctionSymbol *fs =
+      si::lookupFunctionSymbolInParentScopes("cudaFuncSetCacheConfig");
+  PSAssert(fs);
+  SgFunctionCallExp *call =
+      sb::buildFunctionCallExp(fs, args);
+  return call;
+}
+
+SgVariableDeclaration *BuildDim3Declaration(const SgName &name,
+                                            SgExpression *dimx,
+                                            SgExpression *dimy,
+                                            SgExpression *dimz,
+                                            SgScopeStatement *scope) {
+  SgClassType *dim3_type = cuda_dim3_decl()->get_type();
+  SgExprListExp *expr_list = sb::buildExprListExp();
+  si::appendExpression(expr_list, dimx);
+  si::appendExpression(expr_list, dimy);
+  si::appendExpression(expr_list, dimz);  
+  SgConstructorInitializer *init =
+      sb::buildConstructorInitializer(cuda_dim3_ctor_decl(),
+                                      expr_list,
+                                      sb::buildVoidType(),
+                                      false, false, true, false);
+  SgVariableDeclaration *ret =
+      sb::buildVariableDeclaration(name, dim3_type, init, scope);
+  return ret;
+}
+
+SgCudaKernelCallExp *BuildCudaKernelCallExp(SgFunctionRefExp *func_ref,
+                                            SgExprListExp *args,
+                                            SgCudaKernelExecConfig *config) {
+  ROSE_ASSERT(func_ref);
+  ROSE_ASSERT(args);
+  ROSE_ASSERT(config);
+
+  SgCudaKernelCallExp *cuda_call =
+      new SgCudaKernelCallExp(func_ref, args, config);
+  ROSE_ASSERT(cuda_call);
+
+  func_ref->set_parent(cuda_call);
+  args->set_parent(cuda_call);
+  si::setOneSourcePositionForTransformation(cuda_call);
+  return cuda_call;
+}
+
+SgCudaKernelExecConfig *BuildCudaKernelExecConfig(
+    SgExpression *grid,
+    SgExpression *blocks,
+    SgExpression *shared,
+    SgExpression *stream) {
+  if (stream != NULL && shared == NULL) {
+    // Unless shared is given non-null value, stream parameter will be
+    // ignored. 
+    shared = sb::buildIntVal(0);
+  }
+  SgCudaKernelExecConfig *cuda_config =
+      sb::buildCudaKernelExecConfig_nfi(grid, blocks, shared, stream);
+  ROSE_ASSERT(cuda_config);
+  si::setOneSourcePositionForTransformation(cuda_config);
+  return cuda_config;
+}
+
+SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx) {
+  static SgVariableDeclaration *threadIdx = NULL;  
+  static SgVariableDeclaration *blockIdx = NULL;
+  static SgVariableDeclaration *blockDim = NULL;  
+  if (!blockIdx) {
+    threadIdx = sb::buildVariableDeclaration("threadIdx",
+                                             cuda_dim3_decl()->get_type());
+    blockIdx = sb::buildVariableDeclaration("blockIdx",
+                                            cuda_dim3_decl()->get_type());
+    blockDim = sb::buildVariableDeclaration("blockDim",
+                                            cuda_dim3_decl()->get_type());
+  }
+  SgVarRefExp *var = NULL;
+  SgVarRefExp *xyz = NULL;
+  switch (idx) {
+    case kBlockDimX:
+    case kBlockDimY:
+    case kBlockDimZ:
+      var = sb::buildVarRefExp(blockDim);
+      break;
+    case kBlockIdxX:
+    case kBlockIdxY:
+    case kBlockIdxZ:
+      var = sb::buildVarRefExp(blockIdx);
+      break;
+    case kThreadIdxX:
+    case kThreadIdxY:
+    case kThreadIdxZ:
+      var = sb::buildVarRefExp(threadIdx);
+      break;
+    default:
+      ROSE_ASSERT(false);
+  }
+  switch (idx) {
+    case kBlockDimX:
+    case kBlockIdxX:
+    case kThreadIdxX:
+      xyz = sb::buildVarRefExp("x");
+      break;
+    case kBlockDimY:
+    case kBlockIdxY:
+    case kThreadIdxY:
+      xyz = sb::buildVarRefExp("y");
+      break;
+    case kBlockDimZ:
+    case kBlockIdxZ:
+    case kThreadIdxZ:
+      xyz = sb::buildVarRefExp("z");
+      break;
+  }
+  return sb::buildDotExp(var, xyz);
+}
 
 }  // namespace rose_util
 }  // namespace translator

@@ -108,7 +108,7 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
     stencil), the returned call site refers to the inner-most block,
     where the call should be placed.
 
-    This is not a derived function.
+    This is not derived.
     
     \param stencil Stencil map object
     \param dom_arg The domain argument to StencilMap
@@ -124,7 +124,8 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
 
-  virtual SgBasicBlock *BuildRunKernelBody(
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
+  virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices);
 
@@ -140,6 +141,15 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
 
+
+  //! Generates a device type corresponding to a given grid type.
+  /*!
+    This is not derived.
+    
+    \param gt The grid type.
+    \return A type object corresponding to the given grid type.
+   */
+  virtual SgType *BuildOnDeviceGridType(GridType *gt);
   
  protected:
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
@@ -168,6 +178,7 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
+  
   
 };
 

@@ -2,9 +2,7 @@
 
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"
-#include "translator/SageBuilderEx.h"
 
-namespace sbx = physis::translator::SageBuilderEx;
 namespace si = SageInterface;
 namespace sb = SageBuilder;
 
