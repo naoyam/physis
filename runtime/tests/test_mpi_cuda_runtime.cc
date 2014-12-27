@@ -1,3 +1,4 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #define PHYSIS_MPI_CUDA
 #include "physis/physis_common.h"

@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #define PHYSIS_MPI
 #include "physis/physis.h"
 #include "physis/physis_util.h"

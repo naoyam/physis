@@ -1,4 +1,5 @@
-// Copyright 2010, Tokyo Institute of Technology Matsuoka Lab.
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "SageBuilderEx.h"
 #include "grid.h"
 #include "translator/map.h"
