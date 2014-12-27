@@ -125,6 +125,7 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       SgScopeStatement *call_site);
 
   virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
+  virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(StencilMap *s);
   virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices);
