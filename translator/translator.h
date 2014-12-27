@@ -60,6 +60,9 @@ class Translator: public rose_util::RoseASTTraversal {
   bool is_fortran_;
 
   virtual void buildGridDecl();
+  virtual RuntimeBuilder *builder() {
+    return rt_builder_;
+  }
   virtual void ProcessUserDefinedPointType(
       SgClassDeclaration *grid_decl, GridType *gt) {}
   virtual void Visit(SgFunctionCallExp *node);
@@ -124,6 +127,7 @@ class Translator: public rose_util::RoseASTTraversal {
     assert(d);
     return d;
   }
+
 };
 
 } // namespace translator

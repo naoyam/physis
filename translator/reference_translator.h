@@ -52,6 +52,9 @@ class ReferenceTranslator : public Translator {
     variable validate_ast_.
    */
   virtual void ValidateASTConsistency();
+  virtual ReferenceRuntimeBuilder *builder() {
+    return static_cast<ReferenceRuntimeBuilder*>(rt_builder_);
+  }
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void TranslateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
@@ -76,23 +79,6 @@ class ReferenceTranslator : public Translator {
     std::vector<SgFunctionDeclaration*> v;
     return v;
   }
-  //! A helper function for BuildRunKernel.
-  /*!
-    \param s The stencil map object.
-    \param param Parameter list of the run function
-    \return The body of the run function.
-   */
-  virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *s, SgFunctionParameterList *param,
-      vector<SgVariableDeclaration*> &indices);
-#ifdef DEPRECATED  
-  virtual void appendGridSwap(StencilMap *mc, const string &stencil,
-                              bool is_stencil_ptr,
-                              SgScopeStatement *scope);
-#endif
-  virtual SgFunctionCallExp* BuildKernelCall(
-      StencilMap *s, SgExpressionPtrList &indexArgs,
-      SgInitializedName *stencil_param);
 
   virtual void DefineMapSpecificTypesAndFunctions();
   virtual void InsertStencilSpecificType(StencilMap *s,

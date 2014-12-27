@@ -1,20 +1,31 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/cuda_runtime_builder.h"
 
 #include "translator/translation_util.h"
 #include "translator/cuda_builder.h"
+#include "translator/SageBuilderEx.h"
+
+#include <string>
 
 #define DIM_STR ("dim")
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
+namespace sbx = physis::translator::SageBuilderEx;
+namespace ru = physis::translator::rose_util;
+
+namespace {
+
+static bool IsOnDeviceGridTypeName(const std::string &tn) {
+  //LOG_DEBUG() << "name: " << tn << "\n";
+  if (!physis::endswith(tn, "_dev")) return false;
+  std::string host_grid_name = tn.substr(0, tn.length() - 4);
+  //LOG_DEBUG() << "Host grid name: " << host_grid_name << "\n";
+  return physis::translator::GridType::isGridType(host_grid_name);
+}
+
+}
 
 namespace physis {
 namespace translator {
@@ -1099,6 +1110,265 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
   }
 
   return emit_expr;
+}
+
+// Expressions themselves in index_args are used (no copy)
+SgExprListExp *CUDARuntimeBuilder::BuildKernelCallArgList(
+    StencilMap *stencil,
+    SgExpressionPtrList &index_args,
+    SgFunctionParameterList *params) {
+
+  SgExprListExp *args = sb::buildExprListExp();
+  FOREACH(it, index_args.begin(), index_args.end()) {
+    si::appendExpression(args, *it);
+  }
+
+  const SgInitializedNamePtrList &param_ins = params->get_args();
+  SgInitializedNamePtrList::const_iterator pend = param_ins.end();
+  // skip the domain parameter
+  if (stencil->IsRedBlackVariant()) {
+    // skip the color param
+    --pend;
+  }
+  FOREACH(it, ++(param_ins.begin()), pend) {
+    SgInitializedName *in = *it;
+    SgExpression *exp = sb::buildVarRefExp(in);
+    SgType *param_type = in->get_type();
+    //LOG_DEBUG() << "Param type: " << param_type->unparseToString() << "\n";
+    // Pass a pointer if the param is a grid variable
+    if (isSgNamedType(param_type)) {
+      const string tn = isSgNamedType(param_type)->get_name().getString();
+      if (IsOnDeviceGridTypeName(tn)) {
+        //LOG_DEBUG() << "Grid parameter: " << tn << "\n";              
+        exp = sb::buildAddressOfOp(exp);
+      }
+    }
+    si::appendExpression(args, exp);
+  }
+
+  return args;
+}
+
+void CUDARuntimeBuilder::BuildKernelIndices(
+    StencilMap *stencil,
+    SgBasicBlock *call_site,
+    vector<SgVariableDeclaration*> &indices) {
+  int dim = stencil->getNumDim();
+  
+  // x = blockIdx.x * blockDim.x + threadIdx.x;
+  SgExpression *init_x =
+      Add(Mul(sbx::buildCudaIdxExp(sbx::kBlockIdxX),
+              sbx::buildCudaIdxExp(sbx::kBlockDimX)),
+          sbx::buildCudaIdxExp(sbx::kThreadIdxX));
+  if (stencil->IsRedBlackVariant()) {
+    init_x = Mul(init_x, Int(2));
+  }
+  SgVariableDeclaration *x_index = BuildLoopIndexVarDecl(
+      1, init_x, call_site);
+  if (ru::IsCLikeLanguage()) {
+    si::appendStatement(x_index, call_site);
+  }
+  indices.push_back(x_index);
+
+  if (dim >= 2) {
+    // y = blockIdx.y * blockDim.y + threadIdx.y;        
+    SgVariableDeclaration *y_index = BuildLoopIndexVarDecl(
+        2, Add(Mul(sbx::buildCudaIdxExp(sbx::kBlockIdxY),
+                   sbx::buildCudaIdxExp(sbx::kBlockDimY)),
+               sbx::buildCudaIdxExp(sbx::kThreadIdxY)),
+        call_site);
+    if (ru::IsCLikeLanguage()) {
+      si::appendStatement(y_index, call_site);
+    }
+    indices.push_back(y_index);
+  }
+  
+  if (dim >= 3) {
+    SgVariableDeclaration *z_index = BuildLoopIndexVarDecl(
+        3, NULL, call_site);
+    if (ru::IsCLikeLanguage()) {
+      si::appendStatement(z_index, call_site);
+    }
+    indices.push_back(z_index);
+  }
+}
+
+SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble1D(
+    StencilMap *stencil,    
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  SgVariableDeclaration* t[] = {indices[0]};
+  vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
+  si::appendStatement(
+      BuildDomainInclusionCheck(
+          range_checking_idx, dom_arg, sb::buildReturnStmt()),
+      call_site);
+  return call_site;
+}   
+
+SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble2D(
+    StencilMap *stencil,    
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  SgVariableDeclaration* t[] = {indices[0], indices[2]};
+  vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
+  si::appendStatement(
+      BuildDomainInclusionCheck(
+          range_checking_idx, dom_arg, sb::buildReturnStmt()),
+      call_site);
+  return call_site;
+}   
+  
+SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble3D(
+    StencilMap *stencil,
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  int dim = 3;
+  SgExpression *loop_begin =
+      BuildDomMinRef(sb::buildVarRefExp(dom_arg), dim);
+  SgStatement *loop_init = sb::buildAssignStatement(
+      sb::buildVarRefExp(indices.back()), loop_begin);
+  SgExpression *loop_end =
+      BuildDomMaxRef(sb::buildVarRefExp(dom_arg), dim);
+  SgStatement *loop_test = sb::buildExprStatement(
+      sb::buildLessThanOp(sb::buildVarRefExp(indices.back()),
+                          loop_end));
+
+  SgVariableDeclaration* t[] = {
+    stencil->IsRedBlackVariant() ? NULL: indices[0], indices[1]};
+  vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
+  si::appendStatement(
+      BuildDomainInclusionCheck(
+          range_checking_idx, dom_arg, sb::buildReturnStmt()),
+      call_site);
+
+  SgExpression *loop_incr =
+      sb::buildPlusPlusOp(sb::buildVarRefExp(indices.back()));
+  SgBasicBlock *kernel_call_block = sb::buildBasicBlock();
+  SgStatement *loop
+      = sb::buildForStatement(loop_init, loop_test,
+                              loop_incr, kernel_call_block);
+  si::appendStatement(loop, call_site);
+  rose_util::AddASTAttribute(
+      loop,
+      new RunKernelLoopAttribute(dim));
+
+  if (stencil->IsRedBlackVariant()) {
+    SgExpression *rb_offset_init =
+        Add(sb::buildVarRefExp(indices[0]),
+            sb::buildBitAndOp(
+                Add(Var(indices[1]),
+                    sb::buildVarRefExp(indices[2]),
+                    sb::buildVarRefExp(param->get_args().back())),
+                Int(1)));
+    si::appendStatement(
+        sb::buildAssignStatement(Var(indices[0]), rb_offset_init),
+        kernel_call_block);
+    SgVariableDeclaration* t[] = {indices[0]};
+    vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
+    si::appendStatement(
+        BuildDomainInclusionCheck(
+            range_checking_idx, dom_arg, sb::buildContinueStmt()),
+        kernel_call_block);
+  }
+  
+  return kernel_call_block;
+}
+
+SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble(
+    StencilMap *stencil,
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  int dim = stencil->getNumDim();
+  if (dim == 1) {
+    call_site = BuildKernelCallPreamble1D(
+        stencil, dom_arg, param, indices, call_site);
+  } else if (dim == 2) {
+    call_site = BuildKernelCallPreamble2D(
+        stencil, dom_arg, param, indices, call_site);
+  } else if (dim == 3) {
+    call_site = BuildKernelCallPreamble3D(
+        stencil, dom_arg, param, indices, call_site);
+  } else {
+    LOG_ERROR()
+        << "Dimension larger than 3 not supported; given dimension: "
+        << dim << "\n";
+    PSAbort(1);
+  }
+  return call_site;
+}
+
+SgBasicBlock *CUDARuntimeBuilder::BuildRunKernelBody(
+    StencilMap *stencil, SgFunctionParameterList *param,
+    vector<SgVariableDeclaration*> &indices) {
+  LOG_DEBUG() << __FUNCTION__;
+  SgInitializedName *dom_arg = param->get_args()[0];
+  SgBasicBlock *block = sb::buildBasicBlock();
+  si::attachComment(block, "Generated by " + string(__FUNCTION__));
+  
+  BuildKernelIndices(stencil, block, indices);
+  
+  SgExpressionPtrList index_args;
+  FOREACH (it, indices.begin(), indices.end()) {
+    index_args.push_back(sb::buildVarRefExp(*it));
+  }
+
+  SgExprStatement *kernel_call =
+      sb::buildExprStatement(
+          BuildKernelCall(stencil, index_args, param));
+
+  SgScopeStatement *kernel_call_block = 
+      BuildKernelCallPreamble(stencil, dom_arg, param, indices, block);
+  si::appendStatement(kernel_call, kernel_call_block);
+  
+  return block;
+}
+
+SgIfStmt *CUDARuntimeBuilder::BuildDomainInclusionCheck(
+    const vector<SgVariableDeclaration*> &indices,
+    SgInitializedName *dom_arg, SgStatement *true_stmt) {
+  
+  // check x and y domain coordinates, like:
+  // if (x < dom.local_min[0] || x >= dom.local_max[0] ||
+  //     y < dom.local_min[1] || y >= dom.local_max[1]) {
+  //   return;
+  // }
+  
+  SgExpression *test_all = NULL;
+  ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
+    // No check for the unit-stride dimension when red-black ordering
+    // is used
+    SgVariableDeclaration *idx = *index_it;
+    // NULL indicates no check required.
+    if (idx == NULL) continue;
+    SgExpression *dom_min = sb::buildPntrArrRefExp(
+        sb::buildDotExp(sb::buildVarRefExp(dom_arg),
+                        sb::buildVarRefExp("local_min")),
+        Int(dim));
+    SgExpression *dom_max = sb::buildPntrArrRefExp(
+        sb::buildDotExp(sb::buildVarRefExp(dom_arg),
+                        sb::buildVarRefExp("local_max")),
+        Int(dim));
+    SgExpression *test = sb::buildOrOp(
+        sb::buildLessThanOp(sb::buildVarRefExp(idx), dom_min),
+        sb::buildGreaterOrEqualOp(sb::buildVarRefExp(idx), dom_max));
+    if (test_all) {
+      test_all = sb::buildOrOp(test_all, test);
+    } else {
+      test_all = test;
+    }
+  }
+  SgIfStmt *ifstmt =
+      sb::buildIfStmt(test_all, true_stmt, NULL);
+  return ifstmt;
 }
 
 } // namespace translator

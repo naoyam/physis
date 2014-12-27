@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_BUILDER_H_
 #define PHYSIS_RUNTIME_BUILDER_H_
@@ -194,6 +188,58 @@ class RuntimeBuilder {
   virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s) = 0;
   //! Build the real map function for a given stencil
   virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil) = 0;
+
+  //! Generates a call to a stencil function.
+  /*!
+    Used by BuildRunKernel. 
+    
+    \param stencil The stencil kernel to call.
+    \param index_args The index parameters declared in the stencil
+    function.
+    \param params Parameter list of the surrounding function    
+    \return The call object to the stencil kernel.
+   */
+  virtual SgFunctionCallExp* BuildKernelCall(
+      StencilMap *stencil, SgExpressionPtrList &index_args,
+      SgFunctionParameterList *run_kernel_params) = 0;
+  
+  //! Generates an argument list for a call to a stencil function.
+  /*!
+    This is a helper function for BuildKernelCall.
+    
+    \param stencil The stencil kernel to call.
+    \param index_args The index parameters declared in the stencil
+    function.
+    \param run_kernel_params Parameter list of the surrounding function
+    \return The list of kernel call arguments.
+   */
+  virtual SgExprListExp *BuildKernelCallArgList(
+      StencilMap *stencil,
+      SgExpressionPtrList &index_args,
+      SgFunctionParameterList *run_kernel_params) = 0;
+
+  //! A helper function for BuildRunKernel.
+  /*!
+    \param stencil The stencil map object.
+    \param param Parameters for the run function.
+    \param indices Output parameter to return generated indices
+    \return The body of the run function.
+   */
+  virtual SgBasicBlock *BuildRunKernelBody(
+      StencilMap *stencil, SgFunctionParameterList *param,
+      vector<SgVariableDeclaration*> &indices) = 0;
+
+  //! Build a variable declaration represnting loop index
+  /*
+   * \param dim Dimension number
+   * \param init Initializer expression
+   * \param block Containing block
+   * \return a variable declaration for the loop index
+   */
+  virtual SgVariableDeclaration *BuildLoopIndexVarDecl(
+      int dim,
+      SgExpression *init,
+      SgScopeStatement *block) = 0;
   
  protected:
   SgScopeStatement *gs_;

@@ -51,6 +51,21 @@ SgExpression *BuildStreamBoundaryKernel(int idx) {
   SgVarRefExp *inner_stream = sb::buildVarRefExp("stream_boundary_kernel");
   return sb::buildPntrArrRefExp(inner_stream, sb::buildIntVal(idx));
 }
+
+SgExprListExp *MPICUDARuntimeBuilder::BuildKernelCallArgList(
+    StencilMap *stencil,
+    SgExpressionPtrList &index_args,
+    SgFunctionParameterList *run_kernel_params) {
+  return cuda_rt_builder_->BuildKernelCallArgList(
+      stencil, index_args, run_kernel_params);
+}
+
+SgIfStmt *MPICUDARuntimeBuilder::BuildDomainInclusionCheck(
+    const vector<SgVariableDeclaration*> &indices,
+    SgInitializedName *dom_arg, SgStatement *true_stmt) {
+  return cuda_rt_builder_->BuildDomainInclusionCheck(
+      indices, dom_arg, true_stmt);
+}
   
 } // namespace translator
 } // namespace physis

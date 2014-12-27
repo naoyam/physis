@@ -18,6 +18,7 @@
 #define LOOP_INDEX_VAR_NAME2 "i2"
 #define LOOP_INDEX_VAR_NAME3 "i3"
 #define LOOP_INDEX_VAR_NAME4 "i4"
+#define LOOP_INDEX_VAR_NAME5 "i5"
 #define PS_STENCIL_RUN_NAME "PSStencilRun"
 
 #define PS_DOMAIN1D_TYPE_NAME "PSDomain1D"

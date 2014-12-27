@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/cuda_translator.h"
 
@@ -57,9 +51,9 @@ CUDATranslator::CUDATranslator(const Configuration &config):
           std::vector<double> v;
           PSAssert(tbl2 = it->second->getAsLuaTable());
           PSAssert(tbl2->get(v));
-          iv.push_back(sb::buildIntVal((int)v[0]));
-          iv.push_back(sb::buildIntVal((int)v[1]));
-          iv.push_back(sb::buildIntVal((int)v[2]));
+          iv.push_back(Int((int)v[0]));
+          iv.push_back(Int((int)v[1]));
+          iv.push_back(Int((int)v[2]));
           cuda_block_size_vals_.push_back(sb::buildAggregateInitializer(sb::buildExprListExp(iv)));
         }
         return;
@@ -206,7 +200,7 @@ void CUDATranslator::TranslateGetForUserDefinedType(
   SgExpression *new_get = NULL;
   if (array_top == NULL) {
     new_get = 
-        rt_builder_->BuildGridGet(
+        builder()->BuildGridGet(
             sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
             rose_util::GetASTAttribute<GridVarAttribute>(gv),
@@ -223,7 +217,7 @@ void CUDATranslator::TranslateGetForUserDefinedType(
     PSAssert(array_top == parent);
     original = parent;
     new_get = 
-        rt_builder_->BuildGridGet(
+        builder()->BuildGridGet(
             sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
             rose_util::GetASTAttribute<GridVarAttribute>(gv),            
@@ -251,7 +245,7 @@ void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
   SgExpression *gv = sb::buildVarRefExp(grid_arg->get_name(),
                                         si::getScope(func_call_exp));
   SgExpression *real_get =
-      rt_builder_->BuildGridGet(
+      builder()->BuildGridGet(
           gv,
           rose_util::GetASTAttribute<GridVarAttribute>(grid_arg),
           gt, &args, sil, is_kernel, is_periodic);
@@ -284,7 +278,7 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
       si::copyExpression(node->get_args()->get_expressions().back());
   
   SgExpression *real_exp = 
-      rt_builder_->BuildGridEmit(
+      builder()->BuildGridEmit(
           sb::buildVarRefExp(attr->gv()), attr, &args, v, si::getScope(node));
   
   si::replaceExpression(node, real_exp);
@@ -312,15 +306,15 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
   SgExpression *dim_y = NULL;  
   if (dim >= 2) {
     dim_y =
-      sb::buildDivideOp(dom_dim_y,
-                        sb::buildCastExp(block_dim_y,
-                                         sb::buildDoubleType()));
+        sb::buildDivideOp(dom_dim_y,
+                          sb::buildCastExp(block_dim_y,
+                                           sb::buildDoubleType()));
     dim_y = BuildFunctionCall("ceil", dim_y);
     dim_y = sb::buildCastExp(dim_y, sb::buildIntType());
   } else {
-    dim_y = sb::buildIntVal(1);
+    dim_y = Int(1);
   }
-  SgExpression *dim_z = sb::buildIntVal(1);
+  SgExpression *dim_z = Int(1);
   SgVariableDeclaration *grid_dim =
       sbx::buildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
   return grid_dim;
@@ -332,29 +326,29 @@ SgExpression *CUDATranslator::BuildBlockDimX(int nd) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("x");
   }
-  return sb::buildIntVal(block_dim_x_);
+  return Int(block_dim_x_);
 }
 
 SgExpression *CUDATranslator::BuildBlockDimY(int nd) {
   if (nd < 2) {
-    return sb::buildIntVal(1);
+    return Int(1);
   }
   if (block_dim_y_ <= 0) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("y");
   }
-  return sb::buildIntVal(block_dim_y_);  
+  return Int(block_dim_y_);  
 }
 
 SgExpression *CUDATranslator::BuildBlockDimZ(int nd) {
   if (nd < 3) {
-    return sb::buildIntVal(1);
+    return Int(1);
   }
   if (block_dim_z_ <= 0) {
     /* auto tuning & has dynamic arguments */
     return sb::buildVarRefExp("z");
   }
-  return sb::buildIntVal(block_dim_z_);
+  return Int(block_dim_z_);
 }
 
 void CUDATranslator::BuildRunBody(
@@ -366,7 +360,7 @@ void CUDATranslator::BuildRunBody(
   // i = 0;
   SgStatement *loop_init =
       sb::buildAssignStatement(sb::buildVarRefExp(loop_index),
-                               sb::buildIntVal(0));
+                               Int(0));
   // i < iter
   SgStatement *loop_test =
       sb::buildExprStatement(
@@ -482,7 +476,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         sb::buildVarRefExp(stencil_symbol), 2);
 
     if (sm->IsRedBlackVariant()) {
-      dom_max0 = sb::buildDivideOp(dom_max0, sb::buildIntVal(2));
+      dom_max0 = sb::buildDivideOp(dom_max0, Int(2));
     }
 
     SgVariableDeclaration *grid_dim =
@@ -509,12 +503,12 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         SgCudaKernelCallExp *black_call =
             isSgCudaKernelCallExp(si::copyExpression(cuda_call));
         si::appendExpression(black_call->get_args(),
-                             sb::buildIntVal(1));
+                             Int(1));
         si::appendStatement(sb::buildExprStatement(black_call), loop_body);
       }
       si::appendExpression(
           cuda_call->get_args(),
-          sb::buildIntVal(sm->IsBlack() ? 1 : 0));
+          Int(sm->IsBlack() ? 1 : 0));
     }
     //appendGridSwap(sm, stencil_name, false, loop_body);
   }
@@ -525,8 +519,7 @@ void CUDATranslator::ProcessUserDefinedPointType(
     SgClassDeclaration *grid_decl, GridType *gt) {
   LOG_DEBUG() << "Define grid data type for device.\n";
   SgClassDeclaration *type_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridDevTypeForUserType(grid_decl, gt);
+      builder()->BuildGridDevTypeForUserType(grid_decl, gt);
   si::insertStatementAfter(grid_decl, type_decl);
   // If these user-defined types are defined in header files,
   // inserting new related types and declarations AFTER those types
@@ -549,53 +542,40 @@ void CUDATranslator::ProcessUserDefinedPointType(
 
   // Build GridNew for this type
   SgFunctionDeclaration *new_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridNewFuncForUserType(gt);
+      builder()->BuildGridNewFuncForUserType(gt);
   si::insertStatementAfter(type_decl, new_decl);
   gt->aux_new_decl() = new_decl;
   // Build GridFree for this type
   SgFunctionDeclaration *free_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridFreeFuncForUserType(gt);
+      builder()->BuildGridFreeFuncForUserType(gt);
   si::insertStatementAfter(new_decl, free_decl);
   gt->aux_free_decl() = free_decl;
 
   // Build GridCopyin for this type
   SgFunctionDeclaration *copyin_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridCopyinFuncForUserType(gt);
+      builder()->BuildGridCopyinFuncForUserType(gt);
   si::insertStatementAfter(free_decl, copyin_decl);
   gt->aux_copyin_decl() = copyin_decl;
 
   // Build GridCopyout for this type
   SgFunctionDeclaration *copyout_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridCopyoutFuncForUserType(gt);
+      builder()->BuildGridCopyoutFuncForUserType(gt);
   si::insertStatementAfter(copyin_decl, copyout_decl);
   gt->aux_copyout_decl() = copyout_decl;
 
   // Build GridGet for this type
   SgFunctionDeclaration *get_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridGetFuncForUserType(gt);
+      builder()->BuildGridGetFuncForUserType(gt);
   si::insertStatementAfter(copyout_decl, get_decl);
   gt->aux_get_decl() = get_decl;
 
   SgFunctionDeclaration *emit_decl =
-      static_cast<CUDARuntimeBuilder*>(rt_builder_)->
-      BuildGridEmitFuncForUserType(gt);
+      builder()->BuildGridEmitFuncForUserType(gt);
   si::insertStatementAfter(get_decl, emit_decl);
   gt->aux_emit_decl() = emit_decl;
   return;
 }
 
-static bool IsOnDeviceGridTypeName(const string &tn) {
-  //LOG_DEBUG() << "name: " << tn << "\n";
-  if (!endswith(tn, "_dev")) return false;
-  string host_grid_name = tn.substr(0, tn.length() - 4);
-  //LOG_DEBUG() << "Host grid name: " << host_grid_name << "\n";
-  return GridType::isGridType(host_grid_name);
-}
 
 SgType *CUDATranslator::BuildOnDeviceGridType(GridType *gt) const {
   PSAssert(gt);
@@ -674,7 +654,9 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   run_func->get_functionModifier().setCudaKernel();
 #endif
   // Build and set the function body
-  SgBasicBlock *func_body = BuildRunKernelBody(stencil, params);
+  vector<SgVariableDeclaration*> indices;  
+  SgBasicBlock *func_body = builder()->BuildRunKernelBody(
+      stencil, params, indices);
   si::replaceStatement(run_func->get_definition()->get_body(),
                        func_body);
   // Mark this function as RunKernel
@@ -682,263 +664,6 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
                              new RunKernelAttribute(stencil));
   si::fixVariableReferences(run_func);
   return run_func;
-}
-
-// Expresions themselves in index_args are used (no copy)
-SgExprListExp *CUDATranslator::BuildKernelCallArgList(
-    StencilMap *stencil,
-    SgExpressionPtrList &index_args,
-    SgFunctionParameterList *params) {
-
-  SgExprListExp *args = sb::buildExprListExp();
-  FOREACH(it, index_args.begin(), index_args.end()) {
-    si::appendExpression(args, *it);
-  }
-
-#if 0
-  SgClassDefinition *stencil_def = stencil->GetStencilTypeDefinition();  
-  // append the fields of the stencil type to the argument list  
-  SgDeclarationStatementPtrList &members = stencil_def->get_members();
-  FOREACH(it, ++(members.begin()), members.end()) {
-    SgVariableDeclaration *var_decl = isSgVariableDeclaration(*it);
-    PSAssert(var_decl);
-    SgVariableDefinition *var_def = var_decl->get_definition();
-    PSAssert(var_def);
-    SgTypedefType *var_type = isSgTypedefType(var_def->get_type());    
-    //SgExpression *exp = sb::buildVarRefExp(var_decl);
-    SgExpression *exp = sb::buildVarRefExp(
-        var_decl->get_variables()[0]->get_name());
-    if (GridType::isGridType(var_type)) {
-      exp = sb::buildAddressOfOp(exp);
-      // skip the grid index field
-      ++it;
-    }
-    si::appendExpression(args, exp);
-  }
-#else
-  const SgInitializedNamePtrList &param_ins = params->get_args();
-  SgInitializedNamePtrList::const_iterator pend = param_ins.end();
-  // skip the domain parameter
-  if (stencil->IsRedBlackVariant()) {
-    // skip the color param
-    --pend;
-  }
-  FOREACH(it, ++(param_ins.begin()), pend) {
-    SgInitializedName *in = *it;
-    SgExpression *exp = sb::buildVarRefExp(in);
-    SgType *param_type = in->get_type();
-    //LOG_DEBUG() << "Param type: " << param_type->unparseToString() << "\n";
-    // Pass a pointer if the param is a grid variable
-    if (isSgNamedType(param_type)) {
-      const string tn = isSgNamedType(param_type)->get_name().getString();
-      if (IsOnDeviceGridTypeName(tn)) {
-        //LOG_DEBUG() << "Grid parameter: " << tn << "\n";              
-        exp = sb::buildAddressOfOp(exp);
-      }
-    }
-    si::appendExpression(args, exp);
-  }
-#endif
-
-  return args;
-}
-
-SgFunctionCallExp *CUDATranslator::BuildKernelCall(
-    StencilMap *stencil,
-    SgExpressionPtrList &index_args,
-    SgFunctionParameterList *params) {   
-  SgExprListExp *args  = BuildKernelCallArgList(stencil, index_args,
-                                                params);
-  SgFunctionCallExp *func_call =
-      sb::buildFunctionCallExp(
-          sb::buildFunctionRefExp(stencil->getKernel()), args);
-  return func_call;
-}
-
-static SgVariableDeclaration *BuildIndexVarDeclaration(const char *name,
-                                                       int dim,
-                                                       SgExpression *init,
-                                                       SgScopeStatement *block) {
-  SgVariableDeclaration *index = sb::buildVariableDeclaration
-      (name, sb::buildIntType(),
-       init ? sb::buildAssignInitializer(init) : NULL,
-       block);
-  rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
-      index, new RunKernelIndexVarAttribute(dim));
-  si::appendStatement(index, block);
-  return index;
-}
-
-SgBasicBlock* CUDATranslator::BuildRunKernelBody(
-    StencilMap *stencil,
-    SgFunctionParameterList *param) {
-  LOG_DEBUG() << __FUNCTION__;
-  SgInitializedName *dom_arg = param->get_args()[0];
-  SgBasicBlock *block = sb::buildBasicBlock();
-  si::attachComment(block, "Generated by " + string(__FUNCTION__));
-  
-  SgExpressionPtrList index_args;
-  SgVariableDeclaration *loop_index = NULL;
-  int loop_dim = -1;
-  int dim = stencil->getNumDim();  
-  SgVariableDeclaration *indices[dim];
-  
-  // x = blockIdx.x * blockDim.x + threadIdx.x;
-  SgExpression *init_x =
-      sb::buildAddOp(sb::buildMultiplyOp(
-          sbx::buildCudaIdxExp(sbx::kBlockIdxX),
-          sbx::buildCudaIdxExp(sbx::kBlockDimX)),
-                     sbx::buildCudaIdxExp(sbx::kThreadIdxX));
-  if (stencil->IsRedBlackVariant()) {
-    init_x = sb::buildMultiplyOp(init_x, sb::buildIntVal(2));
-  }
-  SgVariableDeclaration *x_index = BuildIndexVarDeclaration(
-      LOOP_INDEX_VAR_NAME1, 1, init_x, block);
-  index_args.push_back(sb::buildVarRefExp(x_index));
-  indices[0] = x_index;
-  
-
-  if (dim >= 2) {
-    SgVariableDeclaration *y_index = BuildIndexVarDeclaration(
-        LOOP_INDEX_VAR_NAME2, 2,
-        sb::buildAddOp(sb::buildMultiplyOp(
-            sbx::buildCudaIdxExp(sbx::kBlockIdxY),
-            sbx::buildCudaIdxExp(sbx::kBlockDimY)),
-                       sbx::buildCudaIdxExp(sbx::kThreadIdxY)),
-        block);
-    index_args.push_back(sb::buildVarRefExp(y_index));
-    indices[1] = y_index;
-  }
-  
-  if (dim >= 3) {
-    // y = blockIdx.y * blockDim.y + threadIdx.y;    
-    SgVariableDeclaration *z_index = BuildIndexVarDeclaration(
-        LOOP_INDEX_VAR_NAME3, 3, NULL, block);    
-    index_args.push_back(sb::buildVarRefExp(z_index));
-    loop_index = z_index;
-    loop_dim = 2;
-    indices[2] = z_index;
-  }
-
-
-  SgFunctionCallExp *kernel_call =
-      BuildKernelCall(stencil, index_args, param);
-  SgScopeStatement *kernel_call_block = block;
-
-  if (dim == 1) {
-    SgVariableDeclaration* t[] = {indices[0]};
-    vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
-    si::appendStatement(
-        BuildDomainInclusionCheck(
-            range_checking_idx, dom_arg, sb::buildReturnStmt()),
-        block);
-  } else if (dim == 2) {
-    SgVariableDeclaration* t[] = {indices[0], indices[1]};
-    vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
-    si::appendStatement(
-        BuildDomainInclusionCheck(
-            range_checking_idx, dom_arg, sb::buildReturnStmt()),
-        block);
-  } else if (dim == 3) {
-    SgExpression *loop_begin =
-        rt_builder_->BuildDomMinRef(sb::buildVarRefExp(dom_arg),
-                                    loop_dim+1);
-    SgStatement *loop_init = sb::buildAssignStatement(
-        sb::buildVarRefExp(loop_index), loop_begin);
-    SgExpression *loop_end =
-        rt_builder_->BuildDomMaxRef(sb::buildVarRefExp(dom_arg), loop_dim+1);
-    SgStatement *loop_test = sb::buildExprStatement(
-        sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
-                            loop_end));
-    index_args.push_back(sb::buildVarRefExp(loop_index));
-
-    SgVariableDeclaration* t[] = {
-      stencil->IsRedBlackVariant() ? NULL: indices[0], indices[1]};
-    vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
-    si::appendStatement(
-        BuildDomainInclusionCheck(
-            range_checking_idx, dom_arg, sb::buildReturnStmt()),
-        block);
-
-    SgExpression *loop_incr =
-        sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
-    kernel_call_block = sb::buildBasicBlock();
-    SgStatement *loop
-        = sb::buildForStatement(loop_init, loop_test,
-                                loop_incr, kernel_call_block);
-    si::appendStatement(loop, block);
-    rose_util::AddASTAttribute(
-        loop,
-        new RunKernelLoopAttribute(3));
-  } else {
-    PSAssert(0);
-  }
-  
-  si::appendStatement(sb::buildExprStatement(kernel_call),
-                      kernel_call_block);
-
-  if (stencil->IsRedBlackVariant()) {
-    PSAssert(dim == 3); // Lower dimension not implemented yet.
-    SgExpression *rb_offset_init =
-        sb::buildAddOp(
-            sb::buildVarRefExp(indices[0]),
-            sb::buildBitAndOp(
-                sb::buildAddOp(
-                    sb::buildAddOp(sb::buildVarRefExp(indices[1]),
-                                   sb::buildVarRefExp(indices[2])),
-                    sb::buildVarRefExp(param->get_args().back())),
-                sb::buildIntVal(1)));
-    SgVariableDeclaration *x_index_rb =
-        sb::buildVariableDeclaration(
-            LOOP_INDEX_VAR_NAME1 "_rb", sb::buildIntType(),
-            sb::buildAssignInitializer(rb_offset_init));
-    
-    SgVariableDeclaration* t[] = {x_index_rb};
-    vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
-    si::prependStatement(
-        BuildDomainInclusionCheck(range_checking_idx, dom_arg,
-                                  sb::buildContinueStmt()),
-        kernel_call_block);
-
-    si::prependStatement(x_index_rb, kernel_call_block);
-    si::replaceExpression(index_args[0], sb::buildVarRefExp(x_index_rb));
-  }
-  
-  return block;
-}
-
-SgIfStmt *CUDATranslator::BuildDomainInclusionCheck(
-    const vector<SgVariableDeclaration*> &indices,
-    SgInitializedName *dom_arg, SgStatement *true_stmt)  const {
-  // check x and y domain coordinates, like:
-  // if (x < dom.local_min[0] || x >= dom.local_max[0] ||
-  //     y < dom.local_min[1] || y >= dom.local_max[1]) {
-  //   return;
-  // }
-  
-  SgExpression *test_all = NULL;
-  ENUMERATE (dim, index_it, indices.begin(), indices.end()) {
-    // No check for the unit-stride dimension when red-black ordering
-    // is used
-    SgVariableDeclaration *idx = *index_it;
-    // NULL indicates no check required.
-    if (idx == NULL) continue;
-    SgExpression *dom_min = rt_builder_->BuildDomMinRef(
-        sb::buildVarRefExp(dom_arg), dim+1);
-    SgExpression *dom_max = rt_builder_->BuildDomMaxRef(
-        sb::buildVarRefExp(dom_arg), dim+1);
-    SgExpression *test = sb::buildOrOp(
-        sb::buildLessThanOp(sb::buildVarRefExp(idx), dom_min),
-        sb::buildGreaterOrEqualOp(sb::buildVarRefExp(idx), dom_max));
-    if (test_all) {
-      test_all = sb::buildOrOp(test_all, test);
-    } else {
-      test_all = test;
-    }
-  }
-  SgIfStmt *ifstmt =
-      sb::buildIfStmt(test_all, true_stmt, NULL);
-  return ifstmt;
 }
 
 void CUDATranslator::FixAST() {
