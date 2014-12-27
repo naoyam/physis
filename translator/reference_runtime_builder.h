@@ -130,6 +130,24 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   
   virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s);
   virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil);
+
+  virtual SgFunctionCallExp* BuildKernelCall(
+      StencilMap *stencil, SgExpressionPtrList &index_args,
+      SgFunctionParameterList *run_kernel_params);
+  
+  virtual SgExprListExp *BuildKernelCallArgList(
+      StencilMap *stencil,
+      SgExpressionPtrList &index_args,
+      SgFunctionParameterList *params);
+
+  virtual SgBasicBlock *BuildRunKernelBody(
+      StencilMap *stencil, SgFunctionParameterList *param,
+      vector<SgVariableDeclaration*> &indices);
+
+  virtual SgVariableDeclaration *BuildLoopIndexVarDecl(
+      int dim,
+      SgExpression *init,
+      SgScopeStatement *block);
   
  protected:
   static const std::string  grid_type_name_;

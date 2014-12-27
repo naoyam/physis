@@ -106,7 +106,6 @@ bool GridType::isGridType(SgType *ty) {
   }
   if (!isSgNamedType(ty)) return false;
   const string tn = isSgNamedType(ty)->get_name().getString();
-  LOG_DEBUG() << "type name: " << tn << "\n";
   return isGridType(tn);
 }
 

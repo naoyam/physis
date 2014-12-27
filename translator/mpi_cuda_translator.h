@@ -7,6 +7,7 @@
 #include "translator/translator_common.h"
 #include "translator/mpi_translator.h"
 #include "translator/cuda_translator.h"
+#include "translator/mpi_cuda_runtime_builder.h"
 
 namespace physis {
 namespace translator {
@@ -22,6 +23,9 @@ class MPICUDATranslator: public MPITranslator {
   string boundary_suffix_;
   std::set<SgFunctionSymbol*> cache_config_done_;
   virtual void FixAST();
+  virtual MPICUDARuntimeBuilder *builder() {
+    return static_cast<MPICUDARuntimeBuilder*>(rt_builder_);
+  }
  public:
   MPICUDATranslator(const Configuration &config);
   virtual ~MPICUDATranslator();

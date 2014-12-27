@@ -10,6 +10,7 @@
 #define PHYSIS_TRANSLATOR_CUDA_TRANSLATOR_H_
 
 #include "translator/reference_translator.h"
+#include "translator/cuda_runtime_builder.h"
 
 namespace physis {
 namespace translator {
@@ -30,6 +31,11 @@ class CUDATranslator : public ReferenceTranslator {
   
   virtual void FixAST();
   virtual void FixGridType();
+
+  virtual CUDARuntimeBuilder *builder() {
+    return static_cast<CUDARuntimeBuilder*>(rt_builder_);
+  }
+
   
  public:
 
@@ -126,60 +132,13 @@ class CUDATranslator : public ReferenceTranslator {
     \return The function declaration.
    */
   virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
-  //! A helper function for BuildRunKernel.
-  /*!
-    \param stencil The stencil map object.
-    \param param Parameters for the run function.
-    \return The body of the run function.
-   */
-  virtual SgBasicBlock *BuildRunKernelBody(
-      StencilMap *stencil, SgFunctionParameterList *param);
-  //! Generates an argument list for a call to a stencil function.
-  /*!
-    This is a helper function for BuildKernelCall.
-    
-    \param stencil The stencil kernel to call.
-    \param index_args The index parameters declared in the stencil
-    function.
-    \param params Parameter list of the surrounding function
-    \return The list of kernel call arguments.
-   */
-  virtual SgExprListExp* BuildKernelCallArgList(
-      StencilMap *stencil, SgExpressionPtrList &index_args,
-      SgFunctionParameterList *params);
-  //! Generates a call to a stencil function.
-  /*!
-    Used by BuildRunKernel. 
-    
-    \param stencil The stencil kernel to call.
-    \param index_args The index parameters declared in the stencil
-    function.
-    \param params Parameter list of the surrounding function    
-    \return The call object to the stencil kernel.
-   */
-  virtual SgFunctionCallExp* BuildKernelCall(
-      StencilMap *stencil, SgExpressionPtrList &index_args,
-      SgFunctionParameterList *params);
+
   //! Generates an expression of the x dimension of thread blocks.
   virtual SgExpression *BuildBlockDimX(int nd);
   //! Generates an expression of the y dimension of thread blocks.  
   virtual SgExpression *BuildBlockDimY(int nd);
   //! Generates an expression of the z dimension of thread blocks.
   virtual SgExpression *BuildBlockDimZ(int nd);
-
-  //! Generates an IF block to exclude indices outside a domain.
-  /*!
-    TODO: move to the builder class
-    
-    \param indices The indices to check.
-    \param dom_arg Name of the domain parameter.
-    \param true_stmt Statement to execute if outside the domain
-    \return The IF block.
-   */
-  virtual SgIfStmt *BuildDomainInclusionCheck(
-      const vector<SgVariableDeclaration*> &indices,
-      SgInitializedName *dom_arg,
-      SgStatement *true_stmt) const;
 
   //! Generates a device type corresponding to a given grid type.
   /*!

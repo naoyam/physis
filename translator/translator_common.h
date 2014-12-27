@@ -50,13 +50,37 @@ SgAddOp *Add(SgExpression *op1, SgExpression* op2) {
 }
 
 inline 
+SgAddOp *Add(SgExpression *op1, SgExpression* op2,
+             SgExpression *op3) {
+  return SageBuilder::buildAddOp(
+      SageBuilder::buildAddOp(op1, op2), op3);
+}
+
+inline 
 SgMultiplyOp *Mul(SgExpression *op1, SgExpression* op2) {
   return SageBuilder::buildMultiplyOp(op1, op2);
 }
 
 inline 
+SgMultiplyOp *Mul(SgExpression *op1, SgExpression* op2,
+                  SgExpression *op3) {
+  return SageBuilder::buildMultiplyOp(
+      SageBuilder::buildMultiplyOp(op1, op2), op3);
+}
+
+inline 
 SgPntrArrRefExp *ArrayRef(SgExpression *op1, SgExpression* op2) {
   return SageBuilder::buildPntrArrRefExp(op1, op2);
+}
+
+template <class T>
+SgVarRefExp *Var(T *v) {
+  return SageBuilder::buildVarRefExp(v);
+}
+
+template <class T, class S>
+SgVarRefExp *Var(T *v, S *w) {
+  return SageBuilder::buildVarRefExp(v, w);
 }
 
 } // namespace translator

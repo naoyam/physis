@@ -14,7 +14,7 @@ namespace physis {
 namespace translator {
 
 MPITranslator::MPITranslator(const Configuration &config):
-    ReferenceTranslator(config), mpi_rt_builder_(NULL),
+    ReferenceTranslator(config),
     flag_mpi_overlap_(false) {
   grid_type_name_ = "__PSGridMPI";
   grid_create_name_ = "__PSGridNewMPI";
@@ -100,8 +100,6 @@ void MPITranslator::Translate() {
                                                 global_scope_));
   //CheckSizes();
 
-  mpi_rt_builder_ = new MPIRuntimeBuilder(global_scope_);
-
   // Insert prototypes of stencil run functions
   FOREACH (it, tx_->run_map().begin(), tx_->run_map().end()) {
     Run *r = it->second;
@@ -110,10 +108,10 @@ void MPITranslator::Translate() {
         (sb::buildIntType(),
          sb::buildPointerType(sb::buildPointerType(sb::buildVoidType())));
     SgFunctionDeclaration *prototype =
-      sb::buildNondefiningFunctionDeclaration(
-          r->GetName(),
-          sb::buildFloatType(),
-          sb::buildFunctionParameterList(client_func_params), global_scope_);
+        sb::buildNondefiningFunctionDeclaration(
+            r->GetName(),
+            sb::buildFloatType(),
+            sb::buildFunctionParameterList(client_func_params), global_scope_);
     rose_util::SetFunctionStatic(prototype);
     si::insertStatementBefore(
         si::findFirstDefiningFunctionDecl(global_scope_),
@@ -121,8 +119,6 @@ void MPITranslator::Translate() {
   }
   
   ReferenceTranslator::Translate();
-  delete mpi_rt_builder_;
-  mpi_rt_builder_ = NULL;
 }
 
 void MPITranslator::TranslateInit(SgFunctionCallExp *node) {
@@ -233,7 +229,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
   string loop_var_name = "i";
   overlap_eligible = true;
   overlap_width = 0;
-   vector<SgIntVal*> overlap_flags;
+  vector<SgIntVal*> overlap_flags;
   // Ensure remote grid points available locally
   FOREACH (ait, smap->grid_params().begin(), smap->grid_params().end()) {
 
@@ -268,7 +264,7 @@ void MPITranslator::GenerateLoadRemoteGridRegion(
     bool is_periodic = smap->IsGridPeriodic(grid_param);
     LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
 
-    SgExpression *gvref = rt_builder_->BuildStencilFieldRef(
+    SgExpression *gvref = builder()->BuildStencilFieldRef(
         sb::buildVarRefExp(stencil_decl),
         grid_param->get_name());
     
@@ -327,7 +323,7 @@ void MPITranslator::DeactivateRemoteGrids(
   //  smap->grid_args().end()) {
   FOREACH (gai, remote_grids.begin(), remote_grids.end()) {
     SgInitializedName *gv = *gai;
-    SgExpression *gvref = rt_builder_->BuildStencilFieldRef(
+    SgExpression *gvref = builder()->BuildStencilFieldRef(
         sb::buildVarRefExp(stencil_decl),
         gv->get_name());
     rose_util::AppendExprStatement(
@@ -345,10 +341,10 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
   // stencil
   SgVariableDeclaration *d = isSgVariableDeclaration(*members.begin());
   SgExpression *dom_var =
-      rt_builder_->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
-                                        sb::buildVarRefExp(d));
+      builder()->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
+                                      sb::buildVarRefExp(d));
   rose_util::AppendExprStatement(
-      scope, mpi_rt_builder_->BuildDomainSetLocalSize(dom_var));
+      scope, builder()->BuildDomainSetLocalSize(dom_var));
   
   FOREACH(it, members.begin(), members.end()) {
     SgVariableDeclaration *d = isSgVariableDeclaration(*it);
@@ -364,9 +360,9 @@ void MPITranslator::FixGridAddresses(StencilMap *smap,
     SgVariableDeclaration *grid_id = isSgVariableDeclaration(*it);
     LOG_DEBUG() << "grid var created\n";
     SgFunctionCallExp *grid_real_addr
-        = mpi_rt_builder_->BuildGetGridByID(
-            rt_builder_->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
-                                              sb::buildVarRefExp(grid_id)));
+        = builder()->BuildGetGridByID(
+            builder()->BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
+                                            sb::buildVarRefExp(grid_id)));
     si::appendStatement(
         sb::buildAssignStatement(grid_var, grid_real_addr),
         scope);
@@ -509,7 +505,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   // https://mailman.nersc.gov/pipermail/rose-public/2011-July/001063.html
   // This may be solved in the latest EDG4 version.
   SgExprListExp *stencil_min_val =
-      mpi_rt_builder_->BuildStencilOffsetMin(sr);
+      builder()->BuildStencilOffsetMin(sr);
   if (stencil_min_val == NULL) {
     LOG_ERROR() << "Analyzing stencil for finding left-most offset failed\n";
     PSAbort(1);
@@ -522,7 +518,7 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   si::appendExpression(args, sb::buildVarRefExp(stencil_min_var));
 
   SgExprListExp *stencil_max_val =
-      mpi_rt_builder_->BuildStencilOffsetMax(sr);
+      builder()->BuildStencilOffsetMax(sr);
   if (stencil_max_val == NULL) {
     LOG_ERROR() << "Analyzing stencil for finding right-most offset failed\n";
     PSAbort(1);

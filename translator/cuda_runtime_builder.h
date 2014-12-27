@@ -59,14 +59,6 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       const string &member_name,
       const SgExpressionVector &array_indices);
 
-  //! Build code for grid emit.
-  /*!
-    \param grid_exp Grid expression    
-    \param attr GridEmit attribute
-    \param offset_exprs offset expressions
-    \param emit_val Value to emit
-    \return Expression implementing the emit.
-   */
   virtual SgExpression *BuildGridEmit(
       SgExpression *grid_exp,      
       GridEmitAttribute *attr,
@@ -89,10 +81,94 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
       const GridType *gt);
+
+  virtual SgExprListExp *BuildKernelCallArgList(
+      StencilMap *stencil,
+      SgExpressionPtrList &index_args,
+      SgFunctionParameterList *params);
+
+
+  //! Build variables for kernel indices
+  /*!
+    \param stencil Stencil map object
+    \param call_site Call site basic block
+    \param indices Output paramter to return variable declarations
+   */
+  virtual void BuildKernelIndices(
+      StencilMap *stencil,
+      SgBasicBlock *call_site,
+      vector<SgVariableDeclaration*> &indices);
+
+
+  //! Build a code block that sorrounds the call to 1D kernel.
+  /*!
+    The return object is the same as the call_site parameter when the
+    kernel call should be just appended to the block (e.g., 1D and 2D
+    stencil). When loops are introduced to cover the domain (e.g., 3D
+    stencil), the returned call site refers to the inner-most block,
+    where the call should be placed.
+
+    This is not a derived function.
+    
+    \param stencil Stencil map object
+    \param dom_arg The domain argument to StencilMap
+    \param param Function parameter list of the RunKernel function
+    \param indices Kernel index vector
+    \param call_site Current call site block
+    \return Call site for the kernel call
+   */
+  virtual SgScopeStatement *BuildKernelCallPreamble(
+      StencilMap *stencil,      
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  virtual SgBasicBlock *BuildRunKernelBody(
+      StencilMap *stencil, SgFunctionParameterList *param,
+      vector<SgVariableDeclaration*> &indices);
+
+  //! Generates an IF block to exclude indices outside a domain.
+  /*!
+    
+    \param indices The indices to check.
+    \param dom_arg Name of the domain parameter.
+    \param true_stmt Statement to execute if outside the domain
+    \return The IF block.
+   */
+  virtual SgIfStmt *BuildDomainInclusionCheck(
+    const vector<SgVariableDeclaration*> &indices,
+    SgInitializedName *dom_arg, SgStatement *true_stmt);
+
   
  protected:
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       const GridType *gt, bool is_copyout);
+
+  //! Helper function for BuildKernelCallPreamble for 1D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble1D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  //! Helper function for BuildKernelCallPreamble for 2D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble2D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  //! Helper function for BuildKernelCallPreamble for 3D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble3D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+  
 };
 
 } // namespace translator

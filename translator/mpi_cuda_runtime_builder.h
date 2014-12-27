@@ -43,6 +43,15 @@ class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
         is_periodic);
   }
 
+  virtual SgExprListExp *BuildKernelCallArgList(
+      StencilMap *stencil,
+      SgExpressionPtrList &index_args,
+      SgFunctionParameterList *params);
+
+  virtual SgIfStmt *BuildDomainInclusionCheck(
+    const vector<SgVariableDeclaration*> &indices,
+    SgInitializedName *dom_arg, SgStatement *true_stmt);
+  
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;

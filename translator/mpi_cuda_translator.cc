@@ -144,7 +144,7 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
     SgVariableDeclaration* t[] = {x_index, y_index};
     vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
     si::appendStatement(
-        cuda_trans_->BuildDomainInclusionCheck(
+        builder()->BuildDomainInclusionCheck(
             range_checking_idx, dom_arg,
             sb::buildReturnStmt()),
         block);
@@ -153,7 +153,7 @@ SgBasicBlock* MPICUDATranslator::BuildRunKernelBody(
     SgExpression *loop_incr =
         sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
     SgFunctionCallExp *kernel_call
-        = cuda_trans_->BuildKernelCall(stencil, index_args, param);
+        = builder()->BuildKernelCall(stencil, index_args, param);
     SgBasicBlock *loop_body =
         sb::buildBasicBlock(sb::buildExprStatement(kernel_call));
     SgStatement *loop
@@ -267,7 +267,7 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
   vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
 
   si::appendStatement(
-      cuda_trans_->BuildDomainInclusionCheck(
+      builder()->BuildDomainInclusionCheck(
           range_checking_idx, dom_arg,
           sb::buildReturnStmt()),
       block);
@@ -276,7 +276,7 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
   SgExpression *loop_incr =
       sb::buildPlusPlusOp(sb::buildVarRefExp(loop_index));
   SgFunctionCallExp *kernel_call
-      = cuda_trans_->BuildKernelCall(stencil, index_args, param);
+      = builder()->BuildKernelCall(stencil, index_args, param);
   SgBasicBlock *loop_body = sb::buildBasicBlock(
       sb::buildExprStatement(kernel_call));
   SgStatement *loop
@@ -1172,8 +1172,8 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
 
   SgBasicBlock *loop_body = sb::buildBasicBlock();
   SgExprListExp *kernel_args=
-      cuda_trans_->BuildKernelCallArgList(stencil, index_args,
-                                          params);
+      builder()->BuildKernelCallArgList(
+          stencil, index_args, params);
   string kernel_name = stencil->getKernel()->get_name()
       + GetBoundarySuffix(dim, fw);
   SgFunctionDeclaration *kernel =
