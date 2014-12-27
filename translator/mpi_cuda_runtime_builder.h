@@ -52,6 +52,20 @@ class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
   
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
+  virtual SgBasicBlock *BuildRunKernelFuncBody(
+      StencilMap *stencil, SgFunctionParameterList *param,
+      vector<SgVariableDeclaration*> &indices);
+
+  //! Generates a device type corresponding to a given grid type.
+  /*!
+    This is not derived.
+    
+    \param gt The grid type.
+    \return A type object corresponding to the given grid type.
+   */
+  virtual SgType *BuildOnDeviceGridType(GridType *gt);
+  
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;

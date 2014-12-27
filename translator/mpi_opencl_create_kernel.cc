@@ -1,7 +1,6 @@
 #include "translator/mpi_opencl_translator.h"
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"
-#include "translator/SageBuilderEx.h"
 #include "translator/rose_util.h"
 #include "translator/rose_ast_attribute.h"
 

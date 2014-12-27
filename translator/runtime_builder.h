@@ -218,6 +218,13 @@ class RuntimeBuilder {
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *run_kernel_params) = 0;
 
+  //! Build a function declaration that runs a stencil map. 
+  /*!
+    \param s The stencil map object.
+    \return The function declaration.
+   */
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s) = 0;
+
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil The stencil map object.
@@ -225,7 +232,7 @@ class RuntimeBuilder {
     \param indices Output parameter to return generated indices
     \return The body of the run function.
    */
-  virtual SgBasicBlock *BuildRunKernelBody(
+  virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices) = 0;
 

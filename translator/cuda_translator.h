@@ -126,13 +126,6 @@ class CUDATranslator : public ReferenceTranslator {
   virtual SgExprListExp *BuildCUDAKernelArgList(
       int stencil_idx, StencilMap *sm, SgVariableSymbol *sv) const;
 
-  //! Generates a CUDA function declaration that runs a stencil map. 
-  /*!
-    \param s The stencil map object.
-    \return The function declaration.
-   */
-  virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
-
   //! Generates an expression of the x dimension of thread blocks.
   virtual SgExpression *BuildBlockDimX(int nd);
   //! Generates an expression of the y dimension of thread blocks.  
@@ -140,12 +133,6 @@ class CUDATranslator : public ReferenceTranslator {
   //! Generates an expression of the z dimension of thread blocks.
   virtual SgExpression *BuildBlockDimZ(int nd);
 
-  //! Generates a device type corresponding to a given grid type.
-  /*!
-    \param gt The grid type.
-    \return A type object corresponding to the given grid type.
-   */
-  virtual SgType *BuildOnDeviceGridType(GridType *gt) const;
 
   /** add dynamic parameter
    * @param[in/out] parlist ... parameter list

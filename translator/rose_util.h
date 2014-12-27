@@ -335,6 +335,48 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
                                                 SgScopeStatement *scope=NULL);
 
 
+enum CudaFuncCache {
+  cudaFuncCachePreferNone,
+  cudaFuncCachePreferShared,
+  cudaFuncCachePreferL1
+};
+
+enum CudaDimentionIdx {
+  kBlockDimX,
+  kBlockDimY,
+  kBlockDimZ,
+  kBlockIdxX,
+  kBlockIdxY,
+  kBlockIdxZ,
+  kThreadIdxX,
+  kThreadIdxY,
+  kThreadIdxZ
+};
+
+SgEnumVal* BuildEnumVal(unsigned int value, SgEnumDeclaration* decl);
+
+SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
+    SgFunctionSymbol *kernel,
+    const CudaFuncCache cache_config,
+    SgScopeStatement *global_scope);
+
+SgVariableDeclaration *BuildDim3Declaration(const SgName &name,
+                                            SgExpression *dimx,
+                                            SgExpression *dimy,
+                                            SgExpression *dimz,
+                                            SgScopeStatement *scope);
+
+SgCudaKernelCallExp *BuildCudaKernelCallExp(SgFunctionRefExp *func_ref,
+                                            SgExprListExp *args,
+                                            SgCudaKernelExecConfig *config);
+
+SgCudaKernelExecConfig *BuildCudaKernelExecConfig(SgExpression *grid,
+                                                  SgExpression *blocks,
+                                                  SgExpression *shared = NULL,
+                                                  SgExpression *stream = NULL);
+
+SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx);
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

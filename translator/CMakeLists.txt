@@ -45,7 +45,7 @@ set (PHYSISC_SRC configuration.cc
   def_analysis.cc map.cc run.cc rose_traversal.cc
   rose_util.cc rose_fortran.cc ast_processing.cc
   translator.cc reference_translator.cc kernel.cc
-  alias_analysis.cc SageBuilderEx.cc
+  alias_analysis.cc 
   stencil_analysis.cc stencil_range.cc translation_util.cc
   reference_runtime_builder.cc runtime_builder.cc
   rose_ast_attribute.cc reduce.cc fortran_output_fix.cc

@@ -64,7 +64,7 @@ class ReferenceTranslator : public Translator {
   virtual void RemoveEmitDummyExp(SgExpression *emit);
   virtual void TranslateSet(SgFunctionCallExp *node, SgInitializedName *gv);
   virtual void TranslateMap(SgFunctionCallExp *node, StencilMap *s);
-  virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
+  //virtual SgFunctionDeclaration *BuildRunKernel(StencilMap *s);
   virtual SgFunctionDeclaration *BuildRunInteriorKernel(StencilMap *s) {
     return NULL;
   }

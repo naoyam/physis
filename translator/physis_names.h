@@ -9,6 +9,7 @@
 #define PS_GRID_EMIT_NAME "emit"
 #define PS_GRID_EMIT_UTYPE_NAME "__PSGridEmitUtype"
 #define PS_STENCIL_MAP_NAME "__PSStencilMap"
+#define PS_STENCIL_MAP_STENCIL_PARAM_NAME "s"
 #define PS_STENCIL_MAP_RB_NAME "__PSStencilMapRedBlack"
 #define PS_STENCIL_MAP_R_NAME "__PSStencilMapRed"
 #define PS_STENCIL_MAP_B_NAME "__PSStencilMapBlack"
