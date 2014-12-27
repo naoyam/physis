@@ -1214,7 +1214,7 @@ SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble2D(
     SgFunctionParameterList *param,    
     vector<SgVariableDeclaration*> &indices,
     SgScopeStatement *call_site) {
-  SgVariableDeclaration* t[] = {indices[0], indices[2]};
+  SgVariableDeclaration* t[] = {indices[0], indices[1]};
   vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
   si::appendStatement(
       BuildDomainInclusionCheck(
