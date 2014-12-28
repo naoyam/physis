@@ -17,7 +17,7 @@ namespace translator {
 
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
     SgScopeStatement *global_scope):
-    RuntimeBuilder(global_scope) {
+    BuilderInterface(), gs_(global_scope) {
   dom_type_ = isSgTypedefType(
       si::lookupNamedTypeInParentScopes(PS_DOMAIN_INTERNAL_TYPE_NAME,
                                         gs_));
@@ -757,5 +757,49 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(StencilMap *s
   return runFunc;
   
 }
+
+
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffset(const StencilRange &sr,
+                                                           bool is_max) {
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  IntVector offset_min, offset_max;
+  int nd = sr.num_dims();
+  if (sr.IsEmpty()) {
+    for (int i = 0; i < nd; ++i) {
+      offset_min.push_back(0);
+      offset_max.push_back(0);
+    }
+  } else if (!sr.GetNeighborAccess(offset_min, offset_max)) {
+    LOG_DEBUG() << "Stencil access is not regular: "
+                << sr << "\n";
+    return NULL;
+  }
+  for (int i = 0; i < (int)offset_min.size(); ++i) {
+    PSIndex v = is_max ? offset_max[i] : offset_min[i];
+    si::appendExpression(exp_list, sb::buildIntVal(v));
+  }
+  return exp_list;
+}
+
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMax(const StencilRange &sr) {
+  return BuildStencilOffset(sr, true);
+}
+
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
+  return BuildStencilOffset(sr, false);
+}
+
+SgExprListExp *ReferenceRuntimeBuilder::BuildSizeExprList(const Grid *g) {
+  SgExprListExp *exp_list = sb::buildExprListExp();
+  SgExpressionPtrList &args = g->new_call()->get_args()->get_expressions();  
+  int nd = g->getType()->rank();
+  for (int i = 0; i < PS_MAX_DIM; ++i) {
+    SgExpression *e = i >= nd ?
+        sb::buildIntVal(0) : si::copyExpression(args[i]);
+    si::appendExpression(exp_list, e);
+  }
+  return exp_list;
+}
+
 } // namespace translator
 } // namespace physis

@@ -5,12 +5,12 @@
 
 #include "translator/translator_common.h"
 #include "translator/map.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 
 namespace physis {
 namespace translator {
 
-class ReferenceRuntimeBuilder: public RuntimeBuilder {
+class ReferenceRuntimeBuilder: virtual public BuilderInterface {
  public:
   ReferenceRuntimeBuilder(SgScopeStatement *global_scope);
   virtual ~ReferenceRuntimeBuilder() {}
@@ -127,6 +127,13 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
       SgExpression *stencil);
   virtual SgExpression *BuildStencilDomMaxRef(
       SgExpression *stencil, int dim);
+
+  virtual SgExprListExp *BuildStencilOffsetMax(
+      const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilOffsetMin(
+      const StencilRange &sr);
+
+  virtual SgExprListExp *BuildSizeExprList(const Grid *g);  
   
   virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s);
   virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil);
@@ -153,11 +160,14 @@ class ReferenceRuntimeBuilder: public RuntimeBuilder {
   
  protected:
   static const std::string  grid_type_name_;
+  SgScopeStatement *gs_;
   SgTypedefType *dom_type_;
   SgClassDeclaration *GetGridDecl();
   virtual SgExpression *BuildDomFieldRef(SgExpression *domain,
                                          string fname);
   
+  virtual SgExprListExp *BuildStencilOffset(
+      const StencilRange &sr, bool is_max);
   
 };
 

@@ -3,7 +3,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 #include <algorithm>
@@ -60,7 +60,7 @@ static void build_index_var_list_from_offset_exp(
 static SgExpression *build_offset_periodic(SgExpression *offset_exp,
                                            int dim, int index_offset,
                                            SgExpression *gvref,
-                                           RuntimeBuilder *builder) {
+                                           BuilderInterface *builder) {
   /*
     if (index_offset > 0)
     then
@@ -123,7 +123,7 @@ static SgExpression *build_offset_periodic(SgExpression *offset_exp,
 
 static void replace_offset(SgVariableDeclaration *base_offset,
                            SgExpressionPtrList &offset_exprs,
-                           RuntimeBuilder *builder) {
+                           BuilderInterface *builder) {
   FOREACH (it, offset_exprs.begin(), offset_exprs.end()) {
     SgExpression *original_offset_expr = *it;
     GridOffsetAttribute *offset_attr =
@@ -170,7 +170,7 @@ static void build_center_stencil_index_list(StencilIndexList &sil) {
   return;
 }
 
-static void do_offset_cse(RuntimeBuilder *builder,
+static void do_offset_cse(BuilderInterface *builder,
                           SgForStatement *loop,
                           SgExpressionVector &offset_exprs) {
   SgBasicBlock *loop_body = isSgBasicBlock(loop->get_loop_body());
@@ -268,7 +268,7 @@ static GridOffsetMap find_candidates(SgForStatement *loop) {
 void offset_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);

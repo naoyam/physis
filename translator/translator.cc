@@ -31,7 +31,7 @@ Translator::Translator(const Configuration &config):
 }
 
 void Translator::SetUp(SgProject *project, TranslationContext *context,
-                       RuntimeBuilder *rt_builder) {
+                       BuilderInterface *rt_builder) {
   assert(project);
   project_ = project;
   src_ = isSgSourceFile((*project_)[0]);

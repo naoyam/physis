@@ -33,14 +33,14 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void FixGridType();
 
   virtual CUDARuntimeBuilder *builder() {
-    return static_cast<CUDARuntimeBuilder*>(rt_builder_);
+    return dynamic_cast<CUDARuntimeBuilder*>(rt_builder_);
   }
 
   
  public:
 
   virtual void SetUp(SgProject *project, TranslationContext *context,
-                     RuntimeBuilder *rt_builder);
+                     BuilderInterface *rt_builder);
 
   virtual void appendNewArgExtra(SgExprListExp *args,
                                  Grid *g,

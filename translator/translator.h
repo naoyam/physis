@@ -17,14 +17,14 @@ class GridType;
 class StencilMap;
 class Run;
 class Grid;
-class RuntimeBuilder;
+class BuilderInterface;
 
 class Translator: public rose_util::RoseASTTraversal {
  public:
   Translator(const Configuration &config);
   virtual ~Translator() {}
   virtual void SetUp(SgProject *project, TranslationContext *context,
-                     RuntimeBuilder *rt_builder);  
+                     BuilderInterface *rt_builder);  
   //! Translate the AST given by the SetUp function.
   /*!
     Call SetUp before calling this. Translator instances can be reused
@@ -56,11 +56,11 @@ class Translator: public rose_util::RoseASTTraversal {
   string grid_type_name_;
   string target_specific_macro_;
 
-  RuntimeBuilder *rt_builder_;
+  BuilderInterface *rt_builder_;
   bool is_fortran_;
 
   virtual void buildGridDecl();
-  virtual RuntimeBuilder *builder() {
+  virtual BuilderInterface *builder() {
     return rt_builder_;
   }
   virtual void ProcessUserDefinedPointType(

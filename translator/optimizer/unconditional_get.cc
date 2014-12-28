@@ -3,7 +3,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 #include <algorithm>
@@ -88,7 +88,7 @@ static SgVarRefExp *ExtractVarRef(SgExpression *exp) {
 
 static SgExpression *BuildGetOffsetCenter(
     SgExpression *get_exp,
-    RuntimeBuilder *builder,
+    BuilderInterface *builder,
     SgScopeStatement *scope) {
   GridGetAttribute *grid_get_attr =
       rose_util::GetASTAttribute<GridGetAttribute>(get_exp);
@@ -108,7 +108,7 @@ static SgExpression *BuildGetOffsetCenter(
 
 static SgExpression *BuildGetOffset(
     SgExpression *base_get_exp,
-    RuntimeBuilder *builder,
+    BuilderInterface *builder,
     SgScopeStatement *scope,
     SgExpression *paired_get_exp) {
   GridGetAttribute *grid_get_attr =
@@ -142,7 +142,7 @@ static SgExpression *BuildGetOffset(
 
 static void ProcessIfStmtStage1(SgExpression *get_exp,
                                 SgIfStmt *if_stmt,
-                                RuntimeBuilder *builder,
+                                BuilderInterface *builder,
                                 SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
   GridVarAttribute *gva = rose_util::GetASTAttribute<
@@ -207,7 +207,7 @@ static void ProcessIfStmtStage1(SgExpression *get_exp,
 
 static void ProcessIfStmtStage2(SgExpression *get_exp,
                                 SgIfStmt *if_stmt,
-                                RuntimeBuilder *builder,
+                                BuilderInterface *builder,
                                 SgExpression *&paired_get_exp,
                                 SgVariableDeclaration *&cond_var) {
   // precondition: get_exp is not replaced with a local var
@@ -308,7 +308,7 @@ static void ProcessIfStmtStage2(SgExpression *get_exp,
 
 static void ProcessIfStmt(SgExpression *get_exp,
                           SgIfStmt *if_stmt,
-                          RuntimeBuilder *builder) {
+                          BuilderInterface *builder) {
   /*
     Step 1: Simplify the if block by moving the get expression out of 
     the conditional block to a separate new conditional block.
@@ -376,7 +376,7 @@ static void ProcessConditionalExp(SgExpression *get_exp,
 void unconditional_get(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   // Traverse grid gets in stencil kernels

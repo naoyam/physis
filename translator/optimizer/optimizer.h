@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_OPTIMIZER_OPTIMIZER_H_
 #define PHYSIS_TRANSLATOR_OPTIMIZER_OPTIMIZER_H_
@@ -12,7 +6,7 @@
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/configuration.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 
 namespace physis {
 namespace translator {
@@ -22,7 +16,7 @@ class Optimizer {
  public:
   Optimizer(SgProject *proj,
             physis::translator::TranslationContext *tx,
-            physis::translator::RuntimeBuilder *builder,
+            physis::translator::BuilderInterface *builder,
             physis::translator::Configuration *config)
       : proj_(proj), tx_(tx), builder_(builder), config_(config) {
     if (config_->LookupFlag("OPT_OFFSET_COMP")) {
@@ -52,7 +46,7 @@ class Optimizer {
  protected:
   SgProject *proj_;  
   physis::translator::TranslationContext *tx_;
-  physis::translator::RuntimeBuilder *builder_;
+  physis::translator::BuilderInterface *builder_;
   physis::translator::Configuration *config_;
   virtual void DoStage1();
   virtual void DoStage2();  

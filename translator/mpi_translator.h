@@ -19,7 +19,7 @@ class MPITranslator: public ReferenceTranslator {
  protected:
   bool flag_mpi_overlap_;
   virtual MPIRuntimeBuilder *builder() {
-    return static_cast<MPIRuntimeBuilder*>(rt_builder_);
+    return dynamic_cast<MPIRuntimeBuilder*>(rt_builder_);
   }
   virtual void TranslateInit(SgFunctionCallExp *node);
   virtual void TranslateRun(SgFunctionCallExp *node,

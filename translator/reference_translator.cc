@@ -9,7 +9,7 @@
 #include "translator/ast_processing.h"
 #include "translator/translation_context.h"
 #include "translator/reference_runtime_builder.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/physis_names.h"
 #include "translator/rose_fortran.h"
 
@@ -101,7 +101,7 @@ void ReferenceTranslator::ValidateASTConsistency() {
 
 void ReferenceTranslator::SetUp(SgProject *project,
                                 TranslationContext *context,
-                                RuntimeBuilder *rt_builder) {
+                                BuilderInterface *rt_builder) {
   Translator::SetUp(project, context, rt_builder);
 }
 

@@ -7,7 +7,7 @@
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
 #include "translator/ast_processing.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 namespace si = SageInterface;
@@ -135,7 +135,7 @@ static void AttachStencilIndexVarAttribute(SgFunctionDeclaration *run_kernel) {
 void kernel_inlining(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   //si::fixVariableReferences(proj);

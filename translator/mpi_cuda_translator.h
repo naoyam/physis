@@ -24,13 +24,13 @@ class MPICUDATranslator: public MPITranslator {
   std::set<SgFunctionSymbol*> cache_config_done_;
   virtual void FixAST();
   virtual MPICUDARuntimeBuilder *builder() {
-    return static_cast<MPICUDARuntimeBuilder*>(rt_builder_);
+    return dynamic_cast<MPICUDARuntimeBuilder*>(rt_builder_);
   }
  public:
   MPICUDATranslator(const Configuration &config);
   virtual ~MPICUDATranslator();
   virtual void SetUp(SgProject *project, TranslationContext *context,
-                     RuntimeBuilder *rt_builder);
+                     BuilderInterface *rt_builder);
   virtual void Finish();
   //! Generates an IF block to exclude indices outside an inner domain.
   /*!

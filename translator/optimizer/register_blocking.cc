@@ -7,7 +7,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 namespace si = SageInterface;
@@ -59,14 +59,14 @@ class RegisterBlocking {
  public:
   SgProject *proj_;
   TranslationContext *tx_;
-  RuntimeBuilder *builder_;
+  BuilderInterface *builder_;
   SgFunctionDeclaration *run_kernel_func_;
   SgForStatement *target_loop_;
   RunKernelLoopAttribute *loop_attr_;
   
   RegisterBlocking(SgProject *proj,
                    TranslationContext *tx,
-                   RuntimeBuilder *builder,
+                   BuilderInterface *builder,
                    SgFunctionDeclaration *run_kernel_func,
                    SgForStatement *target_loop):
       proj_(proj), tx_(tx), builder_(builder),
@@ -706,7 +706,7 @@ namespace pass {
 void register_blocking(
     SgProject *proj,
     TranslationContext *tx,
-    RuntimeBuilder *builder) {    
+    BuilderInterface *builder) {    
   pre_process(proj, tx, __FUNCTION__);
 
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);
