@@ -12,8 +12,9 @@ namespace translator {
 
 class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
  public:
-  MPIRuntimeBuilder(SgScopeStatement *global_scope):
-      ReferenceRuntimeBuilder(global_scope) {}
+  MPIRuntimeBuilder(SgScopeStatement *global_scope,
+                    BuilderInterface *delegator=NULL):
+      ReferenceRuntimeBuilder(global_scope, delegator) {}
   virtual ~MPIRuntimeBuilder() {}
   virtual SgFunctionCallExp *BuildIsRoot();
   virtual SgFunctionCallExp *BuildGetGridByID(SgExpression *id_exp);

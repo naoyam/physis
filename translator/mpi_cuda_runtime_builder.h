@@ -22,10 +22,11 @@ SgExpression *BuildStreamBoundaryKernel(int idx);
 class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                              virtual public CUDABuilderInterface {
  public:
-  MPICUDARuntimeBuilder(SgScopeStatement *global_scope):
-      ReferenceRuntimeBuilder(global_scope),
+  MPICUDARuntimeBuilder(SgScopeStatement *global_scope,
+                        BuilderInterface *delegator=NULL):
+      ReferenceRuntimeBuilder(global_scope, delegator),
       MPIRuntimeBuilder(global_scope),
-      cuda_rt_builder_(new CUDARuntimeBuilder(global_scope))
+      cuda_rt_builder_(new CUDARuntimeBuilder(global_scope, this))
   {}
   
   virtual ~MPICUDARuntimeBuilder() {
@@ -99,10 +100,13 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       const GridType *gt) {
     return NULL;
   }
+  
+  // RunKernel(int offset1, int offset2, Domain *dom, [original params]) -> dom
+  virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
+      SgFunctionParameterList *pl, int dim);
 
   virtual SgScopeStatement *BuildKernelCallPreamble(
       StencilMap *stencil,      
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -110,7 +114,6 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 1D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble1D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -118,7 +121,6 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 2D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble2D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -126,7 +128,6 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 3D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble3D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);

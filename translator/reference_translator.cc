@@ -1112,9 +1112,6 @@ void ReferenceTranslator::TranslateRun(SgFunctionCallExp *node,
 //   return new ReferenceRuntimeBuilder();
 // }
 
-string ReferenceTranslator::GetStencilDomName() const {
-  return string("dom");
-}
 
 void ReferenceTranslator::TranslateSet(SgFunctionCallExp *node,
                                        SgInitializedName *gv) {

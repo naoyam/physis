@@ -38,7 +38,9 @@ class CUDABuilderInterface: virtual public BuilderInterface {
       const GridType *gt) = 0;
   virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
       const GridType *gt) = 0;
-  
+
+  virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
+      SgFunctionParameterList *pl, int dim) = 0;
 
   //! Build a code block that sorrounds the call to 1D kernel.
   /*!
@@ -49,7 +51,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
     where the call should be placed.
     
     \param stencil Stencil map object
-    \param dom_arg The domain argument to StencilMap
     \param param Function parameter list of the RunKernel function
     \param indices Kernel index vector
     \param call_site Current call site block
@@ -57,7 +58,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
    */
   virtual SgScopeStatement *BuildKernelCallPreamble(
       StencilMap *stencil,      
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site) = 0;
@@ -65,7 +65,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
   //! Helper function for BuildKernelCallPreamble for 1D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble1D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site) = 0;
@@ -73,7 +72,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
   //! Helper function for BuildKernelCallPreamble for 2D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble2D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site) = 0;
@@ -81,7 +79,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
   //! Helper function for BuildKernelCallPreamble for 3D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble3D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site) = 0;

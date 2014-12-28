@@ -21,6 +21,8 @@
 #define LOOP_INDEX_VAR_NAME4 "i4"
 #define LOOP_INDEX_VAR_NAME5 "i5"
 #define PS_STENCIL_RUN_NAME "PSStencilRun"
+#define PS_STENCIL_MAP_DOM_NAME "dom"
+#define PS_RUN_KERNEL_PARAM_OFFSET_NAME "offset"
 
 #define PS_DOMAIN1D_TYPE_NAME "PSDomain1D"
 #define PS_DOMAIN2D_TYPE_NAME "PSDomain2D"
@@ -29,6 +31,7 @@
 #define PS_DOMAIN_INTERNAL_TYPE_NAME "__PSDomain"
 #define PS_INDEX_TYPE_NAME "PSIndex"
 #define PS_GRID_DIM_NAME "PSGridDim"
+#define PS_GRID_DIM_DEV_NAME "__PSGridDimDiv"
 #define PSF_GRID_NEW_NAME "PSGridNew"
 #define PS_GRID_GET_ID_NAME "__PSGridGetID"
 #define PSF_GRID_GET_ID_NAME "PSGridGetID"
