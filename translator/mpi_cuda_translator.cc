@@ -48,7 +48,7 @@ MPICUDATranslator::MPICUDATranslator(const Configuration &config)
   if (flag_multistream_boundary_) {
     LOG_INFO() << "Multistream boundary enabled\n";
   }
-  validate_ast_ = false; // TODO (MPI-CUDA AST validation)
+  validate_ast_ = true;
 }
 
 MPICUDATranslator::~MPICUDATranslator() {
@@ -249,6 +249,54 @@ SgIfStmt *MPICUDATranslator::BuildDomainInclusionInnerCheck(
   return ifstmt;
 }
 
+static void AppendSetCacheConfig(SgFunctionSymbol *fs,
+                                 cu::CudaFuncCache config,
+                                 SgScopeStatement *scope) {
+  PSAssert(fs);
+  si::appendStatement(
+      sb::buildExprStatement(
+          cu::BuildCudaCallFuncSetCacheConfig(
+              fs, config)),
+      scope);
+}
+
+static void AppendSetCacheConfig(const string &func_name,
+                                 cu::CudaFuncCache config,
+                                 SgScopeStatement *scope) {
+  AppendSetCacheConfig(
+      si::lookupFunctionSymbolInParentScopes(func_name),
+      config, scope);
+}
+
+void MPICUDATranslator::SetCacheConfig(
+    StencilMap *smap, SgFunctionSymbol *fs,
+    SgScopeStatement *function_body, bool overlap_enabled) {
+  // Refactoring: This block is for cache configuration.
+  if (cache_config_done_.find(fs) == cache_config_done_.end()) {
+    AppendSetCacheConfig(fs, cu::cudaFuncCachePreferL1,
+                         function_body);
+    cache_config_done_.insert(fs);
+    if (overlap_enabled) {
+      if (flag_multistream_boundary_) {
+        for (int i = 0; i < smap->getNumDim(); ++i) {
+          for (int j = 0; j < 2; ++j) {
+            AppendSetCacheConfig(
+                smap->GetRunName() + GetBoundarySuffix(i, j),
+                cu::cudaFuncCachePreferL1, function_body);
+          }
+        }
+      } else {
+        AppendSetCacheConfig(
+            smap->GetRunName() + GetBoundarySuffix(),
+            cu::cudaFuncCachePreferL1, function_body);
+      }
+      AppendSetCacheConfig(
+          ru::getFunctionSymbol(smap->run_inner()),
+          cu::cudaFuncCachePreferL1, function_body);
+    }
+  }
+}
+
 // REFACTORING
 void MPICUDATranslator::ProcessStencilMap(
     StencilMap *smap,  int stencil_map_index,
@@ -285,64 +333,17 @@ void MPICUDATranslator::ProcessStencilMap(
                                remote_grids, load_statements,
                                overlap_eligible, overlap_width);
   bool overlap_enabled = flag_mpi_overlap_ &&  overlap_eligible;
-  if (overlap_enabled) {
-    LOG_INFO() << "Generating overlapping code\n";
-  } else {
-    LOG_INFO() << "Generating non-overlapping code\n";    
-  }
+
+  LOG_INFO() << (overlap_enabled ?
+                 "Generating overlapping code\n" :
+                 "Generating non-overlapping code\n");
+
   // run kernel function
   SgFunctionSymbol *fs = ru::getFunctionSymbol(smap->run());
   PSAssert(fs);
 
-  // Refactoring: This block is for cache configuration.
-  if (cache_config_done_.find(fs) == cache_config_done_.end()) {
-    SgFunctionCallExp *cache_config =
-        cu::BuildCudaCallFuncSetCacheConfig(
-            fs, cu::cudaFuncCachePreferL1,
-            global_scope_);
-    si::appendStatement(sb::buildExprStatement(cache_config),
-                        function_body);
-    cache_config_done_.insert(fs);
-    if (overlap_enabled) {
-      if (flag_multistream_boundary_) {
-        for (int i = 0; i < nd; ++i) {
-          for (int j = 0; j < 2; ++j) {
-            SgFunctionSymbol *fs_boundary =
-                si::lookupFunctionSymbolInParentScopes(
-                    smap->GetRunName() + GetBoundarySuffix(i, j));
-            PSAssert(fs_boundary);
-            si::appendStatement(
-                sb::buildExprStatement(
-                    cu::BuildCudaCallFuncSetCacheConfig(
-                        fs_boundary, cu::cudaFuncCachePreferL1,
-                        global_scope_)),
-                function_body);
-          }
-        }
-      } else {
-        SgFunctionSymbol *fs_boundary =
-            si::lookupFunctionSymbolInParentScopes(
-                smap->GetRunName() + GetBoundarySuffix());
-        PSAssert(fs_boundary);
-        si::appendStatement(
-            sb::buildExprStatement(
-                cu::BuildCudaCallFuncSetCacheConfig(
-                    fs_boundary, cu::cudaFuncCachePreferL1,
-                    global_scope_)),
-            function_body);
-      }
-      
-      SgFunctionSymbol *fs_inner =
-          ru::getFunctionSymbol(smap->run_inner());
-      PSAssert(fs_inner);
-      si::appendStatement(
-          sb::buildExprStatement(
-              cu::BuildCudaCallFuncSetCacheConfig(
-                  fs_inner, cu::cudaFuncCachePreferL1,
-                  global_scope_)),
-          function_body);
-    }
-  }
+  // Cache config is set globally by the runtime
+  //SetCacheConfig(smap, fs, function_body, overlap_enabled);
   
   // Call the stencil kernel
   // Build an argument list by expanding members of the parameter struct
@@ -352,23 +353,17 @@ void MPICUDATranslator::ProcessStencilMap(
   SgClassDefinition *stencil_def = smap->GetStencilTypeDefinition();
   PSAssert(stencil_def);
 
-  SgVariableDeclaration *grid_dim = cuda_trans_->BuildGridDimDeclaration(
+  SgVariableDeclaration *grid_dim = builder()->BuildGridDimDeclaration(
       stencil_name + "_grid_dim",
       smap->getNumDim(),
-      builder()->BuildGetLocalSize(Int(0)),
       builder()->BuildGetLocalSize(Int(1)),
+      builder()->BuildGetLocalSize(Int(2)),
       cuda_trans_->BuildBlockDimX(smap->getNumDim()),
       cuda_trans_->BuildBlockDimY(smap->getNumDim()),
       function_body);
   
   si::appendStatement(grid_dim, function_body);
   
-  // Append the local offset
-  for (int i = 0; i < smap->getNumDim()-1; ++i) {
-    si::appendExpression(args, builder()->BuildGetLocalOffset(Int(i)));
-    if (!flag_multistream_boundary_)
-      si::appendExpression(args_boundary, builder()->BuildGetLocalOffset(Int(i)));
-  }
   if (!flag_multistream_boundary_)
     si::appendExpression(args_boundary, Int(overlap_width));
 
@@ -399,6 +394,13 @@ void MPICUDATranslator::ProcessStencilMap(
       si::appendExpression(args, arg);
     }
     si::appendExpression(args_boundary, si::copyExpression(arg));
+  }
+
+  // Append the local offset
+  for (int i = 1; i < smap->getNumDim(); ++i) {
+    si::appendExpression(args, builder()->BuildGetLocalOffset(Int(i)));
+    if (!flag_multistream_boundary_)
+      si::appendExpression(args_boundary, builder()->BuildGetLocalOffset(Int(i)));
   }
 
   // Generate Kernel invocation code
@@ -526,7 +528,6 @@ void MPICUDATranslator::ProcessStencilMap(
                                     args, cuda_config);
     si::appendStatement(sb::buildExprStatement(c), loop_body);
   }
-  //appendGridSwap(smap, stencil_name, true, loop_body);
   DeactivateRemoteGrids(smap, sdecl, loop_body,
                         remote_grids);
 

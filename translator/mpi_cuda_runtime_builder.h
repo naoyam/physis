@@ -129,6 +129,15 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   virtual SgExpression *BuildGridGetDev(SgExpression *grid_var,
                                         GridType *gt);
 
+  virtual SgVariableDeclaration *BuildGridDimDeclaration(
+      const SgName &name,
+      int dim,
+      SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
+      SgExpression *block_dim_x, SgExpression *block_dim_y,
+      SgScopeStatement *scope = NULL);
+
+  // Not derived functions
+
   //! Build a call to the GetLocalSize function in the MPI-CUDA runtime
   /*
     Not a derived function.
@@ -156,6 +165,7 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
     \param idx Boundary kernel index
    */
   virtual SgExpression *BuildStreamBoundaryKernel(int idx);
+
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;

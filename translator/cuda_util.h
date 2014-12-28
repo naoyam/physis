@@ -32,7 +32,8 @@ SgFunctionCallExp *BuildCUDAMemcpyDeviceToHost(SgExpression *dst,
 enum CudaFuncCache {
   cudaFuncCachePreferNone,
   cudaFuncCachePreferShared,
-  cudaFuncCachePreferL1
+  cudaFuncCachePreferL1,
+  cudaFuncCachePreferEqual
 };
 
 enum CudaDimentionIdx {
@@ -49,8 +50,7 @@ enum CudaDimentionIdx {
 
 SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
-    const CudaFuncCache cache_config,
-    SgScopeStatement *global_scope);
+    const CudaFuncCache cache_config);
 
 SgVariableDeclaration *BuildDim3Declaration(const SgName &name,
                                             SgExpression *dimx,

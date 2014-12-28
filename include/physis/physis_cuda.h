@@ -285,13 +285,16 @@ extern "C" {
 #ifdef PHYSIS_USER
   typedef void* cudaStream_t;
   typedef int cudaError_t;
-  extern cudaError_t cudaThreadSynchronize(void);
   extern cudaError_t cudaStreamSynchronize(cudaStream_t);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
-  // ceil is also used. Ensure its signature is visible to the
-  // translator
   extern double ceil(double x);
+  enum cudaFuncCache {
+    cudaFuncCachePreferNone,
+    cudaFuncCachePreferShared,
+    cudaFuncCachePreferL1,
+    cudaFuncCachePreferEqual
+  };
 #endif
 
 #ifdef __cplusplus

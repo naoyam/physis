@@ -457,10 +457,15 @@ extern "C" {
   typedef int cudaError_t;
   extern cudaStream_t stream_inner;
   extern cudaStream_t stream_boundary_kernel;  
-  extern cudaError_t cudaThreadSynchronize(void);
   extern cudaError_t cudaStreamSynchronize(cudaStream);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
+  enum cudaFuncCache {
+    cudaFuncCachePreferNone,
+    cudaFuncCachePreferShared,
+    cudaFuncCachePreferL1,
+    cudaFuncCachePreferEqual
+  };
 #endif
   
 

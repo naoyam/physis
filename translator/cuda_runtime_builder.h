@@ -152,6 +152,13 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
+
+  virtual SgVariableDeclaration *BuildGridDimDeclaration(
+      const SgName &name,
+      int dim,
+      SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
+      SgExpression *block_dim_x, SgExpression *block_dim_y,
+      SgScopeStatement *scope = NULL);
   
  protected:
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(

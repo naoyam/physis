@@ -23,6 +23,7 @@ void InitCUDA(int my_rank, int num_local_processes) {
   if (!physis::runtime::CheckCudaCapabilities(2, 0)) {
     PSAbort(1);
   }
+  CUDA_SAFE_CALL(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));  
   CUDA_SAFE_CALL(cudaStreamCreate(&stream_inner));
   CUDA_SAFE_CALL(cudaStreamCreate(&stream_boundary_copy));
   for (int i = 0; i < num_stream_boundary_kernel; ++i) {

@@ -1358,6 +1358,37 @@ SgExpression *CUDARuntimeBuilder::BuildGridGetDev(SgExpression *grid_var,
           sb::buildPointerType(Builder()->BuildOnDeviceGridType(gt))));
 }
 
+SgVariableDeclaration *CUDARuntimeBuilder::BuildGridDimDeclaration(
+    const SgName &name,
+    int dim,
+    SgExpression *dom_dim_x,
+    SgExpression *dom_dim_y,    
+    SgExpression *block_dim_x,
+    SgExpression *block_dim_y,
+    SgScopeStatement *scope) {
+  SgExpression *dim_x =
+      sb::buildDivideOp(
+          dom_dim_x,
+          sb::buildCastExp(block_dim_x, sb::buildDoubleType()));
+  dim_x = BuildFunctionCall("ceil", dim_x);
+  dim_x = sb::buildCastExp(dim_x, sb::buildIntType());
+  SgExpression *dim_y = NULL;  
+  if (dim >= 2) {
+    dim_y = sb::buildDivideOp(
+        dom_dim_y, sb::buildCastExp(block_dim_y,
+                                    sb::buildDoubleType()));
+    dim_y = BuildFunctionCall("ceil", dim_y);
+    dim_y = sb::buildCastExp(dim_y, sb::buildIntType());
+  } else {
+    dim_y = Int(1);
+  }
+  SgExpression *dim_z = Int(1);
+  SgVariableDeclaration *grid_dim =
+      cu::BuildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
+  return grid_dim;
+}
+
+
 } // namespace translator
 } // namespace physis
 
