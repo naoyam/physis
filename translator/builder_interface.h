@@ -29,6 +29,7 @@ SgFunctionCallExp *BuildDomainGetBoundary(SgExpression *dom,
 //! Pure interface class defining builder methods
 class BuilderInterface {
  public:
+  virtual ~BuilderInterface() {}
   //!
   /*!
     \param 

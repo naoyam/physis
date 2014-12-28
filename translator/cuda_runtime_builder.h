@@ -16,6 +16,7 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
  public:
   CUDARuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope) {}
+  virtual ~CUDARuntimeBuilder() {}
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
       SgFunctionDeclaration *run_kernel);

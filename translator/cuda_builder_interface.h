@@ -13,6 +13,8 @@ namespace translator {
 class CUDABuilderInterface: virtual public BuilderInterface {
  public:
 
+  virtual ~CUDABuilderInterface() {}
+
   //! Generates a device type corresponding to a given grid type.
   /*!
     This is not derived.
