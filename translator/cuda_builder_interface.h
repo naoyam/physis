@@ -23,6 +23,10 @@ class CUDABuilderInterface: virtual public BuilderInterface {
    */
   virtual SgType *BuildOnDeviceGridType(GridType *gt) = 0;
 
+  //! Get the pointer to the object to be used on the device
+  virtual SgExpression *BuildGridGetDev(SgExpression *grid_var,
+                                        GridType *gt) = 0;
+
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,
       const GridType *gt) = 0;

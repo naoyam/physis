@@ -11,14 +11,6 @@
 namespace physis {
 namespace translator {
 
-// REFACTORING: move these into the builder class
-SgFunctionCallExp *BuildGridGetDev(SgExpression *grid_var);
-SgFunctionCallExp *BuildGetLocalSize(SgExpression *dim);
-SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim);
-SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
-                                     SgExpression *width);
-SgExpression *BuildStreamBoundaryKernel(int idx);
-
 class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                              virtual public CUDABuilderInterface {
  public:
@@ -134,6 +126,36 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
 
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
   
+  virtual SgExpression *BuildGridGetDev(SgExpression *grid_var,
+                                        GridType *gt);
+
+  //! Build a call to the GetLocalSize function in the MPI-CUDA runtime
+  /*
+    Not a derived function.
+   */
+  virtual SgFunctionCallExp *BuildGetLocalSize(SgExpression *dim);
+
+  //! Build a call to the GetLocalOffset function in the MPI-CUDA runtime
+  /*
+    Not a derived function.
+   */
+  virtual SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim);
+
+  //! Build a call to the DomainShrink function in the MPI-CUDA runtime
+  /*
+    Not a derived function.
+   */
+  virtual SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
+                                               SgExpression *width);
+  
+  //! Build an object referencing to a boundary kernel
+  /*
+
+    Not a derived function.
+    
+    \param idx Boundary kernel index
+   */
+  virtual SgExpression *BuildStreamBoundaryKernel(int idx);
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;

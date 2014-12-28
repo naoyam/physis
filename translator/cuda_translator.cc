@@ -8,7 +8,7 @@
 #include "translator/cuda_runtime_builder.h"
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"
-#include "translator/cuda_builder.h"
+#include "translator/cuda_util.h"
 #include "translator/stencil_analysis.h"
 #include "translator/physis_names.h"
 
@@ -16,6 +16,8 @@ namespace pu = physis::util;
 namespace sb = SageBuilder;
 namespace si = SageInterface;
 namespace ru = physis::translator::rose_util;
+namespace cu = physis::translator::cuda_util;
+
 
 #define BLOCK_DIM_X_DEFAULT (64)
 #define BLOCK_DIM_Y_DEFAULT (4)
@@ -315,7 +317,7 @@ SgVariableDeclaration *CUDATranslator::BuildGridDimDeclaration(
   }
   SgExpression *dim_z = Int(1);
   SgVariableDeclaration *grid_dim =
-      ru::BuildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
+      cu::BuildDim3Declaration(name, dim_x, dim_y, dim_z, scope);
   return grid_dim;
 }
 
@@ -379,7 +381,7 @@ void CUDATranslator::BuildRunBody(
   if (config_.LookupFlag(Configuration::CUDA_KERNEL_ERROR_CHECK)) {
     si::insertStatementAfter(
         loop,
-        sb::buildExprStatement(BuildCudaDeviceSynchronize()));
+        sb::buildExprStatement(cu::BuildCUDADeviceSynchronize()));
     si::insertStatementBefore(
         loop,
         sb::buildExprStatement(
@@ -416,10 +418,7 @@ SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(
     // If the type of the member is grid, pass the device pointer.
     GridType *gt = tx_->findGridType(vars[0]->get_type());
     if (gt) {
-      arg = sb::buildPointerDerefExp(
-          sb::buildCastExp(
-              sb::buildArrowExp(arg, sb::buildVarRefExp("dev")),
-              sb::buildPointerType(builder()->BuildOnDeviceGridType(gt))));
+      arg = builder()->BuildGridGetDev(arg, gt);
       // skip the grid index
       ++member;
     }
@@ -461,7 +460,7 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
         stencil_idx, sm, stencil_symbol);
 
     SgVariableDeclaration *block_dim =
-        ru::BuildDim3Declaration(
+        cu::BuildDim3Declaration(
             stencil_name + "_block_dim",
             BuildBlockDimX(nd),
             BuildBlockDimY(nd),
@@ -490,11 +489,11 @@ SgBasicBlock *CUDATranslator::BuildRunLoopBody(
 
     // Generate Kernel invocation code
     SgCudaKernelExecConfig *cuda_config =
-        ru::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
+        cu::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
                                       sb::buildVarRefExp(block_dim),
                                       NULL, NULL);
     SgCudaKernelCallExp *cuda_call =
-        ru::BuildCudaKernelCallExp(sb::buildFunctionRefExp(sm->run()),
+        cu::BuildCudaKernelCallExp(sb::buildFunctionRefExp(sm->run()),
                                    args, cuda_config);
     si::appendStatement(sb::buildExprStatement(cuda_call), loop_body);    
     if (sm->IsRedBlackVariant()) {
@@ -653,7 +652,7 @@ void CUDATranslator::AddSyncAfterDlclose(
    * if not, sometimes fail kernel calling.
    */
   si::appendStatement(
-      sb::buildExprStatement(BuildCudaThreadSynchronize()),
+      sb::buildExprStatement(cu::BuildCUDADeviceSynchronize()),
       scope);
 }
 

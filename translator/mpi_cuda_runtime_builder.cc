@@ -14,40 +14,41 @@ SgExpression *MPICUDARuntimeBuilder::BuildGridBaseAddr(
   return ReferenceRuntimeBuilder::BuildGridBaseAddr(gvref, point_type);
 }
 
-SgFunctionCallExp *BuildGridGetDev(SgExpression *grid_var) {
+SgExpression *MPICUDARuntimeBuilder::BuildGridGetDev(SgExpression *grid_var,
+                                                     GridType *gt) {
   SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes("__PSGridGetDev");
+      = si::lookupFunctionSymbolInParentScopes(PS_GRID_GET_DEV_NAME);
   SgFunctionCallExp *fc =
       sb::buildFunctionCallExp(fs, sb::buildExprListExp(grid_var));
   return fc;
 }
 
-SgFunctionCallExp *BuildGetLocalSize(SgExpression *dim) {
+SgFunctionCallExp *MPICUDARuntimeBuilder::BuildGetLocalSize(SgExpression *dim) {
   SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes("__PSGetLocalSize");
+      = si::lookupFunctionSymbolInParentScopes(PS_GET_LOCAL_SIZE_NAME);
   SgFunctionCallExp *fc =
       sb::buildFunctionCallExp(fs, sb::buildExprListExp(dim));
   return fc;
 }  
-SgFunctionCallExp *BuildGetLocalOffset(SgExpression *dim) {
+SgFunctionCallExp *MPICUDARuntimeBuilder::BuildGetLocalOffset(SgExpression *dim) {
   SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes("__PSGetLocalOffset");
+      = si::lookupFunctionSymbolInParentScopes(PS_GET_LOCAL_OFFSET_NAME);
   SgFunctionCallExp *fc =
       sb::buildFunctionCallExp(fs, sb::buildExprListExp(dim));
   return fc;
 }
 
-SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
-                                     SgExpression *width) {
+SgFunctionCallExp *MPICUDARuntimeBuilder::BuildDomainShrink(SgExpression *dom,
+                                                            SgExpression *width) {
   SgFunctionSymbol *fs
-      = si::lookupFunctionSymbolInParentScopes("__PSDomainShrink");
+      = si::lookupFunctionSymbolInParentScopes(PS_DOMAIN_SHRINK_NAME);
   SgFunctionCallExp *fc =
       sb::buildFunctionCallExp(
           fs, sb::buildExprListExp(dom, width));
   return fc;
 }
 
-SgExpression *BuildStreamBoundaryKernel(int idx) {
+SgExpression *MPICUDARuntimeBuilder::BuildStreamBoundaryKernel(int idx) {
   SgVarRefExp *inner_stream = sb::buildVarRefExp("stream_boundary_kernel");
   return sb::buildPntrArrRefExp(inner_stream, sb::buildIntVal(idx));
 }

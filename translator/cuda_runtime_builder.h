@@ -119,6 +119,9 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
 
+  virtual SgExpression *BuildGridGetDev(SgExpression *grid_var,
+                                        GridType *gt);
+
   // RunKernel(Domain *dom, [original params]) -> dom
   virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
       SgFunctionParameterList *pl, int dim);
