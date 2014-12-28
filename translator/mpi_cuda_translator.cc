@@ -10,7 +10,7 @@
 #include "translator/cuda_runtime_builder.h"
 #include "translator/cuda_builder.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/rose_ast_attribute.h"
 
 namespace pu = physis::util;

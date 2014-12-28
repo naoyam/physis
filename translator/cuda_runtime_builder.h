@@ -126,10 +126,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
-  
- protected:
-  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
-      const GridType *gt, bool is_copyout);
 
   //! Helper function for BuildKernelCallPreamble for 1D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble1D(
@@ -154,6 +150,10 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
+  
+ protected:
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
+      const GridType *gt, bool is_copyout);
   
   CUDABuilderInterface *delegator_;
   CUDABuilderInterface *builder() {
