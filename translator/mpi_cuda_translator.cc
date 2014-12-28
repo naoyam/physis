@@ -756,11 +756,12 @@ void MPICUDATranslator::TranslateKernelDeclaration(
         builder()->BuildOnDeviceGridType(gt));
     exp->set_type(new_type);
   }
-  
+
+  // Replace PSGridDim to __PSGridDimDev
   Rose_STL_Container<SgNode*> gdim_calls =
       NodeQuery::querySubTree(node, V_SgFunctionCallExp);
   SgFunctionSymbol *gdim_dev =
-      si::lookupFunctionSymbolInParentScopes("__PSGridDimDev");
+      si::lookupFunctionSymbolInParentScopes(PS_GRID_DIM_DEV_NAME);
   FOREACH (it, gdim_calls.begin(), gdim_calls.end()) {
     SgFunctionCallExp *fc = isSgFunctionCallExp(*it);
     PSAssert(fc);
@@ -800,9 +801,10 @@ SgFunctionDeclaration *MPICUDATranslator::BuildRunInteriorKernel(
       param_struct_def->get_members();
   // add offset for process
   for (int i = 0; i < stencil->getNumDim()-1; ++i) {
-    si::appendArg(params,
-                  sb::buildInitializedName("offset" + toString(i),
-                                           sb::buildIntType()));
+    si::appendArg(
+        params,
+        sb::buildInitializedName(PS_RUN_KERNEL_PARAM_OFFSET_NAME + toString(i),
+                                 sb::buildIntType()));
   }
   FOREACH(member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
@@ -1096,61 +1098,7 @@ static std::string GetTypeDimName(GridType *gt) {
   return GetTypeName(gt->point_type())
       + toString(gt->rank()) + "D";
 }
-#if 0
-bool MPICUDATranslator::TranslateGetKernel(SgFunctionCallExp *node,
-                                           SgInitializedName *gv,
-                                           bool is_periodic) {
-  // 
-  // *((gt->getElmType())__PSGridGetAddressND(g, x, y, z))
 
-  GridType *gt = tx_->findGridType(gv->get_type());
-  int nd = gt->rank();
-  SgScopeStatement *scope = getContainingScopeStatement(node);  
-  
-  string get_address_name = get_addr_name_ +  GetTypeDimName(gt);
-  string get_address_no_halo_name = get_addr_no_halo_name_ +  GetTypeDimName(gt);
-  SgFunctionRefExp *get_address = NULL;
-  //const StencilIndexList *sil = tx_->findStencilIndex(node);
-  const StencilIndexList *sil = ru::GetASTAttribute<GridGetAttribute>(
-      node)->GetStencilIndexList();
-  PSAssert(sil);
-  LOG_DEBUG() << "Stencil index: " << *sil << "\n";
-  if (StencilIndexSelf(*sil, nd)) {
-    get_address = sb::buildFunctionRefExp(get_address_no_halo_name,
-                                          global_scope_);
-  } else if (StencilIndexRegularOrder(*sil, nd)) {
-    for (int i = 0; i < nd; ++i) {
-      int offset = (*sil)[i].offset;
-      if (!offset) continue;
-      string method_name = 
-          get_address_name + "_" +
-          toString(i) + "_" + ((offset < 0) ? "bw" : "fw");
-      LOG_INFO() << "Using " << method_name << "\n";
-      get_address = sb::buildFunctionRefExp(method_name, global_scope_);
-      break;
-    }
-  } else {
-    get_address = sb::buildFunctionRefExp(get_address_name,
-                                          global_scope_);
-  }
-  SgExprListExp *args = isSgExprListExp(
-      si::copyExpression(node->get_args()));
-  ru::PrependExpression(args, 
-                               sb::buildVarRefExp(gv->get_name(), scope));
-  SgFunctionCallExp *get_address_exp
-      = sb::buildFunctionCallExp(get_address, args);
-  // refactoring: merge the two attributes
-  ru::AddASTAttribute<StencilIndexAttribute>(
-      get_address_exp,
-      new StencilIndexAttribute(*sil));
-  ru::CopyASTAttribute<GridCallAttribute>(
-      get_address_exp, node, false);
-  SgExpression *x = sb::buildPointerDerefExp(get_address_exp);
-  ru::CopyASTAttribute<GridGetAttribute>(x, node, false);  
-  si::replaceExpression(node, x);
-  return true;
-}
-#endif
 void MPICUDATranslator::FixAST() {
   if (validate_ast_) {
     si::fixVariableReferences(project_);

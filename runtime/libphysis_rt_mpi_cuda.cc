@@ -484,7 +484,7 @@ extern "C" {
     return master != NULL;
   }
 
-#if 0
+#if 0 // TODO (MPI-CUDA)
   void *__PSGridGetDev(void *g) {
     GridType *gm = (GridType*)g;
     return gm->GetDev();

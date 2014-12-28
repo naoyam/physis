@@ -12,7 +12,8 @@ namespace translator {
 
 class ReferenceRuntimeBuilder: virtual public BuilderInterface {
  public:
-  ReferenceRuntimeBuilder(SgScopeStatement *global_scope);
+  ReferenceRuntimeBuilder(SgScopeStatement *global_scope,
+                          BuilderInterface *delegator=NULL);
   virtual ~ReferenceRuntimeBuilder() {}
   virtual SgFunctionCallExp *BuildGridGetID(SgExpression *grid_var);
   virtual SgBasicBlock *BuildGridSet(
@@ -117,8 +118,6 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   virtual SgExpression *BuildDomMaxRef(
       SgExpression *domain);
   
-  virtual string GetStencilDomName();
-  
   virtual SgExpression *BuildStencilFieldRef(
       SgExpression *stencil_ref, std::string name);
   virtual SgExpression *BuildStencilFieldRef(
@@ -168,6 +167,7 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
  protected:
   static const std::string  grid_type_name_;
   SgScopeStatement *gs_;
+  BuilderInterface *delegator_;
   SgTypedefType *dom_type_;
   SgClassDeclaration *GetGridDecl();
   virtual SgExpression *BuildDomFieldRef(SgExpression *domain,
@@ -175,7 +175,10 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   
   virtual SgExprListExp *BuildStencilOffset(
       const StencilRange &sr, bool is_max);
-  
+
+  BuilderInterface *Builder() {
+    return delegator_ ? delegator_ : this;
+  }  
 };
 
 } // namespace translator

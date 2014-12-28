@@ -16,12 +16,13 @@ namespace physis {
 namespace translator {
 
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
-    SgScopeStatement *global_scope):
-    BuilderInterface(), gs_(global_scope) {
+    SgScopeStatement *global_scope,
+    BuilderInterface *delegator):
+    BuilderInterface(), gs_(global_scope),
+    delegator_(delegator) {
   dom_type_ = isSgTypedefType(
-      si::lookupNamedTypeInParentScopes(PS_DOMAIN_INTERNAL_TYPE_NAME,
-                                        gs_));
-  
+      si::lookupNamedTypeInParentScopes(
+          PS_DOMAIN_INTERNAL_TYPE_NAME, gs_));
 }
 
 const std::string
@@ -306,11 +307,6 @@ SgExpression *ReferenceRuntimeBuilder::BuildDomMaxRef(SgExpression *domain,
   return exp;
 }
 
-
-string ReferenceRuntimeBuilder::GetStencilDomName() {
-  return string("dom");
-}
-
 SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
     SgExpression *stencil_ref, SgExpression *field) {
   SgType *ty = stencil_ref->get_type();
@@ -360,7 +356,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
 SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
     SgExpression *stencil) {
   SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
+      BuildStencilFieldRef(stencil, PS_STENCIL_MAP_DOM_NAME);
   // s.dom.local_max
   return BuildDomMinRef(exp);  
 }
@@ -368,7 +364,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
 SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
     SgExpression *stencil, int dim) {
   SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
+      BuildStencilFieldRef(stencil, PS_STENCIL_MAP_DOM_NAME);
   // s.dom.local_max
   return BuildDomMinRef(exp, dim);  
 }
@@ -376,7 +372,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMinRef(
 SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMaxRef(
     SgExpression *stencil) {
   SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
+      BuildStencilFieldRef(stencil, PS_STENCIL_MAP_DOM_NAME);
   // s.dom.local_max
   return BuildDomMaxRef(exp);  
 }
@@ -385,7 +381,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilDomMaxRef(
     SgExpression *stencil, int dim) {
   //SgExpression *exp = BuildStencilDomMaxRef(stencil);
   SgExpression *exp =
-      BuildStencilFieldRef(stencil, GetStencilDomName());
+      BuildStencilFieldRef(stencil, PS_STENCIL_MAP_DOM_NAME);
   return BuildDomMaxRef(exp, dim);  
 }
 
@@ -421,7 +417,7 @@ SgClassDeclaration *ReferenceRuntimeBuilder::BuildStencilMapType(StencilMap *s) 
   }
   si::appendStatement(
       sb::buildVariableDeclaration(
-          GetStencilDomName(), GetDomType(s), NULL, def),
+          PS_STENCIL_MAP_DOM_NAME, GetDomType(s), NULL, def),
       def);
 
   SgInitializedNamePtrList &args = s->getKernel()->get_args();
@@ -552,7 +548,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildMap(StencilMap *stencil) {
 SgFunctionCallExp* ReferenceRuntimeBuilder::BuildKernelCall(
     StencilMap *stencil, SgExpressionPtrList &index_args,
     SgFunctionParameterList *run_kernel_params) {
-  SgExprListExp *args = BuildKernelCallArgList(
+  SgExprListExp *args = Builder()->BuildKernelCallArgList(
       stencil, index_args, run_kernel_params);
   SgFunctionCallExp *c =
       sb::buildFunctionCallExp(

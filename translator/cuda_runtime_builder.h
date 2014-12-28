@@ -15,9 +15,8 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
                           virtual public CUDABuilderInterface {
  public:
   CUDARuntimeBuilder(SgScopeStatement *global_scope,
-                     CUDABuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope),
-      delegator_(delegator) {}
+                     BuilderInterface *delegator=NULL):
+      ReferenceRuntimeBuilder(global_scope, delegator) {}
   virtual ~CUDARuntimeBuilder() {}
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
@@ -120,9 +119,12 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
 
+  // RunKernel(Domain *dom, [original params]) -> dom
+  virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
+      SgFunctionParameterList *pl, int dim);
+
   virtual SgScopeStatement *BuildKernelCallPreamble(
       StencilMap *stencil,      
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -130,7 +132,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 1D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble1D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -138,7 +139,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 2D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble2D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -146,7 +146,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   //! Helper function for BuildKernelCallPreamble for 3D stencil
   virtual SgScopeStatement *BuildKernelCallPreamble3D(
       StencilMap *stencil,
-      SgInitializedName *dom_arg,
       SgFunctionParameterList *param,      
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
@@ -155,9 +154,16 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       const GridType *gt, bool is_copyout);
   
-  CUDABuilderInterface *delegator_;
-  CUDABuilderInterface *builder() {
-    return delegator_ ? delegator_ : this;
+  //CUDABuilderInterface *delegator_;
+  CUDABuilderInterface *CUDABuilder() {
+    CUDABuilderInterface *x =
+        dynamic_cast<CUDABuilderInterface*>(delegator_);
+    return x ? x : this;
+  }
+  CUDABuilderInterface *Builder() {
+    CUDABuilderInterface *x =
+        dynamic_cast<CUDABuilderInterface*>(delegator_);
+    return x ? x : this;
   }
 };
 

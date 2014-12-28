@@ -127,7 +127,6 @@ class ReferenceTranslator : public Translator {
 
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
-  virtual std::string GetStencilDomName() const;
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
   virtual void FixGridType();
