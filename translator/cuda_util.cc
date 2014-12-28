@@ -169,24 +169,12 @@ SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
   return ctor_decl;
 }
 
-SgEnumDeclaration *cuda_enum_cuda_func_cache(
-    SgScopeStatement *global_scope) {
+SgEnumDeclaration *cuda_enum_cuda_func_cache() {
   static SgEnumDeclaration *enum_func_cache = NULL;
-  static const char *enum_names[] = {"cudaFuncCachePreferNone",
-                                     "cudaFuncCachePreferShared",
-                                     "cudaFuncCachePreferL1"};
   if (!enum_func_cache) {
-    enum_func_cache =
-        sb::buildEnumDeclaration(SgName("cudaFuncCache"), global_scope);
-    SgInitializedNamePtrList &members = enum_func_cache->get_enumerators();
-    for (int i = 0; i < 3; i++) {
-      SgInitializedName *in =
-          sb::buildInitializedName(
-              SgName(enum_names[i]), enum_func_cache->get_type());
-      members.push_back(in);
-      in->set_parent(enum_func_cache);
-      in->set_scope(enum_func_cache->get_scope());
-    }
+    SgEnumSymbol *es = si::lookupEnumSymbolInParentScopes("cudaFuncCache");
+    PSAssert(es);
+    enum_func_cache = es->get_declaration();
   }
   return enum_func_cache;
 }
@@ -195,11 +183,11 @@ SgEnumDeclaration *cuda_enum_cuda_func_cache(
 
 SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
-    const CudaFuncCache cache_config,
-    SgScopeStatement *global_scope) {
+    const CudaFuncCache cache_config) {
   ROSE_ASSERT(kernel);
-  SgEnumVal *enum_val = ru::BuildEnumVal(cache_config,
-                                         cuda_enum_cuda_func_cache(global_scope));
+  SgEnumVal *enum_val = ru::BuildEnumVal(
+      cache_config, cuda_enum_cuda_func_cache());
+  
   SgExprListExp *args =
       sb::buildExprListExp(sb::buildFunctionRefExp(kernel), enum_val);
 

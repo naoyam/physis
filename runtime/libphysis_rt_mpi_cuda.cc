@@ -492,11 +492,11 @@ extern "C" {
 #endif
   
   PSIndex __PSGetLocalSize(int dim) {
-    return gs->my_size()[dim];
+    return gs->my_size()[dim-1];
   }
 
   PSIndex __PSGetLocalOffset(int dim) {
-    return gs->my_offset()[dim];
+    return gs->my_offset()[dim-1];
   }
 
   __PSDomain __PSDomainShrink(__PSDomain *dom, int width) {

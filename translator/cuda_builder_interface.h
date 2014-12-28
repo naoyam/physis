@@ -97,6 +97,30 @@ class CUDABuilderInterface: virtual public BuilderInterface {
       StencilMap *stencil,
       SgBasicBlock *call_site,
       vector<SgVariableDeclaration*> &indices) = 0;
+
+  //! Build a CUDA grid declaration for a stencil.
+  /*!
+    The x and y dimensions are decomposed by the thread block, whereas
+    the z dimension is processed entirely by each thread block.
+
+    Each dimension parameter must be a free AST node and not be used
+    other tree locations.
+    
+    \param name The name of the grid variable.
+    \param dim Domain dimension
+    \param dom_dim_x
+    \param dom_dim_y
+    \param block_dim_x
+    \param block_dim_y    
+    \param scope The scope where the grid is declared.
+    \return The grid declaration.
+   */
+  virtual SgVariableDeclaration *BuildGridDimDeclaration(
+      const SgName &name,
+      int dim,
+      SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
+      SgExpression *block_dim_x, SgExpression *block_dim_y,
+      SgScopeStatement *scope = NULL) = 0;
 };
 
 } // namespace translator

@@ -173,5 +173,14 @@ SgType *MPICUDARuntimeBuilder::BuildOnDeviceGridType(GridType *gt) {
   return cuda_rt_builder_->BuildOnDeviceGridType(gt);
 }
 
+SgVariableDeclaration *MPICUDARuntimeBuilder::BuildGridDimDeclaration(
+    const SgName &name, int dim,
+    SgExpression *dom_dim_x, SgExpression *dom_dim_y,    
+    SgExpression *block_dim_x, SgExpression *block_dim_y,
+    SgScopeStatement *scope) {
+  return cuda_rt_builder_->BuildGridDimDeclaration(
+      name, dim, dom_dim_x, dom_dim_y, block_dim_x, block_dim_y, scope);
+}
+
 } // namespace translator
 } // namespace physis

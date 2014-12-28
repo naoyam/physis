@@ -15,6 +15,7 @@ namespace translator {
 class MPICUDATranslator: public MPITranslator {
  protected:
   //! Used to generate CUDA-related code.
+  // TODO: Is this dependency really non avoidable?
   CUDATranslator *cuda_trans_;
   //! Optimization flag to enable the multi-stream boundary processing.
   bool flag_multistream_boundary_;
@@ -137,6 +138,10 @@ class MPICUDATranslator: public MPITranslator {
                               SgInitializedName *&grid_arg,
                               SgInitializedName *&dom_arg);
 
+  //! Set the cache config of all functions related to fs
+  void SetCacheConfig(StencilMap *smap, SgFunctionSymbol *fs,
+                      SgScopeStatement *function_body,
+                      bool overlap_enabled);
 };
 
 } // namespace translator
