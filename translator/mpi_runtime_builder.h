@@ -10,7 +10,7 @@
 namespace physis {
 namespace translator {
 
-class MPIRuntimeBuilder: public ReferenceRuntimeBuilder {
+class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
  public:
   MPIRuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope) {}
