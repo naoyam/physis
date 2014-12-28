@@ -1,14 +1,8 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 
 namespace physis {
 namespace translator {
@@ -42,7 +36,7 @@ inline void post_process(
 extern void null_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 //! Apply primitive optimizations
 /*!
@@ -52,7 +46,7 @@ extern void null_optimization(
 extern void primitive_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 //! Inline stencil kernels.
 /*!
@@ -84,17 +78,17 @@ extern void primitive_optimization(
 extern void kernel_inlining(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 extern void loop_peeling(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 extern void register_blocking(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 //! Common subexpression elimination in grid offset calculations.
 /*!
@@ -114,7 +108,7 @@ extern void register_blocking(
 extern void offset_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
     
 //! Make conditional get unconditional.
 /*!
@@ -142,7 +136,7 @@ extern void offset_cse(
 extern void unconditional_get(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 
 //! Apply CSE to offset calculation.
@@ -151,7 +145,7 @@ extern void unconditional_get(
 extern void offset_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 //! Apply CSE to offset calculation across loop iterations.
 /*!
@@ -159,7 +153,7 @@ extern void offset_cse(
 extern void offset_spatial_cse(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 //! Miscellaneous loop optimizations
 /*!
@@ -167,7 +161,7 @@ extern void offset_spatial_cse(
 extern void loop_opt(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder);
+    physis::translator::BuilderInterface *builder);
 
 } // namespace pass
 } // namespace optimizer

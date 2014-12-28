@@ -5,7 +5,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 #include <algorithm>
@@ -122,7 +122,7 @@ static void replace_initial_index(SgExpression *offset_expr,
  */
 static void insert_offset_increment_stmt(SgVariableDeclaration *vdecl,
                                          SgForStatement *loop,
-                                         RuntimeBuilder *builder,
+                                         BuilderInterface *builder,
                                          GridOffsetAttribute *offset_attr) {
   SgExpression *rhs = rose_util::GetVariableDefinitionRHS(vdecl);
   SgExpression *grid_ref =
@@ -223,11 +223,11 @@ static SgExpression *ExtractInvariantPart(SgExpression *offset_expr,
   
   \param offset_expr Offset expression
   \param loop Innermost loop
-  \param builder RuntimeBuilder
+  \param builder BuilderInterface
  */
 static void do_offset_spatial_cse(SgExpression *offset_expr,
                                   SgForStatement *loop,
-                                  RuntimeBuilder *builder) {
+                                  BuilderInterface *builder) {
   LOG_DEBUG() << "Offset expr: "
               << offset_expr->unparseToString() << "\n";
   SgStatement *containing_stmt =
@@ -319,7 +319,7 @@ namespace pass {
 void offset_spatial_cse(
     SgProject *proj,
     ::physis::translator::TranslationContext *tx,
-    ::physis::translator::RuntimeBuilder *builder) {
+    ::physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);

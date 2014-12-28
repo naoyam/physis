@@ -11,7 +11,7 @@
 #include "translator/translator_common.h"
 #include "translator/translation_context.h"
 #include "translator/translator.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/cuda_runtime_builder.h"
 #include "translator/mpi_runtime_builder.h"
 #include "translator/configuration.h"
@@ -241,9 +241,9 @@ void set_output_filename(SgFile *file, string suffix) {
   return;
 }
 
-static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
+static pt::BuilderInterface *GetRTBuilder(SgProject *proj,
                                         CommandLineOptions &opts) {
-  pt::RuntimeBuilder *builder = NULL;
+  pt::BuilderInterface *builder = NULL;
   SgScopeStatement *gs = si::getFirstGlobalScope(proj);
   if (opts.ref_trans) {
     builder = new pt::ReferenceRuntimeBuilder(gs);
@@ -269,7 +269,7 @@ static pt::RuntimeBuilder *GetRTBuilder(SgProject *proj,
 }
 static pto::Optimizer *GetOptimizer(TranslationContext *tx,
                                     SgProject *proj,
-                                    RuntimeBuilder *builder,
+                                    BuilderInterface *builder,
                                     CommandLineOptions &opts,
                                     Configuration *cfg) {
   pto::Optimizer *optimizer = NULL;
@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
   }
 
   pt::TranslationContext tx(proj);
-  pt::RuntimeBuilder *rt_builder = GetRTBuilder(proj, opts);
+  pt::BuilderInterface *rt_builder = GetRTBuilder(proj, opts);
   pto::Optimizer *optimizer =
       GetOptimizer(&tx, proj, rt_builder, opts, &config);
   

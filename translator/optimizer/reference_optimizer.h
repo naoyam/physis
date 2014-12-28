@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_OPTIMIZER_REFERENCE_OPTIMIZER_H_
 #define PHYSIS_TRANSLATOR_OPTIMIZER_REFERENCE_OPTIMIZER_H_
@@ -19,7 +13,7 @@ class ReferenceOptimizer: public Optimizer {
  public:
   ReferenceOptimizer(SgProject *proj,
                      physis::translator::TranslationContext *tx,
-                     physis::translator::RuntimeBuilder *builder,
+                     physis::translator::BuilderInterface *builder,
                      physis::translator::Configuration *config)
       : Optimizer(proj, tx, builder, config) {}
   virtual ~ReferenceOptimizer() {}

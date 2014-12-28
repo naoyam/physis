@@ -3,7 +3,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 #include <algorithm>
@@ -555,7 +555,7 @@ static SgExpression *GetLoopInvariantExpression(SgForStatement *loop,
 void loop_opt(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
   
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);

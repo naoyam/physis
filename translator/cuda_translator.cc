@@ -68,7 +68,7 @@ CUDATranslator::CUDATranslator(const Configuration &config):
 
 void CUDATranslator::SetUp(SgProject *project,
                            TranslationContext *context,
-                           RuntimeBuilder *rt_builder) {
+                           BuilderInterface *rt_builder) {
   ReferenceTranslator::SetUp(project, context, rt_builder);
 
   /* auto tuning & has dynamic arguments */

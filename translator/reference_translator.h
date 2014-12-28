@@ -26,7 +26,7 @@ class ReferenceTranslator : public Translator {
   virtual void Translate();
   virtual void Optimize();
   virtual void SetUp(SgProject *project, TranslationContext *context,
-                     RuntimeBuilder *rt_builder);  
+                     BuilderInterface *rt_builder);  
   virtual void Finish();  
 
   bool flag_constant_grid_size_optimization() const {
@@ -47,7 +47,7 @@ class ReferenceTranslator : public Translator {
    */
   virtual void ValidateASTConsistency();
   virtual ReferenceRuntimeBuilder *builder() {
-    return static_cast<ReferenceRuntimeBuilder*>(rt_builder_);
+    return dynamic_cast<ReferenceRuntimeBuilder*>(rt_builder_);
   }
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void TranslateNew(SgFunctionCallExp *node, GridType *gt);

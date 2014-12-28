@@ -19,7 +19,7 @@ class MPICUDAOptimizer: public Optimizer {
  public:
   MPICUDAOptimizer(SgProject *proj,
                    physis::translator::TranslationContext *tx,
-                   physis::translator::RuntimeBuilder *builder,
+                   physis::translator::BuilderInterface *builder,
                    physis::translator::Configuration *config)
       : Optimizer(proj, tx, builder, config) {}
   virtual ~MPICUDAOptimizer() {}

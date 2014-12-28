@@ -56,7 +56,7 @@ MPICUDATranslator::~MPICUDATranslator() {
 
 void MPICUDATranslator::SetUp(SgProject *project,
                               TranslationContext *context,
-                              RuntimeBuilder *rt_builder) {
+                              BuilderInterface *rt_builder) {
   MPITranslator::SetUp(project, context, rt_builder);
   LOG_DEBUG() << "Parent setup done\n";
   cuda_trans_->SetUp(project, context, rt_builder);

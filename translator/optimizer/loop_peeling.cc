@@ -3,7 +3,7 @@
 #include "translator/optimizer/optimization_passes.h"
 #include "translator/optimizer/optimization_common.h"
 #include "translator/rose_util.h"
-#include "translator/runtime_builder.h"
+#include "translator/builder_interface.h"
 #include "translator/translation_util.h"
 
 namespace si = SageInterface;
@@ -191,7 +191,7 @@ static SgExpression *FindGridRefInLoop(SgInitializedName *grid) {
 static SgForStatement* PeelLastIterations(SgForStatement *loop,
                                           int peel_size,
                                           SgInitializedName *peel_grid,
-                                          RuntimeBuilder *builder) {
+                                          BuilderInterface *builder) {
   LOG_DEBUG() << "Peeling the last " << peel_size
               << " iteration(s)\n";  
   PSAssert(peel_size > 0);
@@ -251,7 +251,7 @@ static SgForStatement* PeelLastIterations(SgForStatement *loop,
 static void PeelLoop(
     SgFunctionDeclaration *run_kernel_func,
     SgForStatement *loop,
-    RuntimeBuilder *builder) {
+    BuilderInterface *builder) {
   RunKernelLoopAttribute *loop_attr =
       rose_util::GetASTAttribute<RunKernelLoopAttribute>(loop);
   int dim = loop_attr->dim();
@@ -602,7 +602,7 @@ static void RemoveDeadConditional(SgForStatement *loop,
 void loop_peeling(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 
   vector<SgForStatement*> target_loops = FindInnermostLoops(proj);

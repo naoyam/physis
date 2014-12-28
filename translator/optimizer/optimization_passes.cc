@@ -14,7 +14,7 @@ namespace pass {
 void null_optimization(
     SgProject *proj,
     physis::translator::TranslationContext *tx,
-    physis::translator::RuntimeBuilder *builder) {
+    physis::translator::BuilderInterface *builder) {
   pre_process(proj, tx, __FUNCTION__);
 }
 

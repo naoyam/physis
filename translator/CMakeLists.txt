@@ -6,7 +6,7 @@ set (MPI_TRANSLATOR_ENABLED TRUE CACHE BOOL
   "Flag to enable MPI target")
 set (MPI_OPENMP_TRANSLATOR_ENABLED FALSE CACHE BOOL
   "Flag to enable MPI-OpenMP target")
-set (MPI_CUDA_TRANSLATOR_ENABLED FALSE CACHE BOOL
+set (MPI_CUDA_TRANSLATOR_ENABLED TRUE CACHE BOOL
   "Flag to enable MPI-CUDA target")  
 set (OPENCL_TRANSLATOR_ENABLED FALSE CACHE BOOL
   "Flag to enable OpenCL target")
@@ -47,7 +47,7 @@ set (PHYSISC_SRC configuration.cc
   translator.cc reference_translator.cc kernel.cc
   alias_analysis.cc 
   stencil_analysis.cc stencil_range.cc translation_util.cc
-  reference_runtime_builder.cc runtime_builder.cc
+  reference_runtime_builder.cc builder_interface.cc
   rose_ast_attribute.cc reduce.cc fortran_output_fix.cc
   optimizer/optimizer.cc
   optimizer/optimization_common.cc
