@@ -17,7 +17,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
 
   //! Generates a device type corresponding to a given grid type.
   /*!
-    This is not derived.
     
     \param gt The grid type.
     \return A type object corresponding to the given grid type.

@@ -68,10 +68,25 @@ SgIfStmt *MPICUDARuntimeBuilder::BuildDomainInclusionCheck(
       indices, dom_arg, true_stmt);
 }
 
+SgFunctionParameterList *MPICUDARuntimeBuilder::BuildRunKernelFuncParameterList(
+    StencilMap *stencil) {
+  SgFunctionParameterList *params =
+      cuda_rt_builder_->BuildRunKernelFuncParameterList(stencil);
+  // add offset for process
+  for (int i = 0; i < stencil->getNumDim()-1; ++i) {
+    si::appendArg(
+        params,
+        sb::buildInitializedName(
+            "offset" + toString(i), sb::buildIntType()));
+  }
+  return params;
+}
+
 // This is almost equivalent as CUDATranslator::BuildRunKernel, except
 // for having offset.
 SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildRunKernelFunc(
     StencilMap *stencil) {
+#if 0  
   SgFunctionParameterList *params = sb::buildFunctionParameterList();
   SgClassDefinition *param_struct_def = stencil->GetStencilTypeDefinition();
   PSAssert(param_struct_def);
@@ -119,8 +134,19 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildRunKernelFunc(
   rose_util::AddASTAttribute(run_func,
                              new RunKernelAttribute(stencil));
   return run_func;
+#else
+  return cuda_rt_builder_->BuildRunKernelFunc(stencil);
+#endif
 }
 
+#if 1
+SgBasicBlock *MPICUDARuntimeBuilder::BuildRunKernelFuncBody(
+    StencilMap *stencil, SgFunctionParameterList *param,
+    vector<SgVariableDeclaration*> &indices) {
+  return cuda_rt_builder_->BuildRunKernelFuncBody(
+      stencil, param, indices);
+}
+#else
 // This is the same as CUDATranslator::BuildRunKernelBody, except for
 // this version needs to add offsets to the x and y indices.
 SgBasicBlock* MPICUDARuntimeBuilder::BuildRunKernelFuncBody(
@@ -216,6 +242,111 @@ SgBasicBlock* MPICUDARuntimeBuilder::BuildRunKernelFuncBody(
   }
 
   return block;
+}
+#endif
+
+SgScopeStatement *MPICUDARuntimeBuilder::BuildKernelCallPreamble1D(
+    StencilMap *stencil,    
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  LOG_ERROR() << "Not implemented yet\n";
+  PSAbort(1);
+  return call_site;
+}   
+
+SgScopeStatement *MPICUDARuntimeBuilder::BuildKernelCallPreamble2D(
+    StencilMap *stencil,    
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  LOG_ERROR() << "Not implemented yet\n";
+  PSAbort(1);
+  return NULL;
+}   
+
+// TODO: Different from CUDA builder?
+SgScopeStatement *MPICUDARuntimeBuilder::BuildKernelCallPreamble3D(
+    StencilMap *stencil,
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  int dim = 3;
+  SgExpression *loop_begin =
+      BuildDomMinRef(sb::buildVarRefExp(dom_arg), dim);
+  SgStatement *loop_init = sb::buildAssignStatement(
+      sb::buildVarRefExp(indices.back()), loop_begin);
+  SgExpression *loop_end =
+      BuildDomMaxRef(sb::buildVarRefExp(dom_arg), dim);
+  SgStatement *loop_test = sb::buildExprStatement(
+      sb::buildLessThanOp(sb::buildVarRefExp(indices.back()),
+                          loop_end));
+
+  SgVariableDeclaration* t[] = {
+    stencil->IsRedBlackVariant() ? NULL: indices[0], indices[1]};
+  vector<SgVariableDeclaration*> range_checking_idx(t, t + 2);
+  si::appendStatement(
+      BuildDomainInclusionCheck(
+          range_checking_idx, dom_arg, sb::buildReturnStmt()),
+      call_site);
+
+  SgExpression *loop_incr =
+      sb::buildPlusPlusOp(sb::buildVarRefExp(indices.back()));
+  SgBasicBlock *kernel_call_block = sb::buildBasicBlock();
+  SgStatement *loop
+      = sb::buildForStatement(loop_init, loop_test,
+                              loop_incr, kernel_call_block);
+  si::appendStatement(loop, call_site);
+  rose_util::AddASTAttribute(
+      loop,
+      new RunKernelLoopAttribute(dim));
+
+  if (stencil->IsRedBlackVariant()) {
+    SgExpression *rb_offset_init =
+        Add(sb::buildVarRefExp(indices[0]),
+            sb::buildBitAndOp(
+                Add(Var(indices[1]),
+                    sb::buildVarRefExp(indices[2]),
+                    sb::buildVarRefExp(param->get_args().back())),
+                Int(1)));
+    SgVariableDeclaration *x_index_rb =
+        sb::buildVariableDeclaration(
+            indices[0]->get_variables()[0]->get_name() + "_rb",
+            sb::buildIntType(),
+            sb::buildAssignInitializer(rb_offset_init));
+    indices[0] = x_index_rb;
+    si::appendStatement(
+        x_index_rb, kernel_call_block);
+    SgVariableDeclaration* t[] = {x_index_rb};
+    vector<SgVariableDeclaration*> range_checking_idx(t, t + 1);
+    si::appendStatement(
+        BuildDomainInclusionCheck(
+            range_checking_idx, dom_arg, sb::buildContinueStmt()),
+        kernel_call_block);
+  }
+  
+  return kernel_call_block;
+}
+
+SgScopeStatement *MPICUDARuntimeBuilder::BuildKernelCallPreamble(
+    StencilMap *stencil,
+    SgInitializedName *dom_arg,
+    SgFunctionParameterList *param,    
+    vector<SgVariableDeclaration*> &indices,
+    SgScopeStatement *call_site) {
+  return cuda_rt_builder_->BuildKernelCallPreamble(
+      stencil, dom_arg, param, indices, call_site);
+}
+
+void MPICUDARuntimeBuilder::BuildKernelIndices(
+    StencilMap *stencil,
+    SgBasicBlock *call_site,
+    vector<SgVariableDeclaration*> &indices) {
+  cuda_rt_builder_->BuildKernelIndices(stencil, call_site, indices);
+  // TODO: add "+ offset"
 }
 
 SgType *MPICUDARuntimeBuilder::BuildOnDeviceGridType(GridType *gt) {

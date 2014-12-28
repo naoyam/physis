@@ -19,7 +19,8 @@ SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
                                      SgExpression *width);
 SgExpression *BuildStreamBoundaryKernel(int idx);
 
-class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder {
+class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
+                             virtual public CUDABuilderInterface {
  public:
   MPICUDARuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope),
@@ -50,6 +51,11 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder {
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *params);
 
+  virtual void BuildKernelIndices(
+      StencilMap *stencil,
+      SgBasicBlock *call_site,
+      vector<SgVariableDeclaration*> &indices);
+
   virtual SgIfStmt *BuildDomainInclusionCheck(
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
@@ -58,19 +64,79 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder {
   virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices);
+  virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
+      StencilMap *stencil);
 
-  //! Generates a device type corresponding to a given grid type.
-  /*!
-    This is not derived.
-    
-    \param gt The grid type.
-    \return A type object corresponding to the given grid type.
-   */
+  // CUDABuilderInterface functions
+
+  // TODO
+  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
+      SgClassDeclaration *grid_decl,
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+
+  virtual SgScopeStatement *BuildKernelCallPreamble(
+      StencilMap *stencil,      
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  //! Helper function for BuildKernelCallPreamble for 1D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble1D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  //! Helper function for BuildKernelCallPreamble for 2D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble2D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
+  //! Helper function for BuildKernelCallPreamble for 3D stencil
+  virtual SgScopeStatement *BuildKernelCallPreamble3D(
+      StencilMap *stencil,
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
+
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
   
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;
+
 };
 
 } // namespace translator
