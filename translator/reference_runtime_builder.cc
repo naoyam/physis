@@ -751,16 +751,15 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(StencilMap *s
                 << "\n";
     si::prependStatement(vd, body);
   }
-  rose_util::AddASTAttribute(runFunc,
-                             new RunKernelAttribute(s, stencil_param));
+  rose_util::AddASTAttribute(
+      runFunc, new RunKernelAttribute(s, stencil_param));
 
   return runFunc;
   
 }
 
-
-SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffset(const StencilRange &sr,
-                                                           bool is_max) {
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffset(
+    const StencilRange &sr, bool is_max) {
   SgExprListExp *exp_list = sb::buildExprListExp();
   IntVector offset_min, offset_max;
   int nd = sr.num_dims();
@@ -781,11 +780,13 @@ SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffset(const StencilRange &s
   return exp_list;
 }
 
-SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMax(const StencilRange &sr) {
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMax(
+    const StencilRange &sr) {
   return BuildStencilOffset(sr, true);
 }
 
-SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMin(const StencilRange &sr) {
+SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffsetMin(
+    const StencilRange &sr) {
   return BuildStencilOffset(sr, false);
 }
 
