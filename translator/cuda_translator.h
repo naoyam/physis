@@ -26,8 +26,8 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void FixAST();
   virtual void FixGridType();
 
-  virtual CUDARuntimeBuilder *builder() {
-    return dynamic_cast<CUDARuntimeBuilder*>(rt_builder_);
+  virtual CUDABuilderInterface *builder() {
+    return dynamic_cast<CUDABuilderInterface*>(rt_builder_);
   }
 
   

@@ -136,7 +136,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridOffset(
       = si::lookupFunctionSymbolInParentScopes(func_name);
   SgFunctionCallExp *offset_fc =
       sb::buildFunctionCallExp(fs, offset_params);
-  rose_util::AddASTAttribute<GridOffsetAttribute>(
+  ru::AddASTAttribute<GridOffsetAttribute>(
       offset_fc,
       new GridOffsetAttribute(num_dim, is_periodic, sil));
   return offset_fc;
@@ -168,8 +168,8 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
                                offset));
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil);
-  rose_util::AddASTAttribute<GridGetAttribute>(get_call,
-                                               gga);
+  ru::AddASTAttribute<GridGetAttribute>(get_call,
+                                        gga);
   return get_call;
 }
 
@@ -201,7 +201,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
 
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil, member_name);
-  rose_util::AddASTAttribute<GridGetAttribute>(
+  ru::AddASTAttribute<GridGetAttribute>(
       x, gga);
   return x;
 }
@@ -214,7 +214,7 @@ SgVariableDeclaration *FindMember(SgClassDefinition *type,
   FOREACH (it, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*it);
-    if (rose_util::GetName(member_decl) == name) {
+    if (ru::GetName(member_decl) == name) {
       return member_decl;
     }
   }
@@ -228,7 +228,7 @@ static void GetArrayDim(SgArrayType *at,
   PSAssert (idx != NULL);
 
   size_t d;
-  PSAssert(rose_util::GetIntLikeVal(idx, d));
+  PSAssert(ru::GetIntLikeVal(idx, d));
   dims.push_back(d);
   if (isSgArrayType(at->get_base_type()))
     GetArrayDim(isSgArrayType(at->get_base_type()), dims);
@@ -248,7 +248,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
 
   SgVariableDeclaration *md = FindMember(gt->point_def(),
                                          member_name);
-  SgArrayType *mt = isSgArrayType(rose_util::GetType(md));
+  SgArrayType *mt = isSgArrayType(ru::GetType(md));
   PSAssert(mt);
 
   vector<size_t> dims;
@@ -309,9 +309,9 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
                                  member_name,
                                  array_indices));
   
-  rose_util::CopyASTAttribute<GridOffsetAttribute>(
+  ru::CopyASTAttribute<GridOffsetAttribute>(
       offset_with_array, offset);
-  rose_util::RemoveASTAttribute<GridOffsetAttribute>(offset);
+  ru::RemoveASTAttribute<GridOffsetAttribute>(offset);
 
   SgExpression *x = sb::buildPntrArrRefExp(
       BuildGridMember(si::copyExpression(gvref),
@@ -319,7 +319,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
       offset_with_array);
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil, member_name);
-  rose_util::AddASTAttribute<GridGetAttribute>(
+  ru::AddASTAttribute<GridGetAttribute>(
       x, gga);
   return x;
 }
@@ -331,10 +331,10 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
     Let X be the user type name, N be the number of dimension,
     
     struct __PSGridNDX_dev {
-      PSIndex dim[N];
-      [list of struct member arrays];
+    PSIndex dim[N];
+    [list of struct member arrays];
     };
-   */
+  */
   string dev_type_name = "__" + gt->type_name() + "_dev";
   SgClassDeclaration *decl =
       sb::buildStructDeclaration(dev_type_name, gs_);
@@ -354,9 +354,9 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
   FOREACH (member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgName member_name = rose_util::GetName(member_decl);
+    SgName member_name = ru::GetName(member_decl);
     SgType *member_type = si::getArrayElementType(
-        rose_util::GetType(member_decl));
+        ru::GetType(member_decl));
     SgVariableDeclaration *dev_type_member =
         sb::buildVariableDeclaration(
             member_name,
@@ -369,7 +369,7 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
 
 
 static bool IsDimMember(SgVariableDeclaration *member) {
-  SgName member_name = rose_util::GetName(member);
+  SgName member_name = ru::GetName(member);
   return member_name == DIM_STR;
 }
 
@@ -379,16 +379,16 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
     const GridType *gt) {
   /*
     Example:
-  void* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
+    void* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
     __PSGridType_dev *p = malloc(sizeof(__PSGridType_dev));
     for (int i = 0; i < num_dim; ++i) {
-      p->dim[i]  = dim[i];
+    p->dim[i]  = dim[i];
     }
     cudaMalloc(&(p->x), sizeof(typeof(p->x)), dim[i]);
     cudaMalloc(&(p->y), sizeof(typeof(p->y)), dim[i]);
     cudaMalloc(&(p->z), sizeof(typeof(p->z)), dim[i]);
     return p;
-  }
+    }
   */
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
   string func_name = dev_type->get_name() + "New";
@@ -447,7 +447,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   FOREACH (member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
     SgExpression *size_exp =
         sb::buildMultiplyOp(
             sb::buildSizeOfOp(
@@ -460,8 +460,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
     }
     SgFunctionCallExp *malloc_call = BuildCudaMalloc(
         sb::buildArrowExp(sb::buildVarRefExp(p_decl),
-                          sb::buildOpaqueVarRefExp(
-                              rose_util::GetName(
+                          sb::buildVarRefExp(
+                              ru::GetName(
                                   sb::buildVarRefExp(member_decl)))),
         size_exp);
     si::appendStatement(sb::buildExprStatement(malloc_call),
@@ -475,7 +475,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, sb::buildPointerType(sb::buildVoidType()), pl);
-  rose_util::ReplaceFuncBody(fdecl, body);
+  ru::ReplaceFuncBody(fdecl, body);
   si::setStatic(fdecl);
   return fdecl;
 }
@@ -484,13 +484,13 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
     const GridType *gt) {
   /*
     Example:
-  void __PSGridType_devFree(void *v) {
+    void __PSGridType_devFree(void *v) {
     __PSGridType_dev *p = (__PSGridType_dev*)v;
     cudaFree(p->x);
     cudaFree(p->y);
     cudaFree(p->z);
     free(p);
-  }
+    }
   */
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
   string func_name = dev_type->get_name() + "Free";
@@ -539,7 +539,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
   
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, ret_type, pl);
-  rose_util::ReplaceFuncBody(fdecl, body);
+  ru::ReplaceFuncBody(fdecl, body);
   si::setStatic(fdecl);  
   return fdecl;
 }
@@ -547,7 +547,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
 /*!
   
   \param user_type_def Original user type definition.
- */
+*/
 // cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
 void AppendCUDAMallocHost(SgBasicBlock *body,
                           SgClassDefinition *user_type_def,
@@ -560,7 +560,7 @@ void AppendCUDAMallocHost(SgBasicBlock *body,
   ENUMERATE (i, member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
     SgExpression *size_exp =
         sb::buildMultiplyOp(
             sb::buildSizeOfOp(si::getArrayElementType(member_type)),
@@ -593,11 +593,11 @@ void AppendCUDAMemcpy(SgBasicBlock *body,
   ENUMERATE (i, member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
     SgExpression *dev_p =
         sb::buildArrowExp(sb::buildVarRefExp(dev_decl),
-                          sb::buildOpaqueVarRefExp(
-                              rose_util::GetName(
+                          sb::buildVarRefExp(
+                              ru::GetName(
                                   sb::buildVarRefExp(member_decl))));
     SgExpression *host_p =
         sb::buildPntrArrRefExp(
@@ -672,10 +672,10 @@ void AppendArrayTranspose(
         sb::buildPntrArrRefExp(si::copyExpression(soa_exp),
                                soa_index);
     si::appendStatement(
-          sb::buildAssignStatement(
-              soa_to_aos ? aos_elm : soa_elm,
-              soa_to_aos ? soa_elm : aos_elm),
-          loop_body);
+        sb::buildAssignStatement(
+            soa_to_aos ? aos_elm : soa_elm,
+            soa_to_aos ? soa_elm : aos_elm),
+        loop_body);
   }
   si::deleteAST(aos_exp);
   si::deleteAST(soa_exp);
@@ -693,8 +693,8 @@ void AppendTranspose(SgBasicBlock *scope,
   ENUMERATE (i, member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
-    const string member_name = rose_util::GetName(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
+    const string member_name = ru::GetName(member_decl);
     // si::getArrayElementType returns type T if T is non-array type.
     SgExpression *soa_elm =
         sb::buildCastExp(
@@ -729,8 +729,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
     const GridType *gt, bool is_copyout) {
   
   /*
-  Example: Transfer SoA device data to AoS host buffer.    
-  void __PSGridType_devCopyout(void *v, void *dst) {
+    Example: Transfer SoA device data to AoS host buffer.    
+    void __PSGridType_devCopyout(void *v, void *dst) {
     Type *dstp = (Type *)dst;
     __PSGridType_dev *p = (__PSGridType_dev*)v;
     void *tbuf[3];
@@ -738,29 +738,29 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
     cudaMemcpy(tbuf[0], p->x, cudaMemcpyDeviceToHost);
     ...;
     for (int i = 0; i < num_elms; ++i) {
-      dstp[i].x = ((float *)tbuf[0])[i];
-      ...;
+    dstp[i].x = ((float *)tbuf[0])[i];
+    ...;
     }
     cudaFreeHost(tbuf[0]);
     ...;
-  }
+    }
 
-  Transpose AoS data to SoA for CUDA.
-  void __PSGridType_devCopyin(void *v, const void *src) {
+    Transpose AoS data to SoA for CUDA.
+    void __PSGridType_devCopyin(void *v, const void *src) {
     __PSGridType_dev *p = (__PSGridType_dev*)v;
     const Type *srcp = (const Type *)src;
     void *tbuf[3];
     cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
     ...;
     for (int i = 0; i < num_elms; ++i) {
-      Type v = srcp[i];
-      ((float *)tbuf[0])[i] = v.x;
-      ...;
+    Type v = srcp[i];
+    ((float *)tbuf[0])[i] = v.x;
+    ...;
     }
     cudaMemcpy(p->x, tbuf[0], cudaMemcpyHostToDevice);
     cudaFreeHost(tbuf[0]);
     ...;
-  }
+    }
   */
 
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
@@ -865,7 +865,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   
   SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
       func_name, sb::buildVoidType(), pl);
-  rose_util::ReplaceFuncBody(fdecl, body);
+  ru::ReplaceFuncBody(fdecl, body);
   si::setStatic(fdecl);    
   return fdecl;
 }
@@ -921,8 +921,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
   ENUMERATE (i, member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
-    string member_name = rose_util::GetName(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
+    string member_name = ru::GetName(member_decl);
     if (isSgArrayType(member_type)) {
       AppendArrayTranspose(
           body,
@@ -962,7 +962,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
       func_name, gt->point_type(), pl);
   fdecl->get_functionModifier().setCudaDevice();
   si::setStatic(fdecl);
-  rose_util::ReplaceFuncBody(fdecl, body);
+  ru::ReplaceFuncBody(fdecl, body);
   si::setStatic(fdecl);  
   return fdecl;
 }
@@ -1009,8 +1009,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
   ENUMERATE (i, member, members.begin(), members.end()) {
     SgVariableDeclaration *member_decl =
         isSgVariableDeclaration(*member);
-    SgType *member_type = rose_util::GetType(member_decl);
-    string member_name = rose_util::GetName(member_decl);
+    SgType *member_type = ru::GetType(member_decl);
+    string member_name = ru::GetName(member_decl);
     if (isSgArrayType(member_type)) {
       AppendArrayTranspose(
           body,
@@ -1045,7 +1045,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
       func_name, sb::buildVoidType(), pl);
   fdecl->get_functionModifier().setCudaDevice();
   si::setStatic(fdecl);
-  rose_util::ReplaceFuncBody(fdecl, body);
+  ru::ReplaceFuncBody(fdecl, body);
   return fdecl;
 }
 
@@ -1075,7 +1075,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
     if (array_offsets.size() > 0) {
       SgExpressionVector offset_vector;
       FOREACH (it, array_offsets.begin(), array_offsets.end()) {
-        SgExpression *e = rose_util::ParseString(*it, scope);
+        SgExpression *e = ru::ParseString(*it, scope);
         offset_vector.push_back(e);
       }
       SgExpression *array_offset =
@@ -1085,9 +1085,9 @@ SgExpression *CUDARuntimeBuilder::BuildGridEmit(
                   si::copyExpression(grid_exp),
                   gt, attr->member_name(),
                   offset_vector));
-      rose_util::CopyASTAttribute<GridOffsetAttribute>(
+      ru::CopyASTAttribute<GridOffsetAttribute>(
           array_offset, offset);
-      rose_util::RemoveASTAttribute<GridOffsetAttribute>(offset);
+      ru::RemoveASTAttribute<GridOffsetAttribute>(offset);
       offset = array_offset;
     }
     emit_expr =
@@ -1253,7 +1253,7 @@ SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble3D(
       = sb::buildForStatement(loop_init, loop_test,
                               loop_incr, kernel_call_block);
   si::appendStatement(loop, call_site);
-  rose_util::AddASTAttribute(
+  ru::AddASTAttribute(
       loop,
       new RunKernelLoopAttribute(dim));
 
@@ -1435,10 +1435,9 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildRunKernelFunc(StencilMap *stenci
   vector<SgVariableDeclaration*> indices;  
   SgBasicBlock *func_body = BuildRunKernelFuncBody(
       stencil, params, indices);
-  si::replaceStatement(run_func->get_definition()->get_body(),
-                       func_body);
+  ru::ReplaceFuncBody(run_func, func_body);
   // Mark this function as RunKernel
-  rose_util::AddASTAttribute(run_func, new RunKernelAttribute(stencil));
+  ru::AddASTAttribute(run_func, new RunKernelAttribute(stencil));
   si::fixVariableReferences(run_func);
   return run_func;
 }
