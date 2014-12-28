@@ -5,12 +5,14 @@
 
 #include "translator/translator_common.h"
 #include "translator/reference_runtime_builder.h"
+#include "translator/cuda_builder_interface.h"
 #include "translator/map.h"
 
 namespace physis {
 namespace translator {
 
-class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
+class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
+                          virtual public CUDABuilderInterface {
  public:
   CUDARuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope) {}
@@ -87,42 +89,11 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *params);
 
-
-  //! Build variables for kernel indices
-  /*!
-    \param stencil Stencil map object
-    \param call_site Call site basic block
-    \param indices Output paramter to return variable declarations
-   */
   virtual void BuildKernelIndices(
       StencilMap *stencil,
       SgBasicBlock *call_site,
       vector<SgVariableDeclaration*> &indices);
 
-
-  //! Build a code block that sorrounds the call to 1D kernel.
-  /*!
-    The return object is the same as the call_site parameter when the
-    kernel call should be just appended to the block (e.g., 1D and 2D
-    stencil). When loops are introduced to cover the domain (e.g., 3D
-    stencil), the returned call site refers to the inner-most block,
-    where the call should be placed.
-
-    This is not derived.
-    
-    \param stencil Stencil map object
-    \param dom_arg The domain argument to StencilMap
-    \param param Function parameter list of the RunKernel function
-    \param indices Kernel index vector
-    \param call_site Current call site block
-    \return Call site for the kernel call
-   */
-  virtual SgScopeStatement *BuildKernelCallPreamble(
-      StencilMap *stencil,      
-      SgInitializedName *dom_arg,
-      SgFunctionParameterList *param,      
-      vector<SgVariableDeclaration*> &indices,
-      SgScopeStatement *call_site);
 
   virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
   virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(StencilMap *s);
@@ -142,15 +113,15 @@ class CUDARuntimeBuilder: public ReferenceRuntimeBuilder {
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
 
-
-  //! Generates a device type corresponding to a given grid type.
-  /*!
-    This is not derived.
-    
-    \param gt The grid type.
-    \return A type object corresponding to the given grid type.
-   */
+  
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
+
+  virtual SgScopeStatement *BuildKernelCallPreamble(
+      StencilMap *stencil,      
+      SgInitializedName *dom_arg,
+      SgFunctionParameterList *param,      
+      vector<SgVariableDeclaration*> &indices,
+      SgScopeStatement *call_site);
   
  protected:
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
