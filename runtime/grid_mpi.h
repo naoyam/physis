@@ -3,12 +3,12 @@
 #ifndef PHYSIS_RUNTIME_GRID_MPI_H_
 #define PHYSIS_RUNTIME_GRID_MPI_H_
 
-#include <iostream>
-#include <sstream>
-
 #include "runtime/runtime_common.h"
 #include "runtime/grid.h"
 #include "runtime/grid_util.h"
+
+#include <iostream>
+#include <sstream>
 
 namespace physis {
 namespace runtime {
