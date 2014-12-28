@@ -21,6 +21,7 @@ SgExpression *BuildStreamBoundaryKernel(int idx);
 class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
  public:
   MPICUDARuntimeBuilder(SgScopeStatement *global_scope):
+      ReferenceRuntimeBuilder(global_scope),
       MPIRuntimeBuilder(global_scope),
       cuda_rt_builder_(new CUDARuntimeBuilder(global_scope))
   {}
