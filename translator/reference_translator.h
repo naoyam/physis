@@ -46,9 +46,9 @@ class ReferenceTranslator : public Translator {
     variable validate_ast_.
    */
   virtual void ValidateASTConsistency();
-  virtual ReferenceRuntimeBuilder *builder() {
-    return dynamic_cast<ReferenceRuntimeBuilder*>(rt_builder_);
-  }
+  //virtual ReferenceRuntimeBuilder *builder() {
+  //return dynamic_cast<ReferenceRuntimeBuilder*>(rt_builder_);
+  //}
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
   virtual void TranslateNew(SgFunctionCallExp *node, GridType *gt);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
