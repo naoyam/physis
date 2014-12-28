@@ -57,6 +57,11 @@ SgAddOp *Add(SgExpression *op1, SgExpression* op2,
 }
 
 inline 
+SgSubtractOp *Sub(SgExpression *op1, SgExpression* op2) {
+  return SageBuilder::buildSubtractOp(op1, op2);
+}
+
+inline 
 SgMultiplyOp *Mul(SgExpression *op1, SgExpression* op2) {
   return SageBuilder::buildMultiplyOp(op1, op2);
 }
@@ -69,8 +74,23 @@ SgMultiplyOp *Mul(SgExpression *op1, SgExpression* op2,
 }
 
 inline 
+SgDotExp *Dot(SgExpression *op1, SgExpression* op2) {
+  return SageBuilder::buildDotExp(op1, op2);
+}
+
+inline 
+SgArrowExp *Arrow(SgExpression *op1, SgExpression* op2) {
+  return SageBuilder::buildArrowExp(op1, op2);
+}
+
+inline 
 SgPntrArrRefExp *ArrayRef(SgExpression *op1, SgExpression* op2) {
   return SageBuilder::buildPntrArrRefExp(op1, op2);
+}
+
+template <class T>
+SgVarRefExp *Var(const T &v) {
+  return SageBuilder::buildVarRefExp(v);
 }
 
 template <class T>
@@ -79,7 +99,7 @@ SgVarRefExp *Var(T *v) {
 }
 
 template <class T, class S>
-SgVarRefExp *Var(T *v, S *w) {
+SgVarRefExp *Var(const T &v, const S &w) {
   return SageBuilder::buildVarRefExp(v, w);
 }
 

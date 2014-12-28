@@ -50,11 +50,11 @@ int num_local_processes;
 /*!
   Not well tested.
   CUDA context may not be completely deleted just with
-  cudaThreadExit. 
+  cudaDeviceReset. 
 */
 void Checkpoint() {
   gs->Save();
-  CUDA_SAFE_CALL(cudaThreadExit());
+  CUDA_SAFE_CALL(cudaDeviceReset());
 }
 
 //! Preliminary restart support

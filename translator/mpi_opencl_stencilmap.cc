@@ -435,7 +435,7 @@ void MPIOpenCLTranslator::ProcessStencilMap(
       LOG_INFO() << "multi-stream version\n";
       // rose_util::AppendExprStatement(
       //     loop_body,
-      //     BuildCudaStreamSynchronize(sb::buildVarRefExp("stream_boundary_copy")));
+      //     BuildCUDAStreamSynchronize(sb::buildVarRefExp("stream_boundary_copy")));
 
       SgExpression *dom = exp_dom;
       PSAssert(dom);     

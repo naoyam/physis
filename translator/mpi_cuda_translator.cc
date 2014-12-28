@@ -8,7 +8,7 @@
 #include "translator/mpi_cuda_runtime_builder.h"
 #include "translator/reference_runtime_builder.h"
 #include "translator/cuda_runtime_builder.h"
-#include "translator/cuda_builder.h"
+#include "translator/cuda_util.h"
 #include "translator/rose_util.h"
 #include "translator/builder_interface.h"
 #include "translator/rose_ast_attribute.h"
@@ -17,6 +17,7 @@ namespace pu = physis::util;
 namespace sb = SageBuilder;
 namespace si = SageInterface;
 namespace ru = physis::translator::rose_util;
+namespace cu = physis::translator::cuda_util;
 
 namespace physis {
 namespace translator {
@@ -122,11 +123,9 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
       "x",
       sb::buildIntType(),
       sb::buildAssignInitializer(
-          Add(
-              Add(Mul(
-                  ru::BuildCudaIdxExp(ru::kBlockIdxX),
-                  ru::BuildCudaIdxExp(ru::kBlockDimX)),
-                  ru::BuildCudaIdxExp(ru::kThreadIdxX)),
+          Add(Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxX),
+                      cu::BuildCudaIdxExp(cu::kBlockDimX)),
+                  cu::BuildCudaIdxExp(cu::kThreadIdxX)),
               offset_exprs[0])),
       block);
   
@@ -135,11 +134,10 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
       "y",
       sb::buildIntType(),
       sb::buildAssignInitializer(
-          Add(
-              Add(Mul(
-                  ru::BuildCudaIdxExp(ru::kBlockIdxY),
-                  ru::BuildCudaIdxExp(ru::kBlockDimY)),
-                  ru::BuildCudaIdxExp(ru::kThreadIdxY)),
+          Add(Add(Mul(
+              cu::BuildCudaIdxExp(cu::kBlockIdxY),
+              cu::BuildCudaIdxExp(cu::kBlockDimY)),
+                  cu::BuildCudaIdxExp(cu::kThreadIdxY)),
               offset_exprs[1])),
       block);
   
@@ -271,7 +269,7 @@ void MPICUDATranslator::ProcessStencilMap(
   si::appendStatement(sdecl, function_body);
 
   SgVariableDeclaration *block_dim =
-      ru::BuildDim3Declaration("block_dim",
+      cu::BuildDim3Declaration("block_dim",
                                 cuda_trans_->BuildBlockDimX(nd),
                                 cuda_trans_->BuildBlockDimY(nd),
                                 cuda_trans_->BuildBlockDimZ(nd),
@@ -299,8 +297,8 @@ void MPICUDATranslator::ProcessStencilMap(
   // Refactoring: This block is for cache configuration.
   if (cache_config_done_.find(fs) == cache_config_done_.end()) {
     SgFunctionCallExp *cache_config =
-        ru::BuildCudaCallFuncSetCacheConfig(
-            fs, ru::cudaFuncCachePreferL1,
+        cu::BuildCudaCallFuncSetCacheConfig(
+            fs, cu::cudaFuncCachePreferL1,
             global_scope_);
     si::appendStatement(sb::buildExprStatement(cache_config),
                         function_body);
@@ -315,8 +313,8 @@ void MPICUDATranslator::ProcessStencilMap(
             PSAssert(fs_boundary);
             si::appendStatement(
                 sb::buildExprStatement(
-                    ru::BuildCudaCallFuncSetCacheConfig(
-                        fs_boundary, ru::cudaFuncCachePreferL1,
+                    cu::BuildCudaCallFuncSetCacheConfig(
+                        fs_boundary, cu::cudaFuncCachePreferL1,
                         global_scope_)),
                 function_body);
           }
@@ -328,8 +326,8 @@ void MPICUDATranslator::ProcessStencilMap(
         PSAssert(fs_boundary);
         si::appendStatement(
             sb::buildExprStatement(
-                ru::BuildCudaCallFuncSetCacheConfig(
-                    fs_boundary, ru::cudaFuncCachePreferL1,
+                cu::BuildCudaCallFuncSetCacheConfig(
+                    fs_boundary, cu::cudaFuncCachePreferL1,
                     global_scope_)),
             function_body);
       }
@@ -339,8 +337,8 @@ void MPICUDATranslator::ProcessStencilMap(
       PSAssert(fs_inner);
       si::appendStatement(
           sb::buildExprStatement(
-              ru::BuildCudaCallFuncSetCacheConfig(
-                  fs_inner, ru::cudaFuncCachePreferL1,
+              cu::BuildCudaCallFuncSetCacheConfig(
+                  fs_inner, cu::cudaFuncCachePreferL1,
                   global_scope_)),
           function_body);
     }
@@ -357,8 +355,8 @@ void MPICUDATranslator::ProcessStencilMap(
   SgVariableDeclaration *grid_dim = cuda_trans_->BuildGridDimDeclaration(
       stencil_name + "_grid_dim",
       smap->getNumDim(),
-      BuildGetLocalSize(Int(0)),
-      BuildGetLocalSize(Int(1)),
+      builder()->BuildGetLocalSize(Int(0)),
+      builder()->BuildGetLocalSize(Int(1)),
       cuda_trans_->BuildBlockDimX(smap->getNumDim()),
       cuda_trans_->BuildBlockDimY(smap->getNumDim()),
       function_body);
@@ -367,12 +365,9 @@ void MPICUDATranslator::ProcessStencilMap(
   
   // Append the local offset
   for (int i = 0; i < smap->getNumDim()-1; ++i) {
-    si::appendExpression(args,
-                         BuildGetLocalOffset(Int(i)));
+    si::appendExpression(args, builder()->BuildGetLocalOffset(Int(i)));
     if (!flag_multistream_boundary_)
-      si::appendExpression(args_boundary,
-                           BuildGetLocalOffset(
-                               Int(i)));
+      si::appendExpression(args_boundary, builder()->BuildGetLocalOffset(Int(i)));
   }
   if (!flag_multistream_boundary_)
     si::appendExpression(args_boundary, Int(overlap_width));
@@ -391,17 +386,15 @@ void MPICUDATranslator::ProcessStencilMap(
     if (gt) {
       arg = sb::buildPointerDerefExp(
           sb::buildCastExp(
-              BuildGridGetDev(arg),
+              builder()->BuildGridGetDev(arg, gt),
               sb::buildPointerType(builder()->BuildOnDeviceGridType(gt))));
       // skip the grid index
       ++member;
     }
     if (overlap_enabled && Domain::isDomainType(member_type)) {
       si::appendExpression(
-          args,
-          BuildDomainShrink(
-              sb::buildAddressOfOp(arg),
-              Int(overlap_width)));
+          args, builder()->BuildDomainShrink(sb::buildAddressOfOp(arg),
+                                             Int(overlap_width)));
     } else {
       si::appendExpression(args, arg);
     }
@@ -410,14 +403,14 @@ void MPICUDATranslator::ProcessStencilMap(
 
   // Generate Kernel invocation code
   SgCudaKernelExecConfig *cuda_config =
-      ru::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
+      cu::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
                                      sb::buildVarRefExp(block_dim),
                                      NULL, NULL);
   if (overlap_enabled) {
     SgVarRefExp *inner_stream = sb::buildVarRefExp("stream_inner");
     PSAssert(inner_stream);
     SgCudaKernelExecConfig *cuda_config_inner =
-        ru::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
+        cu::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
                                        sb::buildVarRefExp(block_dim),
                                        NULL, inner_stream);
 
@@ -425,7 +418,7 @@ void MPICUDATranslator::ProcessStencilMap(
         ru::getFunctionSymbol(smap->run_inner());
     si::appendStatement(
         sb::buildExprStatement(
-            ru::BuildCudaKernelCallExp(sb::buildFunctionRefExp(fs_inner),
+            cu::BuildCudaKernelCallExp(sb::buildFunctionRefExp(fs_inner),
                                         args, cuda_config_inner)),
         loop_body);
     // perform boundary exchange concurrently
@@ -440,7 +433,7 @@ void MPICUDATranslator::ProcessStencilMap(
               smap->GetRunName() + GetBoundarySuffix());
       si::appendStatement(
           sb::buildExprStatement(
-              ru::BuildCudaKernelCallExp(
+              cu::BuildCudaKernelCallExp(
                   sb::buildFunctionRefExp(fs_boundary),
                   args_boundary, cuda_config)),
           loop_body);
@@ -448,7 +441,7 @@ void MPICUDATranslator::ProcessStencilMap(
       LOG_INFO() << "multi-stream version\n";
       // ru::AppendExprStatement(
       //     loop_body,
-      //     BuildCudaStreamSynchronize(sb::buildVarRefExp("stream_boundary_copy")));
+      //     BuildCUDAStreamSynchronize(sb::buildVarRefExp("stream_boundary_copy")));
       // 6 streams for
       int stream_index = 0;
       int num_x_streams = 5;
@@ -463,26 +456,21 @@ void MPICUDATranslator::ProcessStencilMap(
           si::deleteAST(expressions.front());
           expressions.erase(expressions.begin());          
           SgExpression *bd =
-              BuildDomainGetBoundary(
-                  sb::buildAddressOfOp(dom),
-                  0, j, Int(overlap_width),
-                  num_x_streams, i);
+              BuildDomainGetBoundary(sb::buildAddressOfOp(dom),
+                  0, j, Int(overlap_width), num_x_streams, i);
           ru::PrependExpression(args_boundary_strm, bd);
           int dimz = 512 / (overlap_width * 128);
           SgCudaKernelExecConfig *boundary_config =
-              ru::BuildCudaKernelExecConfig(
-                  Int(1),
-                  BuildCudaDim3(Int(overlap_width),
-                                Int(128),
-                                Int(dimz)),
-                  NULL, BuildStreamBoundaryKernel(stream_index));
+              cu::BuildCudaKernelExecConfig(
+                  Int(1), cu::BuildCUDADim3(overlap_width, 128, dimz),
+                  NULL, builder()->BuildStreamBoundaryKernel(stream_index));
           ++stream_index;
           SgFunctionSymbol *fs_boundary
               = si::lookupFunctionSymbolInParentScopes(
                   smap->GetRunName() + GetBoundarySuffix(0, j));
           ru::AppendExprStatement(
               loop_body,
-              ru::BuildCudaKernelCallExp(
+              cu::BuildCudaKernelCallExp(
                   sb::buildFunctionRefExp(fs_boundary),
                   args_boundary_strm, boundary_config));
         }
@@ -499,25 +487,19 @@ void MPICUDATranslator::ProcessStencilMap(
           expressions.erase(expressions.begin());
           SgExpression *bd =
               BuildDomainGetBoundary(
-                  sb::buildAddressOfOp(dom),
-                  j, i, Int(overlap_width),
+                  sb::buildAddressOfOp(dom), j, i, Int(overlap_width),
                   1, 0);
           ru::PrependExpression(args_boundary_strm, bd);
           SgCudaKernelExecConfig *boundary_config;
           if (j == 1) {
             int dimz = 512 / (overlap_width * 128);
-            boundary_config = ru::BuildCudaKernelExecConfig(
-                Int(1),
-                BuildCudaDim3(Int(128),
-                              Int(overlap_width),
-                              Int(dimz)),
-                NULL, BuildStreamBoundaryKernel(stream_index));
+            boundary_config = cu::BuildCudaKernelExecConfig(
+                Int(1), cu::BuildCUDADim3(128, overlap_width, dimz),
+                NULL, builder()->BuildStreamBoundaryKernel(stream_index));
           } else {
-            boundary_config = ru::BuildCudaKernelExecConfig(
-                Int(1),
-                BuildCudaDim3(Int(128),
-                              Int(4)),
-                NULL, BuildStreamBoundaryKernel(stream_index));
+            boundary_config = cu::BuildCudaKernelExecConfig(
+                Int(1), cu::BuildCUDADim3(128, 4),
+                NULL, builder()->BuildStreamBoundaryKernel(stream_index));
           }
           ++stream_index;
           SgFunctionSymbol *fs_boundary
@@ -525,14 +507,13 @@ void MPICUDATranslator::ProcessStencilMap(
                   smap->GetRunName() + GetBoundarySuffix(j, i));
           ru::AppendExprStatement(
               loop_body,
-              ru::BuildCudaKernelCallExp(
+              cu::BuildCudaKernelCallExp(
                   sb::buildFunctionRefExp(fs_boundary),
                   args_boundary_strm, boundary_config));
         }
       }
       si::appendStatement(
-          sb::buildExprStatement(
-              BuildCudaThreadSynchronize()),
+          sb::buildExprStatement(cu::BuildCUDADeviceSynchronize()),
           loop_body);
     }
   } else {
@@ -541,7 +522,7 @@ void MPICUDATranslator::ProcessStencilMap(
       si::appendStatement(*sit, loop_body);
     }
     SgCudaKernelCallExp *c =
-        ru::BuildCudaKernelCallExp(sb::buildFunctionRefExp(fs),
+        cu::BuildCudaKernelCallExp(sb::buildFunctionRefExp(fs),
                                     args, cuda_config);
     si::appendStatement(sb::buildExprStatement(c), loop_body);
   }
@@ -579,7 +560,7 @@ void MPICUDATranslator::BuildRunBody(SgBasicBlock *block, Run *run,
   // cudaThreadSynchronize after each loop
   si::insertStatementAfter(
       loop,
-      sb::buildExprStatement(BuildCudaThreadSynchronize()));
+      sb::buildExprStatement(cu::BuildCUDADeviceSynchronize()));
   return;
 }
 
@@ -1013,16 +994,12 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
   SgVariableDeclaration *loop_index = x_index;
   SgStatement *loop_init = sb::buildAssignStatement(
       sb::buildVarRefExp(loop_index),
-      Add(ru::BuildCudaIdxExp(ru::kThreadIdxX),
-          ArrayRef(min_field,
-                   Int(0))));
+      Add(cu::BuildCudaIdxExp(cu::kThreadIdxX),
+          ArrayRef(min_field, Int(0))));
   SgStatement *loop_test = sb::buildExprStatement(
-      sb::buildLessThanOp(sb::buildVarRefExp(loop_index),
-                          ArrayRef(max_field,
-                                   Int(0))));
+      sb::buildLessThanOp(Var(loop_index), ArrayRef(max_field, Int(0))));
   SgExpression *loop_incr =
-      sb::buildPlusAssignOp(sb::buildVarRefExp(loop_index),
-                            ru::BuildCudaIdxExp(ru::kBlockDimX));
+      sb::buildPlusAssignOp(Var(loop_index), cu::BuildCudaIdxExp(cu::kBlockDimX));
 
   SgBasicBlock *loop_body = sb::buildBasicBlock();
   SgExprListExp *kernel_args=
@@ -1050,24 +1027,19 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
     SgExpression *blockDim = NULL;
     if (i == 1) {
       loop_index = y_index;
-      threadIdx = ru::BuildCudaIdxExp(ru::kThreadIdxY);
-      blockDim = ru::BuildCudaIdxExp(ru::kBlockDimY);
+      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxY);
+      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimY);
     } else if (i == 2) {
       loop_index = z_index;
-      threadIdx = ru::BuildCudaIdxExp(ru::kThreadIdxZ);
-      blockDim = ru::BuildCudaIdxExp(ru::kBlockDimZ);
+      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxZ);
+      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimZ);
     }
     loop_init = sb::buildAssignStatement(
-        sb::buildVarRefExp(loop_index),
-        Add(threadIdx,
-            ArrayRef(
-                si::copyExpression(min_field),
-                Int(i))));
+        Var(loop_index), Add(threadIdx, ArrayRef(
+            si::copyExpression(min_field), Int(i))));
     loop_test = sb::buildExprStatement(
-        sb::buildLessThanOp(
-            sb::buildVarRefExp(loop_index),
-            ArrayRef(si::copyExpression(max_field),
-                     Int(i))));
+        sb::buildLessThanOp(Var(loop_index),
+                            ArrayRef(si::copyExpression(max_field), Int(i))));
     loop_incr = sb::buildPlusAssignOp(
         sb::buildVarRefExp(loop_index), blockDim);
     loop = sb::buildForStatement(loop_init, loop_test, loop_incr, loop);

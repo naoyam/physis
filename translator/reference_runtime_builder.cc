@@ -45,11 +45,11 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGetID(
 SgExpression *ReferenceRuntimeBuilder::BuildGridBaseAddr(
     SgExpression *gvref, SgType *point_type) {
   
-  SgExpression *field = sb::buildVarRefExp(PS_GRID_RAW_PTR_NAME);
+  SgExpression *field = Var(PS_GRID_RAW_PTR_NAME);
   SgExpression *p =
       (si::isPointerType(gvref->get_type())) ?
-      isSgExpression(sb::buildArrowExp(gvref, field)) :
-      isSgExpression(sb::buildDotExp(gvref, field));
+      isSgExpression(Arrow(gvref, field)) :
+      isSgExpression(Dot(gvref, field));
   if (point_type != NULL) {
     p = sb::buildCastExp(p, sb::buildPointerType(point_type));
   }
@@ -69,10 +69,9 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildGridSet(
       = si::lookupFunctionSymbolInParentScopes("__PSGridSet");
   PSAssert(fs);
   SgExprListExp *args = sb::buildExprListExp(
-      grid_var, sb::buildAddressOfOp(sb::buildVarRefExp(decl)));
+      grid_var, sb::buildAddressOfOp(Var(decl)));
   for (int i = 0; i < num_dims; ++i) {
-    si::appendExpression(args,
-                         si::copyExpression(indices[i]));
+    si::appendExpression(args, si::copyExpression(indices[i]));
   }
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(fs, args);
   ru::AppendExprStatement(tb, fc);
@@ -92,7 +91,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
                       sil, is_kernel, is_periodic);
   SgExpression *p = BuildGridBaseAddr(
       si::copyExpression(gvref), gt->point_type());
-  p = sb::buildPntrArrRefExp(p, offset);
+  p = ArrayRef(p, offset);
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil);
   ru::AddASTAttribute<GridGetAttribute>(p, gga);
@@ -109,10 +108,8 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
     bool is_periodic,
     const string &member_name) {
   SgExpression *x = BuildGridGet(gvref, gva, gt, offset_exprs,
-                                 sil, is_kernel,
-                                 is_periodic);
-  SgExpression *xm = sb::buildDotExp(
-      x, sb::buildVarRefExp(member_name));
+                                 sil, is_kernel, is_periodic);
+  SgExpression *xm = Dot(x, Var(member_name));
   ru::CopyASTAttribute<GridGetAttribute>(xm, x);
   ru::RemoveASTAttribute<GridGetAttribute>(x);
   ru::GetASTAttribute<GridGetAttribute>(
@@ -135,7 +132,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
                                    is_periodic,
                                    member_name);
   FOREACH (it, array_indices.begin(), array_indices.end()) {
-    get = sb::buildPntrArrRefExp(get, *it);
+    get = ArrayRef(get, *it);
   }
   return get;
 }
@@ -158,15 +155,15 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   SgExpression *offset = BuildGridOffset(
       si::copyExpression(grid_exp),
       nd, offset_exprs, &sil, true, false);
-  SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
+  SgExpression *lhs = ArrayRef(p1, offset);
   
   if (attr->is_member_access()) {
     // TODO (buildVarRefExp(string))
-    lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
+    lhs = Dot(lhs, Var(attr->member_name()));
     const vector<string> &array_offsets = attr->array_offsets();
     FOREACH (it, array_offsets.begin(), array_offsets.end()) {
       SgExpression *e = ru::ParseString(*it, scope);
-      lhs = sb::buildPntrArrRefExp(lhs, e);
+      lhs = ArrayRef(lhs, e);
     }
   }
   LOG_DEBUG() << "emit lhs: " << lhs->unparseToString() << "\n";
@@ -188,7 +185,7 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridDim(
   if (!si::isPointerType(grid_ref->get_type()))
     grid_ref = sb::buildAddressOfOp(grid_ref);
   SgExprListExp *args = sb::buildExprListExp(
-      grid_ref, sb::buildIntVal(dim));
+      grid_ref, Int(dim));
   SgFunctionCallExp *grid_dim = sb::buildFunctionCallExp(fs, args);
   return grid_dim;
 }
@@ -213,8 +210,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridRefInRunKernel(
           gv->get_name(), stencil_class_def);
   PSAssert(grid_field);
   SgExpression *grid_ref =
-      ru::BuildFieldRef(sb::buildVarRefExp(stencil_param),
-                               sb::buildVarRefExp(grid_field));
+      ru::BuildFieldRef(Var(stencil_param), Var(grid_field));
   return grid_ref;
 }
 
@@ -235,8 +231,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
     gvref = sb::buildAddressOfOp(gvref);
   }
   SgExprListExp *offset_params = sb::buildExprListExp(gvref);
-  FOREACH (it, offset_exprs->begin(),
-           offset_exprs->end()) {
+  FOREACH (it, offset_exprs->begin(), offset_exprs->end()) {
     si::appendExpression(offset_params, *it);
   }
   SgFunctionSymbol *fs
@@ -244,8 +239,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridOffset(
   SgFunctionCallExp *offset_fc =
       sb::buildFunctionCallExp(fs, offset_params);
   ru::AddASTAttribute<GridOffsetAttribute>(
-      offset_fc, new GridOffsetAttribute(
-          num_dim, is_periodic, sil));
+      offset_fc, new GridOffsetAttribute(num_dim, is_periodic, sil));
   return offset_fc;
 }
 
@@ -272,14 +266,14 @@ SgExpression *ReferenceRuntimeBuilder::BuildDomFieldRef(SgExpression *domain,
   }
     
   //LOG_DEBUG() << "domain: " << domain->unparseToString() << "\n";
-  SgExpression *field = sb::buildVarRefExp(fname,
-                                           dom_decl->get_definition());
+  SgExpression *field = Var(fname,
+                            dom_decl->get_definition());
   SgType *ty = domain->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
   if (si::isPointerType(ty)) {
-    return sb::buildArrowExp(domain, field);
+    return Arrow(domain, field);
   } else {
-    return sb::buildDotExp(domain, field);
+    return Dot(domain, field);
   }
 }
 
@@ -295,7 +289,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildDomMinRef(SgExpression *domain,
                                                       int dim) {
   SgExpression *exp = BuildDomMinRef(domain);
   if (ru::IsCLikeLanguage()) --dim;
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  exp = ArrayRef(exp, Int(dim));
   return exp;
 }
 
@@ -303,7 +297,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildDomMaxRef(SgExpression *domain,
                                                       int dim) {
   SgExpression *exp = BuildDomMaxRef(domain);
   if (ru::IsCLikeLanguage()) --dim;  
-  exp = sb::buildPntrArrRefExp(exp, sb::buildIntVal(dim));
+  exp = ArrayRef(exp, Int(dim));
   return exp;
 }
 
@@ -312,9 +306,9 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
   SgType *ty = stencil_ref->get_type();
   PSAssert(ty && !isSgTypeUnknown(ty));
   if (ru::IsFortranLikeLanguage() || !si::isPointerType(ty)) {
-    return sb::buildDotExp(stencil_ref, field);
+    return Dot(stencil_ref, field);
   } else {
-    return sb::buildArrowExp(stencil_ref, field);
+    return Arrow(stencil_ref, field);
   }
 }
 
@@ -343,11 +337,11 @@ SgExpression *ReferenceRuntimeBuilder::BuildStencilFieldRef(
         isSgClassDeclaration(
             stencil_class_type->get_declaration()->get_definingDeclaration())->
         get_definition();
-    field = sb::buildVarRefExp(name, stencil_def);
+    field = Var(name, stencil_def);
   } else {
     // Temporary create an unbound reference; this does not pass the
     // AST consistency tests unless fixed.
-    field = sb::buildVarRefExp(name);    
+    field = Var(name);    
   }
   return BuildStencilFieldRef(stencil_ref, field);
 }
@@ -407,7 +401,7 @@ SgClassDeclaration *ReferenceRuntimeBuilder::BuildStencilMapType(StencilMap *s) 
     // 10, 2013
 #if 0     // Unparse doesn't support inheritance
     SgClassType *st = isSgClassType(
-    si::lookupNamedTypeInParentScopes("PSStencil", si::getScope(s->getKernel())));
+        si::lookupNamedTypeInParentScopes("PSStencil", si::getScope(s->getKernel())));
     PSAssert(st);
     LOG_DEBUG() << "PS Stencil Type: " << st->unparseToString() << "\n";
     SgClassDeclaration *stdecl = isSgClassDeclaration(st->get_declaration());
@@ -498,16 +492,15 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildMap(StencilMap *stencil) {
   BOOST_FOREACH (SgInitializedName *map_arg,
                  make_pair(mapArgs.begin() + arg_skip,
                            mapArgs.end())) {
-    SgExpression *exp = sb::buildVarRefExp(map_arg, mapDef);
+    SgExpression *exp = Var(map_arg, mapDef);
     si::appendExpression(stencil_fields, exp);
     if (GridType::isGridType(exp->get_type())) {
       if (ru::IsCLikeLanguage()) {
         si::appendExpression(stencil_fields,
                              BuildGridGetID(exp));
       } else {
-        // TODO Fortran: GridGetID not supported
-        si::appendExpression(stencil_fields,
-                             sb::buildIntVal(0));
+        // TODO (Fortran): GridGetID not supported
+        si::appendExpression(stencil_fields, Int(0));
       }
     }
   }
@@ -520,8 +513,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildMap(StencilMap *stencil) {
             "stencil", stencil->stencil_type(),
             init, bb);
     si::appendStatement(svar, bb);
-    si::appendStatement(sb::buildReturnStmt(sb::buildVarRefExp(svar)),
-                        bb);
+    si::appendStatement(sb::buildReturnStmt(Var(svar)), bb);
   } else if (ru::IsFortranLikeLanguage()) {
     string stype_name = stencil->stencil_type()->get_name();    
 #if 0
@@ -533,7 +525,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildMap(StencilMap *stencil) {
     si::appendStatement(sb::buildExprStatement(aop), bb);
 #else
     SgAllocateStatement *as = rf::BuildAllocateStatement();
-    as->set_expr_list(sb::buildExprListExp(sb::buildVarRefExp(stencil_param)));
+    as->set_expr_list(sb::buildExprListExp(Var(stencil_param)));
     as->set_source_expression(
         sb::buildFunctionCallExp(
             sb::buildFunctionRefExp(stype_name),
@@ -552,14 +544,14 @@ SgFunctionCallExp* ReferenceRuntimeBuilder::BuildKernelCall(
       stencil, index_args, run_kernel_params);
   SgFunctionCallExp *c =
       sb::buildFunctionCallExp(
-          rose_util::getFunctionSymbol(stencil->getKernel()), args);
+          ru::getFunctionSymbol(stencil->getKernel()), args);
   return c;
 }
 
 SgExprListExp *ReferenceRuntimeBuilder::BuildKernelCallArgList(
-      StencilMap *stencil,
-      SgExpressionPtrList &index_args,
-      SgFunctionParameterList *run_kernel_params) {      
+    StencilMap *stencil,
+    SgExpressionPtrList &index_args,
+    SgFunctionParameterList *run_kernel_params) {      
   SgExprListExp *args = sb::buildExprListExp();
   FOREACH (it, index_args.begin(), index_args.end()) {
     si::appendExpression(args, *it);
@@ -574,8 +566,8 @@ SgExprListExp *ReferenceRuntimeBuilder::BuildKernelCallArgList(
     SgVariableDeclaration *d = isSgVariableDeclaration(*it);
     assert(d);
     LOG_DEBUG() << "member: " << d->unparseToString() << "\n";
-    SgVarRefExp *stencil = sb::buildVarRefExp(stencil_param);
-    SgExpression *exp = ru::BuildFieldRef(stencil, sb::buildVarRefExp(d));
+    SgVarRefExp *stencil = Var(stencil_param);
+    SgExpression *exp = ru::BuildFieldRef(stencil, Var(d));
     SgVariableDefinition *var_def = d->get_definition();
     ROSE_ASSERT(var_def);
     si::appendExpression(args, exp);
@@ -593,13 +585,13 @@ static SgExpression *BuildRedBlackInitOffset(
     SgInitializedName *rb_param,
     int nd) {
   // idx + idx & 1 ^ (i1 + i2 + ... + c) % 2  
-  SgExpression *rb_offset = sb::buildVarRefExp(rb_param);
+  SgExpression *rb_offset = Var(rb_param);
   for (int i = 1; i < nd; ++i) {
-    rb_offset = sb::buildAddOp(rb_offset, sb::buildVarRefExp(indices[i]));
+    rb_offset = Add(rb_offset, Var(indices[i]));
   }
-  rb_offset = sb::buildModOp(rb_offset, sb::buildIntVal(2));
+  rb_offset = sb::buildModOp(rb_offset, Int(2));
   rb_offset = sb::buildBitXorOp(sb::buildBitAndOp(si::copyExpression(idx),
-                                                  sb::buildIntVal(1)),
+                                                  Int(1)),
                                 rb_offset);
   return rb_offset;
 }
@@ -635,37 +627,32 @@ SgBasicBlock *ReferenceRuntimeBuilder::BuildRunKernelFuncBody(
     }
     SgExpression *loop_begin =
         BuildStencilDomMinRef(
-            sb::buildVarRefExp(stencil_param), i+1);
+            Var(stencil_param), i+1);
     if (i == 0 && stencil->IsRedBlackVariant()) {
-      loop_begin = sb::buildAddOp(
-          loop_begin,
-          BuildRedBlackInitOffset(loop_begin, indices,
-                                  param->get_args()[1],
-                                  stencil->getNumDim()));
+      loop_begin = Add(loop_begin,
+                       BuildRedBlackInitOffset(loop_begin, indices,
+                                               param->get_args()[1],
+                                               stencil->getNumDim()));
     }
     SgInitializedName *loop_var = index_decl->get_variables()[0];
     // <= dom.local_max -1
     SgExpression *loop_end =
-        sb::buildSubtractOp(
-            BuildStencilDomMaxRef(
-                sb::buildVarRefExp(stencil_param), i+1),
-            sb::buildIntVal(1));
+        Sub(BuildStencilDomMaxRef(Var(stencil_param), i+1),
+            Int(1));
     SgExpression *incr =
-        sb::buildIntVal((i == 0 && stencil->IsRedBlackVariant()) ? 2 : 1);
+        Int((i == 0 && stencil->IsRedBlackVariant()) ? 2 : 1);
     SgBasicBlock *inner_block = sb::buildBasicBlock();
-    //SgForStatement *loop_statement = sb::buildForStatement(init, test, incr, inner_block);
     SgScopeStatement *loop_statement =
         ru::BuildForLoop(loop_var, loop_begin, loop_end, incr, inner_block);    
     si::appendStatement(loop_statement, parent_block);
-    rose_util::AddASTAttribute(
-        loop_statement,
-        new RunKernelLoopAttribute(i+1));
+    ru::AddASTAttribute(
+        loop_statement, new RunKernelLoopAttribute(i+1));
     parent_block = inner_block;
   }
 
   SgExpressionPtrList index_args;
   for (int i = 0; i < stencil->getNumDim(); ++i) {
-    index_args.push_back(sb::buildVarRefExp(indices[i]));
+    index_args.push_back(Var(indices[i]));
   }
   SgFunctionCallExp *kernelCall =
       BuildKernelCall(stencil, index_args, param);
@@ -702,7 +689,7 @@ SgVariableDeclaration *ReferenceRuntimeBuilder::BuildLoopIndexVarDecl(
           vn, sb::buildIntType(),
           init ? sb::buildAssignInitializer(init) : NULL,
           block);
-  rose_util::AddASTAttribute<RunKernelIndexVarAttribute>(
+  ru::AddASTAttribute<RunKernelIndexVarAttribute>(
       index_decl, new RunKernelIndexVarAttribute(dim));
   return index_decl;
 }
@@ -715,7 +702,7 @@ SgFunctionParameterList *ReferenceRuntimeBuilder::BuildRunKernelFuncParameterLis
   SgType *stencil_type = NULL;
   if (ru::IsCLikeLanguage()) {
     stencil_type = sb::buildConstType(sb::buildPointerType(
-          sb::buildConstType(stencil->stencil_type())));
+        sb::buildConstType(stencil->stencil_type())));
   } else if (ru::IsFortranLikeLanguage()) {
     stencil_type = stencil->stencil_type();
   }    
@@ -741,7 +728,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(
 
   SgFunctionDeclaration *runFunc = ru::BuildFunctionDeclaration(
       s->GetRunName(), sb::buildVoidType(), parlist, gs_);
-  rose_util::SetFunctionStatic(runFunc);
+  ru::SetFunctionStatic(runFunc);
   si::attachComment(runFunc, "Generated by " + string(__FUNCTION__));
 
   // Build and set the function body
@@ -762,7 +749,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(
                 << "\n";
     si::prependStatement(vd, body);
   }
-  rose_util::AddASTAttribute(
+  ru::AddASTAttribute(
       runFunc, new RunKernelAttribute(s, stencil_param));
 
   return runFunc;
@@ -775,7 +762,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(
   
   SgFunctionDeclaration *runFunc = ru::BuildFunctionDeclaration(
       s->GetRunName(), sb::buildVoidType(), params, gs_);
-  rose_util::SetFunctionStatic(runFunc);
+  ru::SetFunctionStatic(runFunc);
   si::attachComment(runFunc, "Generated by " + string(__FUNCTION__));
   
   //  si::replaceStatement(runFunc->get_definition()->get_body(),
@@ -796,7 +783,7 @@ SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunKernelFunc(
     }
   }
   SgInitializedName *stencil_param = params->get_args()[0];
-  rose_util::AddASTAttribute(
+  ru::AddASTAttribute(
       runFunc, new RunKernelAttribute(s, stencil_param));
 
   return runFunc;
@@ -820,7 +807,7 @@ SgExprListExp *ReferenceRuntimeBuilder::BuildStencilOffset(
   }
   for (int i = 0; i < (int)offset_min.size(); ++i) {
     PSIndex v = is_max ? offset_max[i] : offset_min[i];
-    si::appendExpression(exp_list, sb::buildIntVal(v));
+    si::appendExpression(exp_list, Int(v));
   }
   return exp_list;
 }
@@ -840,8 +827,7 @@ SgExprListExp *ReferenceRuntimeBuilder::BuildSizeExprList(const Grid *g) {
   SgExpressionPtrList &args = g->new_call()->get_args()->get_expressions();  
   int nd = g->getType()->rank();
   for (int i = 0; i < PS_MAX_DIM; ++i) {
-    SgExpression *e = i >= nd ?
-        sb::buildIntVal(0) : si::copyExpression(args[i]);
+    SgExpression *e = i >= nd ? Int(0) : si::copyExpression(args[i]);
     si::appendExpression(exp_list, e);
   }
   return exp_list;

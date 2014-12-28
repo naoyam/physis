@@ -35,7 +35,7 @@ extern "C" {
   }
   
   void PSFinalize() {
-    CUDA_SAFE_CALL(cudaThreadExit());
+    CUDA_SAFE_CALL(cudaDeviceReset());
     delete rt;    
   }
 

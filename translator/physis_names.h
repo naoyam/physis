@@ -31,13 +31,17 @@
 #define PS_DOMAIN_INTERNAL_TYPE_NAME "__PSDomain"
 #define PS_INDEX_TYPE_NAME "PSIndex"
 #define PS_GRID_DIM_NAME "PSGridDim"
-#define PS_GRID_DIM_DEV_NAME "__PSGridDimDiv"
+#define PS_GRID_DIM_DEV_NAME "__PSGridDimDev"
 #define PSF_GRID_NEW_NAME "PSGridNew"
 #define PS_GRID_GET_ID_NAME "__PSGridGetID"
 #define PSF_GRID_GET_ID_NAME "PSGridGetID"
+#define PS_GRID_GET_DEV_NAME "__PSGridGetDev"
 
 #define PS_GRID_RAW_PTR_NAME "p"
 #define PS_GRID_GET_BASE_ADDR "__PSGridGetBaseAddr"
+#define PS_GET_LOCAL_SIZE_NAME "__PSGetLocalSize"
+#define PS_GET_LOCAL_OFFSET_NAME "__PSGetLocalOffset"
+#define PS_DOMAIN_SHRINK_NAME "__PSDomainShrink"
 
 
 #endif /* PHYSIS_TRANSLATOR_PHYSIS_NAMES_H_ */
