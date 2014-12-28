@@ -5,6 +5,7 @@
 
 #include "translator/translator_common.h"
 #include "translator/mpi_runtime_builder.h"
+#include "translator/cuda_builder_interface.h"
 #include "translator/cuda_runtime_builder.h"
 
 namespace physis {
@@ -18,7 +19,7 @@ SgFunctionCallExp *BuildDomainShrink(SgExpression *dom,
                                      SgExpression *width);
 SgExpression *BuildStreamBoundaryKernel(int idx);
 
-class MPICUDARuntimeBuilder: public MPIRuntimeBuilder {
+class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder {
  public:
   MPICUDARuntimeBuilder(SgScopeStatement *global_scope):
       ReferenceRuntimeBuilder(global_scope),

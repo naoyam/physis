@@ -14,8 +14,10 @@ namespace translator {
 class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
                           virtual public CUDABuilderInterface {
  public:
-  CUDARuntimeBuilder(SgScopeStatement *global_scope):
-      ReferenceRuntimeBuilder(global_scope) {}
+  CUDARuntimeBuilder(SgScopeStatement *global_scope,
+                     CUDABuilderInterface *delegator=NULL):
+      ReferenceRuntimeBuilder(global_scope),
+      delegator_(delegator) {}
   virtual ~CUDARuntimeBuilder() {}
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
@@ -97,7 +99,8 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
 
 
   virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
-  virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(StencilMap *s);
+  virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
+      StencilMap *s);
   virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
       vector<SgVariableDeclaration*> &indices);
@@ -152,7 +155,10 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       vector<SgVariableDeclaration*> &indices,
       SgScopeStatement *call_site);
   
-  
+  CUDABuilderInterface *delegator_;
+  CUDABuilderInterface *builder() {
+    return delegator_ ? delegator_ : this;
+  }
 };
 
 } // namespace translator
