@@ -395,8 +395,16 @@ void ReferenceTranslator::DefineMapSpecificTypesAndFunctions() {
     assert(realMap);
     InsertStencilSpecificFunc(s, realMap);
     s->setFunc(realMap);
-
+#if 1
     SgFunctionDeclaration *runKernel = builder()->BuildRunKernelFunc(s);
+#else
+    SgFunctionParameterList *pl =
+        builder()->BuildRunKernelFuncParameterList(s);
+    vector<SgVariableDeclaration*> indices;
+    SgBasicBlock *body = builder()->BuildRunKernelFuncBody(s, pl, indices);
+    SgFunctionDeclaration *runKernel =
+        builder()->BuildRunKernelFunc(s, pl, body, indices);
+#endif
     assert(runKernel);
     s->run() = runKernel;
     InsertStencilSpecificFunc(s, runKernel);

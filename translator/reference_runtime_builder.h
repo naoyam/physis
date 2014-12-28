@@ -65,6 +65,12 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
       const string &member_name,
       const SgExpressionVector &array_indices);
 
+  virtual SgExprListExp *BuildStencilOffsetMax(
+      const StencilRange &sr);
+  virtual SgExprListExp *BuildStencilOffsetMin(
+      const StencilRange &sr);
+  virtual SgExprListExp *BuildSizeExprList(const Grid *g);  
+
   //! Build code for grid emit.
   /*!
     \param grid_exp Grid expression
@@ -128,12 +134,6 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   virtual SgExpression *BuildStencilDomMaxRef(
       SgExpression *stencil, int dim);
 
-  virtual SgExprListExp *BuildStencilOffsetMax(
-      const StencilRange &sr);
-  virtual SgExprListExp *BuildStencilOffsetMin(
-      const StencilRange &sr);
-
-  virtual SgExprListExp *BuildSizeExprList(const Grid *g);  
   
   virtual SgClassDeclaration *BuildStencilMapType(StencilMap *s);
   virtual SgFunctionDeclaration *BuildMap(StencilMap *stencil);
@@ -146,8 +146,15 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
       StencilMap *stencil,
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *params);
-
-  virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
+#if 0
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(
+      StencilMap *s, SgFunctionParameterList *params,
+      SgBasicBlock *body, const vector<SgVariableDeclaration*> &indices);
+#endif  
+  virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
+      StencilMap *s);
+  virtual SgFunctionDeclaration *BuildRunKernelFunc(
+      StencilMap *s);
   
   virtual SgBasicBlock *BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
