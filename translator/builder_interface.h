@@ -233,19 +233,21 @@ class BuilderInterface {
       StencilMap *s, SgFunctionParameterList *params,
       SgBasicBlock *body,
       const vector<SgVariableDeclaration*> &indices) = 0;
-#else
+#endif  
+  //! Build a function declaration that runs a stencil map. 
+  /*!
+    \param s The stencil map object.
+    \return The function declaration.
+   */
   virtual SgFunctionDeclaration *BuildRunKernelFunc(
       StencilMap *s) = 0;
-#endif  
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil Stencil map object
     \return Parameter list for the run-kernel function
   */
-#if 0  
   virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
       StencilMap *s) = 0;
-#endif  
   //! A helper function for BuildRunKernel.
   /*!
     \param stencil The stencil map object.
