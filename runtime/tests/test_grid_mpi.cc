@@ -1,11 +1,11 @@
 // Licensed under the BSD license. See LICENSE.txt for more details.
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
 #include "runtime/grid_space_mpi.h"
 #include "runtime/ipc_mpi.h"
 #include "runtime/grid_mpi_debug_util.h"
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #include <iostream>
 #include <algorithm>

@@ -1,5 +1,6 @@
 // Licensed under the BSD license. See LICENSE.txt for more details.
 
+#define __STDC_LIMIT_MACROS
 #include <stdarg.h>
 #include <map>
 #include <string>
