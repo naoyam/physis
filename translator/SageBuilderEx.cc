@@ -144,13 +144,21 @@ SgCudaKernelCallExp *buildCudaKernelCallExp(SgFunctionRefExp *func_ref,
   ROSE_ASSERT(args);
   ROSE_ASSERT(config);
 
+#if 1
+  // This version works both with ROSE edg3 and edg4x
+  SgCudaKernelCallExp *cuda_call =
+      sb::buildCudaKernelCallExp_nfi(func_ref, args, config);
+  ROSE_ASSERT(cuda_call);
+  si::setOneSourcePositionForTransformation(cuda_call);
+#else
+  // This version works with ROSE edg3, but not with edg4x
   SgCudaKernelCallExp *cuda_call =
       new SgCudaKernelCallExp(func_ref, args, config);
   ROSE_ASSERT(cuda_call);
-
   func_ref->set_parent(cuda_call);
   args->set_parent(cuda_call);
   si::setOneSourcePositionForTransformation(cuda_call);
+#endif
   return cuda_call;
 }
 

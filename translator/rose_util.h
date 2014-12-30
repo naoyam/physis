@@ -98,6 +98,13 @@ void printAllTypeNames(SgNode *topLevelNode, std::ostream &os);
 // recursively removes all casts
 SgExpression *removeCasts(SgExpression *exp);
 SgFunctionDeclaration *getFuncDeclFromFuncRef(SgExpression *refExp);
+template <class T>
+T *GetDefiningDecl(T *decl);
+template <> inline
+SgFunctionDeclaration *GetDefiningDecl<SgFunctionDeclaration>(
+    SgFunctionDeclaration *decl) {
+  return isSgFunctionDeclaration(decl->get_definingDeclaration());
+}
 SgClassDefinition *getDefinition(SgClassType *t);
 SgFunctionDeclaration *getContainingFunction(SgNode *node);
 string getFuncName(SgFunctionRefExp *fref);

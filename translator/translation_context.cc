@@ -54,7 +54,7 @@ void TranslationContext::AnalyzeGridTypes() {
 
     // Find the user-visile type 
     SgNamedType *utype = NULL;
-    if (rose_util::IsFortran(project_)) {
+    if (ru::IsFortran(project_)) {
       // In Fortran, the same type is used in the user code
       utype = type;
     } else {
@@ -73,8 +73,8 @@ void TranslationContext::AnalyzeGridTypes() {
     GridType *gt = new GridType(type, utype);
     LOG_DEBUG() << "Created grid type: " << gt->toString() << "\n";
     registerGridType(utype, gt);
-    rose_util::AddASTAttribute<GridType>(utype, gt);
-    rose_util::AddASTAttribute<GridType>(decl, gt);
+    ru::AddASTAttribute<GridType>(utype, gt);
+    ru::AddASTAttribute<GridType>(decl, gt);
   }
 }
 
@@ -87,14 +87,14 @@ void TranslationContext::AnalyzeGridTypes() {
   \return true if new attr is attached
 */
 static bool EnsureGridVarAttribute(SgInitializedName *in) {
-  if (rose_util::GetASTAttribute<GridVarAttribute>(in)) {
+  if (ru::GetASTAttribute<GridVarAttribute>(in)) {
     return false;
   } else {
     GridType *gt = 
-        rose_util::GetASTAttribute<GridType>(in);
+        ru::GetASTAttribute<GridType>(in);
     PSAssert(gt);
     GridVarAttribute *gva = new GridVarAttribute(gt);
-    rose_util::AddASTAttribute<GridVarAttribute>(in, gva);
+    ru::AddASTAttribute<GridVarAttribute>(in, gva);
     LOG_DEBUG() << "Adding GridVarAttribute to "
                 << in->unparseToString() << "\n";
     return true;
@@ -314,8 +314,8 @@ void TranslationContext::AnalyzeGridVars() {
       LOG_DEBUG() << "Grid object of type "
                   << gt->toString() << " found: "
                   << in->unparseToString() << "\n";
-      if (!rose_util::GetASTAttribute<GridType>(in)) {
-          rose_util::AddASTAttribute(in, gt);
+      if (!ru::GetASTAttribute<GridType>(in)) {
+          ru::AddASTAttribute(in, gt);
       }
       changed |= HandleGridDeclaration(in, *this);
     }
@@ -344,8 +344,13 @@ void TranslationContext::AnalyzeGridVars() {
 
     // Handle normal function call
     BOOST_FOREACH (SgFunctionCallExp *c, calls) {
-      SgFunctionDeclaration *callee_decl =
-          si::getDeclarationOfNamedFunction(c->get_function());
+      SgFunctionRefExp *func_ref = isSgFunctionRefExp(c->get_function());
+      if (!func_ref) {
+        // indirect calls are not relevant
+        continue;
+      }
+      SgFunctionDeclaration *callee_decl = si::getDeclarationOfNamedFunction(
+          func_ref);
       if (callee_decl && callee_decl->get_name() == PSF_GRID_NEW_NAME) {
         changed |= HandleGridNewFortran(c, *this);
       } else {
@@ -360,13 +365,13 @@ static void AssociateDomainAttr(SgExpression *exp, Domain *dom,
                                 TranslationContext *tx) {
   LOG_DEBUG() << "Domain attr: "
               << dom->toString() << "\n";
-  Domain *old = rose_util::GetASTAttribute<Domain>(exp);
+  Domain *old = ru::GetASTAttribute<Domain>(exp);
   if (old) {
     old->Merge(*dom);
     delete dom;
   } else {
     //tx->associateExpWithDomain(exp, dom);
-    rose_util::AddASTAttribute<Domain>(exp, dom);
+    ru::AddASTAttribute<Domain>(exp, dom);
   }
 }
 
@@ -404,7 +409,7 @@ void TranslationContext::AnalyzeDomainExpr() {
       SgFunctionCallExp *call = isSgFunctionCallExp(exp);
       Domain *dom = Domain::GetDomain(call);
       //associateExpWithDomain(call, dom);
-      rose_util::AddASTAttribute<Domain>(call, dom);      
+      ru::AddASTAttribute<Domain>(call, dom);      
     } else {
       // OG_DEBUG() << "Ignoring domain expression of type: "
       // < exp->class_name() << "\n";
@@ -427,10 +432,10 @@ void TranslationContext::AnalyzeMap() {
 }
 
 void TranslationContext::locateDomainTypes() {
-  dom1d_type_ = rose_util::FindType(project_, PS_DOMAIN1D_TYPE_NAME);
-  dom2d_type_ = rose_util::FindType(project_, PS_DOMAIN2D_TYPE_NAME);
-  dom3d_type_ = rose_util::FindType(project_, PS_DOMAIN3D_TYPE_NAME);
-  //f_dom_type_ = rose_util::FindType(project_, PSF_DOMAIN_TYPE_NAME);
+  dom1d_type_ = ru::FindType(project_, PS_DOMAIN1D_TYPE_NAME);
+  dom2d_type_ = ru::FindType(project_, PS_DOMAIN2D_TYPE_NAME);
+  dom3d_type_ = ru::FindType(project_, PS_DOMAIN3D_TYPE_NAME);
+  //f_dom_type_ = ru::FindType(project_, PSF_DOMAIN_TYPE_NAME);
   assert(dom1d_type_);
   assert(dom2d_type_);
   assert(dom3d_type_);
@@ -508,7 +513,7 @@ static SgVarRefExp *ExtractGridVarRef(SgFunctionCallExp *call,
                                       TranslationContext *tx) {
   SgVarRefExp *gexp =
       isSgVarRefExp(
-          rose_util::removeCasts(
+          ru::removeCasts(
               call->get_args()->get_expressions()[0]));
   PSAssert(gexp);
   PSAssert(tx->findGridType(gexp));
@@ -519,7 +524,7 @@ bool TranslationContext::isNewCall(SgFunctionCallExp *ce) {
   SgFunctionRefExp *fref =
       isSgFunctionRefExp(ce->get_function());
   if (!fref) return false;
-  const string name = rose_util::getFuncName(fref);
+  const string name = ru::getFuncName(fref);
   return isNewFunc(name);
 }
 
@@ -527,7 +532,7 @@ SgVarRefExp *TranslationContext::IsFree(SgFunctionCallExp *ce) {
   SgFunctionRefExp *fref =
       isSgFunctionRefExp(ce->get_function());
   if (!fref) return NULL;
-  const string name = rose_util::getFuncName(fref);
+  const string name = ru::getFuncName(fref);
   if (name != "PSGridFree") return NULL;
   return ExtractGridVarRef(ce, this);
 }
@@ -536,7 +541,7 @@ SgVarRefExp *TranslationContext::IsCopyin(SgFunctionCallExp *ce) {
   SgFunctionRefExp *fref =
       isSgFunctionRefExp(ce->get_function());
   if (!fref) return NULL;
-  const string name = rose_util::getFuncName(fref);
+  const string name = ru::getFuncName(fref);
   if (name != "PSGridCopyin") return NULL;
   return ExtractGridVarRef(ce, this);
 }
@@ -546,7 +551,7 @@ SgVarRefExp *TranslationContext::IsCopyout(
   SgFunctionRefExp *fref =
       isSgFunctionRefExp(ce->get_function());
   if (!fref) return NULL;
-  const string name = rose_util::getFuncName(fref);
+  const string name = ru::getFuncName(fref);
   if (name != "PSGridCopyout") return NULL;
   return ExtractGridVarRef(ce, this);
 }
@@ -564,9 +569,9 @@ static bool IsBuiltInFunction(const string &func_name) {
 
 static void EnsureKernelBodyAttribute(SgFunctionDeclaration *kernel_decl) {
   SgScopeStatement *body =
-      kernel_decl->get_definition()->get_body();
-  if (!rose_util::GetASTAttribute<KernelBody>(body)) {
-    rose_util::AddASTAttribute<KernelBody>(
+      ru::GetDefiningDecl(kernel_decl)->get_definition()->get_body();
+  if (!ru::GetASTAttribute<KernelBody>(body)) {
+    ru::AddASTAttribute<KernelBody>(
         body, new KernelBody());
   }
 }
@@ -585,7 +590,7 @@ static void AttachStencilIndexVarAttribute(SgFunctionDeclaration *kernel_decl) {
     vector<SgVarRefExp*> vars = si::querySubTree<SgVarRefExp>(kernel_decl);
     BOOST_FOREACH (SgVarRefExp *vr, vars) {
       if (si::convertRefToInitializedName(vr) != param) continue;
-      rose_util::AddASTAttribute<StencilIndexVarAttribute>(vr, attr);
+      ru::AddASTAttribute<StencilIndexVarAttribute>(vr, attr);
     }
   }
 }
@@ -628,7 +633,7 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
       // if the call site is a kernel, then mark the callee as an
       // inner kernel
       SgFunctionDeclaration *callerFunc
-          = rose_util::getContainingFunction(call);
+          = ru::getContainingFunction(call);
       assert(callerFunc);
       Kernel *parentKernel = findKernel(callerFunc);
       if (!parentKernel) continue;
@@ -646,7 +651,7 @@ void TranslationContext::AnalyzeKernelFunctions(void) {
       }
 
       SgFunctionDeclaration *calleeFunc
-          = rose_util::getFuncDeclFromFuncRef(calleeExp);
+          = ru::getFuncDeclFromFuncRef(calleeExp);
       assert(calleeFunc);
       if (IsBuiltInFunction(calleeFunc->get_name())) {
         // builtins are just passed to the runtime
@@ -759,7 +764,7 @@ void TranslationContext::markReadWriteGrids() {
 
 bool TranslationContext::IsInit(SgFunctionCallExp *call) const {
   if (!isSgFunctionRefExp(call->get_function())) return false;
-  const string &fname = rose_util::getFuncName(call);
+  const string &fname = ru::getFuncName(call);
   return fname == PS_INIT_NAME;
 }
 
@@ -780,10 +785,10 @@ Grid *TranslationContext::getOrCreateGrid(SgFunctionCallExp *newCall) {
   } else {
     GridType *gt = NULL;
     if (si::is_C_language() || si::is_Cxx_language()) {
-      gt = rose_util::GetASTAttribute<GridType>(
+      gt = ru::GetASTAttribute<GridType>(
           newCall->get_type());
     } else if (si::is_Fortran_language()) {
-      gt = rose_util::GetASTAttribute<GridType>(
+      gt = ru::GetASTAttribute<GridType>(
           newCall->get_args()->get_expressions()[0]->get_type());
     }
     assert(gt);
@@ -865,7 +870,7 @@ void TranslationContext::AnalyzeReduce() {
     LOG_DEBUG() << "Call to reduce found: "
                 << call->unparseToString() << "\n";
     Reduce *rd = new Reduce(call);
-    rose_util::AddASTAttribute(call, rd);
+    ru::AddASTAttribute(call, rd);
   }
   LOG_INFO() << "Reduction analysis done.\n";  
 }
