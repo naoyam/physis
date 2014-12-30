@@ -24,6 +24,9 @@ if (NOT ROSE_FOUND)
 endif()
 
 include_directories(${ROSE_INCLUDE_DIR})
+if (ROSE_EDG4X)
+  add_definitions(-DUSE_ROSE_EDG4X)
+endif ()
 # Use precompiled header if available
 add_definitions(-include rose.h)
 

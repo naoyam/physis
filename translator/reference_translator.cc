@@ -311,7 +311,7 @@ void ReferenceTranslator::TranslateMap(SgFunctionCallExp *node,
               << realMap->get_name() << "\n";
   SgFunctionRefExp *ref = rose_util::getFunctionRefExp(realMap);
   assert(ref);
-  LOG_DEBUG() << "Map function: " << ref->unparseToString() << "\n";
+  //LOG_DEBUG() << "Map function: " << ref->unparseToString() << "\n";
 
   SgExpressionPtrList &args = node->get_args()->get_expressions();
   SgExpressionPtrList::iterator args_it = args.begin();

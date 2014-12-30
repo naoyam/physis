@@ -154,7 +154,44 @@ extern "C" {
 #else
 #define CUDA_DEVICE __device__
 #endif
-  
+
+  // Forward declartions. These are the only available function
+  // signatures for the translator.
+  static inline PSIndex __PSGridGetOffset1D(__PSGrid *g, PSIndex i1);
+  static inline PSIndex __PSGridGetOffset2D(__PSGrid *g, PSIndex i1,
+                                            PSIndex i2);
+  static inline PSIndex __PSGridGetOffset3D(__PSGrid *g, PSIndex i1,
+                                            PSIndex i2, PSIndex i3);
+  static inline PSIndex __PSGridGetOffsetPeriodic1D(__PSGrid *g, PSIndex i1);
+  static inline PSIndex __PSGridGetOffsetPeriodic2D(__PSGrid *g, PSIndex i1,
+                                                    PSIndex i2);
+  static inline PSIndex __PSGridGetOffsetPeriodic3D(__PSGrid *g, PSIndex i1,
+                                                    PSIndex i2, PSIndex i3);
+  CUDA_DEVICE
+  static inline PSIndex __PSGridGetOffset1DDev(const void *g,
+                                               PSIndex i1);
+  CUDA_DEVICE
+  static inline PSIndex __PSGridGetOffset2DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2);
+  CUDA_DEVICE
+  static inline PSIndex __PSGridGetOffset3DDev(const void *g,
+                                               PSIndex i1,
+                                               PSIndex i2,
+                                               PSIndex i3);
+  CUDA_DEVICE
+  static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
+                                                       PSIndex i1);
+  CUDA_DEVICE
+  static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2);
+  static inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
+                                                       PSIndex i1,
+                                                       PSIndex i2,
+                                                       PSIndex i3);
+  // These are only available for generated codes
+#ifndef PHYSIS_USER
   static inline PSIndex __PSGridGetOffset1D(__PSGrid *g, PSIndex i1) {
     return i1;
   }
@@ -229,7 +266,7 @@ extern "C" {
         (i3 + PSGridDim((__PSGrid_dev*)g, 2)) % PSGridDim((__PSGrid_dev*)g, 2)
         * PSGridDim((__PSGrid_dev*)g, 0) * PSGridDim((__PSGrid_dev*)g, 1);
   }
-  
+#endif  
   
   extern void __PSReduceGridFloat(void *buf, enum PSReduceOp op,
                                   __PSGrid *g);
@@ -252,6 +289,9 @@ extern "C" {
   extern cudaError_t cudaStreamSynchronize(cudaStream_t);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
+  // ceil is also used. Ensure its signature is visible to the
+  // translator
+  extern double ceil(double x);
 #endif
 
 #ifdef __cplusplus

@@ -81,7 +81,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridGet(
       BuildGridOffset(gvref, gt->rank(), offset_exprs,
                       is_kernel, is_periodic, sil);
   gvref = si::copyExpression(gvref);
-  SgExpression *field = sb::buildVarRefExp("p0");
+  SgExpression *field = sb::buildOpaqueVarRefExp("p0");
   SgExpression *p0 =
       (si::isPointerType(gvref->get_type())) ?
       isSgExpression(sb::buildArrowExp(gvref, field)) :
@@ -161,6 +161,7 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   SgExpression *lhs = sb::buildPntrArrRefExp(p1, offset);
   
   if (attr->is_member_access()) {
+    // TODO (buildVarRefExp(string))
     lhs = sb::buildDotExp(lhs, sb::buildVarRefExp(attr->member_name()));
     const vector<string> &array_offsets = attr->array_offsets();
     FOREACH (it, array_offsets.begin(), array_offsets.end()) {

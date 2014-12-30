@@ -79,6 +79,7 @@ SgFunctionDeclaration *StencilMap::getKernelFromMapCall(
   SgExpressionPtrList &args = call->get_args()->get_expressions();
   SgExpression *kernelExp = args[ru::IsCLikeLanguage()? 0 : 1];
   SgFunctionDeclaration *kernel = rose_util::getFuncDeclFromFuncRef(kernelExp);
+  kernel = isSgFunctionDeclaration(kernel->get_definingDeclaration());
   LOG_DEBUG() << "kernel: " << kernel->unparseToString() << "\n";
   return kernel;
 }

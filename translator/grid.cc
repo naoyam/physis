@@ -147,11 +147,14 @@ string GridType::getTypeNameFromFuncName(const string &funcName) {
 
 SgInitializedName*
 GridType::getGridVarUsedInFuncCall(SgFunctionCallExp *call) {
+#ifdef USE_ROSE_EDG4X
+  SgArrowExp *exp = isSgArrowExp(call->get_function());
+#else
   SgPointerDerefExp *pdref =
       isSgPointerDerefExp(call->get_function());
   if (!pdref) return false;
-
   SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
+#endif
   if (!exp) return NULL;
 
   SgExpression *lhs = exp->get_lhs_operand();
@@ -175,9 +178,13 @@ string GridType::GetGridFuncName(SgFunctionCallExp *call) {
   if (!GridType::isGridTypeSpecificCall(call)) {
     throw PhysisException("Not a grid function call");
   }
+#ifdef USE_ROSE_EDG4X
+  SgArrowExp *exp = isSgArrowExp(call->get_function());
+#else  
   SgPointerDerefExp *pdref =
       isSgPointerDerefExp(call->get_function());
   SgArrowExp *exp = isSgArrowExp(pdref->get_operand());
+#endif  
 
   SgVarRefExp *rhs = isSgVarRefExp(exp->get_rhs_operand());
   assert(rhs);

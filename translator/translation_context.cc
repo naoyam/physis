@@ -819,6 +819,9 @@ bool TranslationContext::registerInnerKernel(SgFunctionDeclaration *fd,
 }
 
 bool TranslationContext::registerEntryKernel(SgFunctionDeclaration *fd) {
+  // Assumes only defining func decls for simpliity. Non-defining
+  // should not be passed to this function.
+  PSAssert(fd->get_definingDeclaration() == fd);
   if (isEntryKernel(fd)) return false;
   LOG_DEBUG() << "Entry kernel: "
               << fd->get_name().getString() << "\n";

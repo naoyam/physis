@@ -152,6 +152,11 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
     PSAssert(gn);
     GridVarAttribute *gva = rose_util::GetASTAttribute<GridVarAttribute>(gn);
     const GridSet *gs = tx.findGrid(gn);
+    if (gs == NULL) {
+      // gs can be null if no information on the source of the
+      // variable is available
+      continue;
+    }
     BOOST_FOREACH (Grid *g, *gs) {
       // Note: g is NULL if InitializedName can be initialized
       // with external variables. That happens if a stencil kernel is

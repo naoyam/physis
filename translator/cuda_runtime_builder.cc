@@ -231,7 +231,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
     const string &member_name,
     const SgExpressionVector &array_indices) {
 
-  SgVarRefExp *dim_ref = sb::buildVarRefExp("dim");
+  SgVarRefExp *dim_ref = sb::buildOpaqueVarRefExp("dim");
   SgExpression *g_dim = BuildGridMember(gvref, dim_ref);
       
   SgExpression *num_elms = BuildNumElmsExpr(
@@ -306,7 +306,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGet(
 
   SgExpression *x = sb::buildPntrArrRefExp(
       BuildGridMember(si::copyExpression(gvref),
-                      sb::buildVarRefExp(member_name)),
+                      sb::buildOpaqueVarRefExp(member_name)),
       offset_with_array);
   GridGetAttribute *gga = new GridGetAttribute(
       gt, NULL, gva, is_kernel, is_periodic, sil, member_name);
@@ -418,7 +418,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   for (unsigned i = 0; i < gt->rank(); ++i) {
     SgExpression *lhs = sb::buildPntrArrRefExp(
         sb::buildArrowExp(sb::buildVarRefExp(p_decl),
-                          sb::buildVarRefExp(DIM_STR)),
+                          sb::buildOpaqueVarRefExp(DIM_STR)),
         sb::buildIntVal(i));
     SgExpression *rhs = sb::buildPntrArrRefExp(sb::buildVarRefExp(dim_p),
                                                sb::buildIntVal(i));
@@ -451,7 +451,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
     }
     SgFunctionCallExp *malloc_call = BuildCudaMalloc(
         sb::buildArrowExp(sb::buildVarRefExp(p_decl),
-                          sb::buildVarRefExp(
+                          sb::buildOpaqueVarRefExp(
                               rose_util::GetName(
                                   sb::buildVarRefExp(member_decl)))),
         size_exp);
@@ -587,7 +587,7 @@ void AppendCUDAMemcpy(SgBasicBlock *body,
     SgType *member_type = rose_util::GetType(member_decl);
     SgExpression *dev_p =
         sb::buildArrowExp(sb::buildVarRefExp(dev_decl),
-                          sb::buildVarRefExp(
+                          sb::buildOpaqueVarRefExp(
                               rose_util::GetName(
                                   sb::buildVarRefExp(member_decl))));
     SgExpression *host_p =
@@ -697,7 +697,7 @@ void AppendTranspose(SgBasicBlock *scope,
         sb::buildPntrArrRefExp(
             sb::buildVarRefExp(aos_decl),
             sb::buildVarRefExp(loop_counter)),
-        sb::buildVarRefExp(member_name));
+        sb::buildOpaqueVarRefExp(member_name));
     if (isSgArrayType(member_type)) {
       AppendArrayTranspose(scope, soa_elm,  aos_elm,
                            soa_to_aos, loop_counter,
@@ -918,20 +918,20 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
       AppendArrayTranspose(
           body,
           sb::buildArrowExp(sb::buildVarRefExp(g_p),
-                            sb::buildVarRefExp(member_name)),
+                            sb::buildOpaqueVarRefExp(member_name)),
           sb::buildDotExp(sb::buildVarRefExp(v_decl),
-                          sb::buildVarRefExp(member_name)),
+                          sb::buildOpaqueVarRefExp(member_name)),
           true, offset_p,
           num_elms_decl, isSgArrayType(member_type));
       has_array_type = true;
     } else {
       SgExpression *x = sb::buildPntrArrRefExp(
           sb::buildArrowExp(sb::buildVarRefExp(g_p),
-                            sb::buildVarRefExp(member_name)),
+                            sb::buildOpaqueVarRefExp(member_name)),
           sb::buildVarRefExp(offset_p));
       SgExprStatement *s = sb::buildAssignStatement(
           sb::buildDotExp(sb::buildVarRefExp(v_decl),
-                          sb::buildVarRefExp(member_name)),
+                          sb::buildOpaqueVarRefExp(member_name)),
           x);
       
       si::appendStatement(s, body);

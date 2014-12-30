@@ -104,19 +104,21 @@ class CUDATranslator : public ReferenceTranslator {
     number of times. 
     
     \param run The stencil run object.
-    \return outer_block The outer block where the for loop is included.
+    \param outer_block The outer block where the for loop is included.
+    \param run_func The run function.    
    */
-  virtual SgBasicBlock *BuildRunLoopBody(Run *run,
-                                         SgScopeStatement *outer_block);
+  virtual SgBasicBlock *BuildRunLoopBody(SgBasicBlock *outer_block,
+                                         Run *run,
+                                         SgFunctionDeclaration *run_func);
   //! Generates an argument list for a CUDA kernel call.
   /*!
     \param stencil_idx The index of the stencil in PSStencilRun.
     \param sm The stencil map object.
-    \param sv_name Name of the stencil parameter.
+    \param sv Stencil parameter symbol
     \return The argument list for the call to the stencil map.
    */
   virtual SgExprListExp *BuildCUDAKernelArgList(
-      int stencil_idx, StencilMap *sm, const string &sv_name) const;
+      int stencil_idx, StencilMap *sm, SgVariableSymbol *sv) const;
 
   //! Generates a CUDA function declaration that runs a stencil map. 
   /*!
