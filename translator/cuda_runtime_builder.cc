@@ -74,8 +74,6 @@ static SgVariableDeclaration *BuildNumElmsDecl(
 SgExpression *CUDARuntimeBuilder::BuildGridRefInRunKernel(
     SgInitializedName *gv,
     SgFunctionDeclaration *run_kernel) {
-  // Find the parameter with the same name as gv.
-  // TODO:
   const SgInitializedNamePtrList &plist =
       run_kernel->get_parameterList()->get_args();
   FOREACH (plist_it, plist.begin(), plist.end()) {

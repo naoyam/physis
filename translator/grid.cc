@@ -566,7 +566,7 @@ SgInitializedName *GridGetAnalysis::IsGetArrayRead(SgExpression *exp) {
 }
 
 // Depends on GridType attribute
-// TODO: is_periodic not supported
+// TODO (periodic on utype with arrays)
 SgInitializedName *GridGetAnalysis::IsGetArrayRead(SgExpression *exp,
                                                    bool &is_periodic) {
   SgDotExp *dot = isSgDotExp(exp);

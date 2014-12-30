@@ -15,7 +15,9 @@ namespace translator {
 class MPICUDATranslator: public MPITranslator {
  protected:
   //! Used to generate CUDA-related code.
-  // TODO: Is this dependency really non avoidable?
+  // Note: Is this dependency really non avoidable? No, it can be
+  // avoided if the config logic is duplicated. Seems just fine to
+  // delegate to the CUDA transaltor.
   CUDATranslator *cuda_trans_;
   //! Optimization flag to enable the multi-stream boundary processing.
   bool flag_multistream_boundary_;
