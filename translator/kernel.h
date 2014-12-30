@@ -55,9 +55,9 @@ class Kernel {
 #endif
   bool IsGridUnmodified(Grid *g) const;  
   // Returns true if variable may be modified in this kernel.
-  // TODO (naoya): intra-kernel calls are not analyzed. Parameters
-  // modified in inner kernels are not correctly returned about its
-  // accesses. 
+  // TODO (function call from kernel): calls from kernels are not
+  // analyzed. Parameters modified in inner kernels are not correctly
+  // returned about its accesses. 
   bool isGridParamModified(SgInitializedName *v) const;
   bool isGridParamWritten(SgInitializedName *v) const {
     return isGridParamModified(v);
