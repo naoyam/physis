@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
+# Need CUDA_HOST_COMPILER available in 2.8.10 and onward
+cmake_minimum_required(VERSION 2.8.10)
 
 # CMAKE_BUILD_TYPE must be set before calling project.
 set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
@@ -34,6 +35,11 @@ endif ()
 # Add warning flags
 if (CMAKE_COMPILER_IS_GNUCXX)
   set (WARN_FLAGS "-Wall -Wno-deprecated -Wno-unused-function")
+  # Unused local typedefs are complained with g++-4.8 and Boost 1.53.  
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7)
+    message (STATUS "CXX compiler version is > 4.7: ${CMAKE_CXX_COMPILER_VERSION}")
+    add_flag (WARN_FLAGS "-Wno-unused-local-typedefs")
+  endif ()
 elseif (CMAKE_COMPILER_IS_ICC)
   set (WARN_FLAGS "-Wall -Wcheck -Wno-deprecated -Wno-unused-function")
 endif ()

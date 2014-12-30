@@ -30,7 +30,7 @@ add_definitions(-include rose.h)
 # Boost
 #set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_BOOST_CMAKE true)
-find_package(Boost REQUIRED program_options)
+find_package(Boost REQUIRED program_options iostreams)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # JNI
