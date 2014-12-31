@@ -668,6 +668,8 @@ SgFunctionDeclaration *CUDATranslator::BuildRunKernel(StencilMap *stencil) {
   isSgFunctionDeclaration(
       run_func->get_firstNondefiningDeclaration())->
       get_functionModifier().setCudaKernel();
+  // Further, the modifier of defining function needs to be set
+  run_func->get_functionModifier().setCudaKernel();  
 #else  
   run_func->get_functionModifier().setCudaKernel();
 #endif
