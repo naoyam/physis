@@ -167,25 +167,26 @@ extern "C" {
                                                     PSIndex i2);
   static inline PSIndex __PSGridGetOffsetPeriodic3D(__PSGrid *g, PSIndex i1,
                                                     PSIndex i2, PSIndex i3);
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset1DDev(const void *g,
                                                PSIndex i1);
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset2DDev(const void *g,
                                                PSIndex i1,
                                                PSIndex i2);
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset3DDev(const void *g,
                                                PSIndex i1,
                                                PSIndex i2,
                                                PSIndex i3);
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
                                                        PSIndex i1);
-  CUDA_DEVICE
+  PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2);
+  PS_FUNCTION_DEVICE  
   static inline PSIndex __PSGridGetOffsetPeriodic3DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2,

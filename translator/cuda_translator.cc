@@ -368,7 +368,7 @@ void CUDATranslator::BuildRunBody(
 }
 
 SgExprListExp *CUDATranslator::BuildCUDAKernelArgList(
-    int stencil_idx, StencilMap *sm, SgVariableSymbol *sv) const {
+    int stencil_idx, StencilMap *sm, SgVariableSymbol *sv) {
   // Build an argument list by expanding members of the parameter struct
   // e.g., struct {a, b, c}; -> (s.a, s.b, s.c)
   SgExprListExp *args = sb::buildExprListExp();

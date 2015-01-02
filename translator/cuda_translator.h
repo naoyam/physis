@@ -94,7 +94,7 @@ class CUDATranslator : public ReferenceTranslator {
     \return The argument list for the call to the stencil map.
    */
   virtual SgExprListExp *BuildCUDAKernelArgList(
-      int stencil_idx, StencilMap *sm, SgVariableSymbol *sv) const;
+      int stencil_idx, StencilMap *sm, SgVariableSymbol *sv);
 
   //! Generates an expression of the x dimension of thread blocks.
   virtual SgExpression *BuildBlockDimX(int nd);
