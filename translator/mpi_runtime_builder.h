@@ -17,7 +17,8 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   MPIRuntimeBuilder(SgScopeStatement *global_scope,
                     const Configuration &config,
                     BuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope, config, delegator) {
+      ReferenceRuntimeBuilder(global_scope, config, delegator),
+      flag_mpi_overlap_(false) {
     const pu::LuaValue *lv
         = config.Lookup(Configuration::MPI_OVERLAP);
     if (lv) {

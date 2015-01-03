@@ -138,6 +138,7 @@ extern "C" {
   }
 
 #if ! defined(PHYSIS_RUNTIME) && ! defined(PHYSIS_USER)
+#if 0  
   PS_FUNCTION_DEVICE size_t __PSGridCalcOffset3D(int x, int y, int z,
                                                  int pitch, int dimy) {
     return x + y * pitch + z * pitch * dimy;
@@ -149,14 +150,14 @@ extern "C" {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
     z -= g->local_offset[2];
-    return g->p0 + __PSGridCalcOffset3D(
+    return g->p + __PSGridCalcOffset3D(
         x, y, z, g->pitch, g->local_size[1]);    
   }
 
   PS_FUNCTION_DEVICE float* __PSGridGetAddrNoHaloFloat3DLocal(
       __PSGrid3DFloat_dev *g,
       int x, int y, int z) {
-    return g->p0 + __PSGridCalcOffset3D(
+    return g->p + __PSGridCalcOffset3D(
         x, y, z, g->pitch, g->local_size[1]);    
   }
   
@@ -167,10 +168,9 @@ extern "C" {
     x -= g->local_offset[0];
     y -= g->local_offset[1];
     z -= g->local_offset[2];
-    return g->p0 + __PSGridCalcOffset3D(x, y, z, g->pitch,
+    return g->p + __PSGridCalcOffset3D(x, y, z, g->pitch,
                                         g->local_size[1]);    
   }
-
 
   // z
   PS_FUNCTION_DEVICE float* __PSGridGetAddrFloat3D_2_fw(
@@ -294,6 +294,9 @@ extern "C" {
    }
 #endif
   
+#endif
+
+#if 0  
 #if defined(PHYSIS_TRANSLATOR) || defined(PHYSIS_RUNTIME) || defined(PHYSIS_USER)
   extern float* __PSGridGetAddrFloat3D_0_bw(
       __PSGrid3DFloat_dev *g, int x, int y, int z);
@@ -376,7 +379,7 @@ extern "C" {
     return __PSGridGetAddrNoHaloFloat3D(g, x, y, z);
   }
 #endif
-
+#endif
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);  
   extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,

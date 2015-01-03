@@ -499,8 +499,12 @@ void MPICUDATranslator::TranslateKernelDeclaration(
 
 SgFunctionDeclaration *MPICUDATranslator::BuildRunInteriorKernel(
     StencilMap *stencil) {
+  LOG_DEBUG() << "Building RunInteriorKernel function\n";
 
-  if (!flag_mpi_overlap_) return NULL;
+  if (!flag_mpi_overlap_) {
+    LOG_DEBUG() << "Overlapping is disabled; skipping interior kernel generation.\n";
+    return NULL;
+  }
   
   SgFunctionParameterList *params = sb::buildFunctionParameterList();
   SgClassDefinition *param_struct_def = stencil->GetStencilTypeDefinition();
@@ -550,6 +554,7 @@ SgFunctionDeclaration *MPICUDATranslator::BuildRunInteriorKernel(
   SgBasicBlock *func_body =
       BuildRunInteriorKernelBody(stencil, params);
   ru::ReplaceFuncBody(run_func, func_body);
+  LOG_DEBUG() << "RunInteriorKernel successfully generated\n";
   return run_func;
 }
 

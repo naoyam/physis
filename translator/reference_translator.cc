@@ -375,11 +375,12 @@ void ReferenceTranslator::DefineMapSpecificTypesAndFunctions() {
                                                    global_scope_);
       assert(runSymbol);
       s->run() = runSymbol->get_declaration();
-      // REFACTORING: ugly usage of direct string
+
       SgFunctionSymbol *runInnerSymbol
-          = si::lookupFunctionSymbolInParentScopes(s->GetRunName()
-                                                   + "_inner",
-                                                   global_scope_);
+          = si::lookupFunctionSymbolInParentScopes(
+              s->GetRunName() + "_" + string(PS_STENCIL_MAP_INNER_SUFFIX_NAME),
+              global_scope_);
+      
       if (runInnerSymbol) {
         s->run_inner() = runInnerSymbol->get_declaration();
       }

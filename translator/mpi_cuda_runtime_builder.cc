@@ -435,18 +435,18 @@ void MPICUDARuntimeBuilder::ProcessStencilMapWithOverlapping(
 SgVariableDeclaration *MPICUDARuntimeBuilder::BuildStencilDecl(
     StencilMap *smap, int stencil_map_index,
     SgFunctionDeclaration *run_func) {
-  SgFunctionDefinition *run_func_def = run_func->get_definition();
+  SgBasicBlock *run_func_body = run_func->get_definition()->get_body();
   string stencil_name = PS_STENCIL_MAP_STENCIL_PARAM_NAME + toString(stencil_map_index);
   SgType *stencil_ptr_type = sb::buildPointerType(smap->stencil_type());
   SgAssignInitializer *init =
       sb::buildAssignInitializer(
           sb::buildCastExp(
-              ArrayRef(Var("stencils", run_func_def), Int(stencil_map_index)),
+              ArrayRef(Var("stencils", run_func_body), Int(stencil_map_index)),
               stencil_ptr_type), stencil_ptr_type);
   SgVariableDeclaration *sdecl
       = sb::buildVariableDeclaration(stencil_name, stencil_ptr_type,
-                                     init, run_func_def);
-  si::appendStatement(sdecl, run_func_def);
+                                     init, run_func_body);
+  si::appendStatement(sdecl, run_func_body);
   return sdecl;
 }
 
@@ -454,7 +454,10 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
     StencilMap *smap,  int stencil_map_index, Run *run,
     SgFunctionDeclaration *run_func, SgScopeStatement *loop_body) {
   int nd = smap->getNumDim();
-  SgFunctionDefinition *run_func_def = run_func->get_definition();
+  // FunctionDef does not work for the below variable
+  // declarations. Its body needs to be used instead.
+  // SgFunctionDef *run_func_def = run_func->get_definition();
+  SgBasicBlock *run_func_body = run_func->get_definition()->get_body();
   SgVariableDeclaration *sdecl
       = BuildStencilDecl(smap, stencil_map_index, run_func);
 
@@ -462,9 +465,9 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   SgVariableDeclaration *block_dim =
       cu::BuildDim3Declaration(
           "block_dim", BuildBlockDimX(nd),
-          BuildBlockDimY(nd), BuildBlockDimZ(nd), run_func_def);
-  si::appendStatement(block_dim, run_func_def);
-  
+          BuildBlockDimY(nd), BuildBlockDimZ(nd), run_func_body);
+  si::appendStatement(block_dim, run_func_body);
+
   SgInitializedNamePtrList remote_grids;
   SgStatementPtrList load_statements;
   bool overlap_eligible;
@@ -472,7 +475,7 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   BuildLoadRemoteGridRegion(smap, sdecl, run, 
                             remote_grids, load_statements,
                             overlap_eligible, overlap_width);
-  bool overlap_enabled = IsOverlappingEnabled() &&  overlap_eligible;
+  bool overlap_enabled = IsOverlappingEnabled() && overlap_eligible;
 
   LOG_INFO() << (overlap_enabled ? "Generating overlapping code\n" :
                  "Generating non-overlapping code\n");
@@ -481,8 +484,8 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   SgVariableDeclaration *grid_dim = BuildGridDimDeclaration(
       "grid_dim_" + toString(stencil_map_index), nd,
       BuildGetLocalSize(Int(1)),BuildGetLocalSize(Int(2)),
-      BuildBlockDimX(nd), BuildBlockDimY(nd), run_func_def);
-  si::appendStatement(grid_dim, run_func_def);
+      BuildBlockDimX(nd), BuildBlockDimY(nd), run_func_body);
+  si::appendStatement(grid_dim, run_func_body);
 
   // Build kernel call argument lists for normal kernel and interior kernel
   SgExprListExp *args = BuildCUDAKernelArgList(
@@ -519,7 +522,7 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
     si::appendStatement(stmt, loop_body);
   }
 
-  BuildFixGridAddresses(smap, sdecl, run_func_def);
+  BuildFixGridAddresses(smap, sdecl, run_func_body);
 }
 
   
