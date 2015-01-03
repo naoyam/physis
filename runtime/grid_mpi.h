@@ -142,7 +142,7 @@ class GridMPI: public Grid {
   /*!
     \param dst Destination buffer.
    */
-  virtual void Copyout(void *dst) const;
+  virtual void Copyout(void *dst);
   //! Copy grid data into this grid.
   /*!
     \param src Source buffer to copy.

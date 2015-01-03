@@ -69,6 +69,8 @@ class GridMPICUDAExp: public GridMPI {
   virtual void CopyoutHalo(int dim, const Width2 &width, bool fw, bool diagonal);
   virtual void CopyinHalo(int dim, const Width2 &width, bool fw, bool diagonal);
   virtual int Reduce(PSReduceOp op, void *out);
+  virtual void Copyout(void *dst);
+  virtual void Copyin(const void *src);
   
   // Not inherited
   void *GetDev() { return dev_; }

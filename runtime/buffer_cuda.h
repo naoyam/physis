@@ -37,6 +37,8 @@ class BufferCUDADev: public Buffer {
  public:
   BufferCUDADev();
   virtual ~BufferCUDADev();
+  // Even copyout may modify an internal packing buffer, so this
+  // cann't be a const function
   virtual void Copyout(void *dst, size_t size);  
   virtual void Copyout(size_t elm_size, int rank,
                        const IndexArray  &grid_size,
