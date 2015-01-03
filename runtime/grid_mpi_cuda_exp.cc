@@ -20,7 +20,7 @@ GridMPICUDAExp::GridMPICUDAExp(
     const Width2 &halo,                 
     int attr): GridMPI(type, elm_size, num_dims, size, global_offset,
                        local_offset, local_size,
-                       halo, attr) {
+                       halo, attr), dev_(NULL) {
   if (empty_) return;
 }
 
@@ -59,6 +59,30 @@ size_t GridMPICUDAExp::CalcHaloSize(int dim, unsigned width, bool diagonal) {
   return halo_size.accumulate(num_dims_);
 }
 
+namespace {
+void *MallocPSGridDevType(int dim) {
+  size_t s = 0;
+  switch (dim) {
+    case 1:
+      s = sizeof(__PSGrid1D_dev);
+      break;
+    case 2:
+      s = sizeof(__PSGrid2D_dev);
+      break;
+    case 3:
+      s = sizeof(__PSGrid3D_dev);
+      break;
+    default:
+      LOG_ERROR() << "Dimension, " << dim << ", not supported\n";
+      PSAbort(1);
+  }
+  void *p = malloc(s);
+  PSAssert(p);
+  return p;
+}
+
+}
+
 void GridMPICUDAExp::InitBuffers() {
   LOG_DEBUG() << "Initializing grid buffer\n";
 
@@ -90,7 +114,32 @@ void GridMPICUDAExp::InitBuffers() {
     }
   }
 
+  // buffer to be sent as a pass-by-value parameter for CUDA kernel
+  // calls
+  PSAssert(dev_ == NULL);
+  dev_ = MallocPSGridDevType(num_dims_);
+
   FixupBufferPointers();
+}
+
+
+// Fix addresses in dev_
+namespace {
+template <class DevType>
+void FixupDevBuffer(GridMPICUDAExp &g) {
+  if (!g.GetDev()) {
+    LOG_DEBUG() << "dev_ is NULL; nothing to do\n";
+    return;
+  }
+
+  DevType *dev_ptr = (DevType*)g.GetDev();
+  dev_ptr->p = g.buffer()->Get();
+  for (int i = 0; i < g.num_dims(); ++i) {
+    dev_ptr->dim[i] = g.size()[i];
+    dev_ptr->local_size[i] = g.local_size()[i];
+    dev_ptr->local_offset[i] = g.local_offset()[i];
+  }
+}
 }
 
 void GridMPICUDAExp::FixupBufferPointers() {
@@ -105,7 +154,21 @@ void GridMPICUDAExp::FixupBufferPointers() {
     LOG_VERBOSE() << "data buffer null\n";
     data_ = NULL;
   }
+  
+  switch (num_dims_) {
+    case 1: FixupDevBuffer<__PSGrid1D_dev>(*this);
+      break;
+    case 2: FixupDevBuffer<__PSGrid2D_dev>(*this);
+      break;
+    case 3: FixupDevBuffer<__PSGrid3D_dev>(*this);
+      break;
+    default:
+      LOG_ERROR() << "Dimension, " << num_dims_ << ", not supported\n";
+      PSAbort(1);
+  }
 }
+
+
 
 void GridMPICUDAExp::DeleteBuffers() {
   if (empty_) return;
@@ -131,6 +194,12 @@ void GridMPICUDAExp::DeleteBuffers() {
   halo_peer_host_ = NULL;
   delete[] halo_peer_dev_;
   halo_peer_dev_ = NULL;
+  
+  if (dev_) {
+    free(dev_);
+    dev_ = NULL;
+  }
+  
   GridMPI::DeleteBuffers();
 }
 
