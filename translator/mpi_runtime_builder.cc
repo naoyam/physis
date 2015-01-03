@@ -213,7 +213,8 @@ void MPIRuntimeBuilder::ProcessStencilMap(StencilMap *smap,
                                           Run *run,
                                           SgScopeStatement *function_body,
                                           SgScopeStatement *loop_body) {
-  string stencil_name = "s" + string(PS_STENCIL_MAP_STENCIL_PARAM_NAME);
+  string stencil_name = string(PS_STENCIL_MAP_STENCIL_PARAM_NAME)
+      + toString(stencil_map_index);
   SgExpression *idx = sb::buildIntVal(stencil_map_index);
   SgType *stencil_ptr_type = sb::buildPointerType(smap->stencil_type());
   SgAssignInitializer *init =
