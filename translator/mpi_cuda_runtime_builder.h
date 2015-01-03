@@ -221,8 +221,24 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                                  int stencil_index, Run *run,
                                  SgFunctionDeclaration *run_func,
                                  SgScopeStatement *loop_body);
-
-
+  //! Helper function for ProcessStencilMap
+  /*! 
+    Not a derived function.
+   */
+  virtual void ProcessStencilMapWithOverlapping(
+      StencilMap *smap,
+      SgScopeStatement *loop_body,
+      SgVariableDeclaration *grid_dim,
+      SgVariableDeclaration *block_dim,
+      SgExprListExp *args, SgExprListExp *args_boundary,
+      const SgStatementPtrList &load_statements,
+      SgCudaKernelExecConfig *cuda_config,    
+      int overlap_width);
+  
+  //! Helper function for ProcessStencilMap
+  virtual SgVariableDeclaration *BuildStencilDecl(
+      StencilMap *smap, int stencil_map_index,
+      SgFunctionDeclaration *run_func);
 
 };
 
