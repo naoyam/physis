@@ -1208,18 +1208,18 @@ function update_results()
 			;;
 		$FAIL_TRANSLATE)
 			inc NUM_FAIL_TRANS
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/translate"
 			;;
 		$FAIL_COMPILE)
 			inc NUM_SUCCESS_TRANS
 			inc NUM_FAIL_COMPILE
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/compile"
 			;;
 		$FAIL_EXECUTE)
 			inc NUM_SUCCESS_TRANS
 			inc NUM_SUCCESS_COMPILE
 			inc NUM_FAIL_EXECUTE
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/execute"
 			;;
 		$SKIP_TRANSLATE)
 			inc NUM_SKIP_TRANS
