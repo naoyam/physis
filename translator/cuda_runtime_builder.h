@@ -15,8 +15,8 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
                           virtual public CUDABuilderInterface {
  public:
   CUDARuntimeBuilder(SgScopeStatement *global_scope,
-                     BuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope, delegator) {}
+                     const Configuration &config,
+                     BuilderInterface *delegator=NULL);
   virtual ~CUDARuntimeBuilder() {}
   virtual SgExpression *BuildGridRefInRunKernel(
       SgInitializedName *gv,
@@ -116,6 +116,11 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
 
+  virtual void BuildRunFuncBody(
+      Run *run, SgFunctionDeclaration *run_func);
+
+  virtual SgBasicBlock *BuildRunFuncLoopBody(
+      Run *run, SgFunctionDeclaration *run_func);
   
   virtual SgType *BuildOnDeviceGridType(GridType *gt);
 
@@ -159,8 +164,48 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL);
+
+  //! Generates an argument list for a CUDA kernel call.
+  /*!
+    TODO (Interface decl)
+    
+    \param sm The stencil map object.
+    \param sv Stencil parameter symbol
+    \return The argument list for the call to the stencil map.
+   */
+  virtual SgExprListExp *BuildCUDAKernelArgList(
+      StencilMap *sm, SgVariableSymbol *sv);
+
+  //! Generates an expression of the x dimension of thread blocks.
+  /*!
+    TODO (Interface decl)
+   */
+  virtual SgExpression *BuildBlockDimX(int nd);
+  //! Generates an expression of the y dimension of thread blocks.
+  /*!
+    TODO (Interface decl)
+  */
+  virtual SgExpression *BuildBlockDimY(int nd);
+  //! Generates an expression of the z dimension of thread blocks.
+  /*!
+    TODO (Interface decl)
+  */
+  virtual SgExpression *BuildBlockDimZ(int nd);
+
+  /*!
+    TODO (Interface decl)
+  */
+  const std::vector<SgExpression *> cuda_block_size_vals() const {
+    return cuda_block_size_vals_;
+  }
   
  protected:
+  int block_dim_x_;
+  int block_dim_y_;
+  int block_dim_z_;
+  /** hold all CUDA_BLOCK_SIZE values */
+  std::vector<SgExpression *> cuda_block_size_vals_;
+
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       const GridType *gt, bool is_copyout);
   

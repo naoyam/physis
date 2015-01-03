@@ -242,24 +242,25 @@ void set_output_filename(SgFile *file, string suffix) {
 }
 
 static pt::BuilderInterface *GetRTBuilder(SgProject *proj,
-                                        CommandLineOptions &opts) {
+                                          const Configuration &config,
+                                          CommandLineOptions &opts) {
   pt::BuilderInterface *builder = NULL;
   SgScopeStatement *gs = si::getFirstGlobalScope(proj);
   if (opts.ref_trans) {
-    builder = new pt::ReferenceRuntimeBuilder(gs);
+    builder = new pt::ReferenceRuntimeBuilder(gs, config);
   } else if (opts.cuda_trans) {
-    builder = new pt::CUDARuntimeBuilder(gs);
+    builder = new pt::CUDARuntimeBuilder(gs, config);
 #ifdef CUDA_HM_TRANSLATOR_ENABLED    
   } else if (opts.cuda_hm_trans) {
-    builder = new pt::CUDAHMRuntimeBuilder(gs);
+    builder = new pt::CUDAHMRuntimeBuilder(gs, config);
 #endif    
   } else if (opts.mpi_trans) {
-    builder = new pt::MPIRuntimeBuilder(gs);
+    builder = new pt::MPIRuntimeBuilder(gs, config);
   // } else if (opts.mpi2_trans) {
   //   builder = new pt::MPIRuntimeBuilder(gs);
 #ifdef MPI_CUDA_TRANSLATOR_ENABLED    
   } else if (opts.mpi_cuda_trans) {
-    builder = new pt::MPICUDARuntimeBuilder(gs);
+    builder = new pt::MPICUDARuntimeBuilder(gs, config);
 #endif    
   }
   if (builder == NULL) {
@@ -578,7 +579,7 @@ int main(int argc, char *argv[]) {
   }
 
   pt::TranslationContext tx(proj);
-  pt::BuilderInterface *rt_builder = GetRTBuilder(proj, opts);
+  pt::BuilderInterface *rt_builder = GetRTBuilder(proj, config, opts);
   pto::Optimizer *optimizer =
       GetOptimizer(&tx, proj, rt_builder, opts, &config);
   

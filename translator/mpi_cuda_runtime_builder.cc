@@ -182,5 +182,76 @@ SgVariableDeclaration *MPICUDARuntimeBuilder::BuildGridDimDeclaration(
       name, dim, dom_dim_x, dom_dim_y, block_dim_x, block_dim_y, scope);
 }
 
+SgExprListExp *MPICUDARuntimeBuilder::BuildCUDAKernelArgList(
+    StencilMap *sm, SgVariableSymbol *sv,
+    bool overlap_enabled, int overlap_width) {
+  return BuildCUDAKernelArgList(sm, sv, overlap_enabled, overlap_width, false);
+}
+
+SgExprListExp *MPICUDARuntimeBuilder::BuildCUDABoundaryKernelArgList(
+    StencilMap *sm, SgVariableSymbol *sv,
+    bool overlap_enabled, int overlap_width) {
+  return BuildCUDAKernelArgList(sm, sv, overlap_enabled, overlap_width, true);
+}
+
+SgExprListExp *MPICUDARuntimeBuilder::BuildCUDAKernelArgList(
+    StencilMap *sm, SgVariableSymbol *sv,
+    bool overlap_enabled, int overlap_width,
+    bool is_boundary) {
+  SgExprListExp *args = sb::buildExprListExp();
+  SgClassDefinition *stencil_def = sm->GetStencilTypeDefinition();
+  PSAssert(stencil_def);
+  if (is_boundary && !flag_multistream_boundary_)
+    si::appendExpression(args, Int(overlap_width));
+  // Enumerate members of parameter struct
+  const SgDeclarationStatementPtrList &members = stencil_def->get_members();
+  FOREACH(member, members.begin(), members.end()) {
+    SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
+    SgExpression *arg =
+        Arrow(Var(sv), Var(member_decl));
+    SgType *member_type = si::getFirstVarType(member_decl);
+    GridType *gt = ru::GetASTAttribute<GridType>(member_type);
+    if (gt) {
+      arg = sb::buildPointerDerefExp(
+          sb::buildCastExp(
+              BuildGridGetDev(arg, gt),
+              sb::buildPointerType(BuildOnDeviceGridType(gt))));
+      // skip the grid index
+      ++member;
+    }
+    if (!is_boundary) {
+      if (overlap_enabled && Domain::isDomainType(member_type)) {
+        si::appendExpression(
+            args, BuildDomainShrink(sb::buildAddressOfOp(arg),
+                                    Int(overlap_width)));
+      } else {
+        si::appendExpression(args, arg);
+      }
+    } else {
+      si::appendExpression(args, arg);
+    }
+  }
+
+  // Append the local offset
+  for (int i = 1; i < sm->getNumDim(); ++i) {
+    if (!is_boundary || (is_boundary && !flag_multistream_boundary_)) {
+      si::appendExpression(args, BuildGetLocalOffset(Int(i)));
+    }
+  }
+  return args;
+}
+
+SgExpression *MPICUDARuntimeBuilder::BuildBlockDimX(int nd) {
+  return cuda_rt_builder_->BuildBlockDimX(nd);
+}
+
+SgExpression *MPICUDARuntimeBuilder::BuildBlockDimY(int nd) {
+  return cuda_rt_builder_->BuildBlockDimY(nd);  
+}
+
+SgExpression *MPICUDARuntimeBuilder::BuildBlockDimZ(int nd) {
+  return cuda_rt_builder_->BuildBlockDimZ(nd);
+}
+
 } // namespace translator
 } // namespace physis

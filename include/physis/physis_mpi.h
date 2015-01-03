@@ -102,8 +102,10 @@ extern "C" {
                                 int max_dim2, PSIndex max_offset2,
                                 int max_dim3, PSIndex max_offset3,
                                 int reuse);
+#if 0  
   extern void __PSActivateRemoteGrid(__PSGridMPI *g,
                                      int active);
+#endif  
   extern int __PSIsRoot();
 
   //! Reduces a grid with an operator.

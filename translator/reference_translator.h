@@ -79,9 +79,10 @@ class ReferenceTranslator : public Translator {
                                          SgClassDeclaration *type_decl);
   virtual void InsertStencilSpecificFunc(StencilMap *s,
                                          SgFunctionDeclaration *func);
-  
+#if 0  
   virtual void BuildRunBody(
       SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
+#endif  
   virtual SgFunctionDeclaration *BuildRun(Run *run);
   virtual void TranslateRun(SgFunctionCallExp *node, Run *run);
 
@@ -127,8 +128,10 @@ class ReferenceTranslator : public Translator {
 
   virtual void optimizeConstantSizedGrids();
   string grid_create_name_;
+#if 0  
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
+#endif  
   virtual void FixGridType();
 };
 

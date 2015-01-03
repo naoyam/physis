@@ -24,33 +24,11 @@ class MPITranslator: public ReferenceTranslator {
   virtual void TranslateInit(SgFunctionCallExp *node);
   virtual void TranslateRun(SgFunctionCallExp *node,
                             Run *run);
-  virtual void BuildRunBody(
-      SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
   virtual SgFunctionDeclaration *BuildRun(Run *run);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
                                  SgVariableDeclaration *dim_decl);
-  virtual void GenerateLoadRemoteGridRegion(
-      StencilMap *smap,
-      SgVariableDeclaration *stencil_decl,
-      Run *run, SgScopeStatement *scope,
-      SgInitializedNamePtrList &remote_grids,
-      SgStatementPtrList &statements,
-      bool &overlap_eligible,
-      int &overlap_width);
-  virtual void ProcessStencilMap(StencilMap *smap, SgVarRefExp *stencils,
-                                 int stencil_index, Run *run,
-                                 SgScopeStatement *function_body,
-                                 SgScopeStatement *loop_body);
-  virtual void DeactivateRemoteGrids(
-      StencilMap *smap,
-      SgVariableDeclaration *stencil_decl,      
-      SgScopeStatement *scope,
-      const SgInitializedNamePtrList &remote_grids);
-  virtual void FixGridAddresses(StencilMap *smap,
-                                SgVariableDeclaration *stencil_decl,
-                                SgScopeStatement *scope);
 #if 0  
   virtual void CheckSizes();
 #endif  

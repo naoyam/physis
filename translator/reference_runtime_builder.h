@@ -6,6 +6,7 @@
 #include "translator/translator_common.h"
 #include "translator/map.h"
 #include "translator/builder_interface.h"
+#include "translator/configuration.h"
 
 namespace physis {
 namespace translator {
@@ -13,6 +14,7 @@ namespace translator {
 class ReferenceRuntimeBuilder: virtual public BuilderInterface {
  public:
   ReferenceRuntimeBuilder(SgScopeStatement *global_scope,
+                          const Configuration &conifg,
                           BuilderInterface *delegator=NULL);
   virtual ~ReferenceRuntimeBuilder() {}
   virtual SgFunctionCallExp *BuildGridGetID(SgExpression *grid_var);
@@ -163,10 +165,28 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
       int dim,
       SgExpression *init,
       SgScopeStatement *block);
+
+  virtual void BuildRunFuncBody(
+      Run *run, SgFunctionDeclaration *run_func);
+  virtual SgBasicBlock *BuildRunFuncLoopBody(
+      Run *run, SgFunctionDeclaration *run_func);
+
+  //! Add tracing to StencilRun
+  /*!
+    TODO (interface)
+    
+    \param run StencilRun object
+    \param loop Loop to call the kernel
+    \param cur_scope The current scope where tracing is inserted
+   */
+  virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
+                               SgScopeStatement *cur_scope);
+
   
  protected:
   static const std::string  grid_type_name_;
   SgScopeStatement *gs_;
+  const Configuration & config_;
   BuilderInterface *delegator_;
   SgTypedefType *dom_type_;
   SgClassDeclaration *GetGridDecl();

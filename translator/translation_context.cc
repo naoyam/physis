@@ -809,6 +809,7 @@ bool TranslationContext::registerInnerKernel(SgFunctionDeclaration *fd,
   Kernel *k = new Kernel(fd, this, parentKernel);
   parentKernel->appendChild(call, k);
   inner_kernels_.insert(std::make_pair(fd, k));
+  ru::AddASTAttribute<Kernel>(fd, k);
   return true;
 }
 
@@ -819,7 +820,9 @@ bool TranslationContext::registerEntryKernel(SgFunctionDeclaration *fd) {
   if (isEntryKernel(fd)) return false;
   LOG_DEBUG() << "Entry kernel: "
               << fd->get_name().getString() << "\n";
-  entry_kernels_.insert(std::make_pair(fd, new Kernel(fd, this)));
+  Kernel *k = new Kernel(fd, this);
+  entry_kernels_.insert(std::make_pair(fd, k));
+  ru::AddASTAttribute<Kernel>(fd, k);
   return true;
 }
 

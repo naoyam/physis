@@ -57,30 +57,29 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
 
 void Kernel::analyzeGridWrites(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
-      tx.getGridEmitCalls(decl->get_definition());
+      tx.getGridEmitCalls(decl_->get_definition());
   set<SgInitializedName*> gvs;
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl, tx, gvs, wGrids, wGridVars);
+  analyzeGridAccess(decl_, tx, gvs, wGrids_, wGridVars_);
 }
-
 
 void Kernel::analyzeGridReads(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
-      tx.getGridGetCalls(decl->get_definition());
+      tx.getGridGetCalls(decl_->get_definition());
   set<SgInitializedName*> gvs;
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl, tx, gvs, rGrids, rGridVars);
+  analyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
   calls =
-      tx.getGridGetPeriodicCalls(decl->get_definition());
+      tx.getGridGetPeriodicCalls(decl_->get_definition());
   gvs.clear();
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl, tx, gvs, rGrids, rGridVars);
+  analyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
 }
 
 static void CollectionReadWriteGrids(SgFunctionDefinition *fdef,
@@ -109,33 +108,39 @@ static void CollectionReadWriteGrids(SgFunctionDefinition *fdef,
 }
 
 Kernel::Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,
-               Kernel *parent) : parent(parent) {
-  this->decl =
+               Kernel *parent) : parent_(parent) {
+  this->decl_ =
       isSgFunctionDeclaration(decl->get_definingDeclaration());
-  assert(this->decl);
+  assert(this->decl_);
   if (si::is_C_language() || si::is_Cxx_language()) {
     analyzeGridWrites(*tx);
     analyzeGridReads(*tx);
   } else if (si::is_Fortran_language()) {
     set<SgInitializedName*> rg, wg;
     CollectionReadWriteGrids(decl->get_definition(), rg, wg);
-    analyzeGridAccess(decl, *tx, rg, rGrids, rGridVars);
-    analyzeGridAccess(decl, *tx, wg, wGrids, wGridVars);    
+    analyzeGridAccess(decl, *tx, rg, rGrids_, rGridVars_);
+    analyzeGridAccess(decl, *tx, wg, wGrids_, wGridVars_);    
   }  
 }
 
+Kernel::Kernel(const Kernel &k):
+    decl_(k.decl_), rGrids_(k.rGrids_), rGridVars_(k.rGridVars_),
+    wGrids_(k.wGrids_), wGridVars_(k.wGridVars_), parent_(k.parent_),
+    calls_(k.calls_) {
+}
+
 const GridSet& Kernel::getInGrids() const {
-  return rGrids;
+  return rGrids_;
 }
 
 const GridSet& Kernel::getOutGrids() const {
-  return wGrids;
+  return wGrids_;
 }
 
 #ifdef UNUSED_CODE
 bool Kernel::isModified(Grid *g) const {
-  if (wGrids.count(g)) return true;
-  FOREACH(it, calls.begin(), calls.end()) {
+  if (wGrids_.count(g)) return true;
+  FOREACH(it, calls_.begin(), calls_.end()) {
     Kernel *child = it->second;
     if (child->isModified(g)) return true;
   }
@@ -153,9 +158,9 @@ bool Kernel::isModifiedAny(GridSet *gs) const {
 bool Kernel::IsGridUnmodified(Grid *g) const {
   assert(g != NULL);
   // If NULL is contained, g may be modified.
-  if (wGrids.find(NULL) != wGrids.end()) return false;
-  if (wGrids.find(g) != wGrids.end()) return false;
-  FOREACH(it, calls.begin(), calls.end()) {
+  if (wGrids_.find(NULL) != wGrids_.end()) return false;
+  if (wGrids_.find(g) != wGrids_.end()) return false;
+  FOREACH(it, calls_.begin(), calls_.end()) {
     Kernel *child = it->second;
     if (!child->IsGridUnmodified(g)) return false;
   }
@@ -163,12 +168,12 @@ bool Kernel::IsGridUnmodified(Grid *g) const {
 }
 
 bool Kernel::isGridParamModified(SgInitializedName *v) const {
-  return wGridVars.find(v) != wGridVars.end();
+  return wGridVars_.find(v) != wGridVars_.end();
 }
 
 #ifdef UNUSED_CODE
 bool Kernel::isRead(Grid *g) const {
-  if (rGrids.find(g) != rGrids.end()) return true;
+  if (rGrids_.find(g) != rGrids_.end()) return true;
   FOREACH(it, calls.begin(), calls.end()) {
     Kernel *child = it->second;
     if (child->isRead(g)) return true;
@@ -185,9 +190,9 @@ bool Kernel::isReadAny(GridSet *gs) const {
 #endif
 
 bool Kernel::IsGridUnread(Grid *g) const {
-  if (rGrids.find(NULL) != rGrids.end()) return false;
-  if (rGrids.find(g) != rGrids.end()) return false;
-  FOREACH(it, calls.begin(), calls.end()) {
+  if (rGrids_.find(NULL) != rGrids_.end()) return false;
+  if (rGrids_.find(g) != rGrids_.end()) return false;
+  FOREACH(it, calls_.begin(), calls_.end()) {
     Kernel *child = it->second;
     if (!child->IsGridUnread(g)) return false;
   }
@@ -195,14 +200,16 @@ bool Kernel::IsGridUnread(Grid *g) const {
 }
 
 bool Kernel::isGridParamRead(SgInitializedName *v) const {
-  return rGridVars.find(v) != rGridVars.end();  
+  return rGridVars_.find(v) != rGridVars_.end();  
 }
 
 void Kernel::appendChild(SgFunctionCallExp *call, Kernel *child) {
-  assert(calls.insert(std::make_pair(call, child)).second);
+  assert(calls_.insert(std::make_pair(call, child)).second);
 }
 
 const std::string RunKernelAttribute::name = "RunKernel";
+
+const std::string Kernel::name = "Kernel";
 
 const std::string KernelBody::name = "KernelBody";
 

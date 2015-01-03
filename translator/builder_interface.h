@@ -270,6 +270,27 @@ class BuilderInterface {
       int dim,
       SgExpression *init,
       SgScopeStatement *block) = 0;
+
+  //! Build a function body for StencilRun function.
+  /*!
+    \param run Stencil run object
+    \param run_func StencilRun function
+   */
+  virtual void BuildRunFuncBody(
+      Run *run, SgFunctionDeclaration *run_func) = 0;
+  /*!
+    This is a helper function for BuildRunFuncBody. The run parameter
+    contains stencil kernel calls and the number of iteration. This
+    function generates a sequence of code to call the stencil kernels,
+    which is then included in the for loop that iterates the given
+    number of times. 
+    
+    \param run The stencil run object.
+    \param run_func The run function.    
+   */
+  virtual SgBasicBlock *BuildRunFuncLoopBody(
+      Run *run, SgFunctionDeclaration *run_func) = 0;
+
   
  protected:
   

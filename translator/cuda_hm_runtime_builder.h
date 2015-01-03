@@ -16,7 +16,8 @@ namespace translator {
 
 class CUDAHMRuntimeBuilder : public CUDARuntimeBuilder {
  public:
-  CUDAHMRuntimeBuilder(SgScopeStatement *global_scope);
+  CUDAHMRuntimeBuilder(SgScopeStatement *global_scope,
+                       const Configuration &config);
   virtual ~CUDAHMRuntimeBuilder() {}
 };
 

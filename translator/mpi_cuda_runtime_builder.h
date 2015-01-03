@@ -15,11 +15,18 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                              virtual public CUDABuilderInterface {
  public:
   MPICUDARuntimeBuilder(SgScopeStatement *global_scope,
+                        const Configuration &config,
                         BuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope, delegator),
-      MPIRuntimeBuilder(global_scope),
-      cuda_rt_builder_(new CUDARuntimeBuilder(global_scope, this))
-  {}
+      ReferenceRuntimeBuilder(global_scope, config, delegator),
+      MPIRuntimeBuilder(global_scope, config),
+      cuda_rt_builder_(new CUDARuntimeBuilder(global_scope, config, this)),
+      flag_multistream_boundary_(false) {
+    const pu::LuaValue *lv =
+        config.Lookup(Configuration::MULTISTREAM_BOUNDARY);
+    if (lv) {
+      PSAssert(lv->get(flag_multistream_boundary_));
+    }
+  }
   
   virtual ~MPICUDARuntimeBuilder() {
     delete cuda_rt_builder_;
@@ -43,6 +50,7 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       StencilMap *stencil,
       SgExpressionPtrList &index_args,
       SgFunctionParameterList *params);
+  
 
   virtual void BuildKernelIndices(
       StencilMap *stencil,
@@ -136,6 +144,20 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL);
 
+  /*!
+    REFACTORING: Signature does not match with the CUDA runtime
+    builder. overlap_enabled and overlap_width can be determined at
+    the analysis time, so they can be attributes of StencilMap.
+   */
+  virtual SgExprListExp *BuildCUDAKernelArgList(
+      StencilMap *sm, SgVariableSymbol *sv,
+      bool overlap_enabled, int overlap_width);
+
+  virtual SgExpression *BuildBlockDimX(int nd);
+  virtual SgExpression *BuildBlockDimY(int nd);
+  virtual SgExpression *BuildBlockDimZ(int nd);
+  
+
   // Not derived functions
 
   //! Build a call to the GetLocalSize function in the MPI-CUDA runtime
@@ -166,9 +188,26 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
    */
   virtual SgExpression *BuildStreamBoundaryKernel(int idx);
 
+  virtual SgExprListExp *BuildCUDABoundaryKernelArgList(
+      StencilMap *sm, SgVariableSymbol *sv,
+      bool overlap_enabled, int overlap_width);
   
  protected:
   CUDARuntimeBuilder *cuda_rt_builder_;
+  //! Optimization flag to enable the multi-stream boundary
+  //! processing.
+  // REFACTORING: duplication with MPICUDATranslator. Move the
+  //! functionality to this class entirely.
+  bool flag_multistream_boundary_;
+  
+  /*!
+    Not a derived function.
+   */
+  virtual SgExprListExp *BuildCUDAKernelArgList(
+      StencilMap *sm, SgVariableSymbol *sv,
+      bool overlap_enabled, int overlap_width,
+      bool is_boundary);
+
 
 };
 

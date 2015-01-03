@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_KERNEL_H_
 #define PHYSIS_TRANSLATOR_KERNEL_H_
@@ -22,20 +16,22 @@ struct AccessOffsets {
 
 class TranslationContext;
 
-class Kernel {
+class Kernel: public AstAttribute {
  public:
   typedef map<SgFunctionCallExp*, Kernel*> ChildMap;
  protected:
-  SgFunctionDeclaration *decl;
-  GridSet rGrids;
-  SgInitializedNamePtrSet rGridVars;
-  GridSet wGrids;
-  SgInitializedNamePtrSet wGridVars;
-  Kernel *parent;
-  ChildMap calls;
+  SgFunctionDeclaration *decl_;
+  GridSet rGrids_;
+  SgInitializedNamePtrSet rGridVars_;
+  GridSet wGrids_;
+  SgInitializedNamePtrSet wGridVars_;
+  Kernel *parent_;
+  ChildMap calls_;
  public:
   Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,
          Kernel *k = NULL);
+  Kernel(const Kernel &k);
+  virtual ~Kernel() {}
   const GridSet& getInGrids() const;
   const GridSet& getOutGrids() const;
   // Returns true if grid object g may be read in this
@@ -64,24 +60,26 @@ class Kernel {
   }
 
   SgFunctionDeclaration *getDecl() {
-    return decl;
+    return decl_;
   }
 
   SgInitializedNamePtrList &getArgs() {
-    return decl->get_args();
+    return decl_->get_args();
   }
 
   SgFunctionDefinition *getDef() {
-    return decl->get_definition();
+    return decl_->get_definition();
   }
   void appendChild(SgFunctionCallExp *call, Kernel *child);
-  std::string GetName() const { return string(decl->get_name()); }
-
+  std::string GetName() const { return string(decl_->get_name()); }
+  static const std::string name;
+  Kernel *copy() {
+    return new Kernel(*this);
+  }
  protected:
   void analyzeGridWrites(TranslationContext &tx);
   void analyzeGridReads(TranslationContext &tx);  
 };
-
 
 class KernelBody: public AstAttribute {
  public:

@@ -13,8 +13,9 @@ namespace translator {
 class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
  public:
   MPIRuntimeBuilder(SgScopeStatement *global_scope,
+                    const Configuration &config,
                     BuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope, delegator) {}
+      ReferenceRuntimeBuilder(global_scope, config, delegator) {}
   virtual ~MPIRuntimeBuilder() {}
   virtual SgFunctionCallExp *BuildIsRoot();
   virtual SgFunctionCallExp *BuildGetGridByID(SgExpression *id_exp);
@@ -38,6 +39,32 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
       const SgExpressionPtrList *offset_exprs,
       SgExpression *emit_val,
       SgScopeStatement *scope=NULL);
+
+  virtual void BuildRunFuncBody(
+      Run *run, SgFunctionDeclaration *run_func);
+  virtual void ProcessStencilMap(StencilMap *smap, SgVarRefExp *stencils,
+                                 int stencil_index, Run *run,
+                                 SgScopeStatement *function_body,
+                                 SgScopeStatement *loop_body);
+  /*!
+    TODO (interface)
+   */
+  virtual void GenerateLoadRemoteGridRegion(
+      StencilMap *smap,
+      SgVariableDeclaration *stencil_decl,
+      Run *run, SgScopeStatement *scope,
+      SgInitializedNamePtrList &remote_grids,
+      SgStatementPtrList &statements,
+      bool &overlap_eligible,
+      int &overlap_width);
+  virtual void DeactivateRemoteGrids(
+      StencilMap *smap,
+      SgVariableDeclaration *stencil_decl,      
+      SgScopeStatement *scope,
+      const SgInitializedNamePtrList &remote_grids);
+  virtual void FixGridAddresses(StencilMap *smap,
+                                SgVariableDeclaration *stencil_decl,
+                                SgScopeStatement *scope);
   
 };
 

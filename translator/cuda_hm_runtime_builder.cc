@@ -5,8 +5,9 @@
 namespace physis {
 namespace translator {
 
-CUDAHMRuntimeBuilder::CUDAHMRuntimeBuilder(SgScopeStatement *global_scope):
-    CUDARuntimeBuilder(global_scope) {
+CUDAHMRuntimeBuilder::CUDAHMRuntimeBuilder(SgScopeStatement *global_scope,
+                                           const Configuration &config):
+    CUDARuntimeBuilder(global_scope, config) {
 }
 
 } // namespace translator

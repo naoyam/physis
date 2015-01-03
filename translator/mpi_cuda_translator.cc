@@ -297,6 +297,7 @@ void MPICUDATranslator::SetCacheConfig(
   }
 }
 
+
 // REFACTORING
 void MPICUDATranslator::ProcessStencilMap(
     StencilMap *smap,  int stencil_map_index,
@@ -318,10 +319,10 @@ void MPICUDATranslator::ProcessStencilMap(
 
   SgVariableDeclaration *block_dim =
       cu::BuildDim3Declaration("block_dim",
-                                cuda_trans_->BuildBlockDimX(nd),
-                                cuda_trans_->BuildBlockDimY(nd),
-                                cuda_trans_->BuildBlockDimZ(nd),
-                                function_body);
+                               builder()->BuildBlockDimX(nd),
+                               builder()->BuildBlockDimY(nd),
+                               builder()->BuildBlockDimZ(nd),
+                               function_body);
   si::appendStatement(block_dim, function_body);
   
 
@@ -329,9 +330,9 @@ void MPICUDATranslator::ProcessStencilMap(
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
-                               remote_grids, load_statements,
-                               overlap_eligible, overlap_width);
+  builder()->GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
+                                          remote_grids, load_statements,
+                                          overlap_eligible, overlap_width);
   bool overlap_enabled = flag_mpi_overlap_ &&  overlap_eligible;
 
   LOG_INFO() << (overlap_enabled ?
@@ -342,67 +343,24 @@ void MPICUDATranslator::ProcessStencilMap(
   SgFunctionSymbol *fs = ru::getFunctionSymbol(smap->run());
   PSAssert(fs);
 
-  // Cache config is set globally by the runtime
-  //SetCacheConfig(smap, fs, function_body, overlap_enabled);
-  
-  // Call the stencil kernel
-  // Build an argument list by expanding members of the parameter struct
-  // i.e. struct {a, b, c}; -> (s.a, s.b, s.c)
-  SgExprListExp *args = sb::buildExprListExp();
-  SgExprListExp *args_boundary = sb::buildExprListExp();  
-  SgClassDefinition *stencil_def = smap->GetStencilTypeDefinition();
-  PSAssert(stencil_def);
-
   SgVariableDeclaration *grid_dim = builder()->BuildGridDimDeclaration(
       stencil_name + "_grid_dim",
       smap->getNumDim(),
       builder()->BuildGetLocalSize(Int(1)),
       builder()->BuildGetLocalSize(Int(2)),
-      cuda_trans_->BuildBlockDimX(smap->getNumDim()),
-      cuda_trans_->BuildBlockDimY(smap->getNumDim()),
+      builder()->BuildBlockDimX(smap->getNumDim()),
+      builder()->BuildBlockDimY(smap->getNumDim()),
       function_body);
   
   si::appendStatement(grid_dim, function_body);
+
+  SgExprListExp *args = builder()->BuildCUDAKernelArgList(
+      smap, si::getFirstVarSym(sdecl),
+      overlap_enabled, overlap_width);
+  SgExprListExp *args_boundary = builder()->BuildCUDABoundaryKernelArgList(
+      smap, si::getFirstVarSym(sdecl),
+      overlap_enabled, overlap_width);
   
-  if (!flag_multistream_boundary_)
-    si::appendExpression(args_boundary, Int(overlap_width));
-
-  // Enumerate members of parameter struct
-  const SgDeclarationStatementPtrList &members = stencil_def->get_members();
-  FOREACH(member, members.begin(), members.end()) {
-    SgVariableDeclaration *member_decl = isSgVariableDeclaration(*member);
-    SgExpression *arg =
-        sb::buildArrowExp(sb::buildVarRefExp(sdecl),
-                          sb::buildVarRefExp(member_decl));
-    //const SgInitializedNamePtrList &vars = member_decl->get_variables();
-    //GridType *gt = tx_->findGridType(vars[0]->get_type());
-    SgType *member_type = si::getFirstVarType(member_decl);
-    GridType *gt = tx_->findGridType(member_type);
-    if (gt) {
-      arg = sb::buildPointerDerefExp(
-          sb::buildCastExp(
-              builder()->BuildGridGetDev(arg, gt),
-              sb::buildPointerType(builder()->BuildOnDeviceGridType(gt))));
-      // skip the grid index
-      ++member;
-    }
-    if (overlap_enabled && Domain::isDomainType(member_type)) {
-      si::appendExpression(
-          args, builder()->BuildDomainShrink(sb::buildAddressOfOp(arg),
-                                             Int(overlap_width)));
-    } else {
-      si::appendExpression(args, arg);
-    }
-    si::appendExpression(args_boundary, si::copyExpression(arg));
-  }
-
-  // Append the local offset
-  for (int i = 1; i < smap->getNumDim(); ++i) {
-    si::appendExpression(args, builder()->BuildGetLocalOffset(Int(i)));
-    if (!flag_multistream_boundary_)
-      si::appendExpression(args_boundary, builder()->BuildGetLocalOffset(Int(i)));
-  }
-
   // Generate Kernel invocation code
   SgCudaKernelExecConfig *cuda_config =
       cu::BuildCudaKernelExecConfig(sb::buildVarRefExp(grid_dim),
@@ -528,10 +486,10 @@ void MPICUDATranslator::ProcessStencilMap(
                                     args, cuda_config);
     si::appendStatement(sb::buildExprStatement(c), loop_body);
   }
-  DeactivateRemoteGrids(smap, sdecl, loop_body,
-                        remote_grids);
+  builder()->DeactivateRemoteGrids(smap, sdecl, loop_body,
+                                   remote_grids);
 
-  FixGridAddresses(smap, sdecl, function_body);
+  builder()->FixGridAddresses(smap, sdecl, function_body);
 }
 
 void MPICUDATranslator::BuildRunBody(SgBasicBlock *block, Run *run,
@@ -557,7 +515,7 @@ void MPICUDATranslator::BuildRunBody(SgBasicBlock *block, Run *run,
                             sb::buildPlusPlusOp(sb::buildVarRefExp(lv)),
                             loopBody);
 
-  TraceStencilRun(run, loop, block);
+  builder()->TraceStencilRun(run, loop, block);
   // cudaThreadSynchronize after each loop
   si::insertStatementAfter(
       loop,
