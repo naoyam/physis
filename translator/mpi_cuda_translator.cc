@@ -84,7 +84,8 @@ SgBasicBlock* MPICUDATranslator::BuildRunInteriorKernelBody(
   // Reuse BuildRunKernelBody function, and then redirect calls to
   // the inner kernel function
   vector<SgVariableDeclaration*> indices;
-  SgBasicBlock *body = builder()->BuildRunKernelFuncBody(stencil, param, indices);
+  SgBasicBlock *body = builder()->BuildRunKernelFuncBody(
+      stencil, param, indices);
   const std::string &normal_kernel_name = stencil->getKernel()->get_name();
   const std::string &inner_kernel_name = normal_kernel_name 
       + inner_prefix_;

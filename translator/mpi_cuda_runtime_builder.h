@@ -221,6 +221,7 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                                  int stencil_index, Run *run,
                                  SgFunctionDeclaration *run_func,
                                  SgScopeStatement *loop_body);
+  
   //! Helper function for ProcessStencilMap
   /*! 
     Not a derived function.
@@ -239,7 +240,6 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   virtual SgVariableDeclaration *BuildStencilDecl(
       StencilMap *smap, int stencil_map_index,
       SgFunctionDeclaration *run_func);
-
 };
 
 } // namespace translator
