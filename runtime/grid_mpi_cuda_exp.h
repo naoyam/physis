@@ -71,7 +71,7 @@ class GridMPICUDAExp: public GridMPI {
   virtual int Reduce(PSReduceOp op, void *out);
   
   // Not inherited
-  //__PSGridDev3D *GetDev() { return &dev_; }
+  void *GetDev() { return dev_; }
   void CopyDiag(int dim, const Width2 &width, bool fw);
   void CopyDiag3D1(const Width2 &width, bool fw);  
   void CopyDiag3D2(const Width2 &width, bool fw);
@@ -81,6 +81,8 @@ class GridMPICUDAExp: public GridMPI {
   BufferCUDAHost *(*halo_self_host_)[2];
   BufferCUDAHost *(*halo_peer_host_)[2];
   BufferCUDADev *(*halo_peer_dev_)[2];
+  void *dev_;
+  
   virtual void FixupBufferPointers();
   
  public:

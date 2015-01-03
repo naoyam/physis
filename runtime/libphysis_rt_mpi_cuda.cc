@@ -484,12 +484,10 @@ extern "C" {
     return master != NULL;
   }
 
-#if 0 // TODO (MPI-CUDA)
   void *__PSGridGetDev(void *g) {
     GridType *gm = (GridType*)g;
     return gm->GetDev();
   }
-#endif
   
   PSIndex __PSGetLocalSize(int dim) {
     return gs->my_size()[dim-1];
