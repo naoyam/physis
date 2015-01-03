@@ -347,6 +347,22 @@ int GridMPICUDAExp::Reduce(PSReduceOp op, void *out) {
   PSAbort(1);
   return 0;
 }
+
+
+void GridMPICUDAExp::Copyout(void *dst) {
+  IndexArray offset(halo_.bw);
+  buffer()->Copyout(elm_size_, num_dims(), local_real_size_,
+                    dst, offset, local_size_);
+  return;
+}
+
+void GridMPICUDAExp::Copyin(const void *src) {
+  IndexArray offset(halo_.bw);
+  buffer()->Copyin(elm_size_, num_dims(), local_real_size_,
+                   src, offset, local_size_);
+  return;
+}
+
 } // namespace runtime
 } // namespace physis
 

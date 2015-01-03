@@ -286,7 +286,7 @@ int GridMPI::Reduce(PSReduceOp op, void *out) {
 }
 
 
-void GridMPI::Copyout(void *dst) const {
+void GridMPI::Copyout(void *dst)  {
   const void *src = buffer()->Get();
   if (HasHalo()) {
     IndexArray offset(halo_.bw);
