@@ -35,6 +35,12 @@ extern "C" {
   typedef __PSGridMPI *PSGrid1DDouble;
   typedef __PSGridMPI *PSGrid2DDouble;
   typedef __PSGridMPI *PSGrid3DDouble;
+  typedef __PSGridMPI *PSGrid1DInt;
+  typedef __PSGridMPI *PSGrid2DInt;
+  typedef __PSGridMPI *PSGrid3DInt;
+  typedef __PSGridMPI *PSGrid1DLong;
+  typedef __PSGridMPI *PSGrid2DLong;
+  typedef __PSGridMPI *PSGrid3DLong;
   extern PSIndex PSGridDim(void *p, int d);
   extern cudaStream_t stream_inner;
   extern cudaStream_t stream_boundary_copy;
