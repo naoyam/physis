@@ -57,6 +57,7 @@ TRACE=""
 EXECUTE_WITH_VALGRIND=0
 
 PRIORITY=1
+DIMENSION=""
 CONFIG_ARG=""
 CONFIG_ALL=0
 DEFAULT_CONFIG=/dev/null
@@ -929,6 +930,8 @@ function print_usage()
     echo -e "\t\tExecute the given step with Valgrind. Excution with Valgrind\n\t\tis not yet supported."
     echo -e "\t--priority <level>"
     echo -e "\t\tExecute the test cases with priority higher than or equal\n\t\tto the given level."
+    echo -e "\t--dimension <dimension>"
+    echo -e "\t\tExecute the test cases of the given dimension."
 	echo -e "\t--config <config-file-path>"
 	echo -e "\t\tRead configuration option from the file."
 	echo -e "\t--email <email-address>"
@@ -1096,10 +1099,18 @@ function do_test()
 		cat $cfg	
 		echo "Dimension: $DIM"
 		echo "Supported targets:" ${SUPPORTED_TARGETS[@]}
+		echo "Supported dimension:" ${DIMENSION}
 
 		if ! find_in_array SUPPORTED_TARGETS $TARGET; then
 			# skip
 			echo "Target $TARGET not supported for this test"
+			do_test_finish $SKIP_TRANSLATE
+			popd > /dev/null
+			return $SKIP_TRANSLATE
+		fi
+
+		if [ "x" != "x$DIMENSION" -a "x$DIMENSION" != "x$DIM" ]; then
+			echo "Non-matching dimension"
 			do_test_finish $SKIP_TRANSLATE
 			popd > /dev/null
 			return $SKIP_TRANSLATE
@@ -1197,18 +1208,18 @@ function update_results()
 			;;
 		$FAIL_TRANSLATE)
 			inc NUM_FAIL_TRANS
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/translate"
 			;;
 		$FAIL_COMPILE)
 			inc NUM_SUCCESS_TRANS
 			inc NUM_FAIL_COMPILE
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/compile"
 			;;
 		$FAIL_EXECUTE)
 			inc NUM_SUCCESS_TRANS
 			inc NUM_SUCCESS_COMPILE
 			inc NUM_FAIL_EXECUTE
-			FAILED_TESTS="$FAILED_TESTS $test_sig"
+			FAILED_TESTS="$FAILED_TESTS $test_sig/execute"
 			;;
 		$SKIP_TRANSLATE)
 			inc NUM_SKIP_TRANS
@@ -1288,6 +1299,10 @@ function do_sub_command()
 	} 2>&1 | tee -a $LOGFILE
 }
 
+if [ $# -eq 0 ]; then
+	print_usage
+	exit 0
+fi
 
 if is_sub_command $@; then
 	do_sub_command $@
@@ -1304,7 +1319,7 @@ fi
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,trace,config:,config-all,email:,list,parallel::, -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,dimension:,trace,config:,config-all,email:,list,parallel::, -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Error in getopt. Invalid options: $@"
@@ -1361,6 +1376,10 @@ fi
 				;;
 			--priority)
 				PRIORITY=$2
+				shift 2
+				;;
+			--dimension)
+				DIMENSION=$2
 				shift 2
 				;;
 			--trace)
