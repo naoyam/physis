@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2011, Tokyo Institute of Technology.
-# All rights reserved.
-#
-# This file is distributed under the license described in
-# LICENSE.txt.
-#
-# Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+# Licensed under the BSD license. See LICENSE.txt for more details.
 
 #
 # For usage, see the help message by executing this script with option --help.
@@ -789,7 +783,6 @@ function execute_reference()
     local src_name=${1%%.*}
     local target=$2
     local ref_exe=$(get_reference_exe_name $1 $2)
-	echo $ref_exe
     local ref_out=$ref_exe.out    
     # Do nothing if no reference implementation is found.
     if [ ! -x $ref_exe ]; then
@@ -864,7 +857,9 @@ function execute()
 			exit_error "Unsupported target: $2"
 			;;
     esac
-    if [ $? -ne 0 ] || grep -q "orted was unable to" $exename.err; then
+	# Note OpenMPI does not necessarily return non-zero even upon failures
+    if [ $? -ne 0 ] || \
+		egrep -qiw "orted was unable to|exited on signal" $exename.err; then
 		cat $exename.err
 		return 1
     fi
@@ -1205,10 +1200,13 @@ function update_results()
 			FAILED_TESTS="$FAILED_TESTS $test_sig"
 			;;
 		$FAIL_COMPILE)
+			inc NUM_SUCCESS_TRANS
 			inc NUM_FAIL_COMPILE
 			FAILED_TESTS="$FAILED_TESTS $test_sig"
 			;;
 		$FAIL_EXECUTE)
+			inc NUM_SUCCESS_TRANS
+			inc NUM_SUCCESS_COMPILE
 			inc NUM_FAIL_EXECUTE
 			FAILED_TESTS="$FAILED_TESTS $test_sig"
 			;;
