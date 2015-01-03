@@ -24,7 +24,6 @@ class MPITranslator: public ReferenceTranslator {
   virtual void TranslateInit(SgFunctionCallExp *node);
   virtual void TranslateRun(SgFunctionCallExp *node,
                             Run *run);
-  virtual SgFunctionDeclaration *BuildRun(Run *run);
   virtual SgExprListExp *generateNewArg(GridType *gt, Grid *g,
                                         SgVariableDeclaration *dim_decl);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,

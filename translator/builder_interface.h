@@ -4,10 +4,7 @@
 #define PHYSIS_BUILDER_INTERFACE_H_
 
 #include "translator/translator_common.h"
-#include "translator/translation_context.h"
-
-namespace si = SageInterface;
-namespace sb = SageBuilder;
+#include "translator/run.h"
 
 namespace physis {
 namespace translator {
@@ -271,6 +268,14 @@ class BuilderInterface {
       SgExpression *init,
       SgScopeStatement *block) = 0;
 
+  //! Build a StencilRun function.
+  /*!
+    \param run Stencil run object
+    \param run_func StencilRun function
+   */
+  virtual SgFunctionDeclaration *BuildRunFunc(Run *run) = 0;
+  //! Builder a parameter list for RunFunc
+  virtual SgFunctionParameterList *BuildRunFuncParameterList(Run *run) = 0;  
   //! Build a function body for StencilRun function.
   /*!
     \param run Stencil run object
@@ -291,6 +296,21 @@ class BuilderInterface {
   virtual SgBasicBlock *BuildRunFuncLoopBody(
       Run *run, SgFunctionDeclaration *run_func) = 0;
 
+  // Experimental auto-tuning
+  /** add dynamic parameter
+   * @param[in/out] parlist ... parameter list
+   */
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist) = 0;
+  /** add dynamic argument
+   * @param[in/out] args ... arguments
+   * @param[in] a_exp ... index expression
+   */
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp) = 0;
+  /** add some code after dlclose()
+   * @param[in] scope
+   */
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope) = 0;
+  
   
  protected:
   

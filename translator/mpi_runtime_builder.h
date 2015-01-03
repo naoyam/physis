@@ -6,11 +6,13 @@
 #include "translator/translator_common.h"
 #include "translator/stencil_range.h"
 #include "translator/reference_runtime_builder.h"
+#include "translator/mpi_builder_interface.h"
 
 namespace physis {
 namespace translator {
 
-class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
+class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
+                         virtual public MPIBuilderInterface {
  public:
   MPIRuntimeBuilder(SgScopeStatement *global_scope,
                     const Configuration &config,
@@ -40,28 +42,27 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder {
       SgExpression *emit_val,
       SgScopeStatement *scope=NULL);
 
+  virtual SgFunctionParameterList *BuildRunFuncParameterList(Run *run);
   virtual void BuildRunFuncBody(
       Run *run, SgFunctionDeclaration *run_func);
   virtual void ProcessStencilMap(StencilMap *smap, SgVarRefExp *stencils,
                                  int stencil_index, Run *run,
                                  SgScopeStatement *function_body,
                                  SgScopeStatement *loop_body);
-  /*!
-    TODO (interface)
-   */
-  virtual void GenerateLoadRemoteGridRegion(
-      StencilMap *smap,
-      SgVariableDeclaration *stencil_decl,
-      Run *run, SgScopeStatement *scope,
-      SgInitializedNamePtrList &remote_grids,
-      SgStatementPtrList &statements,
-      bool &overlap_eligible,
+  
+  // Derived from MPIBuilderInterface
+  virtual void BuildLoadRemoteGridRegion(
+      StencilMap *smap, SgVariableDeclaration *stencil_decl,
+      Run *run, SgInitializedNamePtrList &remote_grids,
+      SgStatementPtrList &statements, bool &overlap_eligible,
       int &overlap_width);
-  virtual void DeactivateRemoteGrids(
+  // Derived from MPIBuilderInterface  
+  virtual void BuildDeactivateRemoteGrids(
       StencilMap *smap,
       SgVariableDeclaration *stencil_decl,      
-      SgScopeStatement *scope,
-      const SgInitializedNamePtrList &remote_grids);
+      const SgInitializedNamePtrList &remote_grids,
+      SgStatementPtrList &stmt_list);
+  
   virtual void FixGridAddresses(StencilMap *smap,
                                 SgVariableDeclaration *stencil_decl,
                                 SgScopeStatement *scope);

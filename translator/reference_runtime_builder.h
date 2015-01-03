@@ -166,6 +166,8 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
       SgExpression *init,
       SgScopeStatement *block);
 
+  virtual SgFunctionDeclaration *BuildRunFunc(Run *run);
+  virtual SgFunctionParameterList *BuildRunFuncParameterList(Run *run);  
   virtual void BuildRunFuncBody(
       Run *run, SgFunctionDeclaration *run_func);
   virtual SgBasicBlock *BuildRunFuncLoopBody(
@@ -181,7 +183,10 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
    */
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
-
+  
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
   
  protected:
   static const std::string  grid_type_name_;

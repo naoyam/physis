@@ -1614,6 +1614,44 @@ SgExprListExp *CUDARuntimeBuilder::BuildCUDAKernelArgList(
   return args;
 }
 
+/** add dynamic parameter
+ * @param[in/out] parlist ... parameter list
+ */
+void CUDARuntimeBuilder::AddDynamicParameter(
+    SgFunctionParameterList *parlist) {
+  si::appendArg(parlist, sb::buildInitializedName("x", sb::buildIntType()));
+  si::appendArg(parlist, sb::buildInitializedName("y", sb::buildIntType()));
+  si::appendArg(parlist, sb::buildInitializedName("z", sb::buildIntType()));
+}
+/** add dynamic argument
+ * @param[in/out] args ... arguments
+ * @param[in] a_exp ... index expression
+ */
+void CUDARuntimeBuilder::AddDynamicArgument(
+    SgExprListExp *args, SgExpression *a_exp) {
+  SgExpression *a =
+      sb::buildPntrArrRefExp(
+          sb::buildVarRefExp(
+              sb::buildVariableDeclaration(
+                  "__cuda_block_size",
+                  sb::buildArrayType(cuda_block_size_type()))),
+          a_exp);
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("x")));
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("y")));
+  si::appendExpression(args, sb::buildDotExp(a, sb::buildVarRefExp("z")));
+}
+/** add some code after dlclose()
+ * @param[in] scope
+ */
+void CUDARuntimeBuilder::AddSyncAfterDlclose(
+    SgScopeStatement *scope) {
+  /* adHoc: cudaThreadSynchronize() need after dlclose().
+   * if not, sometimes fail kernel calling.
+   */
+  si::appendStatement(
+      sb::buildExprStatement(cu::BuildCUDADeviceSynchronize()),
+      scope);
+}
 
 } // namespace translator
 } // namespace physis

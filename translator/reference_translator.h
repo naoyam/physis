@@ -79,11 +79,6 @@ class ReferenceTranslator : public Translator {
                                          SgClassDeclaration *type_decl);
   virtual void InsertStencilSpecificFunc(StencilMap *s,
                                          SgFunctionDeclaration *func);
-#if 0  
-  virtual void BuildRunBody(
-      SgBasicBlock *block, Run *run, SgFunctionDeclaration *run_func);
-#endif  
-  virtual SgFunctionDeclaration *BuildRun(Run *run);
   virtual void TranslateRun(SgFunctionCallExp *node, Run *run);
 
   /** generate dlopen and dlsym code
@@ -103,19 +98,6 @@ class ReferenceTranslator : public Translator {
    */
   virtual SgFunctionDeclaration *GenerateTrial(
       Run *run, SgFunctionRefExp *ref);
-  /** add dynamic parameter
-   * @param[in/out] parlist ... parameter list
-   */
-  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
-  /** add dynamic argument
-   * @param[in/out] args ... arguments
-   * @param[in] a_exp ... index expression
-   */
-  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
-  /** add some code after dlclose()
-   * @param[in] scope
-   */
-  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
 
   virtual void TranslateReduceGrid(Reduce *rd);
   virtual void TranslateReduceKernel(Reduce *rd);

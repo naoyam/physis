@@ -1,6 +1,7 @@
 // Licensed under the BSD license. See LICENSE.txt for more details.
 
 #include "translator/mpi_runtime_builder.h"
+#include "translator/kernel.h"
 #include "translator/rose_util.h"
 
 namespace sb = SageBuilder;
@@ -232,9 +233,9 @@ void MPIRuntimeBuilder::ProcessStencilMap(StencilMap *smap,
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
-                               remote_grids, load_statements,
-                               overlap_eligible, overlap_width);
+  BuildLoadRemoteGridRegion(smap, sdecl, run,
+                            remote_grids, load_statements,
+                            overlap_eligible, overlap_width);
   FOREACH (sit, load_statements.begin(), load_statements.end()) {
     si::appendStatement(*sit, loop_body);
   }
@@ -244,27 +245,27 @@ void MPIRuntimeBuilder::ProcessStencilMap(StencilMap *smap,
       sb::buildVarRefExp(sdecl));
   SgFunctionCallExp *c = sb::buildFunctionCallExp(fs, args);
   si::appendStatement(sb::buildExprStatement(c), loop_body);
-  DeactivateRemoteGrids(smap, sdecl, loop_body,
-                        remote_grids);
+  SgStatementPtrList stmt_lists;
+  BuildDeactivateRemoteGrids(smap, sdecl, remote_grids, stmt_lists);
+  BOOST_FOREACH(SgStatement *stmt, stmt_lists) {
+    si::appendStatement(stmt, loop_body);
+  }
 
   FixGridAddresses(smap, sdecl, function_body);
 }
 
-void MPIRuntimeBuilder::DeactivateRemoteGrids(
+void MPIRuntimeBuilder::BuildDeactivateRemoteGrids(
     StencilMap *smap,
     SgVariableDeclaration *stencil_decl,
-    SgScopeStatement *scope,
-    const SgInitializedNamePtrList &remote_grids) {
-  //  FOREACH (gai, smap->grid_args().begin(),
-  //  smap->grid_args().end()) {
+    const SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements) {
   FOREACH (gai, remote_grids.begin(), remote_grids.end()) {
     SgInitializedName *gv = *gai;
     SgExpression *gvref = BuildStencilFieldRef(
         sb::buildVarRefExp(stencil_decl),
         gv->get_name());
-    rose_util::AppendExprStatement(
-        scope,
-        BuildActivateRemoteGrid(gvref, false));
+    statements.push_back(
+        sb::buildExprStatement(BuildActivateRemoteGrid(gvref, false)));
   }
 }
 
@@ -305,11 +306,10 @@ void MPIRuntimeBuilder::FixGridAddresses(StencilMap *smap,
   }
 }
 
-void MPIRuntimeBuilder::GenerateLoadRemoteGridRegion(
+void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
     StencilMap *smap,
     SgVariableDeclaration *stencil_decl,
     Run *run,
-    SgScopeStatement *scope,
     SgInitializedNamePtrList &remote_grids,
     SgStatementPtrList &statements,
     bool &overlap_eligible,
@@ -400,6 +400,18 @@ void MPIRuntimeBuilder::GenerateLoadRemoteGridRegion(
   FOREACH (it, overlap_flags.begin(), overlap_flags.end()) {
     (*it)->set_value(overlap_eligible ? 1 : 0);
   }
+}
+
+SgFunctionParameterList *MPIRuntimeBuilder::BuildRunFuncParameterList(Run *run) {
+  SgFunctionParameterList *parlist = sb::buildFunctionParameterList();
+  si::appendArg(parlist,
+                sb::buildInitializedName("iter",
+                                         sb::buildIntType()));
+  SgType *stype = sb::buildPointerType(
+      sb::buildPointerType(sb::buildVoidType()));
+  si::appendArg(parlist,
+                sb::buildInitializedName("stencils", stype));
+  return parlist;
 }
 
 

@@ -44,6 +44,8 @@ namespace bpo = boost::program_options;
 namespace pt = physis::translator;
 namespace pto = physis::translator::optimizer;
 namespace ru = physis::translator::rose_util;
+namespace si = SageInterface;
+namespace sb = SageBuilder;
 
 namespace physis {
 namespace translator {

@@ -22,6 +22,13 @@ namespace cu = physis::translator::cuda_util;
 namespace physis {
 namespace translator {
 
+
+void MPICUDATranslator::FixAST() {
+  if (validate_ast_) {
+    si::fixVariableReferences(project_);
+  }
+}
+
 std::string MPICUDATranslator::GetBoundarySuffix(int dim, bool fw) {
   return boundary_suffix_ + "_" +
       toString(dim+1) + "_" + (fw ? "fw" : "bw");
@@ -330,9 +337,9 @@ void MPICUDATranslator::ProcessStencilMap(
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  builder()->GenerateLoadRemoteGridRegion(smap, sdecl, run, loop_body,
-                                          remote_grids, load_statements,
-                                          overlap_eligible, overlap_width);
+  builder()->BuildLoadRemoteGridRegion(smap, sdecl, run, 
+                                       remote_grids, load_statements,
+                                       overlap_eligible, overlap_width);
   bool overlap_enabled = flag_mpi_overlap_ &&  overlap_eligible;
 
   LOG_INFO() << (overlap_enabled ?
@@ -486,8 +493,11 @@ void MPICUDATranslator::ProcessStencilMap(
                                     args, cuda_config);
     si::appendStatement(sb::buildExprStatement(c), loop_body);
   }
-  builder()->DeactivateRemoteGrids(smap, sdecl, loop_body,
-                                   remote_grids);
+  SgStatementPtrList stmt_list;
+  builder()->BuildDeactivateRemoteGrids(smap, sdecl, remote_grids, stmt_list);
+  BOOST_FOREACH(SgStatement *stmt, stmt_list) {
+    si::appendStatement(stmt, loop_body);
+  }
 
   builder()->FixGridAddresses(smap, sdecl, function_body);
 }
@@ -1028,12 +1038,6 @@ static std::string GetTypeName(SgType *ty) {
 static std::string GetTypeDimName(GridType *gt) {
   return GetTypeName(gt->point_type())
       + toString(gt->rank()) + "D";
-}
-
-void MPICUDATranslator::FixAST() {
-  if (validate_ast_) {
-    si::fixVariableReferences(project_);
-  }
 }
 
 } // namespace translator

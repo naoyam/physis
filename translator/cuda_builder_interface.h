@@ -121,6 +121,14 @@ class CUDABuilderInterface: virtual public BuilderInterface {
       SgExpression *dom_dim_x, SgExpression *dom_dim_y,      
       SgExpression *block_dim_x, SgExpression *block_dim_y,
       SgScopeStatement *scope = NULL) = 0;
+
+  //! Generates an expression of the x dimension of thread blocks.
+  virtual SgExpression *BuildBlockDimX(int nd) = 0;
+  //! Generates an expression of the y dimension of thread blocks.
+  virtual SgExpression *BuildBlockDimY(int nd) = 0;
+  //! Generates an expression of the z dimension of thread blocks.
+  virtual SgExpression *BuildBlockDimZ(int nd) = 0;
+  
 };
 
 } // namespace translator

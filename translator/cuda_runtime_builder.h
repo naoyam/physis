@@ -177,19 +177,10 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       StencilMap *sm, SgVariableSymbol *sv);
 
   //! Generates an expression of the x dimension of thread blocks.
-  /*!
-    TODO (Interface decl)
-   */
   virtual SgExpression *BuildBlockDimX(int nd);
   //! Generates an expression of the y dimension of thread blocks.
-  /*!
-    TODO (Interface decl)
-  */
   virtual SgExpression *BuildBlockDimY(int nd);
   //! Generates an expression of the z dimension of thread blocks.
-  /*!
-    TODO (Interface decl)
-  */
   virtual SgExpression *BuildBlockDimZ(int nd);
 
   /*!
@@ -198,6 +189,14 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   const std::vector<SgExpression *> cuda_block_size_vals() const {
     return cuda_block_size_vals_;
   }
+  SgType *&cuda_block_size_type() {
+    return cuda_block_size_type_;
+  }
+
+  virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
+  virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
+  virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
+  
   
  protected:
   int block_dim_x_;
@@ -205,6 +204,8 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   int block_dim_z_;
   /** hold all CUDA_BLOCK_SIZE values */
   std::vector<SgExpression *> cuda_block_size_vals_;
+  /** hold __cuda_block_size_struct type */
+  SgType *cuda_block_size_type_;
 
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       const GridType *gt, bool is_copyout);
