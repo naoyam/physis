@@ -17,7 +17,17 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   MPIRuntimeBuilder(SgScopeStatement *global_scope,
                     const Configuration &config,
                     BuilderInterface *delegator=NULL):
-      ReferenceRuntimeBuilder(global_scope, config, delegator) {}
+      ReferenceRuntimeBuilder(global_scope, config, delegator) {
+    const pu::LuaValue *lv
+        = config.Lookup(Configuration::MPI_OVERLAP);
+    if (lv) {
+      PSAssert(lv->get(flag_mpi_overlap_));
+    }
+    if (flag_mpi_overlap_) {
+      LOG_INFO() << "Overlapping enabled\n";
+    }
+  }
+  
   virtual ~MPIRuntimeBuilder() {}
   virtual SgFunctionCallExp *BuildIsRoot();
   virtual SgFunctionCallExp *BuildGetGridByID(SgExpression *id_exp);
@@ -63,10 +73,16 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       const SgInitializedNamePtrList &remote_grids,
       SgStatementPtrList &stmt_list);
   
-  virtual void FixGridAddresses(StencilMap *smap,
-                                SgVariableDeclaration *stencil_decl,
-                                SgScopeStatement *scope);
+  virtual void BuildFixGridAddresses(StencilMap *smap,
+                                     SgVariableDeclaration *stencil_decl,
+                                     SgScopeStatement *scope);
   
+  virtual bool IsOverlappingEnabled() const {
+    return flag_mpi_overlap_;
+  }
+
+ protected:
+  bool flag_mpi_overlap_;
 };
 
 SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression *grid_var,

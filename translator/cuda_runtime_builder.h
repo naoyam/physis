@@ -167,7 +167,7 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
 
   //! Generates an argument list for a CUDA kernel call.
   /*!
-    TODO (Interface decl)
+    TODO (Interface)
     
     \param sm The stencil map object.
     \param sv Stencil parameter symbol

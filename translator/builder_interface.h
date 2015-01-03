@@ -296,6 +296,15 @@ class BuilderInterface {
   virtual SgBasicBlock *BuildRunFuncLoopBody(
       Run *run, SgFunctionDeclaration *run_func) = 0;
 
+  //! Add tracing to StencilRun
+  /*!
+    \param run StencilRun object
+    \param loop Loop to call the kernel
+    \param cur_scope The current scope where tracing is inserted
+   */
+  virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
+                               SgScopeStatement *cur_scope) = 0;
+
   // Experimental auto-tuning
   /** add dynamic parameter
    * @param[in/out] parlist ... parameter list

@@ -173,14 +173,6 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   virtual SgBasicBlock *BuildRunFuncLoopBody(
       Run *run, SgFunctionDeclaration *run_func);
 
-  //! Add tracing to StencilRun
-  /*!
-    TODO (interface)
-    
-    \param run StencilRun object
-    \param loop Loop to call the kernel
-    \param cur_scope The current scope where tracing is inserted
-   */
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
   

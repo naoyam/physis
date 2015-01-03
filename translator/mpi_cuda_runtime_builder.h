@@ -68,9 +68,14 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
       StencilMap *stencil);
 
+  virtual void BuildRunFuncBody(
+      Run *run, SgFunctionDeclaration *run_func);
+  virtual SgBasicBlock *BuildRunFuncLoopBody(
+      Run *run, SgFunctionDeclaration *run_func);
+
   // CUDABuilderInterface functions
 
-  // TODO
+  // TODO (user-defined type)
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(
       SgClassDeclaration *grid_decl,
       const GridType *gt) {
@@ -199,7 +204,7 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   // REFACTORING: duplication with MPICUDATranslator. Move the
   //! functionality to this class entirely.
   bool flag_multistream_boundary_;
-  
+  string boundary_suffix_;
   /*!
     Not a derived function.
    */
@@ -207,6 +212,16 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       StencilMap *sm, SgVariableSymbol *sv,
       bool overlap_enabled, int overlap_width,
       bool is_boundary);
+
+  //! Helper function for BuildRunFuncLoopBody
+  /*! 
+    Not a derived function.
+   */
+  virtual void ProcessStencilMap(StencilMap *smap, 
+                                 int stencil_index, Run *run,
+                                 SgFunctionDeclaration *run_func,
+                                 SgScopeStatement *loop_body);
+
 
 
 };

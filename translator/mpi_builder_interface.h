@@ -44,6 +44,13 @@ class MPIBuilderInterface {
       SgVariableDeclaration *stencil_decl,      
       const SgInitializedNamePtrList &remote_grids,
       SgStatementPtrList &stmt_list) = 0;
+
+  virtual bool IsOverlappingEnabled() const = 0;
+  
+  virtual void BuildFixGridAddresses(StencilMap *smap,
+                                     SgVariableDeclaration *stencil_decl,
+                                     SgScopeStatement *scope) = 0;
+
   
 };
 

@@ -23,7 +23,6 @@ class MPICUDATranslator: public MPITranslator {
   bool flag_multistream_boundary_;
   string boundary_kernel_width_name_;
   string inner_prefix_;
-  string boundary_suffix_;
   std::set<SgFunctionSymbol*> cache_config_done_;
   virtual void FixAST();
   virtual MPICUDARuntimeBuilder *builder() {
@@ -47,26 +46,7 @@ class MPICUDATranslator: public MPITranslator {
       const vector<SgVariableDeclaration*> &indices,
       SgInitializedName *dom_ref, SgExpression *width,
       SgStatement *ifclause) const;
-  virtual void ProcessStencilMap(StencilMap *smap, 
-                                 int stencil_index, Run *run,
-                                 SgScopeStatement *function_body,
-                                 SgScopeStatement *loop_body);
 
-  virtual void BuildRunBody(SgBasicBlock *block, Run *run,
-                            SgFunctionDeclaration *run_func);
-  //! Generates a basic block of the run loop body.
-  /*!
-    This is a helper function for BuildRunBody. The run parameter
-    contains stencil kernel calls and the number of iteration. This
-    function generates a sequence of code to call the stencil kernels,
-    which is then included in the for loop that iterates the given
-    number of times. 
-    
-    \param run The stencil run object.
-    \return outer_block The outer block where the for loop is included.
-   */
-  virtual SgBasicBlock *BuildRunLoopBody(Run *run,
-                                         SgScopeStatement *outer_block);
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node);
   //! Generates CUDA functions that run a boundary stencil.
   /*!
@@ -130,11 +110,6 @@ class MPICUDATranslator: public MPITranslator {
   BuildBoundaryKernel(SgFunctionDeclaration *original);  
   std::string GetBoundarySuffix(int dim, bool fw);
   std::string GetBoundarySuffix();
-#if 0  // use the parent class implementation
-  virtual bool TranslateGetKernel(SgFunctionCallExp *node,
-                                  SgInitializedName *gv,
-                                  bool is_periodic);
-#endif   
   void BuildFunctionParamList(SgClassDefinition *param_struct_def,
                               SgFunctionParameterList *&params,
                               SgInitializedName *&grid_arg,

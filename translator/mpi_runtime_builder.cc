@@ -251,7 +251,7 @@ void MPIRuntimeBuilder::ProcessStencilMap(StencilMap *smap,
     si::appendStatement(stmt, loop_body);
   }
 
-  FixGridAddresses(smap, sdecl, function_body);
+  BuildFixGridAddresses(smap, sdecl, function_body);
 }
 
 void MPIRuntimeBuilder::BuildDeactivateRemoteGrids(
@@ -269,9 +269,9 @@ void MPIRuntimeBuilder::BuildDeactivateRemoteGrids(
   }
 }
 
-void MPIRuntimeBuilder::FixGridAddresses(StencilMap *smap,
-                                         SgVariableDeclaration *stencil_decl,
-                                         SgScopeStatement *scope) {
+void MPIRuntimeBuilder::BuildFixGridAddresses(StencilMap *smap,
+                                              SgVariableDeclaration *stencil_decl,
+                                              SgScopeStatement *scope) {
   SgClassDefinition *stencilDef = smap->GetStencilTypeDefinition();
   SgDeclarationStatementPtrList &members = stencilDef->get_members();
   // skip the first member, which is always the domain var of this
