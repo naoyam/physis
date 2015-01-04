@@ -5,6 +5,8 @@
 
 #define PS_GRID_TYPE_NAME_PREFIX "PSGrid"
 #define PS_GRID_TYPE_PT_NAME "pt"
+#define PS_GRID_TYPE_LOCAL_SIZE_NAME "local_size"
+#define PS_GRID_TYPE_LOCAL_OFFSET_NAME "local_offset"
 #define PS_INIT_NAME "PSInit"
 #define PS_GRID_EMIT_NAME "emit"
 #define PS_GRID_EMIT_UTYPE_NAME "__PSGridEmitUtype"

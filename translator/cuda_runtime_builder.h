@@ -210,7 +210,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
       const GridType *gt, bool is_copyout);
   
-  //CUDABuilderInterface *delegator_;
   CUDABuilderInterface *CUDABuilder() {
     CUDABuilderInterface *x =
         dynamic_cast<CUDABuilderInterface*>(delegator_);

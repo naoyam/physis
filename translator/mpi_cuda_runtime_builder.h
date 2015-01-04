@@ -75,37 +75,6 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
 
   // CUDABuilderInterface functions
 
-  // TODO (user-defined type)
-  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
-      SgClassDeclaration *grid_decl,
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  
   // RunKernel(int offset1, int offset2, Domain *dom, [original params]) -> dom
   virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
       SgFunctionParameterList *pl, int dim);
@@ -161,9 +130,37 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   virtual SgExpression *BuildBlockDimX(int nd);
   virtual SgExpression *BuildBlockDimY(int nd);
   virtual SgExpression *BuildBlockDimZ(int nd);
-  
 
-  // Not derived functions
+  // Functions for handling user-given types
+  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
+      SgClassDeclaration *grid_decl,
+      const GridType *gt);
+  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridNewFuncForUserType(gt);
+  }
+  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridFreeFuncForUserType(gt);
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridCopyinFuncForUserType(gt);
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridCopyoutFuncForUserType(gt);
+  }
+  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridGetFuncForUserType(gt);
+  }
+  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
+      const GridType *gt) {
+    return cuda_rt_builder_->BuildGridEmitFuncForUserType(gt);
+  }
+
+  // Non-derived functions
 
   //! Build a call to the GetLocalSize function in the MPI-CUDA runtime
   /*
