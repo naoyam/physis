@@ -189,7 +189,7 @@ extern "C" {
 
   PSIndex PSGridDim(void *p, int d) {
     Grid *g = (Grid *)p;    
-    return g->size_[d];
+    return g->size()[d];
   }
 
   void __PSStencilRun(int id, int iter, int num_stencils, ...) {
@@ -277,7 +277,7 @@ extern "C" {
         IndexArray(i1, i2, i3));
   }
   void *__PSGridGetBaseAddr(__PSGridMPI *g) {
-    return static_cast<GridMPI*>(g)->_data();
+    return (void*)static_cast<GridMPI*>(g)->data();
   }
 
   void __PSLoadNeighbor(__PSGridMPI *g,

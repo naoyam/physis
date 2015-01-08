@@ -263,6 +263,43 @@ typedef IntegerArray<size_t> SizeArray;
 typedef IntegerArray<ssize_t> SSizeArray;
 typedef IntegerArray<PSIndex> IndexArray;
 
+inline void CopyTypeInfo(__PSGridTypeInfo &dst,
+                         const __PSGridTypeInfo src) {
+  dst = src;
+  dst.members = new __PSGridTypeMemberInfo[dst.num_members];
+  for (int i = 0; i < dst.num_members; ++i) {
+    dst.members[i] = src.members[i];
+  }
+}
+
+inline void FreeTypeInfo(__PSGridTypeInfo *info) {
+  delete[] info->members;
+  delete info;
+}
+
+inline std::string ToString(PSType t) {
+  std::string s;
+  switch (t) {
+    case PS_INT:
+      s = "int";
+      break;
+    case PS_LONG:
+      s = "long";
+      break;
+    case PS_FLOAT:
+      s = "float";
+      break;
+    case PS_DOUBLE:
+      s = "double";
+      break;
+    case PS_USER:
+      s = "user";
+    default:
+      PSAbort(1);
+  }
+  return s;
+}
+
 } // namespace physis
 
 template <typename ty>
@@ -280,4 +317,5 @@ inline std::ostream &operator<<(std::ostream &os,
   os << "{" << sj << "}";  
   return os;
 }
+
 #endif /* PHYSIS_INTERNAL_COMMON_H_ */
