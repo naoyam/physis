@@ -43,6 +43,7 @@ void GMEMWrite(T *p, T h) {
 
 template <class T>
 static void InitGrid(GridType *g) {
+  int member = 0;
   if (g->num_dims() == 3) {
     std::cerr << "local_offset: " << g->local_offset()
               << ", local_size: " << g->local_size() << "\n";
@@ -55,8 +56,8 @@ static void InitGrid(GridType *g) {
               + t[2] * g->size()[0]
               * g->size()[1];
           //std::cerr << "write: " << v << "\n";
-          GMEMWrite((T*)g->GetAddress(t), v);
-          assert(v == GMEMRead((T*)g->GetAddress(t)));
+          GMEMWrite((T*)g->GetAddress(member, t), v);
+          assert(v == GMEMRead((T*)g->GetAddress(member, t)));
         }
       }
     }
@@ -66,14 +67,14 @@ static void InitGrid(GridType *g) {
         IndexArray ij = IndexArray(i, j);
         IndexArray t = ij + g->local_offset();
         T v = t[0] + t[1] * g->size()[0];
-        GMEMWrite((T*)g->GetAddress(t), v);
+        GMEMWrite((T*)g->GetAddress(member, t), v);
       }
     }
   } else if  (g->num_dims() == 1) {
     for (int i = 0; i < g->local_size()[0]; ++i) {
       IndexArray t = IndexArray(i+g->local_offset()[0]);
       T v = i;
-      GMEMWrite((T*)g->GetAddress(t), v);
+      GMEMWrite((T*)g->GetAddress(member, t), v);
     }
   } else {
     LOG_ERROR() << "Unsupported dimension\n";
@@ -107,7 +108,8 @@ class Grid3DFloatTestBase: public T {
   }
 
   float Get(const IndexArray &idx) const {
-    return GMEMRead((float*)g_->GetAddress(idx));
+    int member = 0;
+    return GMEMRead((float*)g_->GetAddress(member, idx));
   }
   
   GridSpaceMPIType *gs_;
@@ -187,14 +189,14 @@ TEST_P(Grid3DFloatCopyOutHaloTest, CopyOutHalo) {
             }
           }
           
-          IndexArray ijk = IndexArray(i, j, k) + g_->local_real_offset();
+          IndexArray ijk = IndexArray(i, j, k) + g_->local_real_offset(member);
           float v = ijk[0] + ijk[1] * g_->size()[0]
               + ijk[2] * g_->size()[0] * g_->size()[1];
           ASSERT_EQ(buf[buf_idx], v)
               << "(i,j,k) = (" << i << "," << j << "," << k << "), "
               << "buf idx: " << buf_idx
               << ", ijk: " << ijk
-              << ", loacl_real_offset: " << g_->local_real_offset()
+              << ", loacl_real_offset: " << g_->local_real_offset(member)
               << ", loacl_real_size: " << g_->local_real_size(member)
               << ", fw: " << fw
               << ", dim: " << dim;
@@ -280,7 +282,7 @@ TEST_P(Grid3DFloatExchangeBoundariesDimTest, ExchangeBoundaries) {
   for (int i = 0; i < dim; ++i) {
     diff *= N;
   }
-  idx_begin[dim] = g_->local_real_offset()[dim];
+  idx_begin[dim] = g_->local_real_offset(member)[dim];
   idx_end[dim] = g_->local_offset()[dim];
   if (gs_->my_idx()[dim] != 0) {  
     for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
@@ -295,7 +297,7 @@ TEST_P(Grid3DFloatExchangeBoundariesDimTest, ExchangeBoundaries) {
     }
   }
   idx_begin[dim] = g_->local_offset()[dim]+g_->local_size()[dim];
-  idx_end[dim] = g_->local_real_offset()[dim]+g_->local_real_size(member)[dim];
+  idx_end[dim] = g_->local_real_offset(member)[dim]+g_->local_real_size(member)[dim];
   if (gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
     for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
       for (int j = idx_begin[1]; j < idx_end[1]; ++j) {
@@ -343,8 +345,8 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
   gs_->ExchangeBoundaries(g_, 0, 1, width_, diag, periodic);
   gs_->ExchangeBoundaries(g_, 0, 0, width_, diag, periodic);
   int dim = 2;
-  IndexArray idx_begin = g_->local_real_offset();
-  IndexArray idx_end = g_->local_real_offset() + g_->local_real_size(member);
+  IndexArray idx_begin = g_->local_real_offset(member);
+  IndexArray idx_end = g_->local_real_offset(member) + g_->local_real_size(member);
   if (!periodic) {
     for (int i = 0; i < 3; ++i) {
       if (gs_->my_idx()[i] == 0) {
@@ -357,7 +359,7 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
   for (int j = idx_begin[1]; j < idx_end[1]; ++j) {
     for (int i = idx_begin[0]; i < idx_end[0]; ++i) {
       if (!periodic && gs_->my_idx()[dim] != 0) {
-        for (int k = g_->local_real_offset()[2]; k < g_->local_offset()[2]; ++k) {
+        for (int k = g_->local_real_offset(member)[2]; k < g_->local_offset()[2]; ++k) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i, j, k+1)) - N*N);
@@ -365,7 +367,7 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int k = g_->local_offset()[2]+g_->local_size()[2];
-             k < g_->local_real_offset()[2]+g_->local_real_size(member)[2]; ++k) {
+             k < g_->local_real_offset(member)[2]+g_->local_real_size(member)[2]; ++k) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i, j, k-1)) + N*N);
@@ -377,14 +379,15 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
   for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
     for (int i = idx_begin[0]; i < idx_end[0]; ++i) {
       if (!periodic && gs_->my_idx()[dim] != 0) {
-        for (int j = g_->local_real_offset()[dim]; j < g_->local_offset()[dim]; ++j) {
+        for (int j = g_->local_real_offset(member)[dim];
+             j < g_->local_offset()[dim]; ++j) {
           ASSERT_EQ(Get(IndexArray(i, j, k)),
                     Get(IndexArray(i, j+1, k)) - N);
         }
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int j = g_->local_offset()[dim]+g_->local_size()[dim];
-             j < g_->local_real_offset()[dim]+g_->local_real_size(member)[dim]; ++j) {
+             j < g_->local_real_offset(member)[dim]+g_->local_real_size(member)[dim]; ++j) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i, j-1, k)) + N);
@@ -396,14 +399,14 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
   for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
     for (int j = idx_begin[1]; j < idx_end[1]; ++j) {
       if (!periodic && gs_->my_idx()[dim] != 0) {
-        for (int i = g_->local_real_offset()[dim]; i < g_->local_offset()[dim]; ++i) {
+        for (int i = g_->local_real_offset(member)[dim]; i < g_->local_offset()[dim]; ++i) {
           ASSERT_EQ(Get(IndexArray(i, j, k)),
                     Get(IndexArray(i+1, j, k))-1);
         }
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int i = g_->local_offset()[dim]+g_->local_size()[dim];
-             i < g_->local_real_offset()[dim]+g_->local_real_size(member)[dim]; ++i) {
+             i < g_->local_real_offset(member)[dim]+g_->local_real_size(member)[dim]; ++i) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i-1, j, k)) + 1);

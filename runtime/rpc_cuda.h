@@ -32,7 +32,11 @@ class ClientCUDA: public Client<GridSpaceType> {
   ClientCUDA(InterProcComm *ipc,
              __PSStencilRunClientFunction *stencil_runs,
              GridSpaceType *gs);
-  virtual void Finalize();  
+  virtual void Finalize();
+  virtual void GridCopyinStage2(
+      typename GridSpaceType::GridType *g);
+  virtual void GridCopyoutStage2(
+      typename GridSpaceType::GridType *g);
 };
 
 template <class GridSpaceType>
@@ -75,26 +79,52 @@ template <class GridSpaceType>
 void MasterCUDA<GridSpaceType>::GridCopyinLocal(typename GridSpaceType::GridType *g, const void *buf) {
   // extract the subgrid from buf for this process to the pinned
   // buffer
-  size_t size = g->local_size().accumulate(g->num_dims()) *
-      g->elm_size();
+  size_t size = g->GetLocalBufferSize();  
   pinned_buf_->EnsureCapacity(size);
   PSAssert(pinned_buf_->Get());
-  CopyoutSubgrid(g->elm_size(), g->num_dims(), buf,
-                 g->size(), pinned_buf_->Get(),
-                 g->local_offset(), g->local_size());
+  for (int i = 0; i < g->num_members(); ++i) {
+    CopyoutSubgrid(g->elm_size(i), g->num_dims(), buf,
+                   g->size(), pinned_buf_->Get(),
+                   g->local_offset(), g->local_size());
+    buf = (void*)((intptr_t)buf + g->num_elms() * g->elm_size(i));
+  }
+  LOG_DEBUG() << "Send from pinned buf to device\n";
   // send it out to device memory
   g->Copyin(pinned_buf_->Get());
 }
 
 template <class GridSpaceType>
 void MasterCUDA<GridSpaceType>::GridCopyoutLocal(typename GridSpaceType::GridType *g, void *buf) {
-  size_t size = g->local_size().accumulate(g->num_dims()) *
-      g->elm_size();
+  size_t size = g->GetLocalBufferSize();
   pinned_buf_->EnsureCapacity(size);
   g->Copyout(pinned_buf_->Get());
-  CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
-                g->size(), pinned_buf_->Get(), g->local_offset(),
-                g->local_size());
+  for (int i = 0; i < g->num_members(); ++i) {
+    CopyinSubgrid(g->elm_size(i), g->num_dims(), buf,
+                  g->size(), pinned_buf_->Get(), g->local_offset(),
+                  g->local_size());
+    buf = (void*)((intptr_t)buf + g->num_elms() * g->elm_size(i));
+  }
+}
+
+template <class GridSpaceType>
+void ClientCUDA<GridSpaceType>::GridCopyinStage2(typename GridSpaceType::GridType *g) {
+  // receive the subregion for this process
+  Buffer *dst_buf = new BufferCUDAHost();
+  dst_buf->EnsureCapacity(g->GetLocalBufferSize());
+  this->ipc_->Recv(dst_buf->Get(), g->GetLocalBufferSize(),
+                   this->GetMasterRank());  
+  g->Copyin(dst_buf->Get());
+  delete dst_buf;
+}
+
+template <class GridSpaceType>
+void ClientCUDA<GridSpaceType>::GridCopyoutStage2(typename GridSpaceType::GridType *g) {
+  Buffer *sbuf = new BufferCUDAHost();
+  sbuf->EnsureCapacity(g->GetLocalBufferSize());
+  g->Copyout(sbuf->Get());
+  this->ipc_->Send(sbuf->Get(), g->GetLocalBufferSize(),
+                   this->GetMasterRank());
+  delete sbuf;
 }
 
 } // namespace runtime

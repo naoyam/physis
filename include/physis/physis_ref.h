@@ -41,7 +41,8 @@ extern "C" {
 #define PSGridDim(p, d) (((__PSGrid *)(p))->dim[(d)])  
 #endif
   
-  extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim);
+  extern __PSGrid* __PSGridNew(__PSGridTypeInfo *type_info,
+                               int num_dims, PSVectorInt dim);
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   extern void __PSGridGet(__PSGrid *g, void *buf, ...);

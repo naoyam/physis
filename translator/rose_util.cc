@@ -596,6 +596,18 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
   return d;
 }
 
+void GetArrayDim(SgArrayType *at, vector<size_t> &dims) {
+  
+  SgExpression *idx = at->get_index();
+  PSAssert (idx != NULL);
+
+  size_t d;
+  PSAssert(GetIntLikeVal(idx, d));
+  dims.push_back(d);
+  if (isSgArrayType(at->get_base_type()))
+    GetArrayDim(isSgArrayType(at->get_base_type()), dims);
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

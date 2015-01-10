@@ -34,6 +34,7 @@ class MPICUDATranslator: public MPITranslator {
   virtual void SetUp(SgProject *project, TranslationContext *context,
                      BuilderInterface *rt_builder);
   virtual void Finish();
+
   //! Generates an IF block to exclude indices outside an inner domain.
   /*!
     \param indices the indices to check.

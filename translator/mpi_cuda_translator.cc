@@ -24,6 +24,7 @@ namespace translator {
 
 
 void MPICUDATranslator::FixAST() {
+  cuda_trans_->FixGridType(grid_type_name_);
   if (validate_ast_) {
     si::fixVariableReferences(project_);
   }
@@ -810,11 +811,38 @@ static std::string GetTypeDimName(GridType *gt) {
 void MPICUDATranslator::ProcessUserDefinedPointType(
     SgClassDeclaration *grid_decl, GridType *gt) {
   cuda_trans_->ProcessUserDefinedPointType(grid_decl, gt);
+  // This is handled by changing the type of grid variable to
+  // __PSGridMPI as in the CUDA translator. Note that replaing type
+  // declration is not refected to variable declarations using the
+  // replaced type, so dangling type referenced will be left.
+#if 0  
+  SgNamedType *utype = gt->user_type();
+  if (!ru::IsFortranLikeLanguage()) {
+    SgTypedefType *tutype = isSgTypedefType(utype);
+    PSAssert(tutype);
+    SgType *true_grid_type = si::lookupNamedTypeInParentScopes(grid_type_name_);
+    PSAssert(true_grid_type);
+    SgTypedefDeclaration *td = sb::buildTypedefDeclaration(
+        tutype->get_name(), sb::buildPointerType(true_grid_type));
+    si::replaceStatement(tutype->get_declaration(), td);
+  }
+
+  SgNodePtrList vdecls =
+      NodeQuery::querySubTree(project_, V_SgVariableDeclaration);
+  FOREACH (it, vdecls.begin(), vdecls.end()) {
+    SgVariableDeclaration *vdecl = isSgVariableDeclaration(*it);
+    SgInitializedNamePtrList &vars = vdecl->get_variables();
+    FOREACH (vars_it, vars.begin(), vars.end()) {
+      SgInitializedName *var = *vars_it;
+      SgType *vt = var->get_type();
+      if (vt == utype) {
+        LOG_WARNING() << "Danling type reference to old grid user type found: "
+                      << var->unparseToString() << "\n";
+      }
+    }
+  }
+#endif  
 }
-
-
-
-  
 
 } // namespace translator
 } // namespace physis

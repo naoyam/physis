@@ -860,7 +860,7 @@ function execute()
     esac
 	# Note OpenMPI does not necessarily return non-zero even upon failures
     if [ $? -ne 0 ] || \
-		egrep -qiw "orted was unable to|exited on signal" $exename.err; then
+		egrep -qiw "orted was unable to|exited on signal|exiting improperly" $exename.err; then
 		cat $exename.err
 		return 1
     fi

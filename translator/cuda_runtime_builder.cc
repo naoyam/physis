@@ -260,19 +260,6 @@ SgVariableDeclaration *FindMember(SgClassDefinition *type,
   return NULL;
 }
 
-static void GetArrayDim(SgArrayType *at,
-                        vector<size_t> &dims) {
-  
-  SgExpression *idx = at->get_index();
-  PSAssert (idx != NULL);
-
-  size_t d;
-  PSAssert(ru::GetIntLikeVal(idx, d));
-  dims.push_back(d);
-  if (isSgArrayType(at->get_base_type()))
-    GetArrayDim(isSgArrayType(at->get_base_type()), dims);
-}
-
 SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
     SgExpression *gvref,
     const GridType *gt,
@@ -291,7 +278,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridArrayMemberOffset(
   PSAssert(mt);
 
   vector<size_t> dims;
-  GetArrayDim(mt, dims);
+  ru::GetArrayDim(mt, dims);
   SgExpression *array_offset = NULL;
   SgExpression *dim_offset = NULL;
   vector<size_t>::reverse_iterator dim_it = dims.rbegin();

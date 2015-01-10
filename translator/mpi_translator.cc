@@ -217,21 +217,6 @@ void MPITranslator::TranslateRun(SgFunctionCallExp *node,
   si::replaceStatement(getContainingStatement(node), tmp_block);
 }
 
-SgExprListExp *MPITranslator::generateNewArg(
-    GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
-  // Prepend the type specifier.
-  SgExprListExp *ref_args =
-      ReferenceTranslator::generateNewArg(gt, g, dim_decl);
-  SgExprListExp *new_args =
-      sb::buildExprListExp(gt->BuildElementTypeExpr());
-  FOREACH (it, ref_args->get_expressions().begin(),
-           ref_args->get_expressions().end()) {
-    si::appendExpression(new_args, si::copyExpression(*it));
-  }
-  si::deleteAST(ref_args);
-  return new_args;
-}
-
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g,
                                       SgVariableDeclaration *dim_decl) {

@@ -82,6 +82,12 @@ class GridMPICUDAExp: public GridMPI {
   BufferCUDADev *buffer(int member_id) {
     return data_buffer_m_[member_id];
   }
+  void *data(int member_id=0) {
+    return buffer(member_id)->Get();
+  }
+  intptr_t idata(int member_id=0) {
+    return (intptr_t)data(member_id);
+  }
   IndexArray local_real_size(int member) const {
     return local_size_ + halo(member).fw + halo(member).bw;
   }
@@ -92,14 +98,27 @@ class GridMPICUDAExp: public GridMPI {
     }
     return n;
   }  
-  size_t local_real_buffer_size() const {
+  size_t GetLocalBufferSize() const {
     size_t n = 0;
     for (int i = 0; i < num_members(); ++i) {
-      n += local_real_size(i).accumulate(num_dims_) * elm_size(i);
+      n += GridMPI::GetLocalBufferSize(i);
+    }
+    return n;
+  }
+  size_t GetLocalBufferRealSize(int member) const {
+    return local_real_size(member).accumulate(num_dims_) * elm_size(member);
+  }
+  size_t GetLocalBufferRealSize() const {
+    size_t n = 0;
+    for (int i = 0; i < num_members(); ++i) {
+      n += GetLocalBufferRealSize(i);
     }
     return n;
   }  
-  
+  IndexArray local_real_offset(int member) const {
+    return local_offset_ - halo(member).bw;
+  }
+
   virtual void CopyoutHalo(int dim, const Width2 &width,
                            bool fw, bool diagonal);
   virtual void CopyoutHalo(int dim, const Width2 &width,
@@ -117,6 +136,14 @@ class GridMPICUDAExp: public GridMPI {
   // Not inherited
   void *GetDev() { return dev_; }
   //void *GetDev(int member_id) { return dev_; }
+  
+  void *GetAddress(int member, const IndexArray &indices) {
+    return (void*)(idata(member) +
+                   GridCalcOffset(indices, local_real_size(member),
+                                  local_real_offset(member), num_dims_)
+                   * elm_size(member));
+  }
+  
   void CopyDiag(int dim, bool fw, int member);
   void CopyDiag3D1(bool fw, int member);  
   void CopyDiag3D2(bool fw, int member);

@@ -19,7 +19,7 @@ class CUDATranslator : public ReferenceTranslator {
   SgType *cuda_block_size_type_;
   
   virtual void FixAST();
-  virtual void FixGridType();
+
 
   virtual CUDABuilderInterface *builder() {
     return dynamic_cast<CUDABuilderInterface*>(rt_builder_);
@@ -54,7 +54,7 @@ class CUDATranslator : public ReferenceTranslator {
                                 GridType *gt);
 
   virtual void Visit(SgExpression *node);
-
+  virtual void FixGridType(const string &real_type_name);
 };
 
 } // namespace translator

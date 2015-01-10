@@ -20,22 +20,16 @@ Grid* Grid::Create(const __PSGridTypeInfo *type_info,
 
 Grid* Grid::Create(PSType type, int elm_size, int num_dims,
                    const IndexArray &size, int attr) {
-  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
-  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return Create(&info, num_dims, size, attr);
 }
 
 Grid::Grid(const __PSGridTypeInfo *type_info,
            int num_dims, const IndexArray &size, int attr):
-    type_(PS_USER), num_dims_(num_dims),
+    type_(type_info->type), num_dims_(num_dims),
     num_elms_(size.accumulate(num_dims)),
     size_(size), data_buffer_(NULL), attr_(attr) {
   CopyTypeInfo(type_info_, *type_info);
-  if (type_info_.num_members == 1 &&
-      type_info_.members[0].rank == 0) {
-    // the element type is a primitive scalar type
-    type_ = type_info_.members[0].type;
-  }
 }
 
 Grid::~Grid() {

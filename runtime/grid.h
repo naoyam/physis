@@ -34,6 +34,13 @@ class Grid {
   int elm_size(int member_id) const {
     return type_info_.members[member_id].size;
   }  
+  int elm_total_size() const {
+    int t = 0;
+    for (int i = 0; i < num_members(); ++i) {
+      t += elm_size(i);
+    }
+    return t;
+  }  
   int num_members() const { return type_info_.num_members; }  
   int num_dims() const { return num_dims_; }
   virtual size_t num_elms() {return num_elms_; }

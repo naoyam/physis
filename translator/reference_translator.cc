@@ -160,12 +160,12 @@ void ReferenceTranslator::TranslateKernelDeclaration(
   modifier.setInline();
 }
 
-SgExprListExp *ReferenceTranslator::generateNewArg(
-    GridType *gt, Grid *g, SgVariableDeclaration *dim_decl) {
+SgExprListExp *ReferenceTranslator::BuildNewArg(GridType *gt, Grid *g,
+                                                SgVariableDeclaration *dim_decl,
+                                                SgVariableDeclaration *type_info_decl) {
+  SgExpression *type_info_exp = sb::buildAddressOfOp(Var(type_info_decl));
   SgExprListExp *new_args
-      = sb::buildExprListExp(sb::buildSizeOfOp(gt->point_type()),
-                             sb::buildIntVal(gt->rank()),
-                             sb::buildVarRefExp(dim_decl));
+      = sb::buildExprListExp(type_info_exp, Int(gt->rank()), Var(dim_decl));
   //SgExpression *attr = g->BuildAttributeExpr();
   //if (!attr) attr = sb::buildIntVal(0);
   //si::appendExpression(new_args, attr);
@@ -193,7 +193,12 @@ void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
           tmpBlock);
   si::appendStatement(dimDecl, tmpBlock);
 
-  SgExprListExp *new_args = generateNewArg(gt, g, dimDecl);
+  // TypeInfo
+  SgStatementPtrList build_type_info_stmts;
+  SgVariableDeclaration *type_info = builder()->BuildTypeInfo(gt, build_type_info_stmts);
+  si::appendStatementList(build_type_info_stmts, tmpBlock);
+
+  SgExprListExp *new_args = BuildNewArg(gt, g, dimDecl, type_info);
 
   SgFunctionSymbol *grid_new
       = si::lookupFunctionSymbolInParentScopes(grid_create_name_,

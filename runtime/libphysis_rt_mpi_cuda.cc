@@ -251,12 +251,11 @@ extern "C" {
   }
   
 
-  __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
-                              const PSVectorInt size,
-                              int attr,
-                              const PSVectorInt global_offset,
-                              const PSVectorInt stencil_offset_min,
-                              const PSVectorInt stencil_offset_max) {
+  __PSGridMPI* __PSGridNewMPI(
+      __PSGridTypeInfo *type_info,
+      int dim, const PSVectorInt size, int attr,
+      const PSVectorInt global_offset, const PSVectorInt stencil_offset_min,
+      const PSVectorInt stencil_offset_max) {
     // Same as libphysis_rt_mpi.cc
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
@@ -270,7 +269,7 @@ extern "C" {
       return NULL;
     }
     return master->GridNew(
-        type, elm_size, dim, gsize,
+        type_info, dim, gsize,
         IndexArray(), stencil_offset_min, stencil_offset_max,
         attr);
   }

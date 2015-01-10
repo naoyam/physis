@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_RUNTIME_H_
 #define PHYSIS_RUNTIME_H_
@@ -12,6 +6,8 @@
 #include <stdio.h>
 
 #include "physis/stopwatch.h"
+
+#define __PS_PERIODIC(x, y) (((x)+(y))%(y))
 
 #ifdef __cplusplus
 extern "C" {

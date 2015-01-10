@@ -29,8 +29,7 @@ struct Request {
 };
 
 struct RequestNEW {
-  PSType type;
-  int elm_size;
+  __PSGridTypeInfo type_info;
   int num_dims;
   IndexArray size;
   bool double_buffering;
@@ -53,10 +52,14 @@ class Client: public Proc {
   virtual void Listen();  
   virtual void Finalize();
   virtual void Barrier();
-  virtual void GridNew();
+  virtual void GridNew(int num_members);
   virtual void GridDelete(int id);
   virtual void GridCopyin(int id);
+  virtual void GridCopyinStage2(
+      typename GridSpaceType::GridType *g);
   virtual void GridCopyout(int id);
+  virtual void GridCopyoutStage2(
+      typename GridSpaceType::GridType *g);
   virtual void GridSet(int id);
   virtual void GridGet(int id);  
   virtual void StencilRun(int id);
@@ -79,13 +82,11 @@ class Master: public Proc {
   virtual ~Master() {}
   virtual void Finalize();
   virtual void Barrier();
-  virtual typename GridSpaceType::GridType *GridNew(PSType type, int elm_size,
-                                                    int num_dims,
-                                                    const IndexArray &size,
-                                                    const IndexArray &global_offset,
-                                                    const IndexArray &stencil_offset_min,
-                                                    const IndexArray &stencil_offset_max,
-                                                    int attr);
+  virtual typename GridSpaceType::GridType *GridNew(
+      __PSGridTypeInfo *type_info,
+      int num_dims, const IndexArray &size,
+      const IndexArray &global_offset, const IndexArray &stencil_offset_min,
+      const IndexArray &stencil_offset_max, int attr);
   virtual void GridDelete(typename GridSpaceType::GridType *g);
   virtual void GridCopyin(typename GridSpaceType::GridType *g, const void *buf);
   virtual void GridCopyinLocal(typename GridSpaceType::GridType *g, const void *buf);  
@@ -128,7 +129,7 @@ void Client<GridSpaceType>::Listen() {
         break;
       case FUNC_NEW:
         LOG_INFO() << "Client: new requested\n";
-        GridNew();
+        GridNew(req.opt);
         LOG_INFO() << "Client: new done\n";        
         break;
       case FUNC_DELETE:
@@ -227,32 +228,46 @@ void Client<GridSpaceType>::Barrier() {
 // Create
 template <class GridSpaceType>
 typename GridSpaceType::GridType *Master<GridSpaceType>::GridNew(
-    PSType type, int elm_size,
+    __PSGridTypeInfo *type_info,
     int num_dims, const IndexArray &size,
     const IndexArray &global_offset,
     const IndexArray &stencil_offset_min,
     const IndexArray &stencil_offset_max,                          
     int attr) {
   LOG_DEBUG() << "[" << rank() << "] New\n";
-  NotifyCall(FUNC_NEW);
-  RequestNEW req = {type, elm_size, num_dims, size,
+  NotifyCall(FUNC_NEW, type_info->num_members);
+  RequestNEW req = {*type_info, num_dims, size,
                     false, global_offset,
                     stencil_offset_min, stencil_offset_max,
                     attr};
-  ipc_->Bcast(&req, sizeof(RequestNEW), rank());  
-  typename GridSpaceType::GridType *g = gs_->CreateGrid
-      (type, elm_size, num_dims, size,
-       global_offset, stencil_offset_min, stencil_offset_max, attr);
+  ipc_->Bcast(&req, sizeof(RequestNEW), rank());
+  if (type_info->num_members > 0) {
+    ipc_->Bcast(type_info->members,
+                sizeof(__PSGridTypeMemberInfo) * type_info->num_members,
+                rank());
+  }
+  typename GridSpaceType::GridType *g = gs_->CreateGrid(
+      type_info, num_dims, size, global_offset,
+      stencil_offset_min, stencil_offset_max, attr);
   return g;
 }
 
 template <class GridSpaceType>
-void Client<GridSpaceType>::GridNew() {
+void Client<GridSpaceType>::GridNew(int num_members) {
   LOG_DEBUG() << "[" << rank() << "] Create\n";
   RequestNEW req;
   ipc_->Bcast(&req, sizeof(RequestNEW), GetMasterRank());
+  if (num_members > 0) {
+    __PSGridTypeMemberInfo *minfo = new __PSGridTypeMemberInfo[num_members];
+    ipc_->Bcast(minfo, sizeof(__PSGridTypeMemberInfo) * num_members,
+                GetMasterRank());
+    req.type_info.members = minfo;
+  } else {
+    req.type_info.members = NULL;
+    req.type_info.num_members = 0;
+  }
   this->gs_->CreateGrid(
-      req.type, req.elm_size, req.num_dims, req.size,
+      &req.type_info, req.num_dims, req.size,
       req.global_offset,
       req.stencil_offset_min, req.stencil_offset_max,
       req.attr);
@@ -303,7 +318,7 @@ void Master<GridSpaceType>::GridCopyinLocal(typename GridSpaceType::GridType *g,
 template <class GridSpaceType>
 void Master<GridSpaceType>::GridCopyin(typename GridSpaceType::GridType *g, const void *buf) {
   LOG_DEBUG() << "[" << rank() << "] Copyin\n";
-
+  fprintf(stderr, "PID: %d\n", getpid());
   // copyin to own buffer
   GridCopyinLocal(g, buf);
 
@@ -318,16 +333,39 @@ void Master<GridSpaceType>::GridCopyin(typename GridSpaceType::GridType *g, cons
     ipc_->Recv(&subgrid_size, sizeof(IndexArray), i);
     LOG_VERBOSE() << "sg size: " << subgrid_size << "\n";
     size_t gsize = subgrid_size.accumulate(g->num_dims()) *
-        g->elm_size();
+        g->elm_total_size();
     if (gsize == 0) continue;
-    send_buf.EnsureCapacity(
-        subgrid_size.accumulate(g->num_dims()) * g->elm_size());
-    CopyoutSubgrid(g->elm_size(), g->num_dims(), buf,
-                   g->size(), send_buf.Get(),
-                   subgrid_offset, subgrid_size);
+    send_buf.EnsureCapacity(gsize);
+    const void *buf_p = buf;
+    void *send_buf_p = send_buf.Get();
+    for (int j = 0; j < g->num_members(); ++j) {
+      LOG_DEBUG() << "Copy member " << j << " for process "  << i << "\n";
+      CopyoutSubgrid(g->elm_size(j), g->num_dims(), buf,
+                     g->size(), send_buf_p,
+                     subgrid_offset, subgrid_size);
+      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(i));
+      send_buf_p = (void *)((intptr_t)send_buf_p +
+                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(i));      
+    }
     ipc_->Send(send_buf.Get(), gsize, i);
   }
   return;
+}
+
+template <class GridSpaceType>
+void Client<GridSpaceType>::GridCopyinStage2(typename GridSpaceType::GridType *g) {
+  // receive the subregion for this process
+  Buffer *dst_buf = g->buffer();
+  if (g->HasHalo()) {
+    dst_buf = new BufferHost();
+    dst_buf->EnsureCapacity(g->GetLocalBufferSize());
+  }
+  ipc_->Recv(dst_buf->Get(), g->GetLocalBufferSize(),
+             GetMasterRank());  
+  if (g->HasHalo()) {
+    g->Copyin(dst_buf->Get());
+    delete dst_buf;
+  }
 }
 
 template <class GridSpaceType>
@@ -345,18 +383,8 @@ void Client<GridSpaceType>::GridCopyin(int id) {
     LOG_DEBUG() << "No copy needed because this grid is empty.\n";
     return;
   }
-  // receive the subregion for this process
-  Buffer *dst_buf = g->buffer();
-  if (g->HasHalo()) {
-    dst_buf = new BufferHost();
-    dst_buf->EnsureCapacity(g->GetLocalBufferSize());
-  }
-  ipc_->Recv(dst_buf->Get(), g->GetLocalBufferSize(),
-             GetMasterRank());  
-  if (g->HasHalo()) {
-    g->Copyin(dst_buf->Get());
-    delete dst_buf;
-  }
+
+  GridCopyinStage2(g);
   return;
 }
 
@@ -386,7 +414,7 @@ void Master<GridSpaceType>::GridCopyoutLocal(typename GridSpaceType::GridType *g
 // Copyout
 template <class GridSpaceType>
 void Master<GridSpaceType>::GridCopyout(typename GridSpaceType::GridType *g, void *buf) {
-  LOG_DEBUG() << "Copyout\n";
+  LOG_DEBUG() << "[" << rank() << "] Copyout\n";
 
   // Copyout self
   GridCopyoutLocal(g, buf);
@@ -398,35 +426,33 @@ void Master<GridSpaceType>::GridCopyout(typename GridSpaceType::GridType *g, voi
   for (int i = 1; i < gs_->num_procs(); ++i) {
     IndexArray subgrid_size, subgrid_offset;
     ipc_->Recv(&subgrid_offset, sizeof(IndexArray), i);
-    LOG_VERBOSE() << "sg offset: " << subgrid_offset << "\n";
+    LOG_DEBUG() << "sg offset: " << subgrid_offset << "\n";
     ipc_->Recv(&subgrid_size, sizeof(IndexArray), i);
-    LOG_VERBOSE() << "sg size: " << subgrid_size << "\n";
+    LOG_DEBUG() << "sg size: " << subgrid_size << "\n";
     //size_t gsize = sbuf.GetLinearSize(subgrid_size);
     size_t gsize = subgrid_size.accumulate(g->num_dims()) *
-        g->elm_size();
+        g->elm_total_size();
     if (gsize == 0) continue;
+    LOG_DEBUG() << "Elm TOTAL SIZE: " << g->elm_total_size()<< "\n";
     recv_buf.EnsureCapacity(gsize);
     ipc_->Recv(recv_buf.Get(), gsize, i);
-    CopyinSubgrid(g->elm_size(), g->num_dims(), buf,
-                  g->size(), recv_buf.Get(), subgrid_offset,
-                  subgrid_size);
+    LOG_DEBUG() << "Copyout subgrid received from " << i << "\n";
+    void *recv_buf_p = recv_buf.Get();
+    void *buf_p = buf;
+    for (int j = 0; j < g->num_members(); ++j) {
+      CopyinSubgrid(g->elm_size(j), g->num_dims(), buf,
+                    g->size(), recv_buf_p, subgrid_offset,
+                    subgrid_size);
+      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(i));
+      recv_buf_p = (void *)((intptr_t)recv_buf_p +
+                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(i));
+    }
   }
 }
 
 template <class GridSpaceType>
-void Client<GridSpaceType>::GridCopyout(int id) {
-  LOG_DEBUG() << "Copyout\n";
-  typename GridSpaceType::GridType *g = static_cast<typename GridSpaceType::GridType*>(gs_->FindGrid(id));
-  // notify the local offset
-  IndexArray ia = g->local_offset();
-  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
-  // notify the local size
-  ia = g->local_size();
-  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
-  if (g->empty()) {
-    LOG_DEBUG() << "No copy needed because this grid is empty.\n";
-    return;
-  }
+void Client<GridSpaceType>::GridCopyoutStage2(
+    typename GridSpaceType::GridType *g) {
   Buffer *sbuf = g->buffer();
   if (g->HasHalo()) {
     sbuf = new BufferHost();
@@ -438,6 +464,23 @@ void Client<GridSpaceType>::GridCopyout(int id) {
   if (g->HasHalo()) {
     free(sbuf);
   }
+}
+
+template <class GridSpaceType>
+void Client<GridSpaceType>::GridCopyout(int id) {
+  LOG_DEBUG() << "[" << rank() << "] Copyout\n";
+  typename GridSpaceType::GridType *g = static_cast<typename GridSpaceType::GridType*>(gs_->FindGrid(id));
+  // notify the local offset
+  IndexArray ia = g->local_offset();
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
+  // notify the local size
+  ia = g->local_size();
+  ipc_->Send(&ia, sizeof(IndexArray), GetMasterRank());  
+  if (g->empty()) {
+    LOG_DEBUG() << "No copy needed because this grid is empty.\n";
+    return;
+  }
+  GridCopyoutStage2(g);
   return;
 }
 

@@ -176,6 +176,10 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
 
+  virtual SgExpression *BuildTypeExpr(SgType *ty);
+  virtual SgVariableDeclaration *BuildTypeInfo(GridType *gt,
+                                               SgStatementPtrList &stmts);
+
   // REFERENCE backend uses the given user-type as is, so the below
   // functions for user-given types just return NULL.
   virtual SgClassDeclaration *BuildGridDevTypeForUserType(

@@ -336,6 +336,9 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
 
 SgEnumVal* BuildEnumVal(unsigned int value, SgEnumDeclaration* decl);
 
+void GetArrayDim(SgArrayType *at, vector<size_t> &dims);
+
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

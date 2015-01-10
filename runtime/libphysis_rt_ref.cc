@@ -50,9 +50,10 @@ extern "C" {
     return 0;
   }
 
-  __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim) {
+  __PSGrid* __PSGridNew(__PSGridTypeInfo *type_info,
+                        int num_dims, PSVectorInt dim) {
     __PSGrid *g = (__PSGrid*)malloc(sizeof(__PSGrid));
-    g->elm_size = elm_size;    
+    g->elm_size = type_info->size;
     g->num_dims = num_dims;
     PSVectorIntCopy(g->dim, dim);
     g->num_elms = 1;

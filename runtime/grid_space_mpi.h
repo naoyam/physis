@@ -273,8 +273,7 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
     const IndexArray &stencil_offset_min,
     const IndexArray &stencil_offset_max,
     int attr) {
-  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
-  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return CreateGrid(&info, num_dims, size, global_offset,
                     stencil_offset_min, stencil_offset_max, attr);
 }

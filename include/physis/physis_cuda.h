@@ -129,8 +129,8 @@ extern "C" {
 #endif // PHYSIS_USER
   
   typedef void * (*__PSGrid_devNewFunc)(int num_dims, PSVectorInt dim);
-  extern __PSGrid* __PSGridNew(int elm_size, int num_dims, PSVectorInt dim,
-                               __PSGrid_devNewFunc func);
+  extern __PSGrid* __PSGridNew(__PSGridTypeInfo *type_info, int num_dims,
+                               PSVectorInt dim, __PSGrid_devNewFunc func);
   extern void __PSGridSwap(__PSGrid *g);
   extern void __PSGridMirror(__PSGrid *g);
   extern int __PSGridGetID(__PSGrid *g);

@@ -266,9 +266,11 @@ typedef IntegerArray<PSIndex> IndexArray;
 inline void CopyTypeInfo(__PSGridTypeInfo &dst,
                          const __PSGridTypeInfo src) {
   dst = src;
-  dst.members = new __PSGridTypeMemberInfo[dst.num_members];
-  for (int i = 0; i < dst.num_members; ++i) {
-    dst.members[i] = src.members[i];
+  if (src.members != NULL) {
+    dst.members = new __PSGridTypeMemberInfo[dst.num_members];
+    for (int i = 0; i < dst.num_members; ++i) {
+      dst.members[i] = src.members[i];
+    }
   }
 }
 

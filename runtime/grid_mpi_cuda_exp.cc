@@ -21,8 +21,29 @@ GridMPICUDAExp::GridMPICUDAExp(
                        local_offset, local_size, halo_m, attr),
                dev_(NULL), halo_m_(NULL) {
   if (empty_) return;
-  halo_m_ = new Width2[type_info->num_members];
-  memcpy(halo_m_, halo_m, sizeof(Width2) * type_info->num_members);
+
+  // Hanlde primitive type as a single-member user-defined type
+  if (type_ != PS_USER) {
+    type_info_.num_members = 1;
+    type_info_.members = new __PSGridTypeMemberInfo;
+    type_info_.members->type = type_info_.type;
+    type_info_.members->size = type_info_.size;
+    type_info_.members->rank = 0;
+  }
+  
+  halo_m_ = new Width2[num_members()];
+  memcpy(halo_m_, halo_m, sizeof(Width2) * num_members());
+  // NOTE: Take maximum of halo width for all members. This is to
+  // reduce the size of grid device type. Otherwise, each member has
+  // to have its own size info.
+  Width2 max_width = halo_m_[0];
+  for (int i = 1; i < num_members(); ++i) {
+    max_width.fw = std::max(max_width.fw, halo_m_[1].fw);
+    max_width.bw = std::max(max_width.bw, halo_m_[1].bw);
+  }
+  for (int i = 0; i < num_members(); ++i) {
+    halo_m_[i] = max_width;
+  }
 }
 
 GridMPICUDAExp::~GridMPICUDAExp() {
@@ -38,8 +59,7 @@ GridMPICUDAExp *GridMPICUDAExp::Create(
     const IndexArray &local_size,
     const Width2 &halo,
     int attr) {
-  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
-  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return GridMPICUDAExp::Create(&info, num_dims, size, global_offset,
                                 local_offset, local_size, &halo, attr);
 }  
@@ -98,7 +118,7 @@ void GridMPICUDAExp::InitBuffers() {
   LOG_DEBUG() << "Initializing grid buffer\n";
 
   if (empty_) return;
-  
+  data_buffer_ = NULL;
   data_buffer_m_ = new BufferCUDADev*[num_members()];
   for (int i = 0; i < num_members(); ++i) {
     data_buffer_m_[i] = new BufferCUDADev();
@@ -148,8 +168,11 @@ void FixupDevBuffer(GridMPICUDAExp &g) {
   DevType *dev_ptr = (DevType*)g.GetDev();
   for (int i = 0; i < g.num_dims(); ++i) {
     dev_ptr->dim[i] = g.size()[i];
-    dev_ptr->local_size[i] = g.local_size()[i];                                
-    dev_ptr->local_offset[i] = g.local_offset()[i];
+    // Pass the real size, not logically assigned size. Note that
+    // since halo size is the same in all members, any member ID
+    // shoudl work.
+    dev_ptr->local_size[i] = g.local_real_size(0)[i];
+    dev_ptr->local_offset[i] = g.local_real_offset(0)[i];
   }
   for (int i = 0; i < g.num_members(); ++i) {
     dev_ptr->p[i] = g.buffer(i)->Get();
@@ -174,20 +197,18 @@ void GridMPICUDAExp::FixupBufferPointers() {
   }
 }
 
-
-
 void GridMPICUDAExp::DeleteBuffers() {
   if (empty_) return;
   for (int k = 0; k < num_members(); ++k) {
     for (int i = 0; i < num_dims_; ++i) {
       for (int j = 0; j < 2; ++j) {
         if (halo_self_host_) {
-          delete GetHaloSelfHost(k, i, j==1);
-          GetHaloSelfHost(k, i, j==1) = NULL;
+          delete GetHaloSelfHost(i, j==1, k);
+          GetHaloSelfHost(i, j==1, k) = NULL;
         }
         if (halo_peer_host_) {
-          delete GetHaloPeerHost(k, i, j==1);
-          GetHaloPeerHost(k, i, j==1) = NULL;
+          delete GetHaloPeerHost(i, j==1, k);
+          GetHaloPeerHost(i, j==1, k) = NULL;
         }
       }
     }
@@ -201,6 +222,11 @@ void GridMPICUDAExp::DeleteBuffers() {
     free(dev_);
     dev_ = NULL;
   }
+
+  for (int i = 0; i < num_members(); ++i) {
+    delete data_buffer_m_[i];
+  }
+  delete[] data_buffer_m_;
   
   GridMPI::DeleteBuffers();
 }
@@ -236,7 +262,7 @@ void GridMPICUDAExp::CopyoutHalo(int dim, const Width2 &width,
   LOG_DEBUG() << "halo size: " << halo_size << "\n";
   
   // First, copy out of CUDA device memory to CUDA pinned host memory
-  void *host_buf = GetHaloSelfHost(member, dim, fw)->Get();
+  void *host_buf = GetHaloSelfHost(dim, fw, member)->Get();
 
   
   buffer(member)->Copyout(elm_size(member), num_dims(),
@@ -356,7 +382,7 @@ void GridMPICUDAExp::CopyinHalo(int dim, const Width2 &width,
   halo_size[dim] = h(fw)[dim];
 
   // The buffer holding peer halo
-  void *host_buf = GetHaloPeerHost(member, dim, fw)->Get();
+  void *host_buf = GetHaloPeerHost(dim, fw, member)->Get();
   
   buffer(member)->Copyin(elm_size(member), num_dims(), local_real_size_m,
                          host_buf, halo_offset, halo_size);

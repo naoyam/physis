@@ -324,8 +324,7 @@ void CUDATranslator::ProcessUserDefinedPointType(
 
 void CUDATranslator::FixAST() {
   // Change the dummy grid type to the actual one even if AST
-  // validation is disabled
-  FixGridType();
+  FixGridType(string(grid_type_name_));
   // Use the ROSE variable reference fix
   if (validate_ast_) {
     si::fixVariableReferences(project_);
@@ -334,11 +333,11 @@ void CUDATranslator::FixAST() {
 
 // Change dummy Grid type to real type so that the whole AST can be
 // validated.
-void CUDATranslator::FixGridType() {
+void CUDATranslator::FixGridType(const string &real_type_name) {
   SgNodePtrList vdecls =
       NodeQuery::querySubTree(project_, V_SgVariableDeclaration);
   SgType *real_grid_type =
-      si::lookupNamedTypeInParentScopes("__PSGrid");
+      si::lookupNamedTypeInParentScopes(real_type_name);
   PSAssert(real_grid_type);
   FOREACH (it, vdecls.begin(), vdecls.end()) {
     SgVariableDeclaration *vdecl = isSgVariableDeclaration(*it);

@@ -159,6 +159,7 @@ extern "C" {
     int dim[PS_GRID_USER_TYPE_MAX_ARRAY_RANK];
   } __PSGridTypeMemberInfo;
   typedef struct {
+    PSType type;
     int size;
     int num_members;
     __PSGridTypeMemberInfo *members;

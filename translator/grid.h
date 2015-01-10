@@ -44,7 +44,8 @@ class GridType: public AstAttribute {
   GridType *copy();
 
   unsigned rank() const { return rank_; }
-  const string& type_name() const { return type_name_; };  
+  const string& type_name() const { return type_name_; };
+  SgNamedType *user_type() const { return user_type_; }  
   SgType *point_type() const { return point_type_; }
   SgClassDefinition *point_def() const { return point_def_; }  
   SgType *aux_type() const { return aux_type_; }      

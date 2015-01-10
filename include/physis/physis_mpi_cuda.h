@@ -52,18 +52,18 @@ extern "C" {
 
 #define DEFINE_GRID_DEV_GENERIC_TYPE(DIM)        \
   typedef struct {                               \
-    void *p;                                     \
     int dim[DIM];                                \
     int local_size[DIM];                         \
     int local_offset[DIM];                       \
+    void *p;                                     \
   } __PSGrid##DIM##D_dev;             
 
 #define DEFINE_GRID_DEV_TYPE(DIM, TY, TY_NAME)   \
   typedef struct {                               \
-    TY *p;                                       \
     int dim[DIM];                                \
     int local_size[DIM];                         \
     int local_offset[DIM];                       \
+    TY *p;                                       \
   } __PSGrid##DIM##D##TY_NAME##_dev;             
 
   DEFINE_GRID_DEV_GENERIC_TYPE(1);
@@ -101,18 +101,21 @@ extern "C" {
 #endif
 
 #define __PSGridLocalSizeDev(p, d) ((p)->local_size[d])
+#define __PSGridLocalOffsetDev(p, d) ((p)->local_offset[d])  
 
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset1DDev(const void *g,
                                                PSIndex i1) {
-    return i1;
+    return i1 - __PSGridLocalOffsetDev((__PSGrid1D_dev*)g, 0);
   }
   
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffset2DDev(const void *g,
                                                PSIndex i1,
                                                PSIndex i2) {
-    return i1 + i2 * __PSGridLocalSizeDev((__PSGrid2D_dev *)g, 0);
+    return i1 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 0)
+        + (i2 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 1))
+        * __PSGridLocalSizeDev((__PSGrid2D_dev *)g, 0);
   }
 
   PS_FUNCTION_DEVICE
@@ -120,26 +123,30 @@ extern "C" {
                                                PSIndex i1,
                                                PSIndex i2,
                                                PSIndex i3) {
-    return i1 + i2 * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
-        + i3 * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
-        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 1);
+    return i1 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 0)
+        + (i2 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 1))
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 0)
+        + (i3 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 2))
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 0)
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 1);
   }
 
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
                                                        PSIndex i1) {
-    return (i1 + __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0))
-    % __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0);
+    return (i1 - __PSGridLocalOffsetDev((__PSGrid1D_dev*)g, 0))
+        % __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0);
   }
   
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2) {
-    return __PSGridGetOffsetPeriodic1DDev(g, i1) +
-        (i2 + __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1))
-        % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1)
-        * __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 0);
+    return (i1 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 0))
+        % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 0)
+        + ((i2 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 1))
+           % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1))
+        * __PSGridLocalSizeDev((__PSGrid2D_dev *)g, 0);
   }
 
   PS_FUNCTION_DEVICE
@@ -147,11 +154,15 @@ extern "C" {
                                                        PSIndex i1,
                                                        PSIndex i2,
                                                        PSIndex i3) {
-    return __PSGridGetOffsetPeriodic2DDev(g, i1, i2) +
-        (i3 + __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 2))
-        % __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 2)
-        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0)
-        * __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 1);
+    return __PS_PERIODIC(i1 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 0),
+                         __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 0))
+        + __PS_PERIODIC(i2 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 1),
+                        __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 1))
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 0)
+        + __PS_PERIODIC(i3 - __PSGridLocalOffsetDev((__PSGrid3D_dev*)g, 2),
+                        __PSGridLocalSizeDev((__PSGrid3D_dev*)g, 2))
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 0)
+        * __PSGridLocalSizeDev((__PSGrid3D_dev *)g, 1);
   }
 
 #if ! defined(PHYSIS_RUNTIME) && ! defined(PHYSIS_USER)
@@ -398,13 +409,12 @@ extern "C" {
 #endif
 #endif
 
-  extern void __PSDomainSetLocalSize(__PSDomain *dom);  
-  extern __PSGridMPI* __PSGridNewMPI(PSType type, int elm_size, int dim,
-                                     const PSVectorInt size,
-                                     int attr,
-                                     const PSVectorInt global_offset,
-                                     const PSVectorInt stencil_offset_min,
-                                     const PSVectorInt stencil_offset_max);
+  extern void __PSDomainSetLocalSize(__PSDomain *dom);
+  extern __PSGridMPI* __PSGridNewMPI(
+      __PSGridTypeInfo *type_info,
+      int dim, const PSVectorInt size, int attr,
+      const PSVectorInt global_offset, const PSVectorInt stencil_offset_min,
+      const PSVectorInt stencil_offset_max);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

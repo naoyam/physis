@@ -41,6 +41,21 @@ GridMPI::GridMPI(const __PSGridTypeInfo *type_info,
     local_real_size_[i] += halo->fw[i] + halo->bw[i];
     local_real_offset_[i] -= halo->bw[i];
   }
+
+  // Hanlde primitive type as a single-member user-defined type
+  if (type_ != PS_USER) {
+    type_info_.num_members = 1;
+    type_info_.members = new __PSGridTypeMemberInfo;
+    type_info_.members->type = type_info_.type;
+    type_info_.members->size = type_info_.size;
+    type_info_.members->rank = 0;
+  } else {
+    // Aggregates multiple members in MPI since AoS is not converted
+    // to SoA
+    type_info_.num_members = 1;
+    type_info_.members[0].size = type_info_.size;
+    type_info_.members[0].type = PS_USER;
+  }
   
   empty_ = local_size_.accumulate(num_dims_) == 0;
   if (empty_) return;
@@ -55,8 +70,7 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
                          const IndexArray &local_size,
                          const Width2 &halo,
                          int attr) {
-  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
-  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return GridMPI::Create(&info, num_dims, size, global_offset,
                          local_offset, local_size, &halo, attr);
 }

@@ -939,6 +939,131 @@ void ReferenceRuntimeBuilder::TraceStencilRun(Run *run,
   return;
 }
 
+SgExpression *ReferenceRuntimeBuilder::BuildTypeExpr(SgType *ty) {
+  SgExpression *e = NULL;
+  if (isSgTypeFloat(ty)) {
+    e = Int(PS_FLOAT);
+  } else if (isSgTypeDouble(ty)) {
+    e = Int(PS_DOUBLE);
+  } else if (isSgTypeInt(ty)) {
+    e = Int(PS_INT);
+  } else if (isSgTypeLong(ty)) {
+    e = Int(PS_LONG);
+  } else {
+    // Assumes user-defined type
+    e = Int(PS_USER);
+  }
+  return e;
+}
+
+SgVariableDeclaration *ReferenceRuntimeBuilder::BuildTypeInfo(
+    GridType *gt, SgStatementPtrList &stmts) {
+  string type_info_name = "type_info";
+  string member_info_name = "member_info";
+
+  SgType *type_info_type = si::lookupNamedTypeInParentScopes("__PSGridTypeInfo");
+  PSAssert(type_info_type);
+
+  SgExpression *type_expr = BuildTypeExpr(gt->point_type());
+  // TypeInfo initializer  
+  SgExprListExp *type_info_init_args =
+      sb::buildExprListExp(type_expr, sb::buildSizeOfOp(gt->point_type()));
+  SgAggregateInitializer *type_info_init =
+      sb::buildAggregateInitializer(type_info_init_args);
+  SgVariableDeclaration *type_info =
+      sb::buildVariableDeclaration(type_info_name, type_info_type,
+                                   type_info_init);
+  if (gt->IsPrimitivePointType()) {
+    si::appendExpression(type_info_init_args, Int(0));
+    //si::appendExpression(type_info_init_args, sb::buildNullExpression());
+  } else {
+    // MemberInfo
+    SgTypedefType *member_info_type =
+        isSgTypedefType(
+            si::lookupNamedTypeInParentScopes("__PSGridTypeMemberInfo"));
+    SgClassType *member_info_class = isSgClassType(member_info_type->get_base_type());
+    PSAssert(member_info_type);
+    SgClassDefinition *member_info_def = isSgClassDeclaration(
+        member_info_class->get_declaration()->get_definingDeclaration())->get_definition();
+
+    // MemberInfo type fields
+    SgVariableSymbol *member_type_field =
+        si::lookupVariableSymbolInParentScopes("type", member_info_def);
+    PSAssert(member_type_field);  
+    SgVariableSymbol *member_size_field =
+        si::lookupVariableSymbolInParentScopes("size", member_info_def);
+    PSAssert(member_size_field);
+    SgVariableSymbol *member_rank_field =
+        si::lookupVariableSymbolInParentScopes("rank", member_info_def);
+    PSAssert(member_rank_field);
+    SgVariableSymbol *member_dim_field =
+        si::lookupVariableSymbolInParentScopes("dim", member_info_def);
+    PSAssert(member_dim_field);
+
+    SgClassDefinition *utype = gt->point_def();
+    // MemberInfo variable declaration
+    const SgDeclarationStatementPtrList &members = utype->get_members();
+    SgType *member_array_type =
+        sb::buildArrayType(member_info_type, Int(members.size()));
+    SgVariableDeclaration *member_info =
+        sb::buildVariableDeclaration(member_info_name, member_array_type);
+    stmts.push_back(member_info);
+
+    si::appendExpression(type_info_init_args, Int(members.size()));
+    si::appendExpression(type_info_init_args, Var(member_info));
+    
+    for (int i = 0; i < (int)members.size(); ++i) {
+      SgVariableDeclaration *member_decl = isSgVariableDeclaration(members[i]);
+      PSAssert(member_decl);
+      LOG_DEBUG() << "Utype Member: " << member_decl->unparseToString() << "\n";
+      SgInitializedName *member_in = si::getFirstInitializedName(member_decl);
+      SgType *member_type = member_in->get_type();
+      SgArrayType *array_type = isSgArrayType(member_type);
+      // Array base type if member is an array; otherwise, same as
+      // member type
+      SgType *member_base_type = array_type ?
+          si::getArrayElementType(array_type) : member_type;
+      
+      // type
+      SgExpression *type_lhs = Dot(ArrayRef(Var(member_info), Int(i)), Var(member_type_field));
+      SgExpression *type_rhs = BuildTypeExpr(member_base_type);
+      stmts.push_back(sb::buildAssignStatement(type_lhs, type_rhs));
+      // size
+      SgExpression *size_lhs = Dot(ArrayRef(Var(member_info), Int(i)), Var(member_size_field));
+      SgExpression *size_rhs = sb::buildSizeOfOp(member_base_type);
+      stmts.push_back(sb::buildAssignStatement(size_lhs, size_rhs));
+      // rank
+      SgExpression *rank_lhs = Dot(ArrayRef(Var(member_info), Int(i)), Var(member_rank_field));
+      SgExpression *rank_rhs = NULL;
+      if (array_type) {
+        vector<size_t> array_dims;
+        ru::GetArrayDim(array_type, array_dims);
+        rank_rhs = Int(array_dims.size());
+        // dim
+        int t = 0;
+        BOOST_FOREACH (size_t d, array_dims) {
+          SgExpression *dim_lhs =
+              ArrayRef(Dot(ArrayRef(Var(member_info), Int(i)),
+                           Var(member_dim_field)), Int(t));
+          SgExpression *dim_rhs = Int(d);
+          stmts.push_back(sb::buildAssignStatement(dim_lhs, dim_rhs));
+          ++t;
+        }
+      } else {
+        rank_rhs = Int(0);
+      }
+      stmts.push_back(sb::buildAssignStatement(rank_lhs, rank_rhs));
+      // Reorder the rank and dim field assignment
+      std::swap(stmts[stmts.size()-1], stmts[stmts.size()-2]);
+    
+    }
+  }
+  
+  stmts.push_back(type_info);
+  return type_info;
+}
+  
+
 SgFunctionDeclaration *ReferenceRuntimeBuilder::BuildRunFunc(Run *run) {
   // setup the parameter list
   SgFunctionParameterList *parlist = Builder()->BuildRunFuncParameterList(run);
