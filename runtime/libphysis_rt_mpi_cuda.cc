@@ -327,7 +327,7 @@ extern "C" {
   // same as mpi_runtime.cc
   PSIndex PSGridDim(void *p, int d) {
     Grid *g = (Grid *)p;    
-    return g->size_[d];
+    return g->size()[d];
   }
 
   // same as mpi_runtime.cc  
@@ -393,6 +393,25 @@ extern "C" {
     return;
   }
 
+  // same as mpi_runtime.cc  
+  void __PSLoadNeighborMember(__PSGridMPI *g,
+                              int member,
+                              const PSVectorInt offset_min,
+                              const PSVectorInt offset_max,
+                              int diagonal, int reuse, int overlap,
+                              int periodic) {
+    GridType *gm = (GridType*)g;
+    cudaStream_t strm = 0;
+    if (overlap) {
+      strm = stream_boundary_copy;
+    }
+    gs->LoadNeighbor(gm, member, IndexArray(offset_min),
+                     IndexArray(offset_max),
+                     diagonal, reuse, periodic,
+                     strm);
+    return;
+  }
+  
 #ifdef NEIGHBOR_EXCHANGE_MULTI_STAGE  
   void __PSLoadNeighborStage1(__PSGridMPI *g,
                               const PSVectorInt offset_min,

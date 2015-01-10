@@ -305,6 +305,27 @@ class BuilderInterface {
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope) = 0;
 
+
+  // These functions build functions and types for user-defined point
+  // types. They may simply return NULL if no user-type-specific
+  // constructs are used in the final code. 
+  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
+      SgClassDeclaration *grid_decl,
+      const GridType *gt) = 0;  
+  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
+      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
+      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
+      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
+      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
+      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
+      const GridType *gt) = 0;
+  
+
   // Experimental auto-tuning
   /** add dynamic parameter
    * @param[in/out] parlist ... parameter list

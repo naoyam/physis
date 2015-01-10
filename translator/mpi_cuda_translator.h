@@ -119,6 +119,10 @@ class MPICUDATranslator: public MPITranslator {
   void SetCacheConfig(StencilMap *smap, SgFunctionSymbol *fs,
                       SgScopeStatement *function_body,
                       bool overlap_enabled);
+
+  virtual void ProcessUserDefinedPointType(
+      SgClassDeclaration *grid_decl, GridType *gt);
+  
 };
 
 } // namespace translator

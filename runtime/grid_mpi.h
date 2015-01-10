@@ -22,12 +22,13 @@ class GridMPI: public Grid {
   template <class T> friend std::ostream& PrintGrid(
       GridMPI *, int, std::ostream&);
  protected:
-  GridMPI(PSType type, int elm_size, int num_dims,
+  GridMPI(const __PSGridTypeInfo *type_info,
+          int num_dims,
           const IndexArray &size,
           const IndexArray &global_offset,
           const IndexArray &local_offset,
           const IndexArray &local_size, 
-          const Width2 &halo,
+          const Width2 *halo,
           int attr);
   //! Flag to indicate whether this sub grid is empty
   bool empty_;
@@ -115,14 +116,21 @@ class GridMPI: public Grid {
 
 
  public:
-  static GridMPI *Create(
-      PSType type, int elm_size,
-      int num_dims, const IndexArray &size,
-      const IndexArray &global_offset,
-      const IndexArray &local_offset,
-      const IndexArray &local_size,
-      const Width2 &halo,
-      int attr);
+  static GridMPI *Create(PSType type, int elm_size,
+                         int num_dims, const IndexArray &size,
+                         const IndexArray &global_offset,
+                         const IndexArray &local_offset,
+                         const IndexArray &local_size,
+                         const Width2 &halo,
+                         int attr);
+
+  static GridMPI* Create(const __PSGridTypeInfo *type_info,
+                         int num_dims, const IndexArray &size,
+                         const IndexArray &global_offset,
+                         const IndexArray &local_offset,
+                         const IndexArray &local_size,
+                         const Width2 *halo,
+                         int attr);
   
   virtual ~GridMPI();
   virtual std::ostream &Print(std::ostream &os) const;
@@ -133,6 +141,9 @@ class GridMPI: public Grid {
   const IndexArray& local_offset() const { return local_offset_; }
   const IndexArray& local_real_offset() const { return local_real_offset_; }  
   const IndexArray& local_real_size() const { return local_real_size_; }
+  size_t local_num_elms() const {
+    return local_real_size_.accumulate(num_dims_);
+  }  
   const Width2 &halo() const { return halo_; }
   bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
   
@@ -173,8 +184,9 @@ class GridMPI: public Grid {
   // by the generated user code. CalcOffset is also a template with
   // the grid rank as a parameter.
   void *GetAddress(const IndexArray &indices) {
-    return (void*)(_data() +
-                   GridCalcOffset(indices, local_real_size_, local_real_offset_, num_dims_)
+    return (void*)(idata() +
+                   GridCalcOffset(indices, local_real_size_,
+                                  local_real_offset_, num_dims_)
                    * elm_size());
   }
   
@@ -215,7 +227,17 @@ class GridMPI: public Grid {
     \return Size in bytes.
   */
   size_t GetLocalBufferSize() const {
-    return local_size_.accumulate(num_dims_) * elm_size_;
+    return local_size_.accumulate(num_dims_) * elm_size();
+  };
+  //! Returns the size of the logical buffer area in bytes.
+  /*!
+    Does not count the halo region.
+    
+    \param member_id Member index
+    \return Size in bytes.
+  */
+  size_t GetLocalBufferSize(int member_id) const {
+    return local_size_.accumulate(num_dims_) * elm_size(member_id);
   };
 
   //! Returns the size of the actual buffer area in bytes.
@@ -225,7 +247,19 @@ class GridMPI: public Grid {
     \return Size in bytes.
   */
   size_t GetLocalBufferRealSize() const {
-    return local_real_size_.accumulate(num_dims_) * elm_size_;
+    return local_real_size_.accumulate(num_dims_) * elm_size();
+  };
+
+
+  //! Returns the size of the actual buffer area in bytes.
+  /*!
+    Does count the halo region.
+
+    \param member_id Member index
+    \return Size in bytes.
+  */
+  size_t GetLocalBufferRealSize(int member_id) const {
+    return local_real_size_.accumulate(num_dims_) * elm_size(member_id);
   };
 };
 

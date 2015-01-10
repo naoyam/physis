@@ -536,6 +536,39 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   BuildFixGridAddresses(smap, sdecl, run_func_body);
 }
 
+SgClassDeclaration *MPICUDARuntimeBuilder::BuildGridDevTypeForUserType(
+    SgClassDeclaration *grid_decl,
+    const GridType *gt) {
+  
+  // First, create the declaration as the CUDA translator, then update
+  // it for MPI-CUDA. Update incldues insertion of local dimension
+  // informatin. 
+
+  // Step 1. Create the declaration for CUDA
+  SgClassDeclaration *decl = cuda_rt_builder_->BuildGridDevTypeForUserType(
+      grid_decl, gt);
+  SgClassDefinition *type_def = decl->get_definition();
+
+  // Step 2. Update the declaration for MPI-CUDA
+  
+  // Step 2.1 Insert local_size after dim field
+  SgVariableDeclaration *dim_decl = isSgVariableDeclaration(
+      si::getFirstStatement(type_def));
+  PSAssert(dim_decl);
+  SgType *dim_type = si::getFirstVarSym(dim_decl)->get_type();
+  SgVariableDeclaration *local_size_decl =
+      sb::buildVariableDeclaration(PS_GRID_TYPE_LOCAL_SIZE_NAME,
+                                   dim_type, NULL, type_def);
+  si::insertStatementAfter(dim_decl, local_size_decl);
+
+  // Step 2.2 Insert local_offset after local_size field
+  SgVariableDeclaration *local_offset_decl =
+      sb::buildVariableDeclaration(PS_GRID_TYPE_LOCAL_OFFSET_NAME,
+                                   dim_type, NULL, type_def);
+  si::insertStatementAfter(local_size_decl, local_offset_decl);
+  
+  return decl;
+}
 
 }  // namespace translator
 }  // namespace physis

@@ -280,10 +280,6 @@ template <class GridSpaceType>
 void Master<GridSpaceType>::GridCopyinLocal(typename GridSpaceType::GridType *g, const void *buf) {
   if (g->empty()) return;
 
-  size_t s = ((typename GridSpaceType::GridType*)g)->local_real_size().accumulate(g->num_dims()) *
-      g->elm_size();
-  PSAssert(g->buffer()->size() == s);
-
   void *tmp_buf = NULL;
   void *grid_dst = g->buffer()->Get();
   

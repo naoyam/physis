@@ -23,25 +23,27 @@ class GridSpaceMPICUDA: public GridSpaceMPI<GridType> {
     this class sends the whole halo region for this subgrid. Thus,
     halo_width is not used.
    */
-  virtual bool SendBoundaries(GridType *grid, int dim,
+  virtual bool SendBoundaries(GridType *grid,
+                              int member, int dim,
                               const Width2 &halo_width,
                               bool forward, bool diagonal, bool periodic,
                               DataCopyProfile &prof,
                               MPI_Request &req) const;
-  
+
   //! Receive halo boundaries for accesses in a dimension.
   /*!
     The halo width for the stencl function is given by halo_width, but
     this class sends the whole halo region for this subgrid. Thus,
     halo_width is not used.
    */
-  virtual bool RecvBoundaries(GridType *grid, int dim,
+  virtual bool RecvBoundaries(GridType *grid,
+                              int member, int dim,
                               const Width2 &halo_width,
                               bool forward, bool diagonal, bool periodic,
                               DataCopyProfile &prof) const;
   
   virtual void ExchangeBoundaries(GridType *grid,
-                                  int dim,
+                                  int member, int dim,
                                   const Width2 &halo_width,
                                   bool diagonal,
                                   bool periodic) const;
@@ -61,12 +63,21 @@ class GridSpaceMPICUDA: public GridSpaceMPI<GridType> {
 #endif // NEIGHBOR_EXCHANGE_MULTI_STAGE
   //using GridSpaceMPI::LoadNeighbor;
   virtual GridType *LoadNeighbor(GridType *g,
+                                 int member,
                                  const IndexArray &offset_min,
                                  const IndexArray &offset_max,
                                  bool diagonal,
                                  bool reuse,
                                  bool periodic,
                                  cudaStream_t cuda_stream);
+  virtual GridType *LoadNeighbor(GridType *g,
+                                 const IndexArray &offset_min,
+                                 const IndexArray &offset_max,
+                                 bool diagonal,
+                                 bool reuse,
+                                 bool periodic,
+                                 cudaStream_t cuda_stream);
+  
   
 #ifdef NEIGHBOR_EXCHANGE_MULTI_STAGE  
   virtual GridType *LoadNeighborStage1(GridType *g,
@@ -241,12 +252,10 @@ void GridSpaceMPICUDA<GridType>::ExchangeBoundariesStage2(
 #endif // NEIGHBOR_EXCHANGE_MULTI_STAGE
 
 template <class GridType>
-bool GridSpaceMPICUDA<GridType>::SendBoundaries(GridType *grid, int dim,
-                                                const Width2 &halo_width,
-                                                bool forward, bool diagonal,
-                                                bool periodic,
-                                                DataCopyProfile &prof,
-                                                MPI_Request &req) const {
+bool GridSpaceMPICUDA<GridType>::SendBoundaries(
+    GridType *grid, int member, int dim, const Width2 &halo_width,
+    bool forward, bool diagonal, bool periodic, DataCopyProfile &prof,
+    MPI_Request &req) const {
   unsigned width = forward ? halo_width.fw[dim] : halo_width.bw[dim];
   // Nothing to do since the width is zero  
   if (width == 0) {
@@ -259,7 +268,8 @@ bool GridSpaceMPICUDA<GridType>::SendBoundaries(GridType *grid, int dim,
   // Do nothing if this process is on the end of the dimension and
   // periodic boundary is not set.
   if (!periodic &&
-      ((!forward && grid->local_offset_[dim] + grid->local_size_[dim] == grid->size_[dim]) ||
+      ((!forward && grid->local_offset_[dim] + grid->local_size_[dim]
+        == grid->size_[dim]) ||
        (forward && grid->local_offset_[dim] == 0))) {
     return false;
   }
@@ -269,7 +279,7 @@ bool GridSpaceMPICUDA<GridType>::SendBoundaries(GridType *grid, int dim,
   
   Stopwatch st;  
   st.Start();
-  grid->CopyoutHalo(dim, halo_width, forward, diagonal);
+  grid->CopyoutHalo(dim, halo_width, forward, diagonal, member);
   prof.gpu_to_cpu += st.Stop();
 #if defined(PS_VERBOSE)
   LOG_VERBOSE() << "own halo copied to host ->";
@@ -279,11 +289,12 @@ bool GridSpaceMPICUDA<GridType>::SendBoundaries(GridType *grid, int dim,
   // Now the halo to be sent to the peer is on the host memory, ready
   // to be sent to the peer.
 
-  BufferHost *halo_buf = grid->GetHaloSelfHost(dim, forward);
+  BufferHost *halo_buf = grid->GetHaloSelfHost(dim, forward, member);
   size_t halo_size = halo_buf->size();
 
   LOG_DEBUG() << "Sending to " << peer << "\n";
-  LOG_DEBUG() << "Sending halo on host of " << halo_size << " bytes to " << peer << "\n";
+  LOG_DEBUG() << "Sending halo on host of " << halo_size
+              << " bytes to " << peer << "\n";
   
   st.Start();
   CHECK_MPI(PS_MPI_Isend(
@@ -294,10 +305,8 @@ bool GridSpaceMPICUDA<GridType>::SendBoundaries(GridType *grid, int dim,
 
 template <class GridType>
 bool GridSpaceMPICUDA<GridType>::RecvBoundaries(
-    GridType *grid, int dim,
-    const Width2 &halo_width, bool forward, bool diagonal,
-    bool periodic,
-    DataCopyProfile &prof) const {
+    GridType *grid, int member, int dim, const Width2 &halo_width,
+    bool forward, bool diagonal, bool periodic, DataCopyProfile &prof) const {
   int peer = forward ? this->fw_neighbors_[dim] : this->bw_neighbors_[dim];
   bool is_last_process =
       grid->local_offset_[dim] + grid->local_size_[dim]
@@ -336,19 +345,20 @@ bool GridSpaceMPICUDA<GridType>::RecvBoundaries(
   }
 #endif  
 
-  BufferHost *halo_buf = grid->GetHaloPeerHost(dim, forward);
+  BufferHost *halo_buf = grid->GetHaloPeerHost(dim, forward, member);
   LOG_DEBUG() << "Receiving halo of " << halo_buf->size()
               << " bytes from " << peer << "\n";
 
   // Receive from the peer MPI process
   st.Start();
   CHECK_MPI(PS_MPI_Recv(
-      halo_buf->Get(), halo_buf->size(), MPI_BYTE, peer, 0, this->comm_, MPI_STATUS_IGNORE));
+      halo_buf->Get(), halo_buf->size(), MPI_BYTE, peer, 0,
+      this->comm_, MPI_STATUS_IGNORE));
   prof.cpu_in += st.Stop();
 
   // Copy to device buffer
   st.Start();
-  grid->CopyinHalo(dim, halo_width, forward, diagonal);
+  grid->CopyinHalo(dim, halo_width, forward, diagonal, member);
   prof.cpu_to_gpu += st.Stop();
   return true;
 }
@@ -356,7 +366,7 @@ bool GridSpaceMPICUDA<GridType>::RecvBoundaries(
 // Note: width is unsigned.
 template <class GridType>
 void GridSpaceMPICUDA<GridType>::ExchangeBoundaries(
-    GridType *grid, int dim, const Width2 &halo_width,
+    GridType *grid, int member, int dim, const Width2 &halo_width,
     bool diagonal, bool periodic) const {
 
   if (grid->empty_) return;
@@ -371,20 +381,20 @@ void GridSpaceMPICUDA<GridType>::ExchangeBoundaries(
 
   // Sends out the halo for backward access
   bool req_bw_active =
-      SendBoundaries(grid, dim, halo_width, false, diagonal,
+      SendBoundaries(grid, member, dim, halo_width, false, diagonal,
                      periodic, prof_upw, req_bw);
   
   // Sends out the halo for forward access
   bool req_fw_active =
-      SendBoundaries(grid, dim, halo_width, true, diagonal,
+      SendBoundaries(grid, member, dim, halo_width, true, diagonal,
                      periodic, prof_dwn, req_fw);
 
   // Receiving halo for backward access
-  RecvBoundaries(grid, dim, halo_width, false, diagonal,
+  RecvBoundaries(grid, member, dim, halo_width, false, diagonal,
                  periodic, prof_dwn);
   
   // Receiving halo for forward access
-  RecvBoundaries(grid, dim, halo_width, true, diagonal,
+  RecvBoundaries(grid, member, dim, halo_width, true, diagonal,
                  periodic, prof_upw);
 
   // Ensure the exchanges are done. Otherwise, the send buffers can be
@@ -445,6 +455,24 @@ inline PSIndex GridCalcOffsetExp(const IndexArray &index,
 
 template <class GridType>
 GridType *GridSpaceMPICUDA<GridType>::LoadNeighbor(
+    GridType *g, int member,
+    const IndexArray &offset_min,
+    const IndexArray &offset_max,
+    bool diagonal,  bool reuse, bool periodic,
+    cudaStream_t cuda_stream) {
+  
+  // set the stream of buffer by the stream parameter
+  //g->SetCUDAStream(cuda_stream);
+  GridType *rg = GridSpaceMPI<GridType>::LoadNeighbor(
+      g, member, offset_min, offset_max,
+      diagonal, reuse, periodic);
+
+  //g->SetCUDAStream(0);
+  return rg;
+}
+
+template <class GridType>
+GridType *GridSpaceMPICUDA<GridType>::LoadNeighbor(
     GridType *g,
     const IndexArray &offset_min,
     const IndexArray &offset_max,
@@ -453,12 +481,14 @@ GridType *GridSpaceMPICUDA<GridType>::LoadNeighbor(
   
   // set the stream of buffer by the stream parameter
   //g->SetCUDAStream(cuda_stream);
-  GridType *rg = GridSpaceMPI<GridType>::LoadNeighbor(g, offset_min, offset_max,
-                                                      diagonal, reuse, periodic);
+  GridType *rg = GridSpaceMPI<GridType>::LoadNeighbor(
+      g, offset_min, offset_max,
+      diagonal, reuse, periodic);
 
   //g->SetCUDAStream(0);
   return rg;
 }
+
 
 #ifdef NEIGHBOR_EXCHANGE_MULTI_STAGE
 template <class GridType>

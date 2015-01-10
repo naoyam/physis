@@ -175,6 +175,38 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
 
   virtual void TraceStencilRun(Run *run, SgScopeStatement *loop,
                                SgScopeStatement *cur_scope);
+
+  // REFERENCE backend uses the given user-type as is, so the below
+  // functions for user-given types just return NULL.
+  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
+      SgClassDeclaration *grid_decl,
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
+      const GridType *gt) {
+    return  NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
+  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
+      const GridType *gt) {
+    return NULL;
+  }
   
   virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
   virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);

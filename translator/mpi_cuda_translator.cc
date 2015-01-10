@@ -807,5 +807,14 @@ static std::string GetTypeDimName(GridType *gt) {
       + toString(gt->rank()) + "D";
 }
 
+void MPICUDATranslator::ProcessUserDefinedPointType(
+    SgClassDeclaration *grid_decl, GridType *gt) {
+  cuda_trans_->ProcessUserDefinedPointType(grid_decl, gt);
+}
+
+
+
+  
+
 } // namespace translator
 } // namespace physis

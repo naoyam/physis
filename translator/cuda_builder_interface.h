@@ -27,22 +27,6 @@ class CUDABuilderInterface: virtual public BuilderInterface {
   virtual SgExpression *BuildGridGetDev(SgExpression *grid_var,
                                         GridType *gt) = 0;
 
-  virtual SgClassDeclaration *BuildGridDevTypeForUserType(
-      SgClassDeclaration *grid_decl,
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
-      const GridType *gt) = 0;
-
   virtual SgInitializedName *GetDomArgParamInRunKernelFunc(
       SgFunctionParameterList *pl, int dim) = 0;
 

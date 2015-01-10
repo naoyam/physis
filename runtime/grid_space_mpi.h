@@ -55,9 +55,18 @@ class GridSpaceMPI: public GridSpace {
                         PSIndex **partitions, PSIndex **offsets,
                         std::vector<IntArray> &proc_indices,
                         IndexArray &min_partition);
+
+  virtual GT *CreateGrid(PSType type, int elm_size,
+                         int num_dims,
+                         const IndexArray &size,
+                         const IndexArray &global_offset,
+                         const IndexArray &stencil_offset_min,
+                         const IndexArray &stencil_offset_max,
+                         int attr);
   
-  virtual GT *CreateGrid(PSType type, int elm_size, int num_dims,
-                         const IndexArray &size, 
+  virtual GT *CreateGrid(const __PSGridTypeInfo *type_info,
+                         int num_dims,
+                         const IndexArray &size,
                          const IndexArray &global_offset,
                          const IndexArray &stencil_offset_min,
                          const IndexArray &stencil_offset_max,
@@ -76,7 +85,7 @@ class GridSpaceMPI: public GridSpace {
     \param requests MPI request vector to poll completion
    */
   virtual void ExchangeBoundariesAsync(
-      GT *grid, int dim,
+      GT *grid, int member, int dim,
       const Width2 &halo_width,
       bool diagonal, bool periodic,
       std::vector<MPI_Request> &requests) const;
@@ -90,7 +99,7 @@ class GridSpaceMPI: public GridSpace {
     \param diagonal True if diagonal points are accessed.
     \param periodic True if periodic access is used.
    */
-  virtual void ExchangeBoundaries(GT *grid, int dim,
+  virtual void ExchangeBoundaries(GT *grid, int member, int dim,
                                   const Width2 &halo_width,
                                   bool diagonal,
                                   bool periodic) const;
@@ -103,7 +112,7 @@ class GridSpaceMPI: public GridSpace {
     \param periodic True if periodic access is used.
     \param reuse True if reuse is enabled.
    */
-  virtual void ExchangeBoundaries(GT *grid,
+  virtual void ExchangeBoundaries(GT *grid, int member,
                                   const Width2 &halo_width,
                                   bool diagonal,
                                   bool periodic,
@@ -115,6 +124,13 @@ class GridSpaceMPI: public GridSpace {
                            bool diagonal,
                            bool reuse,
                            bool periodic);
+  virtual GT *LoadNeighbor(GT *g, int member,
+                           const IndexArray &offset_min,
+                           const IndexArray &offset_max,
+                           bool diagonal,
+                           bool reuse,
+                           bool periodic);
+  
   
 
   virtual int FindOwnerProcess(GT *g, const IndexArray &index);
@@ -250,12 +266,29 @@ GridSpaceMPI<GridType>::~GridSpaceMPI() {
 
 template <class GridType>
 GridType *GridSpaceMPI<GridType>::CreateGrid(
-    PSType type, int elm_size, int num_dims,
-    const IndexArray &size, 
+    PSType type, int elm_size,
+    int num_dims,
+    const IndexArray &size,
     const IndexArray &global_offset,
     const IndexArray &stencil_offset_min,
     const IndexArray &stencil_offset_max,
     int attr) {
+  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
+  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  return CreateGrid(&info, num_dims, size, global_offset,
+                    stencil_offset_min, stencil_offset_max, attr);
+}
+
+template <class GridType>
+GridType *GridSpaceMPI<GridType>::CreateGrid(
+    const __PSGridTypeInfo *type_info,
+    int num_dims,
+    const IndexArray &size,
+    const IndexArray &global_offset,
+    const IndexArray &stencil_offset_min,
+    const IndexArray &stencil_offset_max,
+    int attr) {
+
   IndexArray grid_size = size;
   IndexArray grid_global_offset = global_offset;
   if (num_dims_ != num_dims) {
@@ -291,9 +324,9 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
   LOG_DEBUG() << "halo.bw: " << halo.bw << "\n";  
   
   GridType *g = GridType::Create(
-      type, elm_size, num_dims, grid_size,
+      type_info, num_dims, grid_size,
       grid_global_offset, local_offset, local_size,
-      halo, attr);
+      &halo, attr);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   LOG_DEBUG() << "grid registered\n";
@@ -302,6 +335,7 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
   load_neighbor_prof_.insert(std::make_pair(g->id(), profs));
   return g;
 }
+
 template <class GridType>
 std::ostream &GridSpaceMPI<GridType>::Print(
     std::ostream &os) const {
@@ -322,7 +356,7 @@ std::ostream &GridSpaceMPI<GridType>::Print(
 
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
-    GridType *grid, int dim, const Width2 &halo_width,
+    GridType *grid, int member, int dim, const Width2 &halo_width,
     bool diagonal, bool periodic,
     std::vector<MPI_Request> &requests) const {
   
@@ -334,9 +368,9 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
   const unsigned halo_fw_width = halo_width.fw[dim];
   const unsigned halo_bw_width = halo_width.bw[dim];  
   size_t fw_size = grid->CalcHaloSize(dim, halo_fw_width, diagonal)
-      * grid->elm_size_;
+      * grid->elm_size();
   size_t bw_size = grid->CalcHaloSize(dim, halo_bw_width, diagonal)
-      * grid->elm_size_;
+      * grid->elm_size();
 
   //LOG_DEBUG() << "Periodic?: " << periodic << "\n";
 
@@ -384,7 +418,7 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
                 << " for fw access to " << bw_peer << "\n";
     LOG_DEBUG() << "grid: " << grid << "\n";
     grid->CopyoutHalo(dim, halo_width, true, diagonal);
-    LOG_DEBUG() << "grid2: " << (void*)(grid->_data()) << "\n";
+    LOG_DEBUG() << "grid2: " << grid->data() << "\n";
     LOG_DEBUG() << "dim: " << dim << "\n";        
     MPI_Request req;
     LOG_DEBUG() << "send buf: " <<
@@ -413,10 +447,10 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
 
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundaries(
-    GridType *grid, int dim, const Width2 &halo_width,
+    GridType *grid, int member, int dim, const Width2 &halo_width,
     bool diagonal, bool periodic) const {
   std::vector<MPI_Request> requests;
-  ExchangeBoundariesAsync(grid, dim, halo_width, diagonal,
+  ExchangeBoundariesAsync(grid, member, dim, halo_width, diagonal,
                           periodic, requests);
   FOREACH (it, requests.begin(), requests.end()) {
     MPI_Request *req = &(*it);
@@ -455,7 +489,7 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
 // REFACTORING: reuse is used?
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundaries(
-    GridType *g, const Width2 &halo_width,
+    GridType *g, int member, const Width2 &halo_width,
     bool diagonal, bool periodic, 
     bool reuse) const {
   LOG_DEBUG() << "GridSpaceMPI::ExchangeBoundaries\n";
@@ -463,7 +497,7 @@ void GridSpaceMPI<GridType>::ExchangeBoundaries(
   //GridType *g = static_cast<GridType*>(FindGrid(grid_id));
   for (int i = g->num_dims_ - 1; i >= 0; --i) {
     LOG_VERBOSE() << "Exchanging dimension " << i << " data\n";
-    ExchangeBoundaries(g, i, halo_width, diagonal, periodic);
+    ExchangeBoundaries(g, member, i, halo_width, diagonal, periodic);
   }
   return;
 }
@@ -568,7 +602,7 @@ void GridSpaceMPI<GridType>::HandleFetchRequest(GridRequest &req, GridType *g) {
                      req.my_rank, 0, comm_, MPI_STATUS_IGNORE));
   size_t bytes = finfo.peer_size.accumulate(nd) * g->elm_size();
   buf = ensure_buffer_capacity(buf, cur_buf_size, bytes);
-  CopyoutSubgrid(g->elm_size(), nd, g->_data(), g->local_size(),
+  CopyoutSubgrid(g->elm_size(), nd, g->data(), g->local_size(),
                  buf, finfo.peer_offset - g->local_offset(),
                  finfo.peer_size);
   SendGridRequest(my_rank_, req.my_rank, comm_, FETCH_REPLY);
@@ -590,7 +624,7 @@ void GridSpaceMPI<GridType>::HandleFetchReply(
   CHECK_MPI(MPI_Recv(buf, bytes, MPI_BYTE, req.my_rank, 0,
                      comm_, MPI_STATUS_IGNORE));
   LOG_DEBUG() << "Fetch reply received\n";
-  CopyinSubgrid(sg->elm_size(), num_dims_, sg->_data(),
+  CopyinSubgrid(sg->elm_size(), num_dims_, sg->data(),
                 sg->local_size(), buf,
                 finfo.peer_offset - sg->local_offset(), finfo.peer_size);
   return;;
@@ -607,10 +641,22 @@ int GridSpaceMPI<GridType>::GetProcessRank(const IntArray &proc_index) const {
   return rank;
 }
 
-// REFACTORING: Why need this? Why not directly calling ExchangeBoundaries?
+
 template <class GridType>
 GridType *GridSpaceMPI<GridType>::LoadNeighbor(
     GridType *g, const IndexArray &offset_min,
+    const IndexArray &offset_max,
+    bool diagonal, bool reuse, bool periodic) {
+  for (int i = 0; i < g->num_members(); ++i) {
+    LoadNeighbor(g, i, offset_min, offset_max,
+                 diagonal, reuse, periodic);
+  }
+  return NULL;
+}
+
+template <class GridType>
+GridType *GridSpaceMPI<GridType>::LoadNeighbor(
+    GridType *g, int member, const IndexArray &offset_min,
     const IndexArray &offset_max,
     bool diagonal, bool reuse, bool periodic) {
   Width2 hw;
@@ -618,9 +664,10 @@ GridType *GridSpaceMPI<GridType>::LoadNeighbor(
     hw.bw[i] = (offset_min[i] <= 0) ? (unsigned)(abs(offset_min[i])) : 0;
     hw.fw[i] = (offset_max[i] >= 0) ? (unsigned)(offset_max[i]) : 0;
   }
-  ExchangeBoundaries(g, hw, diagonal, periodic, reuse);
+  ExchangeBoundaries(g, member, hw, diagonal, periodic, reuse);
   return NULL;
 }
+
 
 template <class GridType>
 int GridSpaceMPI<GridType>::FindOwnerProcess(GridType *g, const IndexArray &index) {

@@ -63,6 +63,12 @@ class Translator: public rose_util::RoseASTTraversal {
   virtual BuilderInterface *builder() {
     return rt_builder_;
   }
+  //! Proocess all user-defined point types
+  virtual void ProcessUserDefinedPointType();
+  //! Process a user-defined point type
+  /*!
+    This is a helper function used by ProcessUserDefinedPointType.
+   */
   virtual void ProcessUserDefinedPointType(
       SgClassDeclaration *grid_decl, GridType *gt) {}
   virtual void Visit(SgFunctionCallExp *node);

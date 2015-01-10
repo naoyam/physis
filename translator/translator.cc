@@ -61,27 +61,21 @@ void Translator::SetUp(SgProject *project, TranslationContext *context,
     dom_ptr_type_ = sb::buildPointerType(dom_type_);
   }
 
-  // Visit each of user-defined grid element types
-  NodeQuerySynthesizedAttributeType struct_decls =
-      NodeQuery::querySubTree(project_, NodeQuery::StructDeclarations);
-  FOREACH(it, struct_decls.begin(), struct_decls.end()) {
-    SgClassDeclaration *decl = isSgClassDeclaration(*it);
-    GridType *gt = ru::GetASTAttribute<GridType>(decl);
-    if (gt == NULL) continue;
-    if (!gt->IsUserDefinedPointType()) continue;
-    LOG_DEBUG() << "User-defined point type found.\n";
-    ProcessUserDefinedPointType(decl, gt);
-  }
-
   if (ru::IsFortranLikeLanguage()) {
-    BOOST_FOREACH (SgClassDeclaration *cd, si::querySubTree<SgClassDeclaration>(global_scope_)) {
-      LOG_DEBUG() << "Class decl: " << cd->get_name() << " (" << cd->class_name() << ")\n";
+    BOOST_FOREACH (SgClassDeclaration *cd,
+                   si::querySubTree<SgClassDeclaration>(global_scope_)) {
+      LOG_DEBUG() << "Class decl: " << cd->get_name()
+                  << " (" << cd->class_name() << ")\n";
     }
-    BOOST_FOREACH (SgNamedType *nd, si::querySubTree<SgNamedType>(global_scope_)) {
-      LOG_DEBUG() << "Named type: " << nd->get_name() << " (" << nd->class_name() << ")\n";
+    BOOST_FOREACH (SgNamedType *nd,
+                   si::querySubTree<SgNamedType>(global_scope_)) {
+      LOG_DEBUG() << "Named type: " << nd->get_name()
+                  << " (" << nd->class_name() << ")\n";
     }
-    BOOST_FOREACH (SgFunctionDeclaration *cd, si::querySubTree<SgFunctionDeclaration>(global_scope_)) {
-      LOG_DEBUG() << "Function decl: " << cd->get_name() << " (" << cd->class_name() << ")\n";
+    BOOST_FOREACH (SgFunctionDeclaration *cd,
+                   si::querySubTree<SgFunctionDeclaration>(global_scope_)) {
+      LOG_DEBUG() << "Function decl: " << cd->get_name()
+                  << " (" << cd->class_name() << ")\n";
     }
   }
 }
@@ -269,6 +263,21 @@ void Translator::Visit(SgFunctionCallExp *node) {
   // This is not related to physis grids; leave it as is
   return;
 }
+
+void Translator::ProcessUserDefinedPointType() {
+  // Visit each of user-defined grid element types
+  NodeQuerySynthesizedAttributeType struct_decls =
+      NodeQuery::querySubTree(project_, NodeQuery::StructDeclarations);
+  FOREACH(it, struct_decls.begin(), struct_decls.end()) {
+    SgClassDeclaration *decl = isSgClassDeclaration(*it);
+    GridType *gt = ru::GetASTAttribute<GridType>(decl);
+    if (gt == NULL) continue;
+    if (!gt->IsUserDefinedPointType()) continue;
+    LOG_DEBUG() << "User-defined point type found.\n";
+    ProcessUserDefinedPointType(decl, gt);
+  }
+}
+
 
 } // namespace translator
 } // namespace physis

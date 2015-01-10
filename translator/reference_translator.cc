@@ -65,6 +65,8 @@ void ReferenceTranslator::Translate() {
     
   }
 
+  ProcessUserDefinedPointType();
+
   DefineMapSpecificTypesAndFunctions();
   
   traverseBottomUp(project_);

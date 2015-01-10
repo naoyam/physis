@@ -259,6 +259,7 @@ void CUDATranslator::ProcessUserDefinedPointType(
   LOG_DEBUG() << "Define grid data type for device.\n";
   SgClassDeclaration *type_decl =
       builder()->BuildGridDevTypeForUserType(grid_decl, gt);
+  LOG_DEBUG() << "Inserting device type for user type\n";
   si::insertStatementAfter(grid_decl, type_decl);
   // If these user-defined types are defined in header files,
   // inserting new related types and declarations AFTER those types
@@ -282,34 +283,40 @@ void CUDATranslator::ProcessUserDefinedPointType(
   // Build GridNew for this type
   SgFunctionDeclaration *new_decl =
       builder()->BuildGridNewFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting new function for user type\n";
   si::insertStatementAfter(type_decl, new_decl);
   gt->aux_new_decl() = new_decl;
   // Build GridFree for this type
   SgFunctionDeclaration *free_decl =
       builder()->BuildGridFreeFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting free function for user type\n";
   si::insertStatementAfter(new_decl, free_decl);
   gt->aux_free_decl() = free_decl;
 
   // Build GridCopyin for this type
   SgFunctionDeclaration *copyin_decl =
       builder()->BuildGridCopyinFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting copyin function for user type\n";
   si::insertStatementAfter(free_decl, copyin_decl);
   gt->aux_copyin_decl() = copyin_decl;
 
   // Build GridCopyout for this type
   SgFunctionDeclaration *copyout_decl =
       builder()->BuildGridCopyoutFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting copyout function for user type\n";  
   si::insertStatementAfter(copyin_decl, copyout_decl);
   gt->aux_copyout_decl() = copyout_decl;
 
   // Build GridGet for this type
   SgFunctionDeclaration *get_decl =
       builder()->BuildGridGetFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting get function for user type\n";  
   si::insertStatementAfter(copyout_decl, get_decl);
   gt->aux_get_decl() = get_decl;
 
   SgFunctionDeclaration *emit_decl =
       builder()->BuildGridEmitFuncForUserType(gt);
+  LOG_DEBUG() << "Inserting emit function for user type\n";  
   si::insertStatementAfter(get_decl, emit_decl);
   gt->aux_emit_decl() = emit_decl;
   return;

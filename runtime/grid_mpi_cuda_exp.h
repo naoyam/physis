@@ -44,20 +44,28 @@ class GridMPICUDAExp: public GridMPI {
   friend class GridSpaceMPI<GridMPICUDAExp>;  
   friend class GridSpaceMPICUDA<GridMPICUDAExp>;
 
- protected:  
-  GridMPICUDAExp(PSType type, int elm_size, int num_dims, const IndexArray &size,
-                 const IndexArray &global_offset,
+ protected:
+  
+  GridMPICUDAExp(const __PSGridTypeInfo *type_info, int num_dims,
+                 const IndexArray &size, const IndexArray &global_offset,
                  const IndexArray &local_offset, const IndexArray &local_size,
-                 const Width2 &halo,                 
+                 const Width2 *halo,                 
                  int attr);
  public:
   
   static GridMPICUDAExp *Create(
       PSType type, int elm_size, int num_dims,  const IndexArray &size,
-      const IndexArray &global_offset,
-      const IndexArray &local_offset, const IndexArray &local_size,
-      const Width2 &halo,
+      const IndexArray &global_offset, const IndexArray &local_offset,
+      const IndexArray &local_size, const Width2 &halo,
       int attr);
+  
+  static GridMPICUDAExp *Create(
+      const __PSGridTypeInfo *type_info,
+      int num_dims,  const IndexArray &size,
+      const IndexArray &global_offset, const IndexArray &local_offset,
+      const IndexArray &local_size, const Width2 *halo,
+      int attr);
+  
   
   virtual ~GridMPICUDAExp();
 
@@ -65,42 +73,121 @@ class GridMPICUDAExp: public GridMPI {
   size_t CalcHaloSize(int dim, unsigned width, bool diagonal);  
   virtual void InitBuffers();  
   virtual void DeleteBuffers();
-  BufferCUDADev *buffer() { return static_cast<BufferCUDADev*>(data_buffer_); }
-  virtual void CopyoutHalo(int dim, const Width2 &width, bool fw, bool diagonal);
-  virtual void CopyinHalo(int dim, const Width2 &width, bool fw, bool diagonal);
+  BufferCUDADev *buffer() {
+    //return static_cast<BufferCUDADev*>(data_buffer_);
+    LOG_ERROR() << "Not supported; member ID needs to be specified\n";
+    PSAbort(1);
+    return NULL;
+  }
+  BufferCUDADev *buffer(int member_id) {
+    return data_buffer_m_[member_id];
+  }
+  IndexArray local_real_size(int member) const {
+    return local_size_ + halo(member).fw + halo(member).bw;
+  }
+  size_t local_real_num_elms() const {
+    size_t n = 0;
+    for (int i = 0; i < num_members(); ++i) {
+      n += local_real_size(i).accumulate(num_dims_);
+    }
+    return n;
+  }  
+  size_t local_real_buffer_size() const {
+    size_t n = 0;
+    for (int i = 0; i < num_members(); ++i) {
+      n += local_real_size(i).accumulate(num_dims_) * elm_size(i);
+    }
+    return n;
+  }  
+  
+  virtual void CopyoutHalo(int dim, const Width2 &width,
+                           bool fw, bool diagonal);
+  virtual void CopyoutHalo(int dim, const Width2 &width,
+                           bool fw, bool diagonal, int member);
+  virtual void CopyinHalo(int dim, const Width2 &width,
+                          bool fw, bool diagonal);
+  virtual void CopyinHalo(int dim, const Width2 &width,
+                          bool fw, bool diagonal, int member);
   virtual int Reduce(PSReduceOp op, void *out);
   virtual void Copyout(void *dst);
+  virtual void Copyout(void *dst, int member);  
   virtual void Copyin(const void *src);
+  virtual void Copyin(const void *src, int member);
   
   // Not inherited
   void *GetDev() { return dev_; }
-  void CopyDiag(int dim, const Width2 &width, bool fw);
-  void CopyDiag3D1(const Width2 &width, bool fw);  
-  void CopyDiag3D2(const Width2 &width, bool fw);
+  //void *GetDev(int member_id) { return dev_; }
+  void CopyDiag(int dim, bool fw, int member);
+  void CopyDiag3D1(bool fw, int member);  
+  void CopyDiag3D2(bool fw, int member);
   //void SetCUDAStream(cudaStream_t strm);
+
+  Width2 &halo(int member_id) {
+    return halo_m_[member_id];
+  }
+  const Width2 &halo(int member_id) const {
+    return halo_m_[member_id];
+  }
   
  protected:
+  BufferCUDADev **data_buffer_m_; // different buffers for different members
   BufferCUDAHost *(*halo_self_host_)[2];
   BufferCUDAHost *(*halo_peer_host_)[2];
-  BufferCUDADev *(*halo_peer_dev_)[2];
   void *dev_;
+  Width2 *halo_m_;
   
   virtual void FixupBufferPointers();
+
+  BufferCUDAHost *&GetHaloBuf(int dim, bool fw,
+                              BufferCUDAHost *(*const & buf_array)[2],
+                              int member) const {
+    int offset = dim + member * num_dims_;
+    return fw ? buf_array[offset][1] : buf_array[offset][0];
+  }
+
+  BufferCUDAHost *&GetHaloBuf(int dim, bool fw, 
+                              BufferCUDAHost *(*&buf_array)[2],
+                              int member) {
+    int offset = dim + member * num_dims_;
+    return fw ? buf_array[offset][1] : buf_array[offset][0];
+  }
   
  public:
-  virtual BufferCUDAHost *GetHaloSelfHost(int dim, bool fw) const {
-    return fw ? halo_self_host_[dim][1] : halo_self_host_[dim][0];
+#if 0                                          
+  virtual BufferCUDAHost *GetHaloSelfHost(int member, int dim, bool fw) const {
+    int offset = dim + member * num_dims_;
+    return fw ? halo_self_host_[offset][1] : halo_self_host_[offset][0];
   }
-  virtual BufferCUDAHost *&GetHaloSelfHost(int dim, bool fw) {
-    return fw ? halo_self_host_[dim][1] : halo_self_host_[dim][0];
+  virtual BufferCUDAHost *&GetHaloSelfHost(int member, int dim, bool fw) {
+    int offset = dim + member * num_dims_;
+    return fw ? halo_self_host_[offset][1] : halo_self_host_[offset][0];
   }
-  virtual BufferCUDAHost *GetHaloPeerHost(int dim, bool fw) const {
-    return fw ? halo_peer_host_[dim][1] : halo_peer_host_[dim][0];
+  virtual BufferCUDAHost *GetHaloPeerHost(int member, int dim, bool fw) const {
+    int offset = dim + member * num_dims_;    
+    return fw ? halo_peer_host_[offset][1] : halo_peer_host_[offset][0];
   }
-  virtual BufferCUDAHost *&GetHaloPeerHost(int dim, bool fw) {
-    return fw ? halo_peer_host_[dim][1] : halo_peer_host_[dim][0];
+  virtual BufferCUDAHost *&GetHaloPeerHost(int member, int dim, bool fw) {
+    int offset = dim + member * num_dims_;    
+    return fw ? halo_peer_host_[offset][1] : halo_peer_host_[offset][0];
   }
-  
+#else  
+  virtual BufferCUDAHost *&GetHaloSelfHost(
+      int dim, bool fw, int member) const {
+    return GetHaloBuf(dim, fw, halo_self_host_, member);
+  }
+  virtual BufferCUDAHost *&GetHaloSelfHost(
+      int dim, bool fw, int member) {
+    return GetHaloBuf(dim, fw, halo_self_host_, member);
+  }
+  virtual BufferCUDAHost *&GetHaloPeerHost(
+      int dim, bool fw, int member) const {
+    return GetHaloBuf(dim, fw, halo_peer_host_, member);
+  }
+  virtual BufferCUDAHost *&GetHaloPeerHost(
+      int dim, bool fw, int member) {
+    return GetHaloBuf(dim, fw, halo_peer_host_, member);    
+  }
+#endif  
 };
 
   

@@ -11,12 +11,31 @@
 namespace physis {
 namespace runtime {
 
-Grid::Grid(PSType type, int elm_size, int num_dims,
-           const IndexArray &size,
-           int attr):
-    type_(type), elm_size_(elm_size), num_dims_(num_dims),
+Grid* Grid::Create(const __PSGridTypeInfo *type_info,
+                   int num_dims, const IndexArray &size, int attr) {
+  Grid *g = new Grid(type_info, num_dims, size, attr);
+  g->InitBuffer();
+  return g;
+}
+
+Grid* Grid::Create(PSType type, int elm_size, int num_dims,
+                   const IndexArray &size, int attr) {
+  __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
+  __PSGridTypeInfo info = {elm_size, 1, &member_info};
+  return Create(&info, num_dims, size, attr);
+}
+
+Grid::Grid(const __PSGridTypeInfo *type_info,
+           int num_dims, const IndexArray &size, int attr):
+    type_(PS_USER), num_dims_(num_dims),
     num_elms_(size.accumulate(num_dims)),
-    size_(size), data_buffer_(NULL), data_(NULL), attr_(attr) {
+    size_(size), data_buffer_(NULL), attr_(attr) {
+  CopyTypeInfo(type_info_, *type_info);
+  if (type_info_.num_members == 1 &&
+      type_info_.members[0].rank == 0) {
+    // the element type is a primitive scalar type
+    type_ = type_info_.members[0].type;
+  }
 }
 
 Grid::~Grid() {
@@ -26,22 +45,17 @@ Grid::~Grid() {
 void Grid::InitBuffer() {
   LOG_DEBUG() << "Initializing grid buffer\n";
   data_buffer_ = new BufferHost();
-  data_buffer_->Allocate(num_elms_ * elm_size_);
-  data_ = (char*)data_buffer_->Get();
 }
 
 void Grid::DeleteBuffers() {
-  if (data_) {
+  if (data_buffer_) {
     delete data_buffer_;
-    data_ = NULL;
+    data_buffer_ = NULL;
   }
 }
 
 void *Grid::GetAddress(const IndexArray &indices) {
-#ifdef PS_DEBUG
-  PSAssert(_data() == buffer()->Get());
-#endif
-  return (void*)(_data() +
+  return (void*)(idata() +
                  GridCalcOffset(indices, size(), num_dims())
                  * elm_size());
 }
@@ -68,6 +82,7 @@ bool Grid::AttributeSet(enum PS_GRID_ATTRIBUTE a) {
 
 std::ostream &Grid::Print(std::ostream &os) const {
   os << "Grid {"
+     << "\ttype: " << ToString(type_)
      << "}";
   return os;
 }
@@ -77,7 +92,7 @@ int ReduceGrid(Grid *g, PSReduceOp op, T *out) {
   if (g->num_elms() == 0) return 0;
   //LOG_DEBUG() << "Op: " << op << "\n";
   boost::function<T (T, T)> func = GetReducer<T>(op);
-  T *d = (T *)g->_data();
+  T *d = (T *)g->data();
   T v = d[0];
   for (size_t i = 1; i < g->num_elms(); ++i) {
     v = func(v, d[i]);
@@ -103,6 +118,8 @@ int Grid::Reduce(PSReduceOp op, void *out) {
       rv = ReduceGrid<long>(this, op, (long*)out);
       break;
     default:
+      PSAssert(type_ == PS_USER);
+      LOG_ERROR()  << "Reduction of user type not supported\n";
       PSAbort(1);
   }
   return rv;

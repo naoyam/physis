@@ -189,7 +189,7 @@ TEST_P(Grid3DFloatExchangeBoundariesDimTest, ExchangeBoundaries) {
   //std::cout << "\n";
   int dim = std::tr1::get<2>(GetParam());
   for (int i = 2; i >= dim; --i) {
-    gs_->ExchangeBoundaries(g_, i, width_, false, false);
+    gs_->ExchangeBoundaries(g_, 0, i, width_, false, false);
   }
   IndexArray idx_begin = g_->local_offset();
   IndexArray idx_end = g_->local_offset() + g_->local_size();
@@ -253,9 +253,9 @@ class Grid3DFloatExchangeBoundariesTest:
 TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
   bool diag = std::tr1::get<2>(GetParam());
   bool periodic = std::tr1::get<3>(GetParam());
-  gs_->ExchangeBoundaries(g_, 2, width_, diag, periodic);
-  gs_->ExchangeBoundaries(g_, 1, width_, diag, periodic);
-  gs_->ExchangeBoundaries(g_, 0, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 2, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 1, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 0, width_, diag, periodic);
   int dim = 2;
   IndexArray idx_begin = g_->local_real_offset();
   IndexArray idx_end = g_->local_real_offset() + g_->local_real_size();

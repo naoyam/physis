@@ -150,6 +150,19 @@ extern "C" {
     // declarations
     PS_GRID_ATTRIBUTE_DUMMY = 1 << 0 
   };
+
+#define PS_GRID_USER_TYPE_MAX_ARRAY_RANK (5)
+  typedef struct {
+    PSType type;
+    int size;
+    int rank;
+    int dim[PS_GRID_USER_TYPE_MAX_ARRAY_RANK];
+  } __PSGridTypeMemberInfo;
+  typedef struct {
+    int size;
+    int num_members;
+    __PSGridTypeMemberInfo *members;
+  } __PSGridTypeInfo;
   
 #define INVALID_GRID (NULL)
 
