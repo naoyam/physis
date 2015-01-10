@@ -85,7 +85,7 @@ class GridSpaceMPI: public GridSpace {
     \param requests MPI request vector to poll completion
    */
   virtual void ExchangeBoundariesAsync(
-      GT *grid, int dim,
+      GT *grid, int member, int dim,
       const Width2 &halo_width,
       bool diagonal, bool periodic,
       std::vector<MPI_Request> &requests) const;
@@ -99,7 +99,7 @@ class GridSpaceMPI: public GridSpace {
     \param diagonal True if diagonal points are accessed.
     \param periodic True if periodic access is used.
    */
-  virtual void ExchangeBoundaries(GT *grid, int dim,
+  virtual void ExchangeBoundaries(GT *grid, int member, int dim,
                                   const Width2 &halo_width,
                                   bool diagonal,
                                   bool periodic) const;
@@ -112,7 +112,7 @@ class GridSpaceMPI: public GridSpace {
     \param periodic True if periodic access is used.
     \param reuse True if reuse is enabled.
    */
-  virtual void ExchangeBoundaries(GT *grid,
+  virtual void ExchangeBoundaries(GT *grid, int member,
                                   const Width2 &halo_width,
                                   bool diagonal,
                                   bool periodic,
@@ -124,6 +124,13 @@ class GridSpaceMPI: public GridSpace {
                            bool diagonal,
                            bool reuse,
                            bool periodic);
+  virtual GT *LoadNeighbor(GT *g, int member,
+                           const IndexArray &offset_min,
+                           const IndexArray &offset_max,
+                           bool diagonal,
+                           bool reuse,
+                           bool periodic);
+  
   
 
   virtual int FindOwnerProcess(GT *g, const IndexArray &index);
@@ -319,7 +326,7 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
   GridType *g = GridType::Create(
       type_info, num_dims, grid_size,
       grid_global_offset, local_offset, local_size,
-      halo, attr);
+      &halo, attr);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   LOG_DEBUG() << "grid registered\n";
@@ -349,7 +356,7 @@ std::ostream &GridSpaceMPI<GridType>::Print(
 
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
-    GridType *grid, int dim, const Width2 &halo_width,
+    GridType *grid, int member, int dim, const Width2 &halo_width,
     bool diagonal, bool periodic,
     std::vector<MPI_Request> &requests) const {
   
@@ -440,10 +447,10 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
 
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundaries(
-    GridType *grid, int dim, const Width2 &halo_width,
+    GridType *grid, int member, int dim, const Width2 &halo_width,
     bool diagonal, bool periodic) const {
   std::vector<MPI_Request> requests;
-  ExchangeBoundariesAsync(grid, dim, halo_width, diagonal,
+  ExchangeBoundariesAsync(grid, member, dim, halo_width, diagonal,
                           periodic, requests);
   FOREACH (it, requests.begin(), requests.end()) {
     MPI_Request *req = &(*it);
@@ -482,7 +489,7 @@ void GridSpaceMPI<GridType>::ExchangeBoundariesAsync(
 // REFACTORING: reuse is used?
 template <class GridType>
 void GridSpaceMPI<GridType>::ExchangeBoundaries(
-    GridType *g, const Width2 &halo_width,
+    GridType *g, int member, const Width2 &halo_width,
     bool diagonal, bool periodic, 
     bool reuse) const {
   LOG_DEBUG() << "GridSpaceMPI::ExchangeBoundaries\n";
@@ -490,7 +497,7 @@ void GridSpaceMPI<GridType>::ExchangeBoundaries(
   //GridType *g = static_cast<GridType*>(FindGrid(grid_id));
   for (int i = g->num_dims_ - 1; i >= 0; --i) {
     LOG_VERBOSE() << "Exchanging dimension " << i << " data\n";
-    ExchangeBoundaries(g, i, halo_width, diagonal, periodic);
+    ExchangeBoundaries(g, member, i, halo_width, diagonal, periodic);
   }
   return;
 }
@@ -634,10 +641,22 @@ int GridSpaceMPI<GridType>::GetProcessRank(const IntArray &proc_index) const {
   return rank;
 }
 
-// REFACTORING: Why need this? Why not directly calling ExchangeBoundaries?
+
 template <class GridType>
 GridType *GridSpaceMPI<GridType>::LoadNeighbor(
     GridType *g, const IndexArray &offset_min,
+    const IndexArray &offset_max,
+    bool diagonal, bool reuse, bool periodic) {
+  for (int i = 0; i < g->num_members(); ++i) {
+    LoadNeighbor(g, i, offset_min, offset_max,
+                 diagonal, reuse, periodic);
+  }
+  return NULL;
+}
+
+template <class GridType>
+GridType *GridSpaceMPI<GridType>::LoadNeighbor(
+    GridType *g, int member, const IndexArray &offset_min,
     const IndexArray &offset_max,
     bool diagonal, bool reuse, bool periodic) {
   Width2 hw;
@@ -645,9 +664,10 @@ GridType *GridSpaceMPI<GridType>::LoadNeighbor(
     hw.bw[i] = (offset_min[i] <= 0) ? (unsigned)(abs(offset_min[i])) : 0;
     hw.fw[i] = (offset_max[i] >= 0) ? (unsigned)(offset_max[i]) : 0;
   }
-  ExchangeBoundaries(g, hw, diagonal, periodic, reuse);
+  ExchangeBoundaries(g, member, hw, diagonal, periodic, reuse);
   return NULL;
 }
+
 
 template <class GridType>
 int GridSpaceMPI<GridType>::FindOwnerProcess(GridType *g, const IndexArray &index) {

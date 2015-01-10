@@ -28,7 +28,7 @@ class GridMPI: public Grid {
           const IndexArray &global_offset,
           const IndexArray &local_offset,
           const IndexArray &local_size, 
-          const Width2 &halo,
+          const Width2 *halo,
           int attr);
   //! Flag to indicate whether this sub grid is empty
   bool empty_;
@@ -129,7 +129,7 @@ class GridMPI: public Grid {
                          const IndexArray &global_offset,
                          const IndexArray &local_offset,
                          const IndexArray &local_size,
-                         const Width2 &halo,
+                         const Width2 *halo,
                          int attr);
   
   virtual ~GridMPI();
@@ -141,6 +141,9 @@ class GridMPI: public Grid {
   const IndexArray& local_offset() const { return local_offset_; }
   const IndexArray& local_real_offset() const { return local_real_offset_; }  
   const IndexArray& local_real_size() const { return local_real_size_; }
+  size_t local_num_elms() const {
+    return local_real_size_.accumulate(num_dims_);
+  }  
   const Width2 &halo() const { return halo_; }
   bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
   
@@ -226,6 +229,16 @@ class GridMPI: public Grid {
   size_t GetLocalBufferSize() const {
     return local_size_.accumulate(num_dims_) * elm_size();
   };
+  //! Returns the size of the logical buffer area in bytes.
+  /*!
+    Does not count the halo region.
+    
+    \param member_id Member index
+    \return Size in bytes.
+  */
+  size_t GetLocalBufferSize(int member_id) const {
+    return local_size_.accumulate(num_dims_) * elm_size(member_id);
+  };
 
   //! Returns the size of the actual buffer area in bytes.
   /*!
@@ -235,6 +248,18 @@ class GridMPI: public Grid {
   */
   size_t GetLocalBufferRealSize() const {
     return local_real_size_.accumulate(num_dims_) * elm_size();
+  };
+
+
+  //! Returns the size of the actual buffer area in bytes.
+  /*!
+    Does count the halo region.
+
+    \param member_id Member index
+    \return Size in bytes.
+  */
+  size_t GetLocalBufferRealSize(int member_id) const {
+    return local_real_size_.accumulate(num_dims_) * elm_size(member_id);
   };
 };
 

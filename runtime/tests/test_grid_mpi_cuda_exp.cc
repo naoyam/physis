@@ -122,40 +122,41 @@ class Grid3DFloatCopyOutHaloTest:
       tr1::tuple<IndexArray, IndexArray, int, bool, bool> > > {};
 
 TEST_P(Grid3DFloatCopyOutHaloTest, CopyOutHalo) {
+  int member = 0;
   int dim = std::tr1::get<2>(GetParam());
   bool diag = std::tr1::get<3>(GetParam());
   bool fw = std::tr1::get<4>(GetParam());
   for (int i = 2; i > dim; --i) {
-    gs_->ExchangeBoundaries(g_, i, width_, false, false);    
+    gs_->ExchangeBoundaries(g_, member, i, width_, false, false);    
   }
   g_->CopyoutHalo(dim, width_, fw, diag);
   LOG_DEBUG() << "Copyout done\n";
-  if (g_->halo()(dim, fw) > 0 &&
+  if (g_->halo(member)(dim, fw) > 0 &&
       ((fw && gs_->my_idx()[dim] != 0) ||
        (!fw && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1))) {
-    float *buf = (float*)g_->GetHaloSelfHost(dim, fw)->Get();
+    float *buf = (float*)g_->GetHaloSelfHost(dim, fw, member)->Get();
     IndexArray idx_begin(0);
-    IndexArray idx_end = g_->local_real_size();
+    IndexArray idx_end = g_->local_real_size(member);
     if (fw) {
-      idx_begin[dim] = g_->halo()(dim, false);
+      idx_begin[dim] = g_->halo(member)(dim, false);
     } else {
-      idx_begin[dim] = g_->local_real_size()[dim] -
-          g_->halo()(dim, true) - g_->halo()(dim, false);
+      idx_begin[dim] = g_->local_real_size(member)[dim] -
+          g_->halo(member)(dim, true) - g_->halo(member)(dim, false);
     }
-    idx_end[dim] = idx_begin[dim] + g_->halo()(dim, fw);
+    idx_end[dim] = idx_begin[dim] + g_->halo(member)(dim, fw);
     int buf_idx = 0;
-    IndexArray halo_size = g_->local_real_size();
-    halo_size[dim] = g_->halo()(dim, fw);
+    IndexArray halo_size = g_->local_real_size(member);
+    halo_size[dim] = g_->halo(member)(dim, fw);
     for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
       if (dim < 2) {
         // handle edge processe, which do not have halo unless
         // periodic
-        if (k < (int)g_->halo()(2, false)) {
+        if (k < (int)g_->halo(member)(2, false)) {
           if (gs_->my_idx()[2] == 0) {
             buf_idx += halo_size[0] * halo_size[1];
             continue;
           }
-        } else if (k >= (int)g_->halo()(2, false) + g_->local_size()[2]) {
+        } else if (k >= (int)g_->halo(member)(2, false) + g_->local_size()[2]) {
           if (gs_->my_idx()[2] == gs_->proc_size()[2] - 1) {
             break;
           }
@@ -163,15 +164,15 @@ TEST_P(Grid3DFloatCopyOutHaloTest, CopyOutHalo) {
       }
       for (int j = idx_begin[1]; j < idx_end[1]; ++j) {
         if (dim > 1) {
-          if (j < (int)g_->halo()(1, false) ||
-              j >= (int)g_->halo()(1, false) + g_->local_size()[1]) {
-            buf_idx += g_->local_real_size()[0];
+          if (j < (int)g_->halo(member)(1, false) ||
+              j >= (int)g_->halo(member)(1, false) + g_->local_size()[1]) {
+            buf_idx += g_->local_real_size(member)[0];
             continue;
           }
         } else if (dim < 1) {
-          if ((j < (int)g_->halo()(1, false) &&
+          if ((j < (int)g_->halo(member)(1, false) &&
               gs_->my_idx()[1] == 0) ||
-              (j >= (int)g_->halo()(1, false) + g_->local_size()[1] &&
+              (j >= (int)g_->halo(member)(1, false) + g_->local_size()[1] &&
                gs_->my_idx()[1] == gs_->proc_size()[1] - 1)) {
             buf_idx += halo_size[0];
             continue;
@@ -179,8 +180,8 @@ TEST_P(Grid3DFloatCopyOutHaloTest, CopyOutHalo) {
         }
         for (int i = idx_begin[0]; i < idx_end[0]; ++i) {
           if (dim > 0) {
-            if (i < (int)g_->halo()(0, false) ||
-                i >= (int)g_->halo()(0, false) + g_->local_size()[0]) {
+            if (i < (int)g_->halo(member)(0, false) ||
+                i >= (int)g_->halo(member)(0, false) + g_->local_size()[0]) {
               buf_idx += 1;
               continue;
             }
@@ -194,7 +195,7 @@ TEST_P(Grid3DFloatCopyOutHaloTest, CopyOutHalo) {
               << "buf idx: " << buf_idx
               << ", ijk: " << ijk
               << ", loacl_real_offset: " << g_->local_real_offset()
-              << ", loacl_real_size: " << g_->local_real_size()
+              << ", loacl_real_size: " << g_->local_real_size(member)
               << ", fw: " << fw
               << ", dim: " << dim;
           ++buf_idx;
@@ -268,9 +269,10 @@ class Grid3DFloatExchangeBoundariesDimTest:
 TEST_P(Grid3DFloatExchangeBoundariesDimTest, ExchangeBoundaries) {
   //g_->Print(std::cout);
   //std::cout << "\n";
+  int member = 0;
   int dim = std::tr1::get<2>(GetParam());
   for (int i = 2; i >= dim; --i) {
-    gs_->ExchangeBoundaries(g_, i, width_, false, false);
+    gs_->ExchangeBoundaries(g_, 0, i, width_, false, false);
   }
   IndexArray idx_begin = g_->local_offset();
   IndexArray idx_end = g_->local_offset() + g_->local_size();
@@ -293,7 +295,7 @@ TEST_P(Grid3DFloatExchangeBoundariesDimTest, ExchangeBoundaries) {
     }
   }
   idx_begin[dim] = g_->local_offset()[dim]+g_->local_size()[dim];
-  idx_end[dim] = g_->local_real_offset()[dim]+g_->local_real_size()[dim];
+  idx_end[dim] = g_->local_real_offset()[dim]+g_->local_real_size(member)[dim];
   if (gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
     for (int k = idx_begin[2]; k < idx_end[2]; ++k) {
       for (int j = idx_begin[1]; j < idx_end[1]; ++j) {
@@ -334,20 +336,21 @@ class Grid3DFloatExchangeBoundariesTest:
       tr1::tuple<IndexArray, IndexArray, bool, bool> > > {};
 
 TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
+  int member = 0;  
   bool diag = std::tr1::get<2>(GetParam());
   bool periodic = std::tr1::get<3>(GetParam());
-  gs_->ExchangeBoundaries(g_, 2, width_, diag, periodic);
-  gs_->ExchangeBoundaries(g_, 1, width_, diag, periodic);
-  gs_->ExchangeBoundaries(g_, 0, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 2, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 1, width_, diag, periodic);
+  gs_->ExchangeBoundaries(g_, 0, 0, width_, diag, periodic);
   int dim = 2;
   IndexArray idx_begin = g_->local_real_offset();
-  IndexArray idx_end = g_->local_real_offset() + g_->local_real_size();
+  IndexArray idx_end = g_->local_real_offset() + g_->local_real_size(member);
   if (!periodic) {
     for (int i = 0; i < 3; ++i) {
       if (gs_->my_idx()[i] == 0) {
-        idx_begin[i] +=  g_->halo()(i, false);
+        idx_begin[i] +=  g_->halo(member)(i, false);
       } else if (gs_->my_idx()[i] == gs_->proc_size()[i]-1) {
-        idx_end[i] -= g_->halo()(i, true);
+        idx_end[i] -= g_->halo(member)(i, true);
       }
     }
   }
@@ -362,7 +365,7 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int k = g_->local_offset()[2]+g_->local_size()[2];
-             k < g_->local_real_offset()[2]+g_->local_real_size()[2]; ++k) {
+             k < g_->local_real_offset()[2]+g_->local_real_size(member)[2]; ++k) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i, j, k-1)) + N*N);
@@ -381,7 +384,7 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int j = g_->local_offset()[dim]+g_->local_size()[dim];
-             j < g_->local_real_offset()[dim]+g_->local_real_size()[dim]; ++j) {
+             j < g_->local_real_offset()[dim]+g_->local_real_size(member)[dim]; ++j) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i, j-1, k)) + N);
@@ -400,7 +403,7 @@ TEST_P(Grid3DFloatExchangeBoundariesTest, ExchangeBoundaries) {
       }
       if (!periodic && gs_->my_idx()[dim] != gs_->proc_size()[dim]-1) {
         for (int i = g_->local_offset()[dim]+g_->local_size()[dim];
-             i < g_->local_real_offset()[dim]+g_->local_real_size()[dim]; ++i) {
+             i < g_->local_real_offset()[dim]+g_->local_real_size(member)[dim]; ++i) {
           ASSERT_EQ(
               Get(IndexArray(i, j, k)),
               Get(IndexArray(i-1, j, k)) + 1);

@@ -80,7 +80,18 @@ extern "C" {
   DEFINE_GRID_DEV_TYPE(3, float, Float);
   DEFINE_GRID_DEV_TYPE(3, double, Double);  
   DEFINE_GRID_DEV_TYPE(3, int, Int);
-  DEFINE_GRID_DEV_TYPE(3, long, Long);  
+  DEFINE_GRID_DEV_TYPE(3, long, Long);
+
+#define DEFINE_GRID_DEV_TYPE_M(DIM)                \
+  typedef struct {                                 \
+    int dim[DIM];                                  \
+    int local_size[DIM];                           \
+    int local_offset[DIM];                         \
+    void *p[1];                                    \
+  } __PSGrid##DIM##D_dev_m;             
+  DEFINE_GRID_DEV_TYPE_M(1);
+  DEFINE_GRID_DEV_TYPE_M(2);
+  DEFINE_GRID_DEV_TYPE_M(3);
 
 
 #ifdef __CUDACC__
@@ -407,6 +418,18 @@ extern "C" {
 
   extern int __PSBcast(void *buf, size_t size);
 
+  extern void __PSLoadNeighbor(__PSGridMPI *g,
+                               const PSVectorInt halo_fw_width,
+                               const PSVectorInt halo_bw_width,
+                               int diagonal, int reuse,
+                               int overlap, int periodic);
+  extern void __PSLoadNeighborMember(__PSGridMPI *g,
+                                     int member,
+                                     const PSVectorInt halo_fw_width,
+                                     const PSVectorInt halo_bw_width,
+                                     int diagonal, int reuse,
+                                     int overlap, int periodic);
+  // Load all members with same halo width
   extern void __PSLoadNeighbor(__PSGridMPI *g,
                                const PSVectorInt halo_fw_width,
                                const PSVectorInt halo_bw_width,

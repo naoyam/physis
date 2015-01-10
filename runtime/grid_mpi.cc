@@ -28,7 +28,7 @@ GridMPI::GridMPI(const __PSGridTypeInfo *type_info,
                  const IndexArray &global_offset,
                  const IndexArray &local_offset,                 
                  const IndexArray &local_size,
-                 const Width2 &halo,
+                 const Width2 *halo,
                  int attr):
     Grid(type_info, num_dims, size, attr),
     global_offset_(global_offset),  
@@ -38,14 +38,14 @@ GridMPI::GridMPI(const __PSGridTypeInfo *type_info,
   local_real_size_ = local_size_;
   local_real_offset_ = local_offset_;
   for (int i = 0; i < num_dims_; ++i) {
-    local_real_size_[i] += halo.fw[i] + halo.bw[i];
-    local_real_offset_[i] -= halo.bw[i];
+    local_real_size_[i] += halo->fw[i] + halo->bw[i];
+    local_real_offset_[i] -= halo->bw[i];
   }
   
   empty_ = local_size_.accumulate(num_dims_) == 0;
   if (empty_) return;
 
-  halo_ = halo;
+  halo_ = *halo;
 }
 
 GridMPI *GridMPI::Create(PSType type, int elm_size,
@@ -57,8 +57,8 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
                          int attr) {
   __PSGridTypeMemberInfo member_info = {type, elm_size, 0};
   __PSGridTypeInfo info = {elm_size, 1, &member_info};
-  return Create(&info, num_dims, size, global_offset,
-                local_offset, local_size, halo, attr);
+  return GridMPI::Create(&info, num_dims, size, global_offset,
+                         local_offset, local_size, &halo, attr);
 }
 
 GridMPI* GridMPI::Create(const __PSGridTypeInfo *type_info,
@@ -66,7 +66,7 @@ GridMPI* GridMPI::Create(const __PSGridTypeInfo *type_info,
                          const IndexArray &global_offset,
                          const IndexArray &local_offset,
                          const IndexArray &local_size,
-                         const Width2 &halo,
+                         const Width2 *halo,
                          int attr) {
   GridMPI *g = new GridMPI(type_info, num_dims, size,
                            global_offset, local_offset,
