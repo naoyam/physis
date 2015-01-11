@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_TRANSLATION_CONTEXT_H_
 #define PHYSIS_TRANSLATOR_TRANSLATION_CONTEXT_H_
@@ -20,8 +14,6 @@
 #include "translator/map.h"
 #include "translator/run.h"
 #include "translator/reduce.h"
-// Why this is included? 
-//#include "translator/CallGraph.h"
 #include "translator/kernel.h"
 
 using std::map;

@@ -238,7 +238,7 @@ void ReferenceTranslator::TranslateGet(SgFunctionCallExp *node,
   /*
     (type*)(g->p0)[offset]
   */
-  GridType *gt = tx_->findGridType(gv->get_type());
+  GridType *gt = ru::GetASTAttribute<GridType>(gv->get_type());
   const StencilIndexList *sil =
       rose_util::GetASTAttribute<GridGetAttribute>(node)->GetStencilIndexList();
   SgExpressionPtrList args;
@@ -969,7 +969,7 @@ void ReferenceTranslator::TranslateRun(SgFunctionCallExp *node,
 
 void ReferenceTranslator::TranslateSet(SgFunctionCallExp *node,
                                        SgInitializedName *gv) {
-  GridType *gt = tx_->findGridType(gv->get_type());
+  GridType *gt = ru::GetASTAttribute<GridType>(gv->get_type());
   int nd = gt->rank();
   SgScopeStatement *scope = getContainingScopeStatement(node);    
   SgVarRefExp *g = sb::buildVarRefExp(gv->get_name(), scope);
@@ -995,8 +995,7 @@ void ReferenceTranslator::TranslateReduceGrid(Reduce *rd) {
   // function with the reducer function.
   SgVarRefExp *gv = rd->GetGrid();
   PSAssert(gv);
-  //SgInitializedName *gin = gv->get_symbol()->get_declaration();
-  GridType *gt = tx_->findGridType(gv);
+  GridType *gt = ru::GetASTAttribute<GridType>(gv->get_type());
   SgType *elm_type = gt->point_type();
   
   SgFunctionSymbol *reduce_grid_func;

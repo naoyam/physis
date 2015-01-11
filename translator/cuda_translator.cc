@@ -92,7 +92,7 @@ void CUDATranslator::TranslateKernelDeclaration(
     SgInitializedName *exp = isSgInitializedName(*it);
     PSAssert(exp);
     SgType *cur_type = exp->get_type();
-    GridType *gt = tx_->findGridType(cur_type);
+    GridType *gt = ru::GetASTAttribute<GridType>(cur_type);
     // not a grid type
     if (!gt) continue;
     SgType *new_type = sb::buildPointerType(builder()->BuildOnDeviceGridType(gt));
@@ -199,7 +199,7 @@ void CUDATranslator::TranslateGetForUserDefinedType(
 void CUDATranslator::TranslateGet(SgFunctionCallExp *func_call_exp,
                                   SgInitializedName *grid_arg,
                                   bool is_kernel, bool is_periodic) {
-  GridType *gt = tx_->findGridType(grid_arg->get_type());
+  GridType *gt = ru::GetASTAttribute<GridType>(grid_arg->get_type());
   SgExpressionPtrList args;
   rose_util::CopyExpressionPtrList(
       func_call_exp->get_args()->get_expressions(), args);
@@ -222,7 +222,7 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
   bool is_grid_type_specific_call =
       GridType::isGridTypeSpecificCall(node);
 
-  GridType *gt = tx_->findGridType(gv->get_type());
+  GridType *gt = ru::GetASTAttribute<GridType>(gv->get_type());
   if (gt->IsPrimitivePointType()) {
     ReferenceTranslator::TranslateEmit(node, attr);
     return;
