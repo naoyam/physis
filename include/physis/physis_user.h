@@ -14,7 +14,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  
+
+  int _PS_DUMMY_ARRAY_LENGTH;
   /*
     Functions returning values of grid element type, such as get, cannot
     be represented as standard C or C++ since return-type polymorphism
@@ -32,7 +33,7 @@ extern "C" {
     type (*emitNeumann)(type, int);                             \
     type (*reduce)(void *dom, type (*kernel)(type, type));      \
   };                                                            \
-  typedef struct __PSGrid1D##name *PSGrid1D##name;              \
+  typedef struct __PSGrid1D##name *PSGrid1D##name; \
   extern PSGrid1D##name PSGrid1D##name##New(PSIndex, ...);
 
 #define DeclareGrid2D(name, type)                                       \
@@ -46,7 +47,7 @@ extern "C" {
     type (*emitNeumann)(type, int);                                     \
     type (*reduce)(void *dom, type (*kernel)(type, type));              \
   };                                                                    \
-  typedef struct __PSGrid2D##name *PSGrid2D##name;                      \
+  typedef struct __PSGrid2D##name *PSGrid2D##name[_PS_DUMMY_ARRAY_LENGTH]; \
   extern PSGrid2D##name PSGrid2D##name##New(PSIndex, PSIndex, ...);
 
 #define DeclareGrid3D(name, type)                                       \
@@ -60,7 +61,7 @@ extern "C" {
     type (*emitNeumann)(type, int);                                     \
     type (*reduce)(void *dom, type (*kernel)(type, type));              \
   };                                                                    \
-  typedef struct __PSGrid3D##name *PSGrid3D##name;                      \
+  typedef type *PSGrid3D##name[_PS_DUMMY_ARRAY_LENGTH][_PS_DUMMY_ARRAY_LENGTH]; \
   extern PSGrid3D##name PSGrid3D##name##New(PSIndex, PSIndex, PSIndex, ...);
   
   DeclareGrid1D(Float, float);
