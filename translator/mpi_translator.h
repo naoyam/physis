@@ -26,6 +26,9 @@ class MPITranslator: public ReferenceTranslator {
                             Run *run);
   virtual void appendNewArgExtra(SgExprListExp *args, Grid *g,
                                  SgVariableDeclaration *dim_decl);
+  virtual void AppendNewArgStencilMemberInfo(SgExprListExp *args, Grid *g,
+                                             SgStatement *prec_stmt);
+  
 #if 0  
   virtual void CheckSizes();
 #endif  

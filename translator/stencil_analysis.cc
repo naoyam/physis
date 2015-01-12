@@ -9,6 +9,7 @@
 
 using namespace std;
 namespace si = SageInterface;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -139,12 +140,14 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
   return false;
 }
 
+
 static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) {
   BOOST_FOREACH(SgNode *node,
-                rose_util::QuerySubTreeAttribute<GridVarAttribute>(tx.project())) {
+                ru::QuerySubTreeAttribute<GridVarAttribute>(tx.project())) {
     SgInitializedName *gn = isSgInitializedName(node);
     PSAssert(gn);
     GridVarAttribute *gva = rose_util::GetASTAttribute<GridVarAttribute>(gn);
+    gva->FixAggregateAndMemberStencilRange();
     const GridSet *gs = tx.findGrid(gn);
     if (gs == NULL) {
       // gs can be null if no information on the source of the
@@ -160,6 +163,7 @@ static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) 
         continue;
       } 
       g->SetStencilRange(gva->sr());
+      g->SetMemberStencilRange(gva->member_sr());      
       LOG_DEBUG() << "Grid stencil range: "
                   << *g << ", " << g->stencil_range() << "\n";
     }
@@ -177,9 +181,9 @@ static void ExtractArrayIndices(SgNode *n, IntVector &v) {
   return ExtractArrayIndices(p->get_parent(), v);
 }
 
-static bool GetGridMember(SgExpression *get,
-                          string &member,
-                          IntVector &indices) {
+static bool AnalyzeGetMemberAccess(SgExpression *get,
+                                   string &member,
+                                   IntVector &indices) {
   SgDotExp *dot = isSgDotExp(get->get_parent());
   if (dot == NULL) return false;
   SgVarRefExp *rhs = isSgVarRefExp(dot->get_rhs_operand());
@@ -189,21 +193,21 @@ static bool GetGridMember(SgExpression *get,
   return true;
 }
 
-static void AddIndex(SgExpression *get,
-                     SgInitializedName *gv,
-                     StencilIndexList &sil) {
-  string member;
-  IntVector indices;
+//! Associate stencil access with GridVar attributes
+static void AssociateIndex(GridGetAttribute *gga,
+                           SgInitializedName *gv,
+                           StencilIndexList &sil) {
   // Collect member-specific information
-  if (GetGridMember(get, member, indices)) {
-    LOG_DEBUG() << "Access to member: " << member << "\n";
+  if (gga->IsMemberAccess()) {
+    LOG_DEBUG() << "Access to member: " << gga->member_name() << "\n";
     GridVarAttribute *gva =
         rose_util::GetASTAttribute<GridVarAttribute>(gv);
-    gva->AddMemberStencilIndexList(member, indices, sil);
-  }    
-  GridVarAttribute *gva =
-      rose_util::GetASTAttribute<GridVarAttribute>(gv);
-  gva->AddStencilIndexList(sil);
+    gva->AddMemberStencilIndexList(gga->member_name(), gga->indices(), sil);
+  } else {
+    GridVarAttribute *gva =
+        rose_util::GetASTAttribute<GridVarAttribute>(gv);
+    gva->AddStencilIndexList(sil);
+  }
   return;
 }
 
@@ -268,7 +272,7 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     StencilIndexList stencil_indices;
     ExtractStencilIndices(get, stencil_indices, kernel);
     // Associate gv with the stencil indices
-    AddIndex(isSgExpression(get), gv, stencil_indices);
+    AssociateIndex(gga, gv, stencil_indices);
     LOG_DEBUG() << "Analyzed index: " << stencil_indices << "\n";    
     LOG_DEBUG() << "Setting stencil index list for "
                 << get->unparseToString() << "\n";
@@ -386,10 +390,13 @@ static void AnalyzeGetCall(SgNode *top_level_node,
     PSAssert(gt);
     GridVarAttribute *gva = rose_util::GetASTAttribute<GridVarAttribute>(gv);
     PSAssert(gva);
+    string member;
+    IntVector indices;
+    AnalyzeGetMemberAccess(call, member, indices);
     GridGetAttribute *gga = new GridGetAttribute(
         gt, NULL, gva, tx.isKernel(si::getEnclosingFunctionDeclaration(call)),
-        is_periodic, NULL);
-    rose_util::AddASTAttribute(call, gga);
+        is_periodic, NULL, member, indices);
+    ru::AddASTAttribute(call, gga);
   }
   LOG_DEBUG() << "Analysis of get call done\n";    
 }

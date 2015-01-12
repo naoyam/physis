@@ -72,7 +72,7 @@ void CUDATranslator::appendNewArgExtra(SgExprListExp *args,
   GridType *gt = g->getType();
   SgExpression *extra_arg = NULL;
   if (gt->IsPrimitivePointType()) {
-    extra_arg = rose_util::buildNULL(global_scope_);
+    extra_arg = ru::BuildNULL();
   } else {
     extra_arg = sb::buildFunctionRefExp(gt->aux_new_decl());
   }
@@ -373,7 +373,7 @@ void CUDATranslator::TranslateFree(SgFunctionCallExp *node,
   // user-defined point type
   SgExpression *free_func = NULL;
   if (gt->IsPrimitivePointType()) {
-    free_func = rose_util::buildNULL(global_scope_);
+    free_func = ru::BuildNULL();
   } else {
     free_func = sb::buildFunctionRefExp(gt->aux_free_decl());
   }
@@ -397,7 +397,7 @@ void CUDATranslator::TranslateCopyin(SgFunctionCallExp *node,
   // user-defined point type
   SgExpression *func = NULL;
   if (gt->IsPrimitivePointType()) {
-    func = rose_util::buildNULL(global_scope_);
+    func = ru::BuildNULL();
   } else {
     func = sb::buildFunctionRefExp(gt->aux_copyin_decl());
   }
@@ -421,7 +421,7 @@ void CUDATranslator::TranslateCopyout(SgFunctionCallExp *node,
   // user-defined point type
   SgExpression *func = NULL;
   if (gt->IsPrimitivePointType()) {
-    func = rose_util::buildNULL(global_scope_);
+    func = ru::BuildNULL();
   } else {
     func = sb::buildFunctionRefExp(gt->aux_copyout_decl());
   }

@@ -331,6 +331,19 @@ void Grid::SetStencilRange(const StencilRange &sr) {
   return;
 }
 
+void Grid::SetMemberStencilRange(const MemberStencilRangeMap &msr) {
+  BOOST_FOREACH (const MemberStencilRangeMap::value_type &sr,
+                 msr) {
+    if (isContained(member_stencil_range_, sr.first)) {
+      StencilRange &s = member_stencil_range_.find(sr.first)->second;
+      s.merge(sr.second);
+    } else {
+      member_stencil_range_.insert(sr);
+    }
+  }
+  return;
+}
+
 bool Grid::IsIntrinsicCall(SgFunctionCallExp *ce) {
   if (GridType::isGridTypeSpecificCall(ce)) return true;
   string funcNames[] = {
@@ -379,6 +392,15 @@ void GridVarAttribute::AddMemberStencilIndexList(
   }
   StencilRange &sr = member_sr_.find(make_pair(member, indices))->second;
   sr.insert(sil);
+}
+
+void GridVarAttribute::FixAggregateAndMemberStencilRange() {
+  StencilRange agg_sr = sr_;
+  BOOST_FOREACH (MemberStencilRangeMap::value_type it, member_sr_) {
+    StencilRange &s = it.second;
+    sr_.merge(s);
+    s.merge(agg_sr);
+  }
 }
 
 const std::string GridOffsetAttribute::name = "PSGridOffset";
@@ -488,10 +510,12 @@ GridGetAttribute::GridGetAttribute(
     bool in_kernel,
     bool is_periodic,
     const StencilIndexList *sil,
-    const string &member_name):
+    const string &member_name,
+    const IntVector &indices):
     gt_(gt), gv_(gv), gva_(gva), in_kernel_(in_kernel),
     is_periodic_(is_periodic),
-    sil_(NULL), member_name_(member_name) {
+    sil_(NULL), member_name_(member_name),
+    indices_(indices) {
   if (sil) {
     sil_ = new StencilIndexList(*sil);
   }
@@ -534,6 +558,10 @@ void GridGetAttribute::SetStencilIndexList(
 
 bool GridGetAttribute::IsUserDefinedType() const {
   return gt_->IsUserDefinedPointType();
+}
+
+bool GridGetAttribute::IsMemberAccess() const {
+  return member_name_ != "";
 }
 
 SgInitializedName *GridGetAnalysis::IsGetCall(SgExpression *call) {

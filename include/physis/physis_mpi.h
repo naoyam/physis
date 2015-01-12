@@ -44,10 +44,12 @@ extern "C" {
 
   extern void __PSDomainSetLocalSize(__PSDomain *dom);
   extern __PSGridMPI* __PSGridNewMPI(
-      __PSGridTypeInfo *type_info,
-      int dim, const PSVectorInt size, int attr,
-      const PSVectorInt global_offset, const PSVectorInt stencil_offset_min,
-      const PSVectorInt stencil_offset_max);
+      __PSGridTypeInfo *type_info, int dim, const PSVectorInt size, int attr,
+      const PSVectorInt global_offset,
+      const PSVectorInt stencil_offset_min,
+      const PSVectorInt stencil_offset_max,
+      const int *stencil_offset_min_member,
+      const int *stencil_offset_max_member);
   extern void __PSGridSwap(__PSGridMPI *g);
   extern void __PSGridMirror(__PSGridMPI *g);
   extern int __PSGridGetID(__PSGridMPI *g);

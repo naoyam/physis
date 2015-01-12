@@ -97,7 +97,7 @@ class RegisterBlocking {
       bool member_blocked = false;
       LOG_DEBUG() << "Checking member accesses\n";
       BOOST_FOREACH (
-          GridVarAttribute::MemberStencilRangeMap::value_type &p,
+          MemberStencilRangeMap::value_type &p,
           gva->member_sr()) {
         const string &member = p.first.first;
         const IntVector &indices = p.first.second;

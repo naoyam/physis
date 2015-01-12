@@ -9,6 +9,7 @@
 
 namespace si = SageInterface;
 namespace sb = SageBuilder;
+namespace ru = physis::translator::rose_util;
 
 namespace physis {
 namespace translator {
@@ -217,15 +218,74 @@ void MPITranslator::TranslateRun(SgFunctionCallExp *node,
   si::replaceStatement(getContainingStatement(node), tmp_block);
 }
 
+void MPITranslator::AppendNewArgStencilMemberInfo(SgExprListExp *args,
+                                                  Grid *g,
+                                                  SgStatement *prec_stmt) {
+  GridType *gt = g->getType();
+  if (gt->IsPrimitivePointType()) {
+    // Pass NULL pointers
+    // member min
+    si::appendExpression(args, ru::BuildNULL());
+    // member max
+    si::appendExpression(args, ru::BuildNULL());
+  } else {
+    SgExprListExp *min_arg = sb::buildExprListExp();
+    SgExprListExp *max_arg = sb::buildExprListExp();
+    MemberStencilRangeMap &msr = g->member_stencil_range();
+    const SgDeclarationStatementPtrList &members =
+        gt->point_def()->get_members();
+    // Aggregates range info by members.
+    map<string, StencilRange> sr_args;
+    // First, create a default empty stencil range
+    BOOST_FOREACH (SgDeclarationStatement *m, members) {
+      const string member_name = ru::GetName(isSgVariableDeclaration(m));
+      // Empty stencil range
+      StencilRange s(gt->rank());
+      sr_args.insert(make_pair(member_name, s));
+    }
+    // Aggregate member stencil range
+    BOOST_FOREACH (const MemberStencilRangeMap::value_type &v, msr) {
+      const MemberStencilRangeMap::key_type &msr_key = v.first;
+      const string &menmber_name = msr_key.first;
+      StencilRange &sr = sr_args.find(menmber_name)->second;
+      sr.merge(v.second);
+    }
+    // Pass stencil range info in the order of member appearance in
+    // the original user type
+    BOOST_FOREACH (SgDeclarationStatement *m, members) {
+      const string member_name = ru::GetName(isSgVariableDeclaration(m));
+      const StencilRange &sr = sr_args.find(member_name)->second;
+      si::appendExpression(min_arg,
+                           builder()->BuildStencilOffsetMin(sr));
+      si::appendExpression(max_arg,
+                           builder()->BuildStencilOffsetMax(sr));
+    }
+    SgType *ty = sb::buildArrayType(sb::buildIntType(),
+                                    Int(PS_MAX_DIM * members.size()));
+    SgVariableDeclaration *member_stencil_min_var
+        = sb::buildVariableDeclaration(
+            "member_stencil_offset_min", ty,
+            sb::buildAggregateInitializer(min_arg, ty));
+    si::insertStatementAfter(prec_stmt, member_stencil_min_var);
+    si::appendExpression(args, sb::buildVarRefExp(member_stencil_min_var));
+    SgVariableDeclaration *member_stencil_max_var
+        = sb::buildVariableDeclaration(
+            "member_stencil_offset_max", ty,
+            sb::buildAggregateInitializer(max_arg, ty));
+    si::insertStatementAfter(member_stencil_min_var, member_stencil_max_var);
+    si::appendExpression(args, sb::buildVarRefExp(member_stencil_max_var));
+  }
+}
+
+
 void MPITranslator::appendNewArgExtra(SgExprListExp *args,
                                       Grid *g,
                                       SgVariableDeclaration *dim_decl) {
-  LOG_DEBUG() << "Append New extra arg for "
-              << *g << "\n";
+  LOG_DEBUG() << "Append New extra arg for " << *g << "\n";
   // attribute
-  si::appendExpression(args, sb::buildIntVal(0));
+  si::appendExpression(args, Int(0));
   // global offset
-  si::appendExpression(args, rose_util::buildNULL(global_scope_));
+  si::appendExpression(args, ru::BuildNULL());
 
   const StencilRange &sr = g->stencil_range();
 
@@ -257,9 +317,10 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
       = sb::buildVariableDeclaration(
           "stencil_offset_max", ivec_type_,
           sb::buildAggregateInitializer(stencil_max_val, ivec_type_));
-  si::insertStatementAfter(dim_decl, stencil_max_var);
+  si::insertStatementAfter(stencil_min_var, stencil_max_var);
   si::appendExpression(args, sb::buildVarRefExp(stencil_max_var));
-  
+
+  AppendNewArgStencilMemberInfo(args, g, stencil_max_var);
   return;
 }
 #if 0

@@ -17,6 +17,8 @@ namespace translator {
 
 static const char *gridIndexNames[3] = {"x", "y", "z"};
 
+typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
+
 // Represents a grid type, not a particular grid object.
 // Grid objects are handled by class Grid.
 class GridType: public AstAttribute {
@@ -103,6 +105,7 @@ class Grid {
   GridType *gt;
   SgFunctionCallExp *newCall;
   StencilRange stencil_range_;
+  MemberStencilRangeMap member_stencil_range_;  
   SizeVector static_size_;
   bool has_static_size_;
   void identifySize(SgExpressionPtrList::const_iterator size_begin,
@@ -191,14 +194,24 @@ class Grid {
   }
   virtual void SetStencilRange(const StencilRange &sr);
 
+  const MemberStencilRangeMap &member_stencil_range() const {
+    return member_stencil_range_;
+  }
+  MemberStencilRangeMap &member_stencil_range() {
+    return member_stencil_range_;
+  }
+  virtual void SetMemberStencilRange(const MemberStencilRangeMap &msr);
+
+
   static bool IsIntrinsicCall(SgFunctionCallExp *call);
 };
 
 typedef std::set<Grid*> GridSet;
 
+
+
 class GridVarAttribute: public AstAttribute {
  public:
-  typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
   static const std::string name;  
   GridVarAttribute(GridType *gt);
   GridVarAttribute(const GridVarAttribute &x);
@@ -213,7 +226,7 @@ class GridVarAttribute: public AstAttribute {
   GridType *gt() { return gt_; }
   StencilRange &sr() { return sr_; }
   MemberStencilRangeMap &member_sr() { return member_sr_; }
-  //ArrayMemberStencilRangeMap &array_member_sr() { return array_member_sr_; }
+  void FixAggregateAndMemberStencilRange();
   
  protected:
   GridType *gt_;
@@ -315,7 +328,8 @@ class GridGetAttribute: public AstAttribute {
                    bool in_kernel,
                    bool is_periodic,
                    const StencilIndexList *sil,
-                   const string &member_name="");
+                   const string &member_name="",
+                   const IntVector &indices=IntVector());
   GridGetAttribute(const GridGetAttribute &x);
   virtual ~GridGetAttribute();
   GridGetAttribute *copy();
@@ -334,6 +348,13 @@ class GridGetAttribute: public AstAttribute {
   GridVarAttribute *gva() { return gva_; }  
   string &member_name() { return member_name_; }
   bool IsUserDefinedType() const;
+  bool IsMemberAccess() const;
+  const IntVector& indices() const {
+    return indices_;
+  }
+  IntVector& indices() {
+    return indices_;
+  }
   
  protected:
   GridType *gt_;
@@ -343,6 +364,7 @@ class GridGetAttribute: public AstAttribute {
   bool is_periodic_;
   StencilIndexList *sil_;
   string member_name_;
+  IntVector indices_;
 };
 
 class GridEmitAttribute: public AstAttribute {

@@ -224,7 +224,9 @@ extern "C" {
       __PSGridTypeInfo *type_info,
       int dim, const PSVectorInt size, int attr,
       const PSVectorInt global_offset, const PSVectorInt stencil_offset_min,
-      const PSVectorInt stencil_offset_max) {
+      const PSVectorInt stencil_offset_max,
+      const int *stencil_offset_min_member,
+      const int *stencil_offset_max_member) {
     // NOTE: global_offset is not set by the translator. 0 is assumed.
     PSAssert(global_offset == NULL);
 

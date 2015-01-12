@@ -152,7 +152,7 @@ void SetFunctionStatic(SgFunctionDeclaration *fdecl) {
   fdecl->get_declarationModifier().get_storageModifier().setStatic();
 }
 
-SgExpression *buildNULL(SgScopeStatement *global_scope) {
+SgExpression *BuildNULL() {
 #if 0  
   static SgVariableDeclaration *dummy_null = NULL;
   if (!dummy_null) {

@@ -118,7 +118,7 @@ bool IsFuncParam(SgInitializedName *in);
 string generateUniqueName(SgScopeStatement *scope = NULL,
                           const string &prefix = "__ps_");
 void SetFunctionStatic(SgFunctionDeclaration *fdecl);
-SgExpression *buildNULL(SgScopeStatement *global_scope);
+SgExpression *BuildNULL();
 SgVariableDeclaration *buildVarDecl(const string &name,
                                     SgType *type,
                                     SgExpression *val,
