@@ -936,7 +936,7 @@ function print_usage()
 	echo -e "\t\tRead configuration option from the file."
 	echo -e "\t--email <email-address>"
 	echo -e "\t\tEmail test result"
-	echo -e "\t--parallel [max parallel tests]"
+	echo -e "\t--parallel[=max parallel tests]"
 	echo -e "\t\tRun tests in parallel"
 	echo -e "\t-q, --quit"
 	echo -e "\t\tQuit immediately upon error."
