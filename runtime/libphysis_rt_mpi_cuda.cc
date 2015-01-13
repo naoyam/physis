@@ -273,6 +273,7 @@ extern "C" {
     return master->GridNew(
         type_info, dim, gsize,
         IndexArray(), stencil_offset_min, stencil_offset_max,
+        stencil_offset_min_member, stencil_offset_max_member,
         attr);
   }
 

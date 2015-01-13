@@ -49,7 +49,8 @@ class GridMPICUDAExp: public GridMPI {
   GridMPICUDAExp(const __PSGridTypeInfo *type_info, int num_dims,
                  const IndexArray &size, const IndexArray &global_offset,
                  const IndexArray &local_offset, const IndexArray &local_size,
-                 const Width2 *halo,                 
+                 const Width2 &halo,
+                 const Width2 *halo_member,
                  int attr);
  public:
   
@@ -63,7 +64,8 @@ class GridMPICUDAExp: public GridMPI {
       const __PSGridTypeInfo *type_info,
       int num_dims,  const IndexArray &size,
       const IndexArray &global_offset, const IndexArray &local_offset,
-      const IndexArray &local_size, const Width2 *halo,
+      const IndexArray &local_size, const Width2 &halo,
+      const Width2 *halo_member,      
       int attr);
   
   
@@ -149,19 +151,11 @@ class GridMPICUDAExp: public GridMPI {
   void CopyDiag3D2(bool fw, int member);
   //void SetCUDAStream(cudaStream_t strm);
 
-  Width2 &halo(int member_id) {
-    return halo_m_[member_id];
-  }
-  const Width2 &halo(int member_id) const {
-    return halo_m_[member_id];
-  }
-  
  protected:
   BufferCUDADev **data_buffer_m_; // different buffers for different members
   BufferCUDAHost *(*halo_self_host_)[2];
   BufferCUDAHost *(*halo_peer_host_)[2];
   void *dev_;
-  Width2 *halo_m_;
   
   virtual void FixupBufferPointers();
 

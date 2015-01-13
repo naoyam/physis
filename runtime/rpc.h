@@ -86,7 +86,10 @@ class Master: public Proc {
       __PSGridTypeInfo *type_info,
       int num_dims, const IndexArray &size,
       const IndexArray &global_offset, const IndexArray &stencil_offset_min,
-      const IndexArray &stencil_offset_max, int attr);
+      const IndexArray &stencil_offset_max,
+      const int *stencil_offset_min_member,
+      const int *stencil_offset_max_member,
+      int attr);
   virtual void GridDelete(typename GridSpaceType::GridType *g);
   virtual void GridCopyin(typename GridSpaceType::GridType *g, const void *buf);
   virtual void GridCopyinLocal(typename GridSpaceType::GridType *g, const void *buf);  
@@ -232,7 +235,9 @@ typename GridSpaceType::GridType *Master<GridSpaceType>::GridNew(
     int num_dims, const IndexArray &size,
     const IndexArray &global_offset,
     const IndexArray &stencil_offset_min,
-    const IndexArray &stencil_offset_max,                          
+    const IndexArray &stencil_offset_max,
+    const int *stencil_offset_min_member,
+    const int *stencil_offset_max_member,
     int attr) {
   LOG_DEBUG() << "[" << rank() << "] New\n";
   NotifyCall(FUNC_NEW, type_info->num_members);
@@ -242,13 +247,28 @@ typename GridSpaceType::GridType *Master<GridSpaceType>::GridNew(
                     attr};
   ipc_->Bcast(&req, sizeof(RequestNEW), rank());
   if (type_info->num_members > 0) {
-    ipc_->Bcast(type_info->members,
-                sizeof(__PSGridTypeMemberInfo) * type_info->num_members,
+    PSAssert(stencil_offset_min_member);
+    PSAssert(stencil_offset_max_member);
+    size_t type_info_size = sizeof(__PSGridTypeMemberInfo) *
+        type_info->num_members;
+    size_t stencil_offset_size =
+        sizeof(PSVectorInt) * type_info->num_members;
+    // pack all member-related data to buf
+    void *buf = malloc(type_info_size + stencil_offset_size * 2);
+    memcpy(buf, type_info->members, type_info_size);
+    memcpy((void*)((intptr_t)buf + type_info_size),
+           stencil_offset_min_member, stencil_offset_size);
+    memcpy((void*)((intptr_t)buf + type_info_size + stencil_offset_size),
+           stencil_offset_max_member, stencil_offset_size);
+    ipc_->Bcast(buf, type_info_size + stencil_offset_size * 2,
                 rank());
+    free(buf);
   }
   typename GridSpaceType::GridType *g = gs_->CreateGrid(
       type_info, num_dims, size, global_offset,
-      stencil_offset_min, stencil_offset_max, attr);
+      stencil_offset_min, stencil_offset_max,
+      stencil_offset_min_member, stencil_offset_max_member, 
+      attr);
   return g;
 }
 
@@ -257,20 +277,31 @@ void Client<GridSpaceType>::GridNew(int num_members) {
   LOG_DEBUG() << "[" << rank() << "] Create\n";
   RequestNEW req;
   ipc_->Bcast(&req, sizeof(RequestNEW), GetMasterRank());
+  int *stencil_offset_min_member = NULL;
+  int *stencil_offset_max_member = NULL;
+  req.type_info.members = NULL;
+  void *buf = NULL;
   if (num_members > 0) {
-    __PSGridTypeMemberInfo *minfo = new __PSGridTypeMemberInfo[num_members];
-    ipc_->Bcast(minfo, sizeof(__PSGridTypeMemberInfo) * num_members,
+    size_t type_info_size = sizeof(__PSGridTypeMemberInfo) * num_members;
+    size_t stencil_offset_size = sizeof(PSVectorInt) * num_members;
+    buf = malloc(type_info_size + stencil_offset_size * 2);
+    ipc_->Bcast(buf, type_info_size + stencil_offset_size * 2,
                 GetMasterRank());
-    req.type_info.members = minfo;
+    req.type_info.members = (__PSGridTypeMemberInfo *)buf;
+    stencil_offset_min_member =
+        (int*)((intptr_t)buf + type_info_size);
+    stencil_offset_max_member =
+        (int*)((intptr_t)buf + type_info_size + stencil_offset_size);
   } else {
-    req.type_info.members = NULL;
     req.type_info.num_members = 0;
   }
   this->gs_->CreateGrid(
       &req.type_info, req.num_dims, req.size,
       req.global_offset,
       req.stencil_offset_min, req.stencil_offset_max,
+      stencil_offset_min_member, stencil_offset_max_member,
       req.attr);
+  if (buf) free(buf);
   LOG_DEBUG() << "[" << rank() << "] Create done\n";
   return;
 }

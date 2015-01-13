@@ -28,7 +28,8 @@ class GridMPI: public Grid {
           const IndexArray &global_offset,
           const IndexArray &local_offset,
           const IndexArray &local_size, 
-          const Width2 *halo,
+          const Width2 &halo,
+          const Width2 *halo_member,
           int attr);
   //! Flag to indicate whether this sub grid is empty
   bool empty_;
@@ -52,7 +53,9 @@ class GridMPI: public Grid {
     halo_.bw[i] and halo_.fw[i] are the (unsigned) width of the
     backward and forward halo in the i'th dimension, respectively.
    */
-  Width2 halo_; 
+  Width2 halo_;
+  //! Width of the halo for each dimension of each member
+  Width2 *halo_member_;  
   //! Offset of the actual buffer within the whole grid.
   IndexArray local_real_offset_;    
   //! Length of the actual buffer with halo
@@ -129,7 +132,8 @@ class GridMPI: public Grid {
                          const IndexArray &global_offset,
                          const IndexArray &local_offset,
                          const IndexArray &local_size,
-                         const Width2 *halo,
+                         const Width2 &halo,
+                         const Width2 *halo_member,
                          int attr);
   
   virtual ~GridMPI();
@@ -146,6 +150,13 @@ class GridMPI: public Grid {
   }  
   const Width2 &halo() const { return halo_; }
   bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
+
+  Width2 &halo(int member_id) {
+    return halo_member_[member_id];
+  }
+  const Width2 &halo(int member_id) const {
+    return halo_member_[member_id];
+  }
   
   virtual int Reduce(PSReduceOp op, void *out);
 

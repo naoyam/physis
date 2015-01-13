@@ -38,6 +38,29 @@ void SendGridRequest(int my_rank, int peer_rank, MPI_Comm comm,
                      GRID_REQUEST_KIND kind);
 GridRequest RecvGridRequest(MPI_Comm comm);
 
+
+inline void ConvertStencilOffsetToStencilWidth(const IndexArray &halo_bw,
+                                               const IndexArray &halo_fw,
+                                               Width2 &width,
+                                               int rank,
+                                               const IndexArray &local_size,
+                                               const IndexArray &proc_size) {
+
+  IndexArray tb = halo_bw * -1;
+  IndexArray tf = halo_fw;
+  for (int i = 0; i < rank; ++i) {
+    if (local_size[i] == 0 || proc_size[i] == 1) {
+      tb[i] = 0;
+      tf[i] = 0;
+    }
+    tb[i] = std::max(tb[i], 0);
+    tf[i] = std::max(tf[i], 0);
+  }
+  width.bw = tb;  
+  width.fw = tf;
+  return;
+}
+
 //class GridMPI;
 
 template <class GT>
@@ -70,6 +93,8 @@ class GridSpaceMPI: public GridSpace {
                          const IndexArray &global_offset,
                          const IndexArray &stencil_offset_min,
                          const IndexArray &stencil_offset_max,
+                         const int *stencil_offset_min_member,
+                         const int *stencil_offset_max_member,
                          int attr);
 
   //! Exchange halo on one dimension of a grid asynchronously.
@@ -275,7 +300,7 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
     int attr) {
   __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return CreateGrid(&info, num_dims, size, global_offset,
-                    stencil_offset_min, stencil_offset_max, attr);
+                    stencil_offset_min, stencil_offset_max, NULL, NULL, attr);
 }
 
 template <class GridType>
@@ -286,6 +311,8 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
     const IndexArray &global_offset,
     const IndexArray &stencil_offset_min,
     const IndexArray &stencil_offset_max,
+    const int *stencil_offset_min_member,
+    const int *stencil_offset_max_member,
     int attr) {
 
   IndexArray grid_size = size;
@@ -307,25 +334,28 @@ GridType *GridSpaceMPI<GridType>::CreateGrid(
   LOG_DEBUG() << "stencil_offset_max: "
               << stencil_offset_max << "\n";
 
-  IndexArray halo_fw = stencil_offset_max;
-  IndexArray halo_bw = stencil_offset_min;  
-  halo_bw = halo_bw * -1;
-  for (int i = 0; i < num_dims_; ++i) {
-    if (local_size[i] == 0 || proc_size()[i] == 1) {
-      halo_bw[i] = 0;
-      halo_fw[i] = 0;
-    }
-    if (halo_bw[i] < 0) halo_bw[i] = 0;
-    if (halo_fw[i] < 0) halo_fw[i] = 0;    
-  }
-  Width2 halo = {halo_bw, halo_fw};
+  Width2 halo;
+  ConvertStencilOffsetToStencilWidth(
+      stencil_offset_min, stencil_offset_max, halo,
+      num_dims_, local_size, proc_size());
   LOG_DEBUG() << "halo.fw: " << halo.fw << "\n";
-  LOG_DEBUG() << "halo.bw: " << halo.bw << "\n";  
+  LOG_DEBUG() << "halo.bw: " << halo.bw << "\n";
+
+  Width2 *halo_member = NULL;
+  if (type_info->num_members > 0) {
+    halo_member = new Width2[type_info->num_members];
+    for (int i = 0; i < type_info->num_members; ++i) {
+      IndexArray halo_bw(stencil_offset_min_member + i*PS_MAX_DIM);
+      IndexArray halo_fw(stencil_offset_max_member + i*PS_MAX_DIM);
+      ConvertStencilOffsetToStencilWidth(
+          halo_bw, halo_fw, halo_member[i], num_dims_, local_size, proc_size());
+    }
+  }
   
   GridType *g = GridType::Create(
       type_info, num_dims, grid_size,
       grid_global_offset, local_offset, local_size,
-      &halo, attr);
+      halo, halo_member, attr);
   LOG_DEBUG() << "grid created\n";
   RegisterGrid(g);
   LOG_DEBUG() << "grid registered\n";

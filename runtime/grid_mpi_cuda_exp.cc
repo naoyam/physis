@@ -16,10 +16,10 @@ namespace runtime {
 GridMPICUDAExp::GridMPICUDAExp(
     const __PSGridTypeInfo *type_info, int num_dims, const IndexArray &size,
     const IndexArray &global_offset, const IndexArray &local_offset,
-    const IndexArray &local_size, const Width2 *halo_m,                 
+    const IndexArray &local_size, const Width2 &halo, const Width2 *halo_member,
     int attr): GridMPI(type_info, num_dims, size, global_offset,
-                       local_offset, local_size, halo_m, attr),
-               dev_(NULL), halo_m_(NULL) {
+                       local_offset, local_size, halo, halo_member, attr),
+               dev_(NULL) {
   if (empty_) return;
 
   // Hanlde primitive type as a single-member user-defined type
@@ -31,23 +31,20 @@ GridMPICUDAExp::GridMPICUDAExp(
     type_info_.members->rank = 0;
   }
   
-  halo_m_ = new Width2[num_members()];
-  memcpy(halo_m_, halo_m, sizeof(Width2) * num_members());
   // NOTE: Take maximum of halo width for all members. This is to
   // reduce the size of grid device type. Otherwise, each member has
   // to have its own size info.
-  Width2 max_width = halo_m_[0];
+  Width2 max_width = halo_member_[0];
   for (int i = 1; i < num_members(); ++i) {
-    max_width.fw = std::max(max_width.fw, halo_m_[1].fw);
-    max_width.bw = std::max(max_width.bw, halo_m_[1].bw);
+    max_width.fw = std::max(max_width.fw, halo_member_[1].fw);
+    max_width.bw = std::max(max_width.bw, halo_member_[1].bw);
   }
   for (int i = 0; i < num_members(); ++i) {
-    halo_m_[i] = max_width;
+    halo_member_[i] = max_width;
   }
 }
 
 GridMPICUDAExp::~GridMPICUDAExp() {
-  delete[] halo_m_;
   DeleteBuffers();
 }
 
@@ -61,18 +58,20 @@ GridMPICUDAExp *GridMPICUDAExp::Create(
     int attr) {
   __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return GridMPICUDAExp::Create(&info, num_dims, size, global_offset,
-                                local_offset, local_size, &halo, attr);
+                                local_offset, local_size, halo,
+                                NULL, attr);
 }  
 
 GridMPICUDAExp *GridMPICUDAExp::Create(
       const __PSGridTypeInfo *type_info,
       int num_dims,  const IndexArray &size,
       const IndexArray &global_offset, const IndexArray &local_offset,
-      const IndexArray &local_size, const Width2 *halo,
+      const IndexArray &local_size, const Width2 &halo,
+      const Width2 *halo_member,
       int attr) {
   GridMPICUDAExp *g = new GridMPICUDAExp(
       type_info, num_dims, size, global_offset, local_offset,
-      local_size, halo, attr);
+      local_size, halo, halo_member, attr);
   g->InitBuffers();
   return g;
 }

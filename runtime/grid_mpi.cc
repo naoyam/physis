@@ -23,25 +23,35 @@ size_t GridMPI::CalcHaloSize(int dim, unsigned width, bool diagonal) {
 }
 
 GridMPI::GridMPI(const __PSGridTypeInfo *type_info,
-                 int num_dims,
-                 const IndexArray &size,
+                 int num_dims, const IndexArray &size,
                  const IndexArray &global_offset,
                  const IndexArray &local_offset,                 
                  const IndexArray &local_size,
-                 const Width2 *halo,
+                 const Width2 &halo, const Width2 *halo_member,
                  int attr):
     Grid(type_info, num_dims, size, attr),
     global_offset_(global_offset),  
     local_offset_(local_offset), local_size_(local_size),
-    halo_self_fw_(NULL), halo_self_bw_(NULL),
-    halo_peer_fw_(NULL), halo_peer_bw_(NULL) {
+    halo_(halo), halo_member_(NULL), halo_self_fw_(NULL), halo_self_bw_(NULL),
+  halo_peer_fw_(NULL), halo_peer_bw_(NULL) {
+
+  empty_ = local_size_.accumulate(num_dims_) == 0;
+  if (empty_) return;
+  
   local_real_size_ = local_size_;
   local_real_offset_ = local_offset_;
   for (int i = 0; i < num_dims_; ++i) {
-    local_real_size_[i] += halo->fw[i] + halo->bw[i];
-    local_real_offset_[i] -= halo->bw[i];
+    local_real_size_[i] += halo.fw[i] + halo.bw[i];
+    local_real_offset_[i] -= halo.bw[i];
   }
 
+  if (type_info->num_members > 0) {
+    halo_member_ = new Width2[type_info->num_members];
+    for (int i = 0; i < type_info->num_members; ++i) {
+      halo_member_[i] = halo_member[i];
+    }
+  }
+  
   // Hanlde primitive type as a single-member user-defined type
   if (type_ != PS_USER) {
     type_info_.num_members = 1;
@@ -49,18 +59,18 @@ GridMPI::GridMPI(const __PSGridTypeInfo *type_info,
     type_info_.members->type = type_info_.type;
     type_info_.members->size = type_info_.size;
     type_info_.members->rank = 0;
+    PSAssert(halo_member_ == NULL);
+    halo_member_ = new Width2[1];
+    halo_member_[0] = halo_;
   } else {
     // Aggregates multiple members in MPI since AoS is not converted
     // to SoA
     type_info_.num_members = 1;
     type_info_.members[0].size = type_info_.size;
     type_info_.members[0].type = PS_USER;
+    halo_member_[0] = halo_;
   }
   
-  empty_ = local_size_.accumulate(num_dims_) == 0;
-  if (empty_) return;
-
-  halo_ = *halo;
 }
 
 GridMPI *GridMPI::Create(PSType type, int elm_size,
@@ -72,7 +82,7 @@ GridMPI *GridMPI::Create(PSType type, int elm_size,
                          int attr) {
   __PSGridTypeInfo info = {type, elm_size, 0, NULL};
   return GridMPI::Create(&info, num_dims, size, global_offset,
-                         local_offset, local_size, &halo, attr);
+                         local_offset, local_size, halo, NULL, attr);
 }
 
 GridMPI* GridMPI::Create(const __PSGridTypeInfo *type_info,
@@ -80,11 +90,12 @@ GridMPI* GridMPI::Create(const __PSGridTypeInfo *type_info,
                          const IndexArray &global_offset,
                          const IndexArray &local_offset,
                          const IndexArray &local_size,
-                         const Width2 *halo,
+                         const Width2 &halo,
+                         const Width2 *halo_member,                         
                          int attr) {
   GridMPI *g = new GridMPI(type_info, num_dims, size,
                            global_offset, local_offset,
-                           local_size, halo, attr);
+                           local_size, halo, halo_member, attr);
   g->InitBuffers();
   return g;
 }
@@ -132,6 +143,7 @@ void GridMPI::InitHaloBuffers() {
 }
 
 GridMPI::~GridMPI() {
+  delete[] halo_member_;
   DeleteBuffers();
 }
 
