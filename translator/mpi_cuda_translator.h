@@ -130,8 +130,8 @@ class MPICUDATranslator: public MPITranslator {
                                 GridType *gt);
   virtual void TranslateGetForUserDefinedType(
       SgDotExp *node, SgPntrArrRefExp *array_top);
-  
-  
+  virtual void TranslateEmit(SgFunctionCallExp *node,
+                             GridEmitAttribute *attr);
 };
 
 } // namespace translator

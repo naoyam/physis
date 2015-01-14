@@ -769,5 +769,15 @@ SgFunctionParameterList *MPICUDARuntimeBuilder::BuildGridCopyFuncSigForUserType(
   return pl;
 }
 
+SgExpression *MPICUDARuntimeBuilder::BuildGridEmit(
+    SgExpression *grid_exp,
+    GridEmitAttribute *attr,
+    const SgExpressionPtrList *offset_exprs,
+    SgExpression *emit_val,
+    SgScopeStatement *scope) {
+  return cuda_rt_builder_->BuildGridEmit(grid_exp, attr, offset_exprs,
+                                         emit_val, scope);
+}
+    
 }  // namespace translator
 }  // namespace physis

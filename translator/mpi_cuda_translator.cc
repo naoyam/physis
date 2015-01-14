@@ -860,5 +860,11 @@ void MPICUDATranslator::TranslateGetForUserDefinedType(
   
 }
 
+void MPICUDATranslator::TranslateEmit(SgFunctionCallExp *node,
+                                      GridEmitAttribute *attr) {
+  cuda_trans_->TranslateEmit(node, attr);
+}
+
+
 } // namespace translator
 } // namespace physis

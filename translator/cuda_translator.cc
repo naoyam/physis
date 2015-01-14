@@ -179,13 +179,17 @@ void CUDATranslator::TranslateEmit(SgFunctionCallExp *node,
   SgInitializedName *gv = attr->gv();  
   bool is_grid_type_specific_call =
       GridType::isGridTypeSpecificCall(node);
-
   GridType *gt = ru::GetASTAttribute<GridType>(gv->get_type());
+  
+  // Just call the reference implementation if this grid is of a
+  // primitive type. 
   if (gt->IsPrimitivePointType()) {
     ReferenceTranslator::TranslateEmit(node, attr);
     return;
   }
 
+  // The type of the grid is a user-defined type.
+  
   // build a function call to gt->aux_emit_decl(g, offset, v)
   int nd = gt->rank();
   SgExpressionPtrList args;

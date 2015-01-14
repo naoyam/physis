@@ -74,6 +74,13 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       const string &member_name,
       const SgExpressionVector &array_indices);
 
+  virtual SgExpression *BuildGridEmit(
+      SgExpression *grid_exp,
+      GridEmitAttribute *attr,
+      const SgExpressionPtrList *offset_exprs,
+      SgExpression *emit_val,
+      SgScopeStatement *scope=NULL);
+
   virtual SgExprListExp *BuildKernelCallArgList(
       StencilMap *stencil,
       SgExpressionPtrList &index_args,
