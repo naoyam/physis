@@ -46,13 +46,6 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       bool is_kernel,
       bool is_periodic);
 
-  virtual SgExpression *BuildGridEmit(
-      SgExpression *grid_exp,
-      GridEmitAttribute *attr,
-      const SgExpressionPtrList *offset_exprs,
-      SgExpression *emit_val,
-      SgScopeStatement *scope=NULL);
-
   virtual SgFunctionParameterList *BuildRunFuncParameterList(Run *run);
   virtual void BuildRunFuncBody(
       Run *run, SgFunctionDeclaration *run_func);

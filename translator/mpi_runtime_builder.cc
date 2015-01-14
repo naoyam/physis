@@ -160,19 +160,6 @@ SgExpression *MPIRuntimeBuilder::BuildGridGet(
   return x;
 }
 
-SgExpression *MPIRuntimeBuilder::BuildGridEmit(
-    SgExpression *grid_exp,
-    GridEmitAttribute *attr,
-    const SgExpressionPtrList *offset_exprs,
-    SgExpression *emit_val,
-    SgScopeStatement *scope) {
-  return ReferenceRuntimeBuilder::BuildGridEmit(grid_exp,
-                                         attr,
-                                         offset_exprs,
-                                         emit_val,
-                                         scope);
-}
-
 void MPIRuntimeBuilder::BuildRunFuncBody(
     Run *run, SgFunctionDeclaration *run_func) {
   SgBasicBlock *block = run_func->get_definition()->get_body();  
