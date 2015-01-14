@@ -35,6 +35,8 @@ class RoseASTTraversal {
   virtual void Visit(SgTypedefDeclaration *node) {}
   virtual void Visit(SgFunctionCallExp *node) {}
   virtual void Visit(SgClassDeclaration *node) {}
+  virtual void Visit(SgDotExp *node) {}
+  virtual void Visit(SgPntrArrRefExp *node) {}  
   virtual void Visit(SgExpression *node) {}
   virtual void Visit(SgFunctionDeclaration *node) {}
   virtual void Visit(SgNode *node) {}

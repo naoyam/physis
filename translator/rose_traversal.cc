@@ -15,6 +15,10 @@ void RoseASTTraversal::VisitInternal(SgNode *node) {
     Visit(isSgClassDeclaration(node));    
   } else if (isSgFunctionCallExp(node)) {
     Visit(isSgFunctionCallExp(node));
+  } else if (isSgDotExp(node)) {
+    Visit(isSgDotExp(node));
+  } else if (isSgPntrArrRefExp(node)) {
+    Visit(isSgPntrArrRefExp(node));
   } else if (isSgExpression(node)) {
     Visit(isSgExpression(node));
   } else if (isSgFunctionDeclaration(node)) {

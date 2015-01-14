@@ -128,6 +128,8 @@ class MPICUDATranslator: public MPITranslator {
                                GridType *gt);
   virtual void TranslateCopyout(SgFunctionCallExp *node,
                                 GridType *gt);
+  virtual void TranslateGetForUserDefinedType(
+      SgDotExp *node, SgPntrArrRefExp *array_top);
   
   
 };

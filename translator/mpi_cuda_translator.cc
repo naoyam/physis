@@ -854,5 +854,11 @@ void MPICUDATranslator::TranslateCopyout(SgFunctionCallExp *node,
   cuda_trans_->TranslateCopyout(node, gt);
 }
 
+void MPICUDATranslator::TranslateGetForUserDefinedType(
+    SgDotExp *node, SgPntrArrRefExp *array_top) {
+  cuda_trans_->TranslateGetForUserDefinedType(node, array_top);
+  
+}
+
 } // namespace translator
 } // namespace physis

@@ -53,7 +53,6 @@ class CUDATranslator : public ReferenceTranslator {
   virtual void TranslateCopyout(SgFunctionCallExp *node,
                                 GridType *gt);
 
-  virtual void Visit(SgExpression *node);
   virtual void FixGridType(const string &real_type_name);
 };
 

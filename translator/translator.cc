@@ -264,6 +264,49 @@ void Translator::Visit(SgFunctionCallExp *node) {
   return;
 }
 
+void Translator::Visit(SgDotExp *node) {
+  // skip expressions like get().x[i] since those are handled as
+  // array member accesses. See Visit(SgPntrArrRefExp*).
+  if (isSgPntrArrRefExp(node->get_parent())) {
+    return;
+  }
+  SgExpression *lhs = node->get_lhs_operand();
+  GridGetAttribute *gga =
+      rose_util::GetASTAttribute<GridGetAttribute>(lhs);
+  if (gga == NULL) return;
+  TranslateGetForUserDefinedType(node, NULL);
+}
+
+void Translator::Visit(SgPntrArrRefExp *node) {
+  // node may be a multi-dimensional array. If so, node has nested
+  // SgPntrArrRefExp.
+  
+  // Process only the top-level array access expression
+  if (isSgPntrArrRefExp(node->get_parent())) return;  
+
+  // Find the base expression for this multi-dimensional array
+  SgExpression *lhs_base = NULL;
+  SgPntrArrRefExp *par = node;
+  while (true) {
+    lhs_base = par->get_lhs_operand();
+    if (isSgPntrArrRefExp(lhs_base)) {
+      par = isSgPntrArrRefExp(lhs_base);
+      continue;
+    } else {
+      break;
+    }
+  }
+  if (isSgDotExp(lhs_base)) {
+    SgDotExp *dot = isSgDotExp(lhs_base);
+    SgExpression *dot_lhs = dot->get_lhs_operand();
+    GridGetAttribute *gga =
+        ru::GetASTAttribute<GridGetAttribute>(dot_lhs);
+    if (gga == NULL) return;
+    TranslateGetForUserDefinedType(dot, node);
+    return;
+  }
+}
+
 void Translator::ProcessUserDefinedPointType() {
   // Visit each of user-defined grid element types
   NodeQuerySynthesizedAttributeType struct_decls =

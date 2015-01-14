@@ -23,6 +23,46 @@ SgExpression *MPICUDARuntimeBuilder::BuildGridBaseAddr(
   return ReferenceRuntimeBuilder::BuildGridBaseAddr(gvref, point_type);
 }
 
+SgExpression *MPICUDARuntimeBuilder::BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,                  
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic) {
+  return cuda_rt_builder_->BuildGridGet(gvref, gva, gt, offset_exprs,
+                                        sil, is_kernel, is_periodic);
+}
+
+SgExpression *MPICUDARuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,
+    GridVarAttribute *gva,                    
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
+    bool is_kernel,
+    bool is_periodic,
+    const string &member_name) {
+  return cuda_rt_builder_->BuildGridGet(gvref, gva, gt, offset_exprs,
+                                        sil, is_kernel, is_periodic, member_name);
+}
+
+SgExpression *MPICUDARuntimeBuilder::BuildGridGet(
+    SgExpression *gvref,
+    GridVarAttribute *gva,      
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
+    bool is_kernel,
+    bool is_periodic,
+    const string &member_name,
+    const SgExpressionVector &array_indices) {
+  return cuda_rt_builder_->BuildGridGet(gvref, gva, gt, offset_exprs,
+                                        sil, is_kernel, is_periodic,
+                                        member_name, array_indices);
+}
+
 SgExpression *MPICUDARuntimeBuilder::BuildGridGetDev(SgExpression *grid_var,
                                                      GridType *gt) {
   SgFunctionSymbol *fs

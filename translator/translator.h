@@ -73,7 +73,9 @@ class Translator: public rose_util::RoseASTTraversal {
       SgClassDeclaration *grid_decl, GridType *gt) {}
   virtual void Visit(SgFunctionCallExp *node);
   virtual void Visit(SgFunctionDeclaration *node);
-
+  virtual void Visit(SgDotExp *node);
+  virtual void Visit(SgPntrArrRefExp *node);
+  
   virtual void TranslateKernelDeclaration(SgFunctionDeclaration *node) {}
   virtual void TranslateInit(SgFunctionCallExp *node) {}
   virtual void TranslateNew(SgFunctionCallExp *node,
@@ -103,6 +105,9 @@ class Translator: public rose_util::RoseASTTraversal {
                                   bool is_periodic) {
     return false;
   }
+  //! Translates GridGet for user-defined types
+  virtual void TranslateGetForUserDefinedType(
+      SgDotExp *node, SgPntrArrRefExp *array_top) {}
   virtual void TranslateEmit(SgFunctionCallExp *node,
                              GridEmitAttribute *attr) {}
   virtual void TranslateSet(SgFunctionCallExp *node,

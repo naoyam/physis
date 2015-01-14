@@ -46,6 +46,34 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
         is_periodic);
   }
 
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic);
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name);
+  virtual SgExpression *BuildGridGet(
+      SgExpression *gvref,
+      GridVarAttribute *gva,            
+      GridType *gt,
+      const SgExpressionPtrList *offset_exprs,
+      const StencilIndexList *sil,
+      bool is_kernel,
+      bool is_periodic,
+      const string &member_name,
+      const SgExpressionVector &array_indices);
+
   virtual SgExprListExp *BuildKernelCallArgList(
       StencilMap *stencil,
       SgExpressionPtrList &index_args,

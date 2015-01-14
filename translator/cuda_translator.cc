@@ -101,58 +101,16 @@ void CUDATranslator::TranslateKernelDeclaration(
   return;
 }
 
-void CUDATranslator::Visit(SgExpression *node) {
-  // Replace get(g, offset).x with g->x[offset]
-  if (isSgDotExp(node)) {
-    SgDotExp *dot = isSgDotExp(node);
-    SgExpression *lhs = dot->get_lhs_operand();
-    GridGetAttribute *gga =
-        rose_util::GetASTAttribute<GridGetAttribute>(lhs);
-    if (gga == NULL) return;
-    TranslateGetForUserDefinedType(dot, NULL);
-  }
-  SgPntrArrRefExp *par = isSgPntrArrRefExp(node);  
-  // Process the top-level array access expression
-  if (par == NULL ||
-      isSgPntrArrRefExp(node->get_parent())) return;  
-
-  SgExpression *lhs = NULL;  
-  while (true) {
-    lhs = par->get_lhs_operand();
-    if (isSgPntrArrRefExp(lhs)) {
-      par = isSgPntrArrRefExp(lhs);
-      continue;
-    } else {
-      break;
-    }
-  }
-  if (isSgDotExp(lhs)) {
-    SgDotExp *dot = isSgDotExp(lhs);
-    SgExpression *dot_lhs = dot->get_lhs_operand();
-    GridGetAttribute *gga =
-        rose_util::GetASTAttribute<GridGetAttribute>(dot_lhs);
-    if (gga == NULL) return;
-    TranslateGetForUserDefinedType(dot, isSgPntrArrRefExp(node));
-    return;
-  }
-  
-  return;
-}
-
 void CUDATranslator::TranslateGetForUserDefinedType(
     SgDotExp *node, SgPntrArrRefExp *array_top) {
-  SgVarRefExp *mem_ref =
+  SgVarRefExp *member_ref =
       isSgVarRefExp(node->get_rhs_operand());
-  PSAssert(mem_ref);
-  if (isSgPntrArrRefExp(node->get_parent()) &&
-      array_top == NULL) {
-    return;
-  }
+  PSAssert(member_ref);
   SgExpression *get_exp = node->get_lhs_operand();
   GridGetAttribute *gga =
       rose_util::GetASTAttribute<GridGetAttribute>(
           get_exp);
-  const string &mem_name = rose_util::GetName(mem_ref);
+  const string &mem_name = ru::GetName(member_ref);
   SgExpressionPtrList indices =
       GridOffsetAnalysis::GetIndices(
           GridGetAnalysis::GetOffset(get_exp));
@@ -167,7 +125,7 @@ void CUDATranslator::TranslateGetForUserDefinedType(
         builder()->BuildGridGet(
             sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
-            rose_util::GetASTAttribute<GridVarAttribute>(gv),
+            ru::GetASTAttribute<GridVarAttribute>(gv),
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
@@ -184,7 +142,7 @@ void CUDATranslator::TranslateGetForUserDefinedType(
         builder()->BuildGridGet(
             sb::buildVarRefExp(gv->get_name(),
                                si::getScope(node)),
-            rose_util::GetASTAttribute<GridVarAttribute>(gv),            
+            ru::GetASTAttribute<GridVarAttribute>(gv),            
             gt, &args,
             gga->GetStencilIndexList(),
             gga->in_kernel(), gga->is_periodic(),
