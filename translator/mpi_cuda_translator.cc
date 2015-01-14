@@ -844,5 +844,15 @@ void MPICUDATranslator::ProcessUserDefinedPointType(
 #endif  
 }
 
+void MPICUDATranslator::TranslateCopyin(SgFunctionCallExp *node,
+                                        GridType *gt) {
+  cuda_trans_->TranslateCopyin(node, gt);
+}
+
+void MPICUDATranslator::TranslateCopyout(SgFunctionCallExp *node,
+                                        GridType *gt) {
+  cuda_trans_->TranslateCopyout(node, gt);
+}
+
 } // namespace translator
 } // namespace physis

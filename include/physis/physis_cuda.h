@@ -142,7 +142,7 @@ extern "C" {
                              __PSGrid_devCopyinFunc func);
   typedef void (*__PSGrid_devCopyoutFunc)(void *g, void *dst);
   extern void __PSGridCopyout(void *p, void *dst_array,
-                             __PSGrid_devCopyoutFunc func);
+                              __PSGrid_devCopyoutFunc func);
   
   /** check CUDA error
    * @param[in] message

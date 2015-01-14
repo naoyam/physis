@@ -336,8 +336,11 @@ SgVariableDeclaration *BuildVariableDeclaration(const string &name,
 
 SgEnumVal* BuildEnumVal(unsigned int value, SgEnumDeclaration* decl);
 
+SgPointerType *VoidPointerType();
+SgPointerType *ConstVoidPointerType();
 void GetArrayDim(SgArrayType *at, vector<size_t> &dims);
 
+SgExpression *BuildOffsetVoidPointer(SgExpression *base, SgExpression *offset);
 
 }  // namespace rose_util
 }  // namespace translator

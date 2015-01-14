@@ -33,7 +33,7 @@ static bool IsOnDeviceGridTypeName(const std::string &tn) {
 namespace physis {
 namespace translator {
 
-static SgExpression *BuildNumElmsExpr(
+SgExpression *CUDARuntimeBuilder::BuildNumElmsExpr(
     SgExpression *dim_expr,
     int num_dims) {
   SgExpression *num_elms_rhs =
@@ -45,7 +45,7 @@ static SgExpression *BuildNumElmsExpr(
   return num_elms_rhs;
 }
 
-static SgVariableDeclaration *BuildNumElmsDecl(
+SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgExpression *dim_expr,
     int num_dims) {
   SgExpression *num_elms_rhs = BuildNumElmsExpr(dim_expr, num_dims);
@@ -56,7 +56,7 @@ static SgVariableDeclaration *BuildNumElmsDecl(
   return num_elms_decl;
 }
 
-static SgVariableDeclaration *BuildNumElmsDecl(
+SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgVarRefExp *p_exp,
     SgClassDeclaration *type_decl,
     int num_dims) {
@@ -67,7 +67,7 @@ static SgVariableDeclaration *BuildNumElmsDecl(
   return BuildNumElmsDecl(dim_expr, num_dims);
 }
 
-static SgVariableDeclaration *BuildNumElmsDecl(
+SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgVariableDeclaration *p_decl,
     SgClassDeclaration *type_decl,
     int num_dims) {
@@ -631,7 +631,7 @@ void AppendCUDAFreeHost(SgBasicBlock *body,
   }
 }
 
-void AppendArrayTranspose(
+void CUDARuntimeBuilder::BuildUserTypeArrayTranspose(
     SgBasicBlock *loop_body,
     SgExpression *soa_exp,
     SgExpression *aos_exp,
@@ -662,13 +662,14 @@ void AppendArrayTranspose(
   si::deleteAST(soa_exp);
 }
 
-void AppendTranspose(SgBasicBlock *scope,
-                     SgClassDefinition *user_type_def,
-                     SgVariableDeclaration *soa_decl,
-                     SgVariableDeclaration *aos_decl,
-                     bool soa_to_aos,
-                     SgInitializedName *loop_counter,
-                     SgVariableDeclaration *num_elms_decl) {
+void CUDARuntimeBuilder::BuildUserTypeTranspose(
+    SgBasicBlock *scope,
+    SgClassDefinition *user_type_def,
+    SgVariableDeclaration *soa_decl,
+    SgVariableDeclaration *aos_decl,
+    bool soa_to_aos,
+    SgInitializedName *loop_counter,
+    SgVariableDeclaration *num_elms_decl) {
   const SgDeclarationStatementPtrList &members =
       user_type_def->get_members();
   ENUMERATE (i, member, members.begin(), members.end()) {
@@ -684,9 +685,9 @@ void AppendTranspose(SgBasicBlock *scope,
         ArrayRef(Var(aos_decl), Var(loop_counter)),
         Var(member_name));
     if (isSgArrayType(member_type)) {
-      AppendArrayTranspose(scope, soa_elm,  aos_elm,
-                           soa_to_aos, loop_counter,
-                           num_elms_decl, isSgArrayType(member_type));
+      BuildUserTypeArrayTranspose(scope, soa_elm,  aos_elm,
+                                  soa_to_aos, loop_counter,
+                                  num_elms_decl, isSgArrayType(member_type));
     } else {
       soa_elm = ArrayRef(soa_elm, Var(loop_counter));
       si::appendStatement(
@@ -696,6 +697,29 @@ void AppendTranspose(SgBasicBlock *scope,
           scope);
     }
   }
+}
+
+SgFunctionParameterList *CUDARuntimeBuilder::BuildGridCopyFuncSigForUserType(
+    bool is_copyout, SgInitializedNamePtrList &params) {
+  // Build a parameter list
+  SgFunctionParameterList *pl = sb::buildFunctionParameterList();
+  // void *v
+  SgInitializedName *v_p =
+      sb::buildInitializedName(
+          "v", sb::buildPointerType(sb::buildVoidType()));
+  si::appendArg(pl, v_p);
+  // const void *src or void *dst
+  SgType *host_param_type = 
+      sb::buildPointerType(
+          is_copyout ? (SgType*)sb::buildVoidType() :
+          (SgType*)sb::buildConstType(sb::buildVoidType()));
+  string host_name = is_copyout ? "dst" : "src";  
+  SgInitializedName *host_param =
+      sb::buildInitializedName(host_name, host_param_type);
+  si::appendArg(pl, host_param);
+  params.push_back(v_p);
+  params.push_back(host_param);
+  return pl;
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
@@ -745,22 +769,10 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       (SgClassDeclaration*)gt->aux_decl();
   string host_name = is_copyout ? "dst" : "src";
   
-  // Build a parameter list
-  SgFunctionParameterList *pl = sb::buildFunctionParameterList();
-  // void *v
-  SgInitializedName *v_p =
-      sb::buildInitializedName(
-          "v", sb::buildPointerType(sb::buildVoidType()));
-  si::appendArg(pl, v_p);
-  // const void *src or void *dst
-  SgType *host_param_type = 
-      sb::buildPointerType(
-          is_copyout ? (SgType*)sb::buildVoidType() :
-          (SgType*)sb::buildConstType(sb::buildVoidType()));
-  SgInitializedName *host_param =
-      sb::buildInitializedName(host_name, host_param_type);
-  si::appendArg(pl, host_param);
-
+  SgInitializedNamePtrList params;
+  SgFunctionParameterList *pl =
+      BuildGridCopyFuncSigForUserType(is_copyout, params);
+  
   // Function body
   SgBasicBlock *body = sb::buildBasicBlock();
   
@@ -768,7 +780,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           "p", dev_ptr_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(v_p), dev_ptr_type)));
+              sb::buildCastExp(Var(params[0]), dev_ptr_type)));
   si::appendStatement(p_decl, body);
   //Type *dstp = (Type *)dst;
   SgType *hostp_type =
@@ -779,7 +791,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           host_name + "p", hostp_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(host_param), hostp_type)));
+              sb::buildCastExp(Var(params[1]), hostp_type)));
   si::appendStatement(hostp_decl, body);
   // void *tbuf[3];
   SgVariableDeclaration *tbuf_decl =
@@ -817,8 +829,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
                             incr, loop_body);
   si::appendStatement(trans_loop, body);
 
-  AppendTranspose(loop_body, gt->point_def(), tbuf_decl, hostp_decl,
-                  is_copyout, init->get_variables()[0], num_elms_decl);
+  BuildUserTypeTranspose(loop_body, gt->point_def(), tbuf_decl, hostp_decl,
+                         is_copyout, init->get_variables()[0], num_elms_decl);
 
   if (!is_copyout) {
     AppendCUDAMemcpy(
@@ -833,16 +845,6 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   ru::ReplaceFuncBody(fdecl, body);
   si::setStatic(fdecl);    
   return fdecl;
-}
-
-SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyinFuncForUserType(
-    const GridType *gt) {
-  return BuildGridCopyFuncForUserType(gt, false);
-}
-
-SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyoutFuncForUserType(
-    const GridType *gt) {
-  return BuildGridCopyFuncForUserType(gt, true);
 }
 
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
@@ -885,7 +887,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
     SgType *member_type = ru::GetType(member_decl);
     string member_name = ru::GetName(member_decl);
     if (isSgArrayType(member_type)) {
-      AppendArrayTranspose(
+      BuildUserTypeArrayTranspose(
           body, Arrow(Var(g_p), Var(member_name)),
           Dot(Var(v_decl), Var(member_name)),
           true, offset_p,
@@ -960,7 +962,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
     SgType *member_type = ru::GetType(member_decl);
     string member_name = ru::GetName(member_decl);
     if (isSgArrayType(member_type)) {
-      AppendArrayTranspose(body, Arrow(Var(g_p), Var(member_name)),
+      BuildUserTypeArrayTranspose(body, Arrow(Var(g_p), Var(member_name)),
                            Dot(Var(v_p), Var(member_name)),
                            false, offset_p,
                            num_elms_decl, isSgArrayType(member_type));

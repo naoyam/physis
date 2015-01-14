@@ -143,14 +143,11 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       const GridType *gt) {
     return cuda_rt_builder_->BuildGridFreeFuncForUserType(gt);
   }
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt) {
-    return cuda_rt_builder_->BuildGridCopyinFuncForUserType(gt);
-  }
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt) {
-    return cuda_rt_builder_->BuildGridCopyoutFuncForUserType(gt);
-  }
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
+      const GridType *gt, bool is_copyout);
+  virtual SgFunctionParameterList *BuildGridCopyFuncSigForUserType(
+      bool is_copyout, SgInitializedNamePtrList &params);
+  
   virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
       const GridType *gt) {
     return cuda_rt_builder_->BuildGridGetFuncForUserType(gt);

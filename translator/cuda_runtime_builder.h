@@ -77,14 +77,32 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       const GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt);
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt);
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
+      const GridType *gt, bool is_copyout);
+  virtual SgFunctionParameterList *BuildGridCopyFuncSigForUserType(
+      bool is_copyout, SgInitializedNamePtrList &params);
   virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(
       const GridType *gt);
+
+  virtual void BuildUserTypeTranspose(
+      SgBasicBlock *scope,
+      SgClassDefinition *user_type_def,
+      SgVariableDeclaration *soa_decl,
+      SgVariableDeclaration *aos_decl,
+      bool soa_to_aos,
+      SgInitializedName *loop_counter,
+      SgVariableDeclaration *num_elms_decl);
+  virtual void BuildUserTypeArrayTranspose(
+    SgBasicBlock *loop_body,
+    SgExpression *soa_exp,
+    SgExpression *aos_exp,
+    bool soa_to_aos,
+    SgInitializedName *loop_counter,
+    SgVariableDeclaration *num_elms_decl,
+    SgArrayType *member_type);
+
 
   virtual SgExprListExp *BuildKernelCallArgList(
       StencilMap *stencil,
@@ -196,6 +214,22 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   virtual void AddDynamicParameter(SgFunctionParameterList *parlist);
   virtual void AddDynamicArgument(SgExprListExp *args, SgExpression *a_exp);
   virtual void AddSyncAfterDlclose(SgScopeStatement *scope);
+
+  // Helper functions for user-type function generations
+  virtual SgExpression *BuildNumElmsExpr(
+    SgExpression *dim_expr,
+    int num_dims);
+  virtual SgVariableDeclaration *BuildNumElmsDecl(
+      SgExpression *dim_expr,
+      int num_dims);
+  virtual SgVariableDeclaration *BuildNumElmsDecl(
+      SgVarRefExp *p_exp,
+      SgClassDeclaration *type_decl,
+      int num_dims);
+  virtual SgVariableDeclaration *BuildNumElmsDecl(
+      SgVariableDeclaration *p_decl,
+      SgClassDeclaration *type_decl,
+      int num_dims);
   
   
  protected:
@@ -207,9 +241,6 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   /** hold __cuda_block_size_struct type */
   SgType *cuda_block_size_type_;
 
-  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
-      const GridType *gt, bool is_copyout);
-  
   CUDABuilderInterface *CUDABuilder() {
     CUDABuilderInterface *x =
         dynamic_cast<CUDABuilderInterface*>(delegator_);

@@ -295,14 +295,14 @@ void CUDATranslator::ProcessUserDefinedPointType(
 
   // Build GridCopyin for this type
   SgFunctionDeclaration *copyin_decl =
-      builder()->BuildGridCopyinFuncForUserType(gt);
+      builder()->BuildGridCopyFuncForUserType(gt, false);
   LOG_DEBUG() << "Inserting copyin function for user type\n";
   si::insertStatementAfter(free_decl, copyin_decl);
   gt->aux_copyin_decl() = copyin_decl;
 
   // Build GridCopyout for this type
   SgFunctionDeclaration *copyout_decl =
-      builder()->BuildGridCopyoutFuncForUserType(gt);
+      builder()->BuildGridCopyFuncForUserType(gt, true);
   LOG_DEBUG() << "Inserting copyout function for user type\n";  
   si::insertStatementAfter(copyin_decl, copyout_decl);
   gt->aux_copyout_decl() = copyout_decl;

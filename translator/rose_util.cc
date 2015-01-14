@@ -608,6 +608,21 @@ void GetArrayDim(SgArrayType *at, vector<size_t> &dims) {
     GetArrayDim(isSgArrayType(at->get_base_type()), dims);
 }
 
+SgPointerType *VoidPointerType() {
+  return sb::buildPointerType(sb::buildVoidType());
+}
+
+SgPointerType *ConstVoidPointerType() {
+  return sb::buildPointerType(sb::buildConstType(sb::buildVoidType()));
+}
+
+SgExpression *BuildOffsetVoidPointer(SgExpression *base, SgExpression *offset) {
+  return sb::buildCastExp(
+      Add(sb::buildCastExp(base, sb::buildPointerType(sb::buildCharType())),
+          offset),
+      VoidPointerType());
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

@@ -337,15 +337,29 @@ extern "C" {
     master->GridDelete((GridType*)p);
   }
 
-  // same as mpi_runtime.cc  
-  void PSGridCopyin(void *g, const void *buf) {
-    master->GridCopyin((GridType*)g, buf);
+  void __PSGridCopyin(void *g, const void *buf,
+                      __PSGrid_devCopyinFunc func) {
+    if (func) {
+      void *packing_buf = func(g, buf);
+      master->GridCopyin((GridType*)g, packing_buf);
+      free(packing_buf);
+    } else {
+      master->GridCopyin((GridType*)g, buf);
+    }
     return;
   }
 
-  // same as mpi_runtime.cc  
-  void PSGridCopyout(void *g, void *buf) {
-    master->GridCopyout((GridType*)g, buf);;
+  void __PSGridCopyout(void *g, void *buf,
+                     __PSGrid_devCopyoutFunc func) {
+    if (func) {
+      void *packing_buf = malloc(
+          ((GridType*)g)->elm_size() *
+          ((GridType*)g)->num_elms());
+      master->GridCopyout((GridType*)g, packing_buf);
+      func(g, buf, packing_buf);
+    } else {
+      master->GridCopyout((GridType*)g, buf);
+    }
     return;
   }
 

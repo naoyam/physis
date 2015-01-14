@@ -195,12 +195,8 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
       const GridType *gt) {
     return NULL;
   }
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt) {
-    return NULL;
-  }
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt) {
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
+      const GridType *gt, bool is_copyout) {
     return NULL;
   }
   virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(

@@ -321,10 +321,8 @@ class BuilderInterface {
       const GridType *gt) = 0;
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridCopyinFuncForUserType(
-      const GridType *gt) = 0;
-  virtual SgFunctionDeclaration *BuildGridCopyoutFuncForUserType(
-      const GridType *gt) = 0;
+  virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(
+      const GridType *gt, bool is_copyout) = 0;
   virtual SgFunctionDeclaration *BuildGridGetFuncForUserType(
       const GridType *gt) = 0;
   virtual SgFunctionDeclaration *BuildGridEmitFuncForUserType(

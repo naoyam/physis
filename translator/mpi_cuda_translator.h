@@ -123,6 +123,12 @@ class MPICUDATranslator: public MPITranslator {
 
   virtual void ProcessUserDefinedPointType(
       SgClassDeclaration *grid_decl, GridType *gt);
+
+  virtual void TranslateCopyin(SgFunctionCallExp *node,
+                               GridType *gt);
+  virtual void TranslateCopyout(SgFunctionCallExp *node,
+                                GridType *gt);
+  
   
 };
 
