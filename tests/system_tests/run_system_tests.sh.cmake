@@ -135,7 +135,10 @@ function print_results()
 	msg+="\n"
 	if [ "x" != "x$FAILED_TESTS" ]; then
 		msg+="\n!!! $(echo "$FAILED_TESTS" | wc -w) failure(s)!!!"
-		msg+="\nFailed tests: $FAILED_TESTS"
+		msg+="\nFailed tests:\n"
+		for t in $FAILED_TESTS; do
+			msg+="\t$t\n"
+		done
 	elif [ $NUM_SKIP_TRANS -gt 0 -o $NUM_SKIP_COMPILE -gt 0 \
 							  -o $NUM_SKIP_EXECUTE -gt 0 ]; then
 		msg+="\nCompleted successfully with some tests skipped."
