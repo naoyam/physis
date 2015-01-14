@@ -1,7 +1,7 @@
 /*
- * TEST: Run stencil on a user-defined type
+ * TEST: Copy within an array member
  * DIM: 3
- * PRIORITY: 1
+ * PRIORITY: 10
  */
 
 #include <stdio.h>
