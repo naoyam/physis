@@ -340,7 +340,7 @@ extern "C" {
   void __PSGridCopyin(void *g, const void *buf,
                       __PSGrid_devCopyinFunc func) {
     if (func) {
-      void *packing_buf = func(g, buf);
+      void *packing_buf = func(buf, ((GridType*)g)->num_elms());
       master->GridCopyin((GridType*)g, packing_buf);
       free(packing_buf);
     } else {
@@ -356,7 +356,7 @@ extern "C" {
           ((GridType*)g)->elm_size() *
           ((GridType*)g)->num_elms());
       master->GridCopyout((GridType*)g, packing_buf);
-      func(g, buf, packing_buf);
+      func(buf, packing_buf, ((GridType*)g)->num_elms());
     } else {
       master->GridCopyout((GridType*)g, buf);
     }

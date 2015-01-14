@@ -342,6 +342,9 @@ void GetArrayDim(SgArrayType *at, vector<size_t> &dims);
 
 SgExpression *BuildOffsetVoidPointer(SgExpression *base, SgExpression *offset);
 
+// ROSE SageBuilder does not have a function to build a size_t type
+SgType *SizeType();
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

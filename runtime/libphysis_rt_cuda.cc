@@ -114,7 +114,7 @@ extern "C" {
                       __PSGrid_devCopyinFunc func) {
     __PSGrid *g = (__PSGrid *)p;
     if (func) {
-      func(g->dev, src_array);
+      func(g->dev, src_array, g->num_elms);
     } else {
       CUDA_SAFE_CALL(cudaMemcpy(
           g->p, src_array, g->num_elms*g->elm_size,
@@ -126,7 +126,7 @@ extern "C" {
                        __PSGrid_devCopyoutFunc func) {
     __PSGrid *g = (__PSGrid *)p;
     if (func) {
-      func(g->dev, dst_array);
+      func(g->dev, dst_array, g->num_elms);
     } else {
       CUDA_SAFE_CALL(cudaMemcpy(
               dst_array, g->p,

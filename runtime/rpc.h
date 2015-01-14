@@ -349,7 +349,6 @@ void Master<GridSpaceType>::GridCopyinLocal(typename GridSpaceType::GridType *g,
 template <class GridSpaceType>
 void Master<GridSpaceType>::GridCopyin(typename GridSpaceType::GridType *g, const void *buf) {
   LOG_DEBUG() << "[" << rank() << "] Copyin\n";
-  fprintf(stderr, "PID: %d\n", getpid());
   // copyin to own buffer
   GridCopyinLocal(g, buf);
 
@@ -371,13 +370,14 @@ void Master<GridSpaceType>::GridCopyin(typename GridSpaceType::GridType *g, cons
     void *send_buf_p = send_buf.Get();
     for (int j = 0; j < g->num_members(); ++j) {
       LOG_DEBUG() << "Copy member " << j << " for process "  << i << "\n";
-      CopyoutSubgrid(g->elm_size(j), g->num_dims(), buf,
+      CopyoutSubgrid(g->elm_size(j), g->num_dims(), buf_p,
                      g->size(), send_buf_p,
                      subgrid_offset, subgrid_size);
-      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(i));
+      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(j));
       send_buf_p = (void *)((intptr_t)send_buf_p +
-                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(i));      
+                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(j));      
     }
+    LOG_DEBUG() << "Send packed subgrid to process " << i << "\n";
     ipc_->Send(send_buf.Get(), gsize, i);
   }
   return;
@@ -471,12 +471,12 @@ void Master<GridSpaceType>::GridCopyout(typename GridSpaceType::GridType *g, voi
     void *recv_buf_p = recv_buf.Get();
     void *buf_p = buf;
     for (int j = 0; j < g->num_members(); ++j) {
-      CopyinSubgrid(g->elm_size(j), g->num_dims(), buf,
+      CopyinSubgrid(g->elm_size(j), g->num_dims(), buf_p,
                     g->size(), recv_buf_p, subgrid_offset,
                     subgrid_size);
-      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(i));
+      buf_p = (void *)((intptr_t)buf_p + g->num_elms() * g->elm_size(j));
       recv_buf_p = (void *)((intptr_t)recv_buf_p +
-                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(i));
+                            subgrid_size.accumulate(g->num_dims()) * g->elm_size(j));
     }
   }
 }

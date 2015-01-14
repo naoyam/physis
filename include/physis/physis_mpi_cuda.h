@@ -418,11 +418,11 @@ extern "C" {
       const PSVectorInt stencil_offset_max,
       const int *stencil_offset_min_member,
       const int *stencil_offset_max_member);
-  typedef void *(*__PSGrid_devCopyinFunc)(void *g, const void *src);
+  typedef void *(*__PSGrid_devCopyinFunc)(const void *src, size_t num_elms);
   extern void __PSGridCopyin(void *p, const void *src_array,
                              __PSGrid_devCopyinFunc func);
-  typedef void (*__PSGrid_devCopyoutFunc)(void *g, void *dst,
-                                          const void *pack);
+  typedef void (*__PSGrid_devCopyoutFunc)(void *dst, const void *pack,
+                                          size_t num_elms);
   extern void __PSGridCopyout(void *p, void *dst_array,
                               __PSGrid_devCopyoutFunc func);
   extern int __PSGridGetID(__PSGridMPI *g);

@@ -572,9 +572,9 @@ SgClassDeclaration *MPICUDARuntimeBuilder::BuildGridDevTypeForUserType(
 
 void BuildPackingBuffer(SgBasicBlock *body,
                         SgClassDefinition *user_type_def,
-                        SgVariableDeclaration *num_elms_decl,
                         SgVariableDeclaration *buf_decl,
-                        SgInitializedNamePtrList &params,
+                        SgInitializedName *pack_buf,
+                        SgInitializedName *num_elms,
                         bool is_copyout) {
   const SgDeclarationStatementPtrList &members =
       user_type_def->get_members();
@@ -590,11 +590,11 @@ void BuildPackingBuffer(SgBasicBlock *body,
       // is already packing buffer filled with packed data. We just
       // need to transpose the data
       if (is_copyout) {
-        rhs = Var(params[2]);
+        rhs = Var(pack_buf);
       } else {
         SgExpression *size_exp =
             Mul(sb::buildSizeOfOp(user_type_def->get_declaration()->get_type()),
-                Var(num_elms_decl));
+                Var(num_elms));
         rhs = sb::buildFunctionCallExp(
             "malloc", ru::VoidPointerType(),
             sb::buildExprListExp(size_exp));
@@ -602,7 +602,7 @@ void BuildPackingBuffer(SgBasicBlock *body,
     } else {
       SgExpression *size_exp =
           Mul(sb::buildSizeOfOp(si::getArrayElementType(member_type)),
-              Var(num_elms_decl));
+              Var(num_elms));
       if (isSgArrayType(member_type)) {
         size_exp = Mul(size_exp, Int(
             si::getArrayElementCount(isSgArrayType(member_type))));
@@ -623,25 +623,19 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   SgClassType *dev_type = static_cast<SgClassType*>(gt->aux_type());
   string func_name = dev_type->get_name();
   if (is_copyout) func_name += "Copyout"; else func_name += "Copyin";
-  SgType *dev_ptr_type = sb::buildPointerType(dev_type);
   int num_point_elms = gt->point_def()->get_members().size();
-  SgClassDeclaration *type_decl =
-      (SgClassDeclaration*)gt->aux_decl();
   string host_name = is_copyout ? "dst" : "src";
   
   SgInitializedNamePtrList params;
   SgFunctionParameterList *pl =
       BuildGridCopyFuncSigForUserType(is_copyout, params);
+  SgInitializedName *user_ptr = params[0];
+  SgInitializedName *pack_buf = is_copyout ? params[1] : NULL;
+  SgInitializedName *num_elms = params.back();  
   
   // Function body
   SgBasicBlock *body = sb::buildBasicBlock();
   
-  SgVariableDeclaration *p_decl =
-      sb::buildVariableDeclaration(
-          "p", dev_ptr_type,
-          sb::buildAssignInitializer(
-              sb::buildCastExp(Var(params[0]), dev_ptr_type)));
-  si::appendStatement(p_decl, body);
   //Type *dstp = (Type *)dst;
   SgType *hostp_type =
       sb::buildPointerType(
@@ -651,7 +645,7 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           host_name + "p", hostp_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(params[1]), hostp_type)));
+              sb::buildCastExp(Var(user_ptr), hostp_type)));
   si::appendStatement(hostp_decl, body);
   // void *tbuf[3];
   SgVariableDeclaration *tbuf_decl =
@@ -662,13 +656,10 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
               ru::VoidPointerType(),
               Int(num_point_elms)));
   si::appendStatement(tbuf_decl, body);
-  // size_t num_elms = dim[0] * ...;
-  SgVariableDeclaration *num_elms_decl =
-      cuda_rt_builder_->BuildNumElmsDecl(p_decl, type_decl, gt->rank());
-  si::appendStatement(num_elms_decl, body);
+
   // cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);
-  BuildPackingBuffer(body, gt->point_def(), num_elms_decl, tbuf_decl,
-                     params, is_copyout);
+  BuildPackingBuffer(body, gt->point_def(), tbuf_decl,
+                     pack_buf, num_elms, is_copyout);
   
   // for (size_t i = 0; i < num_elms; ++i) {
   SgVariableDeclaration *init =
@@ -678,7 +669,7 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
           sb::buildAssignInitializer(Int(0)));
   SgExpression *cond =
       sb::buildLessThanOp(
-          Var(init), Var(num_elms_decl));
+          Var(init), Var(num_elms));
   SgExpression *incr = sb::buildPlusPlusOp(Var(init));
   SgBasicBlock *loop_body = sb::buildBasicBlock();
   SgForStatement *trans_loop =
@@ -688,7 +679,7 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
 
   cuda_rt_builder_->BuildUserTypeTranspose(
       loop_body, gt->point_def(), tbuf_decl, hostp_decl,
-      is_copyout, init->get_variables()[0], num_elms_decl);
+      is_copyout, init->get_variables()[0], num_elms);
 
   // Return packing buffer if copyin
   if (!is_copyout) {
@@ -711,12 +702,6 @@ SgFunctionParameterList *MPICUDARuntimeBuilder::BuildGridCopyFuncSigForUserType(
     bool is_copyout, SgInitializedNamePtrList &params) {
   // Build a parameter list
   SgFunctionParameterList *pl = sb::buildFunctionParameterList();
-  // void *v
-  SgInitializedName *v_p =
-      sb::buildInitializedName(
-          "v", sb::buildPointerType(sb::buildVoidType()));
-  si::appendArg(pl, v_p);
-  params.push_back(v_p);  
   // const void *src or void *dst
   SgType *host_param_type = 
       sb::buildPointerType(
@@ -736,6 +721,11 @@ SgFunctionParameterList *MPICUDARuntimeBuilder::BuildGridCopyFuncSigForUserType(
     si::appendArg(pl, param);
     params.push_back(param);
   }
+  // size_t num_elms
+  SgInitializedName *num_elms =
+      sb::buildInitializedName("num_elms", ru::SizeType());
+  si::appendArg(pl, num_elms);
+  params.push_back(num_elms);
   return pl;
 }
 

@@ -22,7 +22,9 @@ GridMPICUDAExp::GridMPICUDAExp(
                dev_(NULL) {
   if (empty_) return;
 
-  // Hanlde primitive type as a single-member user-defined type
+  // Overrides the change in the parent GridMPI constructor
+  CopyTypeInfo(type_info_, *type_info); 
+  // Handle primitive type as a single-member user-defined type
   if (type_ != PS_USER) {
     type_info_.num_members = 1;
     type_info_.members = new __PSGridTypeMemberInfo;

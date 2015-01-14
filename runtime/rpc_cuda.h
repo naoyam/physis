@@ -82,11 +82,14 @@ void MasterCUDA<GridSpaceType>::GridCopyinLocal(typename GridSpaceType::GridType
   size_t size = g->GetLocalBufferSize();  
   pinned_buf_->EnsureCapacity(size);
   PSAssert(pinned_buf_->Get());
+  void *bufp = pinned_buf_->Get();
   for (int i = 0; i < g->num_members(); ++i) {
+    LOG_DEBUG() << "CopyinLocal for member " << i << "\n";
     CopyoutSubgrid(g->elm_size(i), g->num_dims(), buf,
-                   g->size(), pinned_buf_->Get(),
+                   g->size(), bufp,
                    g->local_offset(), g->local_size());
     buf = (void*)((intptr_t)buf + g->num_elms() * g->elm_size(i));
+    bufp = (void*)((intptr_t)bufp + g->local_num_elms() * g->elm_size(i));
   }
   LOG_DEBUG() << "Send from pinned buf to device\n";
   // send it out to device memory
@@ -98,11 +101,13 @@ void MasterCUDA<GridSpaceType>::GridCopyoutLocal(typename GridSpaceType::GridTyp
   size_t size = g->GetLocalBufferSize();
   pinned_buf_->EnsureCapacity(size);
   g->Copyout(pinned_buf_->Get());
+  void *bufp = pinned_buf_->Get();
   for (int i = 0; i < g->num_members(); ++i) {
     CopyinSubgrid(g->elm_size(i), g->num_dims(), buf,
-                  g->size(), pinned_buf_->Get(), g->local_offset(),
+                  g->size(), bufp, g->local_offset(),
                   g->local_size());
     buf = (void*)((intptr_t)buf + g->num_elms() * g->elm_size(i));
+    bufp = (void*)((intptr_t)bufp + g->local_num_elms() * g->elm_size(i));    
   }
 }
 
@@ -112,7 +117,8 @@ void ClientCUDA<GridSpaceType>::GridCopyinStage2(typename GridSpaceType::GridTyp
   Buffer *dst_buf = new BufferCUDAHost();
   dst_buf->EnsureCapacity(g->GetLocalBufferSize());
   this->ipc_->Recv(dst_buf->Get(), g->GetLocalBufferSize(),
-                   this->GetMasterRank());  
+                   this->GetMasterRank());
+  LOG_DEBUG() << "dst_buf[0]: " << ((float*)dst_buf->Get())[0] << "\n";
   g->Copyin(dst_buf->Get());
   delete dst_buf;
 }
@@ -122,6 +128,7 @@ void ClientCUDA<GridSpaceType>::GridCopyoutStage2(typename GridSpaceType::GridTy
   Buffer *sbuf = new BufferCUDAHost();
   sbuf->EnsureCapacity(g->GetLocalBufferSize());
   g->Copyout(sbuf->Get());
+  LOG_DEBUG() << "dst_buf[0]: " << ((float*)sbuf->Get())[0] << "\n";
   this->ipc_->Send(sbuf->Get(), g->GetLocalBufferSize(),
                    this->GetMasterRank());
   delete sbuf;

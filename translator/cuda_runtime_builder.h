@@ -93,16 +93,15 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgVariableDeclaration *aos_decl,
       bool soa_to_aos,
       SgInitializedName *loop_counter,
-      SgVariableDeclaration *num_elms_decl);
+      SgInitializedName *num_elms);
   virtual void BuildUserTypeArrayTranspose(
     SgBasicBlock *loop_body,
     SgExpression *soa_exp,
     SgExpression *aos_exp,
     bool soa_to_aos,
     SgInitializedName *loop_counter,
-    SgVariableDeclaration *num_elms_decl,
+    SgInitializedName *num_elms,
     SgArrayType *member_type);
-
 
   virtual SgExprListExp *BuildKernelCallArgList(
       StencilMap *stencil,

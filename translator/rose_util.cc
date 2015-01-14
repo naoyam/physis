@@ -623,6 +623,12 @@ SgExpression *BuildOffsetVoidPointer(SgExpression *base, SgExpression *offset) {
       VoidPointerType());
 }
 
+SgType *SizeType() {
+  SgType *t = si::lookupNamedTypeInParentScopes("size_t");
+  PSAssert(t);
+  return t;
+}
+
 }  // namespace rose_util
 }  // namespace translator
 }  // namespace physis

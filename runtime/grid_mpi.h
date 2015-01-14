@@ -72,7 +72,7 @@ class GridMPI: public Grid {
   char **halo_peer_bw_;
 
   // Make these public for testing
- public:   
+ public:
   //! Allocates buffers, including halo buffers.
   virtual void InitBuffers();
   //! Allocates buffers for halo communications.
@@ -272,6 +272,7 @@ class GridMPI: public Grid {
   size_t GetLocalBufferRealSize(int member_id) const {
     return local_real_size_.accumulate(num_dims_) * elm_size(member_id);
   };
+
 };
 
 } // namespace runtime
