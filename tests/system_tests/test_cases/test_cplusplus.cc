@@ -1,7 +1,7 @@
 /*
  * TEST: C++ test
  * DIM: 3
- * PRIORITY: 1
+ * PRIORITY: 10
  * TARGETS: ref cuda
  */
 
