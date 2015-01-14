@@ -136,30 +136,6 @@ SgExpression *MPIRuntimeBuilder::BuildGridBaseAddr(
   return base_addr;
 }
 
-SgExpression *MPIRuntimeBuilder::BuildGridGet(
-      SgExpression *gvref,
-      GridVarAttribute *gva,                  
-      GridType *gt,
-      const SgExpressionPtrList *offset_exprs,
-      const StencilIndexList *sil,
-      bool is_kernel,
-      bool is_periodic) {
-  
-  SgExpression *offset = BuildGridOffset(
-      gvref, gt->rank(), offset_exprs, sil,
-      is_kernel, is_periodic);
-
-  SgExpression *base_addr = BuildGridBaseAddr(
-      si::copyExpression(gvref), gt->point_type());
-  
-  SgExpression *x = sb::buildPntrArrRefExp(base_addr, offset);
-      
-  GridGetAttribute *gga = new GridGetAttribute(
-      gt, NULL, gva, is_kernel, is_periodic, sil);
-  rose_util::AddASTAttribute<GridGetAttribute>(x, gga);
-  return x;
-}
-
 void MPIRuntimeBuilder::BuildRunFuncBody(
     Run *run, SgFunctionDeclaration *run_func) {
   SgBasicBlock *block = run_func->get_definition()->get_body();  

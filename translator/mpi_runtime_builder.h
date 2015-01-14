@@ -37,15 +37,6 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   virtual SgExpression *BuildGridBaseAddr(
       SgExpression *gvref, SgType *point_type);
 
-  virtual SgExpression *BuildGridGet(
-      SgExpression *gvref,
-      GridVarAttribute *gva,                  
-      GridType *gt,
-      const SgExpressionPtrList *offset_exprs,
-      const StencilIndexList *sil,
-      bool is_kernel,
-      bool is_periodic);
-
   virtual SgFunctionParameterList *BuildRunFuncParameterList(Run *run);
   virtual void BuildRunFuncBody(
       Run *run, SgFunctionDeclaration *run_func);
