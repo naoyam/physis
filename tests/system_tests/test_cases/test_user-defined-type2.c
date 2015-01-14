@@ -1,5 +1,5 @@
 /*
- * TEST: Run stencil on a user-defined type
+ * TEST: Copy between user-defined type members
  * DIM: 3
  * PRIORITY: 1
  */
