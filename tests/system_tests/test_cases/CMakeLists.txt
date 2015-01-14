@@ -56,6 +56,8 @@ add_executable(test_user-defined-type-multi-dim-member.manual.ref.exe
   test_user-defined-type-multi-dim-member.manual.ref.c)
 add_executable(test_user-defined-type-7-pt-periodic.manual.ref.exe
   test_user-defined-type-7-pt-periodic.manual.ref.c)
+add_executable(test_user-defined-type-7-pt-periodic-complex.manual.ref.exe
+  test_user-defined-type-7-pt-periodic-complex.manual.ref.c)
 
 if (CUDA_FOUND)
   cuda_add_executable(test_7-pt.manual.cuda.exe test_7-pt.manual.cuda.cu)  
@@ -109,4 +111,6 @@ if (CUDA_FOUND)
     test_user-defined-type-multi-dim-member.manual.cuda.cu)
   cuda_add_executable(test_user-defined-type-7-pt-periodic.manual.cuda.exe
     test_user-defined-type-7-pt-periodic.manual.cuda.cu)
+  cuda_add_executable(test_user-defined-type-7-pt-periodic-complex.manual.cuda.exe
+    test_user-defined-type-7-pt-periodic-complex.manual.cuda.cu)
 endif ()
