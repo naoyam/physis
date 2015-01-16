@@ -367,6 +367,10 @@ class RegisterBlocking {
                          bool is_periodic) {
     SgExpression *grid_ref = sb::buildVarRefExp(
         GridGetAnalysis::GetGridVar(gd.ref_get_));
+    // BuildGridGet requires a pointer to a grid
+    if (!isSgPointerType(grid_ref->get_type())) {
+      grid_ref = sb::buildAddressOfOp(grid_ref);
+    }
     if (gd.IsArrayMemberAcccess()) {
       SgExpressionPtrList array_indices;
       BOOST_FOREACH(int i, gd.indices_) {

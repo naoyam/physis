@@ -683,16 +683,22 @@ SgInitializedName *GridGetAnalysis::GetGridVar(SgExpression *get_exp) {
     if (isSgAddressOfOp(x)) {
       x = isSgAddressOfOp(x)->get_operand();
     }
-    gvref = isSgVarRefExp(x);
+    PSAssert(gvref = isSgVarRefExp(x));
   } else if (isSgFunctionCallExp(get_exp)) {
-    gvref = isSgVarRefExp(isSgFunctionCallExp(get_exp)->
-                          get_args()->get_expressions()[0]);
+    SgExpression *call_first_arg =
+        isSgFunctionCallExp(get_exp)->
+        get_args()->get_expressions()[0];
+    // When a user-defined type is used, this expresson can be
+    // SgAddressOfOp.
+    if (isSgAddressOfOp(call_first_arg)) {
+      call_first_arg = isSgAddressOfOp(call_first_arg)->get_operand();
+    }
+    PSAssert(gvref = isSgVarRefExp(call_first_arg));
   } else {
     LOG_ERROR() << "Unsupported grid get: "
                 << get_exp->unparseToString() << "\n";
     PSAbort(1);
   }
-  PSAssert(gvref);
   return gvref->get_symbol()->get_declaration();
 }
 
