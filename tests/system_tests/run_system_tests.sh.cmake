@@ -908,7 +908,9 @@ function print_usage()
     echo -e "\t-s, --source <source-names>"
     echo -e "\t\tSet the test source files."
 	echo -e "\t--list"
-    echo -e "\t\tList available test source files."
+    echo -e "\t\tList test source files filetered by priority."
+    echo -e "\t--list-all"
+    echo -e "\t\tList all available test source files."
     echo -e "\t--translate"
     echo -e "\t\tTest only translation and its dependent tasks."
     echo -e "\t--compile"
@@ -1322,14 +1324,16 @@ fi
 
     TESTS=$(get_test_cases)
 	
-    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,dimension:,trace,config:,config-all,email:,list,parallel::, -- "$@")
+    TEMP=$(getopt -o ht:s:m:q --long help,clear,targets:,source:,translate,compile,execute,mpirun,machinefile:,proc-dim:,physis-nlp:,quit,with-valgrind:,priority:,dimension:,trace,config:,config-all,email:,list,list-all,parallel::, -- "$@")
 
     if [ $? != 0 ]; then
 		print_error "Error in getopt. Invalid options: $@"
 		print_usage
 		exit_error
     fi
-    
+   
+    list_testcasets="NO"
+
     eval set -- "$TEMP"
     while true; do
 		case "$1" in
@@ -1412,9 +1416,13 @@ fi
 				shift
 				;;
 			--list)
-				list_tests "$TESTS"
-				exit 0
+                list_testcasets="yes"
+                shift
 				;;
+            --list-all) 
+                list_tests "$TESTS"
+                exit 0
+                ;;
 			--parallel)
 				RUN_PARALLEL=1
 				PARALLEL_NP="$2"
@@ -1433,6 +1441,10 @@ fi
     done
 
 	TESTS=$(filter_test_case_by_priority $PRIORITY $TESTS)
+	if [ "$list_testcasets" = "yes" ]; then
+        list_tests "$TESTS"
+        exit 0
+    fi  
     
     if [ "x$TARGETS" = "x" ]; then
 		TARGETS=$DEFAULT_TARGETS
