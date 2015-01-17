@@ -400,7 +400,7 @@ int GridMPICUDAExp::Reduce(PSReduceOp op, void *out) {
 void GridMPICUDAExp::Copyout(void *dst) {
   for (int i = 0; i < num_members(); ++i) {
     Copyout(dst, i);
-    dst = (void*)((intptr_t)dst + buffer(i)->size());
+    dst = (void*)((intptr_t)dst + GetLocalBufferSize(i));
   }
   return;
 }
@@ -416,7 +416,7 @@ void GridMPICUDAExp::Copyout(void *dst, int member) {
 void GridMPICUDAExp::Copyin(const void *src) {
   for (int i = 0; i < num_members(); ++i) {
     Copyin(src, i);
-    src = (void*)((intptr_t)src + buffer(i)->size());
+    src = (void*)((intptr_t)src + GetLocalBufferSize(i));
   }
   return;
 }

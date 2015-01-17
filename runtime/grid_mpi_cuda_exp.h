@@ -100,23 +100,26 @@ class GridMPICUDAExp: public GridMPI {
     }
     return n;
   }  
-  size_t GetLocalBufferSize() const {
+  virtual size_t GetLocalBufferSize() const {
     size_t n = 0;
     for (int i = 0; i < num_members(); ++i) {
       n += GridMPI::GetLocalBufferSize(i);
     }
     return n;
   }
-  size_t GetLocalBufferRealSize(int member) const {
-    return local_real_size(member).accumulate(num_dims_) * elm_size(member);
+  size_t GetLocalBufferSize(int member) const {
+    return GridMPI::GetLocalBufferSize(member);
   }
-  size_t GetLocalBufferRealSize() const {
+  virtual size_t GetLocalBufferRealSize() const {
     size_t n = 0;
     for (int i = 0; i < num_members(); ++i) {
       n += GetLocalBufferRealSize(i);
     }
     return n;
-  }  
+  }
+  size_t GetLocalBufferRealSize(int member) const {
+    return local_real_size(member).accumulate(num_dims_) * elm_size(member);
+  }
   IndexArray local_real_offset(int member) const {
     return local_offset_ - halo(member).bw;
   }

@@ -146,7 +146,7 @@ class GridMPI: public Grid {
   const IndexArray& local_real_offset() const { return local_real_offset_; }  
   const IndexArray& local_real_size() const { return local_real_size_; }
   size_t local_num_elms() const {
-    return local_real_size_.accumulate(num_dims_);
+    return local_size_.accumulate(num_dims_);
   }  
   const Width2 &halo() const { return halo_; }
   bool HasHalo() const { return ! (halo_.fw == 0 && halo_.bw == 0); }
@@ -237,7 +237,7 @@ class GridMPI: public Grid {
     
     \return Size in bytes.
   */
-  size_t GetLocalBufferSize() const {
+  virtual size_t GetLocalBufferSize() const {
     return local_size_.accumulate(num_dims_) * elm_size();
   };
   //! Returns the size of the logical buffer area in bytes.
