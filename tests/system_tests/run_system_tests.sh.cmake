@@ -623,7 +623,7 @@ function compile()
 		done
     fi
     local LDFLAGS="-L@CMAKE_BINARY_DIR@/runtime -lm"
-    local NVCC_CFLAGS="-arch sm_20"
+    local NVCC_CFLAGS="-arch sm_20 -G"
     local CUDA_LDFLAGS="-lcudart -L@CUDA_RT_DIR@"
 	local mod_base_file=$(get_module_base $src)
 	local mod_base_obj=$(basename ${mod_base_file%.c}.o)

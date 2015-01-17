@@ -93,6 +93,8 @@ void BufferCUDADev::Copyout(size_t elm_size, int rank,
                             const IndexArray &subgrid_offset,
                             const IndexArray &subgrid_size) {
   LOG_DEBUG() << "BufferCUDADev copyout\n";
+  LOG_DEBUG() << "elm size: " << elm_size << "\n";
+  LOG_DEBUG() << "rank: " << rank << "\n";  
   LOG_DEBUG() << "grid size: " << grid_size << "\n";
   LOG_DEBUG() << "subgrid offset: " << subgrid_offset << "\n";
   LOG_DEBUG() << "subgrid size: " << subgrid_size << "\n";
