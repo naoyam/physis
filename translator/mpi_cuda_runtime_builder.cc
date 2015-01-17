@@ -111,7 +111,7 @@ SgExprListExp *MPICUDARuntimeBuilder::BuildKernelCallArgList(
   SgExprListExp *args = cuda_rt_builder_->BuildKernelCallArgList(
       stencil, index_args, run_kernel_params);
   // remove the last offset args
-  int dim = 3;
+  int dim = stencil->getNumDim();
   int num_offset_args = dim - 1;
   if (num_offset_args > 0) {
     SgExprListExp *new_args = sb::buildExprListExp();
