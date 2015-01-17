@@ -49,12 +49,19 @@ set (MPI_CUDA_COMMON_SRC
   ${MPI_COMMON_SRC}
   ../grid_mpi_cuda_exp.cc)
 if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
-  list(APPEND test_src test_grid_mpi_cuda_exp.cc)
+  list(APPEND test_src
+    test_grid_mpi_cuda_exp.cc
+    test_grid_mpi_cuda_exp_utype.cc)
   cuda_compile(MPI_CUDA_COMMON_CUDA_OBJ ../buffer_cuda.cu)
   add_executable(test_grid_mpi_cuda_exp
     test_grid_mpi_cuda_exp.cc ${MPI_CUDA_COMMON_SRC}
     ${MPI_CUDA_COMMON_CUDA_OBJ})
+  add_executable(test_grid_mpi_cuda_exp_utype
+    test_grid_mpi_cuda_exp_utype.cc ${MPI_CUDA_COMMON_SRC}
+    ${MPI_CUDA_COMMON_CUDA_OBJ})
   target_link_libraries(test_grid_mpi_cuda_exp
+    ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
+  target_link_libraries(test_grid_mpi_cuda_exp_utype
     ${MPI_LIBRARIES} ${CUDA_LIBRARIES})
 endif()
 
