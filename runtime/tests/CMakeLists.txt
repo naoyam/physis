@@ -52,7 +52,9 @@ if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
   list(APPEND test_src
     test_grid_mpi_cuda_exp.cc
     test_grid_mpi_cuda_exp_utype.cc)
-  cuda_compile(MPI_CUDA_COMMON_CUDA_OBJ ../buffer_cuda.cu)
+  cuda_compile(MPI_CUDA_COMMON_CUDA_OBJ
+    ../buffer_cuda.cu
+    ../reduce_grid_mpi_cuda_exp.cu)  
   add_executable(test_grid_mpi_cuda_exp
     test_grid_mpi_cuda_exp.cc ${MPI_CUDA_COMMON_SRC}
     ${MPI_CUDA_COMMON_CUDA_OBJ})

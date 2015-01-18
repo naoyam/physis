@@ -68,6 +68,7 @@ if (CUDA_FOUND AND CUDA_HM_RUNTIME_ENABLED)
 endif()
 
 if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cub-1.3.2)
   cuda_add_library(physis_rt_mpi_cuda ${RUNTIME_COMMON_SRC}
     libphysis_rt_mpi_cuda.cc
     runtime_mpi_cuda.cc
@@ -76,7 +77,7 @@ if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
     grid_util.cc
     proc.cc rpc_cuda.cc 
     ipc_mpi.cc mpi_wrapper.cc
-    buffer_cuda.cu reduce_mpi_cuda.cu)
+    buffer_cuda.cu reduce_grid_mpi_cuda_exp.cu)
   install(TARGETS physis_rt_mpi_cuda DESTINATION lib)
 endif()
 

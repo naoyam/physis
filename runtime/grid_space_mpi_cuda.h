@@ -580,6 +580,12 @@ int GridSpaceMPICUDA<GridType>::ReduceGrid(void *out, PSReduceOp op,
       case PS_DOUBLE:
         *(double*)p = GetReductionDefaultValue<float>(op);
         break;
+      case PS_INT:
+        *(int*)p = GetReductionDefaultValue<int>(op);
+        break;
+      case PS_LONG:
+        *(long*)p = GetReductionDefaultValue<long>(op);
+        break;
       default:
         PSAbort(1);
     }

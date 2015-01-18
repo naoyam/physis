@@ -30,6 +30,8 @@ class Grid {
   virtual std::ostream &Print(std::ostream &os) const;
   int &id() { return id_; }
   PSType type() { return type_; }
+  PSType type(int member_id) {
+    return type_info_.members[member_id].type; }  
   int elm_size() const { return type_info_.size; }
   int elm_size(int member_id) const {
     return type_info_.members[member_id].size;

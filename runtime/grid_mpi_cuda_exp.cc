@@ -4,6 +4,7 @@
 #include "runtime/runtime_common_cuda.h"
 #include "runtime/buffer_cuda.h"
 #include "runtime/grid_util.h"
+#include "runtime/reduce_grid_mpi_cuda_exp.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -390,11 +391,11 @@ void GridMPICUDAExp::CopyinHalo(int dim, const Width2 &width,
   
 }
 
-// TODO (Reduction)
 int GridMPICUDAExp::Reduce(PSReduceOp op, void *out) {
-  LOG_ERROR() << "Not supported\n";
-  PSAbort(1);
-  return 0;
+  // Only supports reduction of the first member
+  int rv = ReduceGridMPICUDAExp(out, type(0), op, buffer(0)->Get(), num_dims_,
+                                local_size(), halo(0));
+  return rv;
 }
 
 void GridMPICUDAExp::Copyout(void *dst) {
