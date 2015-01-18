@@ -51,7 +51,8 @@ void BufferCUDADev::FreeChunk(void *ptr) {
   CUDA_SAFE_CALL(cudaFree(ptr));
 }
 
-__global__ void Pack2D(const int *src, int *dst,
+template <class T>
+__global__ void Pack2D(const T *src, T *dst,
                        PSIndex xdim, PSIndex ydim,
                        PSIndex xoff, PSIndex yoff,
                        PSIndex xextent, PSIndex yextent) {
@@ -61,7 +62,7 @@ __global__ void Pack2D(const int *src, int *dst,
   tid = tid / xextent;
   PSIndex yidx = tid;
   if (yidx < yextent) {
-    dst[dst_idx] = src[(xidx+xoff) + (yidx+yoff) * xdim];
+    dst[dst_idx] = src[xidx+xoff + (yidx+yoff) * xdim];
   }
 }
 
@@ -70,7 +71,22 @@ void BufferCUDADev::Copyout(void *dst, size_t size) {
                             cudaMemcpyDeviceToHost));
 }
 
-__global__ void Pack3D(const int *src, int *dst,
+//! Pack a 3-dimensional sub grid into a linear region
+/*!
+  \param src 3D source grid 
+  \param dst Linear buffer
+  \param xdim X size of the grid
+  \param ydim Y size of the grid
+  \param zdim Z size of the grid
+  \param xoff X offset of the sub grid
+  \param yoff Y offset of the sub grid
+  \param zoff Z offset of the sub grid
+  \param xextent X size of the sub grid
+  \param yextent Y size of the sub grid
+  \param zextent Z size of the sub grid 
+ */
+template <class T>
+__global__ void Pack3D(const T *src, T *dst,
                        PSIndex xdim, PSIndex ydim, PSIndex zdim,
                        PSIndex xoff, PSIndex yoff, PSIndex zoff,
                        PSIndex xextent, PSIndex yextent, PSIndex zextent) {
@@ -133,18 +149,36 @@ void BufferCUDADev::Copyout(size_t elm_size, int rank,
     if (temp_buffer_ == NULL) temp_buffer_ = new BufferCUDADev();
     temp_buffer_->EnsureCapacity(total_size);
 
+    // Assumption in the pacing code
+    PSAssert(elm_size == 4 || elm_size == 8);
     if (rank == 3) {
-      Pack3D<<<nblocks, thread_block_size>>>(
-          (int*)Get(), (int*)(temp_buffer_->Get()),
-          grid_size[0], grid_size[1], grid_size[2],
-          subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
-          subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      if (elm_size == 4) {
+        Pack3D<float><<<nblocks, thread_block_size>>>(
+            (float*)Get(), (float*)(temp_buffer_->Get()),
+            grid_size[0], grid_size[1], grid_size[2],
+            subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
+            subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      } else if (elm_size == 8) {
+        Pack3D<double><<<nblocks, thread_block_size>>>(
+            (double*)Get(), (double*)(temp_buffer_->Get()),
+            grid_size[0], grid_size[1], grid_size[2],
+            subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
+            subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      }
     } else if (rank == 2) {
-      Pack2D<<<nblocks, thread_block_size>>>(
-          (int*)Get(), (int*)(temp_buffer_->Get()),
-          grid_size[0], grid_size[1], 
-          subgrid_offset[0], subgrid_offset[1],
-          subgrid_size[0], subgrid_size[1]);
+      if (elm_size == 4) {
+        Pack2D<float><<<nblocks, thread_block_size>>>(
+            (float*)Get(), (float*)(temp_buffer_->Get()),
+            grid_size[0], grid_size[1], 
+            subgrid_offset[0], subgrid_offset[1],
+            subgrid_size[0], subgrid_size[1]);
+      } else if (elm_size == 8) {
+        Pack2D<double><<<nblocks, thread_block_size>>>(
+            (double*)Get(), (double*)(temp_buffer_->Get()),
+            grid_size[0], grid_size[1], 
+            subgrid_offset[0], subgrid_offset[1],
+            subgrid_size[0], subgrid_size[1]);
+      }        
     } else {
       LOG_ERROR() << "Unsupported\n";
       PSAbort(1);
@@ -162,7 +196,8 @@ void BufferCUDADev::Copyin(const void *src, size_t size) {
                             cudaMemcpyHostToDevice));
 }
 
-__global__ void Unpack2d(const int *src, int *dst,
+template <class T>
+__global__ void Unpack2d(const T *src, T *dst,
                          PSIndex xdim, PSIndex ydim,
                          PSIndex xoff, PSIndex yoff,
                          PSIndex xextent, PSIndex yextent) {
@@ -176,7 +211,8 @@ __global__ void Unpack2d(const int *src, int *dst,
   }
 }
 
-__global__ void Unpack3d(const int *src, int *dst,
+template <class T>
+__global__ void Unpack3d(const T *src, T *dst,
                          PSIndex xdim, PSIndex ydim, PSIndex zdim,
                          PSIndex xoff, PSIndex yoff, PSIndex zoff,
                          PSIndex xextent, PSIndex yextent, PSIndex zextent) {
@@ -237,19 +273,36 @@ void BufferCUDADev::Copyin(size_t elm_size, int rank,
     CUDA_SAFE_CALL(cudaMemcpy(temp_buffer_->Get(), subgrid, 
                               subgrid_size.accumulate(rank) * elm_size,
                               cudaMemcpyHostToDevice));
-    
+
+    PSAssert(elm_size == 4 || elm_size == 8);
     if (rank == 3) {
-      Unpack3d<<<nblocks, thread_block_size>>>(
-          (int*)(temp_buffer_->Get()), (int*)Get(),
-          grid_size[0], grid_size[1], grid_size[2],
-          subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
-          subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      if (elm_size == 4) {
+        Unpack3d<float><<<nblocks, thread_block_size>>>(
+            (float*)(temp_buffer_->Get()), (float*)Get(),
+            grid_size[0], grid_size[1], grid_size[2],
+            subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
+            subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      } else if (elm_size == 8) {
+        Unpack3d<double><<<nblocks, thread_block_size>>>(
+            (double*)(temp_buffer_->Get()), (double*)Get(),
+            grid_size[0], grid_size[1], grid_size[2],
+            subgrid_offset[0], subgrid_offset[1], subgrid_offset[2],
+            subgrid_size[0], subgrid_size[1], subgrid_size[2]);
+      }        
     } else if (rank == 2) {
-      Unpack2d<<<nblocks, thread_block_size>>>(
-          (int*)(temp_buffer_->Get()), (int*)Get(), 
-          grid_size[0], grid_size[1], 
-          subgrid_offset[0], subgrid_offset[1],
-          subgrid_size[0], subgrid_size[1]);
+      if (elm_size == 4) {
+        Unpack2d<float><<<nblocks, thread_block_size>>>(
+            (float*)(temp_buffer_->Get()), (float*)Get(), 
+            grid_size[0], grid_size[1], 
+            subgrid_offset[0], subgrid_offset[1],
+            subgrid_size[0], subgrid_size[1]);
+      } else if (elm_size == 8) {
+        Unpack2d<double><<<nblocks, thread_block_size>>>(
+            (double*)(temp_buffer_->Get()), (double*)Get(), 
+            grid_size[0], grid_size[1], 
+            subgrid_offset[0], subgrid_offset[1],
+            subgrid_size[0], subgrid_size[1]);
+      }
     } else {
       LOG_ERROR() << "Unsupported\n";
       PSAbort(1);
