@@ -7,16 +7,13 @@
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 32
-#define ITER 10
+#define N 8
 #define REAL float
 #define PSGrid3DReal PSGrid3DFloat
 #define PSGrid3DRealNew PSGrid3DFloatNew
 
 static void kernel(const int x, const int y, const int z,
-            PSGrid3DReal g1, PSGrid3DReal g2,
-            REAL ce, REAL cw, REAL cn, REAL cs,
-            REAL ct, REAL cb, REAL cc) {
+                   PSGrid3DReal g1, PSGrid3DReal g2) {
   int nx, ny, nz;
   nx = PSGridDim(g1, 0);
   ny = PSGridDim(g1, 1);
@@ -30,8 +27,7 @@ static void kernel(const int x, const int y, const int z,
   if (y == ny-1) s = PSGridGet(g1, x, y, z); else s = PSGridGet(g1, x, y+1, z);
   if (z == 0)    b = PSGridGet(g1, x, y, z); else b = PSGridGet(g1, x, y, z-1);
   if (z == nz-1) t = PSGridGet(g1, x, y, z); else t = PSGridGet(g1, x, y, z+1);
-  PSGridEmit(g2, cc*c + cw*w + ce*e + cs*s
-             + cn*n + cb*b + ct*t);
+  PSGridEmit(g2, c + w + e + s + n + b + t);
   return;
 }
 
@@ -57,33 +53,9 @@ int main(int argc, char *argv[]) {
   }
   REAL *outdata = (REAL *)malloc(sizeof(REAL) * nelms);
 
-  int nx = N, ny = N, nz = N;
-
-  REAL l = 1.0;
-  REAL kappa = 0.1;
-  REAL dx = l / nx;
-  REAL dy = l / ny;
-  REAL dz = l / nz;
-  //REAL kx, ky, kz;
-  //kx = ky = kz = 2.0 * M_PI;
-  REAL dt = 0.1 * dx * dx / kappa;
-  REAL ce, cw;
-  ce = cw = kappa*dt/(dx*dx);
-  REAL cn, cs;
-  cn = cs = kappa*dt/(dy*dy);
-  REAL ct, cb;
-  ct = cb = kappa*dt/(dz*dz);
-  REAL cc = 1.0 - (ce + cw + cn + cs + ct + cb);
-    
   PSGridCopyin(g1, indata);
-
-  PSStencilRun(PSStencilMap(kernel, d, g1, g2,
-                            ce, cw, cn, cs, ct, cb, cc),
-               PSStencilMap(kernel, d, g2, g1,
-                            ce, cw, cn, cs, ct, cb, cc),               
-               ITER/2);
-  
-  PSGridCopyout(g1, outdata);
+  PSStencilRun(PSStencilMap(kernel, d, g1, g2));
+  PSGridCopyout(g2, outdata);
 
   dump(outdata);  
 

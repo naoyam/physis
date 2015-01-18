@@ -2,16 +2,14 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 
-#define N 32
-#define ITER 10
+#define N 8
+#define ITER 1
 #define REAL float
 
 #define OFFSET(x, y, z) ((x) + (y) * N + (z) * N * N)
 
 __global__ void kernel(REAL *f1, REAL *f2,
-                       int nx, int ny, int nz,
-                       REAL ce, REAL cw, REAL cn, REAL cs,
-                       REAL ct, REAL cb, REAL cc) {
+                       int nx, int ny, int nz) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;  
   int j = blockDim.y * blockIdx.y + threadIdx.y;
   int c = i + j * nx;
@@ -23,8 +21,8 @@ __global__ void kernel(REAL *f1, REAL *f2,
     int s = (j == ny-1)     ? c : c + ny;
     int b = (k == 0)        ? c : c - xy;
     int t = (k == nz-1)     ? c : c + xy;
-    f2[c] = cc * f1[c] + cw * f1[w] + ce * f1[e] + cs * f1[s]
-        + cn * f1[n] + cb * f1[b] + ct * f1[t];
+    f2[c] = f1[c] + f1[w] + f1[e] + f1[s]
+        + f1[n] + f1[b] + f1[t];
     c += xy;
   }
   return;
@@ -51,31 +49,15 @@ int main(int argc, char *argv[]) {
   }
 
   int nx = N, ny = N, nz = N;
-
-  REAL l = 1.0;
-  REAL kappa = 0.1;
-  REAL dx = l / nx;
-  REAL dy = l / ny;
-  REAL dz = l / nz;
-  //REAL kx, ky, kz;
-  //kx = ky = kz = 2.0 * M_PI;
-  REAL dt = 0.1 * dx * dx / kappa;
-  REAL ce, cw;
-  ce = cw = kappa*dt/(dx*dx);
-  REAL cn, cs;
-  cn = cs = kappa*dt/(dy*dy);
-  REAL ct, cb;
-  ct = cb = kappa*dt/(dz*dz);
-  REAL cc = 1.0 - (ce + cw + cn + cs + ct + cb);
     
   cudaMemcpy(g1d, g1, sizeof(REAL) * nelms, cudaMemcpyHostToDevice);
   
-  dim3 block_dim(16, 2);
+  dim3 block_dim(4, 2);
   dim3 grid_dim(nx/block_dim.x, ny/block_dim.y);
 
   for (i = 0; i < ITER; ++i) {
     kernel<<<grid_dim, block_dim>>>(
-        g1d, g2d, nx, ny, nz, ce, cw, cn, cs, ct, cb, cc);
+        g1d, g2d, nx, ny, nz);
     REAL *t = g1d;
     g1d = g2d;
     g2d = t;
