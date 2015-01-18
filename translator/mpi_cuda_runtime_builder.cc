@@ -112,7 +112,7 @@ SgExprListExp *MPICUDARuntimeBuilder::BuildKernelCallArgList(
       stencil, index_args, run_kernel_params);
   // remove the last offset args
   int dim = stencil->getNumDim();
-  int num_offset_args = dim - 1;
+  int num_offset_args = std::min(2, dim);
   if (num_offset_args > 0) {
     SgExprListExp *new_args = sb::buildExprListExp();
     int num_current_args = args->get_expressions().size();
@@ -138,7 +138,8 @@ SgFunctionParameterList *MPICUDARuntimeBuilder::BuildRunKernelFuncParameterList(
   SgFunctionParameterList *params =
       cuda_rt_builder_->BuildRunKernelFuncParameterList(stencil);
   // add offset for process
-  for (int i = 1; i <= stencil->getNumDim()-1; ++i) {
+  int num_offset_args = std::min(2, stencil->getNumDim());
+  for (int i = 1; i <= num_offset_args; ++i) {
     si::appendArg(
         params,
         sb::buildInitializedName(
@@ -207,7 +208,8 @@ void MPICUDARuntimeBuilder::BuildKernelIndices(
     vector<SgVariableDeclaration*> &indices) {
   cuda_rt_builder_->BuildKernelIndices(stencil, call_site, indices);
   int dim = stencil->getNumDim();
-  for (int i = 1; i < dim; ++i) {
+  int num_offset_par = (dim >= 2) ? 2 : 1;
+  for (int i = 1; i <= num_offset_par; ++i) {
     SgVarRefExp *offset_var =
         Var(PS_RUN_KERNEL_PARAM_OFFSET_NAME + toString(i));
     SgAssignInitializer *asn =
@@ -284,7 +286,7 @@ SgExprListExp *MPICUDARuntimeBuilder::BuildCUDAKernelArgList(
   }
 
   // Append the local offset
-  for (int i = 1; i < sm->getNumDim(); ++i) {
+  for (int i = 1; i <= std::min(2, sm->getNumDim()); ++i) {
     if (!is_boundary || (is_boundary && !flag_multistream_boundary_)) {
       si::appendExpression(args, BuildGetLocalOffset(Int(i)));
     }

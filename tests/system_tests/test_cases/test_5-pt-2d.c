@@ -1,37 +1,39 @@
 /*
- * TEST: 3-point stencil with 1-D grids
- * DIM: 1
- * PRIORITY: 1 
+ * TEST: 5-point stencil with 2-D grids
+ * DIM: 2
+ * PRIORITY: 10
  */
 
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 1024
+#define N 32
 
-static void kernel(const int x, PSGrid1DFloat g, PSGrid1DFloat g2) {
+static void kernel(const int x, const int y, PSGrid2DFloat g, PSGrid2DFloat g2) {
   float v =
-      PSGridGet(g,x-1) +
-      PSGridGet(g,x) + 
-      PSGridGet(g,x+1);
+      PSGridGet(g,x, y) + 
+      PSGridGet(g,x-1, y) +
+      PSGridGet(g,x+1, y) +
+      PSGridGet(g,x, y-1) +
+      PSGridGet(g,x, y+1);
   PSGridEmit(g2, v);
   return;
 }
 
 void dump(float *input) {
   int i;
-  for (i = 0; i < N; ++i) {
+  for (i = 0; i < N*N; ++i) {
     printf("%f\n", input[i]);
   }
 }
 
 int main(int argc, char *argv[]) {
-  PSInit(&argc, &argv, 1, N);
-  PSGrid1DFloat g1 = PSGrid1DFloatNew(N);
-  PSGrid1DFloat g2 = PSGrid1DFloatNew(N);
+  PSInit(&argc, &argv, 2, N, N);
+  PSGrid2DFloat g1 = PSGrid2DFloatNew(N, N);
+  PSGrid2DFloat g2 = PSGrid2DFloatNew(N, N);
 
-  PSDomain1D d = PSDomain1DNew(1, N-1);
-  size_t nelms = N;
+  PSDomain2D d = PSDomain2DNew(1, N-1, 1, N-1);
+  size_t nelms = N * N;
   
   float *indata = (float *)malloc(sizeof(float) * nelms);
   int i;
