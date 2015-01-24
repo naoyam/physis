@@ -24,13 +24,13 @@ SgExpression *MPICUDARuntimeBuilder::BuildGridBaseAddr(
 }
 
 SgExpression *MPICUDARuntimeBuilder::BuildGridGet(
-      SgExpression *gvref,
-      GridVarAttribute *gva,                  
-      GridType *gt,
-      const SgExpressionPtrList *offset_exprs,
-      const StencilIndexList *sil,
-      bool is_kernel,
-      bool is_periodic) {
+    SgExpression *gvref,
+    GridVarAttribute *gva,
+    GridType *gt,
+    const SgExpressionPtrList *offset_exprs,
+    const StencilIndexList *sil,
+    bool is_kernel,
+    bool is_periodic) {
   return cuda_rt_builder_->BuildGridGet(gvref, gva, gt, offset_exprs,
                                         sil, is_kernel, is_periodic);
 }
@@ -525,7 +525,7 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   LOG_INFO() << (overlap_enabled ? "Generating overlapping code\n" :
                  "Generating non-overlapping code\n");
 
-    // Build a CUDA block variable declaration
+  // Build a CUDA block variable declaration
   SgVariableDeclaration *block_dim =
       cu::BuildDim3Declaration(
           "block_dim" + toString(stencil_map_index),
@@ -564,7 +564,7 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
     PSAssert(fs);
     SgCudaKernelCallExp *c =
         cu::BuildCudaKernelCallExp(sb::buildFunctionRefExp(fs),
-                                    args, cuda_config);
+                                   args, cuda_config);
     si::appendStatement(sb::buildExprStatement(c), loop_body);
   }
 

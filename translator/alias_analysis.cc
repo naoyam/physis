@@ -13,16 +13,16 @@ namespace translator {
 
 Counter AliasGraphNode::c;
 
-bool AliasVarNode::addAlias(AliasVarNode *alias) {
+bool AliasVarNode::AddAlias(AliasVarNode *alias) {
   return aliases.insert(alias).second;
 }
 
-bool AliasVarNode::addOrigin(AliasGraphNode *origin) {
+bool AliasVarNode::AddOrigin(AliasGraphNode *origin) {
   return origins.insert(origin).second;
 }
 
-std::ostream &AliasVarNode::print(std::ostream &os) const {
-  AliasGraphNode::print(os);
+std::ostream &AliasVarNode::Print(std::ostream &os) const {
+  AliasGraphNode::Print(os);
   StringJoin originStr;
   FOREACH(oit, origins.begin(), origins.end()) {
     originStr << (*oit)->getIndex();
@@ -40,17 +40,17 @@ std::ostream &AliasVarNode::print(std::ostream &os) const {
   return os;
 }
 
-bool AliasGraph::addAlias(AliasVarNode *alias, AliasGraphNode *origin) {
+bool AliasGraph::AddAlias(AliasVarNode *alias, AliasGraphNode *origin) {
   bool changed = false;
-  changed |= alias->addOrigin(origin);
+  changed |= alias->AddOrigin(origin);
   AliasVarNode *v = dynamic_cast<AliasVarNode*>(origin);
   if (v) {
-    changed |= v->addAlias(alias);
+    changed |= v->AddAlias(alias);
   }
   return changed;
 }
 
-AliasVarNode *AliasGraph::findAliasVar(SgInitializedName *var) {
+AliasVarNode *AliasGraph::FindAliasVar(SgInitializedName *var) {
   AliasVarMap::iterator it = vars.find(var);
   if (it == vars.end()) {
     return NULL;
@@ -59,7 +59,7 @@ AliasVarNode *AliasGraph::findAliasVar(SgInitializedName *var) {
   }
 }
 
-AliasVarNode *AliasGraph::createOrFindAliasVar(SgInitializedName *var) {
+AliasVarNode *AliasGraph::CreateOrFindAliasVar(SgInitializedName *var) {
   AliasVarMap::iterator it = vars.find(var);
   AliasVarNode *av;
   if (it == vars.end()) {
@@ -71,10 +71,10 @@ AliasVarNode *AliasGraph::createOrFindAliasVar(SgInitializedName *var) {
   return av;
 }
 
-bool AliasGraph::handleVarDecl(SgInitializedName *in) {
+bool AliasGraph::HandleVarDecl(SgInitializedName *in) {
   bool changed = false;
   SgInitializer *initializer = in->get_initializer();
-  AliasVarNode *av = createOrFindAliasVar(in);
+  AliasVarNode *av = CreateOrFindAliasVar(in);
 
   if (!initializer) {
     LOG_DEBUG() << "No init found: "
@@ -83,10 +83,10 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
                 << "\n";
     if (rose_util::IsFuncParam(in)) {
       LOG_DEBUG() << "Func param\n";
-      changed |= av->addOrigin(AliasFuncParamNode::getInstance());
+      changed |= av->AddOrigin(AliasFuncParamNode::getInstance());
     } else {
       LOG_DEBUG() << "Null init\n";
-      changed |= av->addOrigin(AliasNullInitNode::getInstance());
+      changed |= av->AddOrigin(AliasNullInitNode::getInstance());
     }
     return changed;
   }
@@ -102,14 +102,14 @@ bool AliasGraph::handleVarDecl(SgInitializedName *in) {
 
   if (isSgVarRefExp(rhs)) {
     AliasVarNode *rhsV =
-        createOrFindAliasVar(si::convertRefToInitializedName(isSgVarRefExp(rhs)));
-    return av->addOrigin(rhsV);
+        CreateOrFindAliasVar(si::convertRefToInitializedName(isSgVarRefExp(rhs)));
+    return av->AddOrigin(rhsV);
   } else {
-    return av->addOrigin(AliasUnknownOriginNode::getInstance());
+    return av->AddOrigin(AliasUnknownOriginNode::getInstance());
   }
 }
 
-bool AliasGraph::handleVarAssignment(SgExpression *lhs, SgExpression *rhs) {
+bool AliasGraph::HandleVarAssignment(SgExpression *lhs, SgExpression *rhs) {
   assert(isSgVarRefExp(lhs));
   assert(isSgVarRefExp(rhs));
   SgInitializedName *lhsIn = si::convertRefToInitializedName(isSgVarRefExp(lhs));
@@ -117,12 +117,12 @@ bool AliasGraph::handleVarAssignment(SgExpression *lhs, SgExpression *rhs) {
   SgInitializedName *rhsIn = si::convertRefToInitializedName(isSgVarRefExp(rhs));
   assert(rhsIn);
 
-  return addAlias(createOrFindAliasVar(lhsIn),
-                  createOrFindAliasVar(rhsIn));
+  return AddAlias(CreateOrFindAliasVar(lhsIn),
+                  CreateOrFindAliasVar(rhsIn));
 }
 
 
-void AliasGraph::build(const SgTypePtrList &relevantTypes) {
+void AliasGraph::Build(const SgTypePtrList &relevantTypes) {
   vector<SgInitializedName*> vars =
       si::querySubTree<SgInitializedName>(topLevelNode);
   vector<SgAssignOp*> asns =
@@ -136,7 +136,7 @@ void AliasGraph::build(const SgTypePtrList &relevantTypes) {
       if (std::find(relevantTypes.begin(), relevantTypes.end(),
                     type) == relevantTypes.end())
         continue;
-      changed |= handleVarDecl(in);
+      changed |= HandleVarDecl(in);
     }
 
     BOOST_FOREACH(SgAssignOp *aop, asns) {
@@ -144,14 +144,14 @@ void AliasGraph::build(const SgTypePtrList &relevantTypes) {
       if (std::find(relevantTypes.begin(), relevantTypes.end(),
                     type) == relevantTypes.end())
         continue;
-      changed |= handleVarAssignment(aop->get_lhs_operand(),
+      changed |= HandleVarAssignment(aop->get_lhs_operand(),
                                      aop->get_rhs_operand());
     }
   }
 }
 
 
-bool AliasGraph::hasMultipleOriginVar() const {
+bool AliasGraph::HasMultipleOriginVar() const {
   FOREACH(vit, vars.begin(), vars.end()) {
     AliasVarNode *v = vit->second;
     if (v->getNumOrigins() > 1) return true;
@@ -159,7 +159,7 @@ bool AliasGraph::hasMultipleOriginVar() const {
   return false;
 }
 
-bool AliasGraph::hasNullInitVar() const {
+bool AliasGraph::HasNullInitVar() const {
   FOREACH(vit, vars.begin(), vars.end()) {
     AliasVarNode *v = vit->second;
     FOREACH(oit, v->origins.begin(), v->origins.end()) {
@@ -172,7 +172,7 @@ bool AliasGraph::hasNullInitVar() const {
 }
 
 
-std::ostream &AliasGraph::print(std::ostream &os) const {
+std::ostream &AliasGraph::Print(std::ostream &os) const {
   os << "Alias Graph\n";
   os << *AliasFuncParamNode::getInstance() << "\n";
   os << *AliasUnknownOriginNode::getInstance() << "\n";
@@ -184,7 +184,7 @@ std::ostream &AliasGraph::print(std::ostream &os) const {
   return os;
 }
 
-AliasGraphNode *AliasVarNode::findRoot() {
+AliasGraphNode *AliasVarNode::FindRoot() {
   AliasVarNode *node = this;
   AliasGraphNode *root = NULL;
   while (true) {
@@ -199,8 +199,8 @@ AliasGraphNode *AliasVarNode::findRoot() {
   return root;
 }
 
-SgInitializedName *AliasGraph::findOriginalVar(SgInitializedName *var) {
-  AliasVarNode *vn = findAliasVar(var);
+SgInitializedName *AliasGraph::FindOriginalVar(SgInitializedName *var) {
+  AliasVarNode *vn = FindAliasVar(var);
   assert(vn);
   while (true) {
     assert(vn->origins.size() == 1);

@@ -17,7 +17,8 @@ namespace translator {
 
 static const char *gridIndexNames[3] = {"x", "y", "z"};
 
-typedef map<pair<string, IntVector>, StencilRange> MemberStencilRangeMap;
+typedef pair<string, IntVector> AccessLoc;
+typedef map<AccessLoc, StencilRange> MemberStencilRangeMap;
 
 // Represents a grid type, not a particular grid object.
 // Grid objects are handled by class Grid.
@@ -80,6 +81,8 @@ class GridType: public AstAttribute {
   string getNewName() const {
     return type_name_ + "New";
   }
+
+  int GetMemberIndex(const string &member_name) const;
 
   static string getTypeNameFromFuncName(const string &funcName);
   static unsigned GetRankFromTypeName(const string &tname);
@@ -208,8 +211,6 @@ class Grid {
 
 typedef std::set<Grid*> GridSet;
 
-
-
 class GridVarAttribute: public AstAttribute {
  public:
   static const std::string name;  
@@ -232,7 +233,6 @@ class GridVarAttribute: public AstAttribute {
   GridType *gt_;
   StencilRange sr_;
   MemberStencilRangeMap member_sr_;
-  //ArrayMemberStencilRangeMap array_member_sr_;
 };
 
 class GridOffsetAnalysis {

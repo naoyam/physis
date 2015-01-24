@@ -11,42 +11,42 @@ namespace ru = physis::translator::rose_util;
 namespace physis {
 namespace translator {
 
-SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression *grid_ref,
-                                        SgVariableDeclaration *grid_range,
-                                        SgExpression *reuse) {
+SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression &grid_ref,
+                                        SgVariableDeclaration &grid_range,
+                                        SgExpression &reuse) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSLoadSubgrid");
   SgExprListExp *args = sb::buildExprListExp(
-      grid_ref, sb::buildAddressOfOp(sb::buildVarRefExp(grid_range)),
-      reuse);
+      &grid_ref, sb::buildAddressOfOp(sb::buildVarRefExp(&grid_range)),
+      &reuse);
   SgFunctionCallExp *call = sb::buildFunctionCallExp(fs, args);
   return call;
 }
 
 
-SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression *gref,
+SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression &gref,
                                                  StencilRange &sr,
-                                                 SgExpression *reuse) {
-  SgExprListExp *args = sb::buildExprListExp(gref);
+                                                 SgExpression &reuse) {
+  SgExprListExp *args = sb::buildExprListExp(&gref);
   for (int i = 0; i < sr.num_dims(); ++i) {
     PSAssert(sr.min_indices()[i].size() == 1);
     si::appendExpression(
         args,
-        rose_util::BuildIntLikeVal(sr.min_indices()[i].front().dim));
+        ru::BuildIntLikeVal(sr.min_indices()[i].front().dim));
     si::appendExpression(
         args,
-        rose_util::BuildIntLikeVal(sr.min_indices()[i].front().offset));
+        ru::BuildIntLikeVal(sr.min_indices()[i].front().offset));
   }
   for (int i = 0; i < sr.num_dims(); ++i) {
     PSAssert(sr.max_indices()[i].size() == 1);
     si::appendExpression(
         args,
-        rose_util::BuildIntLikeVal(sr.max_indices()[i].front().dim));
+        ru::BuildIntLikeVal(sr.max_indices()[i].front().dim));
     si::appendExpression(
         args,
-        rose_util::BuildIntLikeVal(sr.max_indices()[i].front().offset));
+        ru::BuildIntLikeVal(sr.max_indices()[i].front().offset));
   }
-  si::appendExpression(args, reuse);
+  si::appendExpression(args, &reuse);
   
   SgFunctionCallExp *call;
   SgFunctionSymbol *fs = NULL;
@@ -62,27 +62,27 @@ SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression *gref,
   return call;
 }
 
-SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
+SgFunctionCallExp *BuildLoadNeighbor(SgExpression &grid_var,
                                      StencilRange &sr,
-                                     SgScopeStatement *scope,
-                                     SgExpression *reuse,
-                                     SgExpression *overlap,
+                                     SgScopeStatement &scope,
+                                     SgExpression &reuse,
+                                     SgExpression &overlap,
                                      bool is_periodic) {
   SgFunctionSymbol *load_neighbor_func
       = si::lookupFunctionSymbolInParentScopes("__PSLoadNeighbor");
   IntVector offset_min, offset_max;
   PSAssert(sr.GetNeighborAccess(offset_min, offset_max));
   SgVariableDeclaration *offset_min_decl =
-      rose_util::DeclarePSVectorInt("offset_min", offset_min, scope);
+      ru::DeclarePSVectorInt("offset_min", offset_min, &scope);
   SgVariableDeclaration *offset_max_decl =
-      rose_util::DeclarePSVectorInt("offset_max", offset_max, scope);
+      ru::DeclarePSVectorInt("offset_max", offset_max, &scope);
   bool diag_needed = sr.IsNeighborAccessDiagonalAccessed();
   SgExprListExp *load_neighbor_args =
-      sb::buildExprListExp(grid_var,
+      sb::buildExprListExp(&grid_var,
                            sb::buildVarRefExp(offset_min_decl),                           
                            sb::buildVarRefExp(offset_max_decl),
                            sb::buildIntVal(diag_needed),
-                           reuse, overlap,
+                           &reuse, &overlap,
                            sb::buildIntVal(is_periodic));
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(load_neighbor_func,
                                                    load_neighbor_args);
@@ -242,8 +242,8 @@ void MPIRuntimeBuilder::BuildFixGridAddresses(StencilMap *smap,
   SgVariableDeclaration *d = isSgVariableDeclaration(*members.begin());
   SgExpression *dom_var =
       BuildStencilFieldRef(sb::buildVarRefExp(stencil_decl),
-                                      sb::buildVarRefExp(d));
-  rose_util::AppendExprStatement(
+                           sb::buildVarRefExp(d));
+  ru::AppendExprStatement(
       scope, BuildDomainSetLocalSize(dom_var));
   
   FOREACH(it, members.begin(), members.end()) {
@@ -269,6 +269,102 @@ void MPIRuntimeBuilder::BuildFixGridAddresses(StencilMap *smap,
   }
 }
 
+void MPIRuntimeBuilder::BuildLoadNeighborStatements(
+    SgExpression &grid_var,
+    StencilRange &sr,
+    SgExpression &reuse,
+    bool is_periodic,
+    SgStatementPtrList &statements,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags) {
+  // Create an inner scope for declaring variables
+  SgBasicBlock *bb = sb::buildBasicBlock();
+  statements.push_back(bb);
+  SgIntVal *overlap_arg = sb::buildIntVal(0);
+  overlap_flags.push_back(overlap_arg);
+  SgFunctionCallExp *load_neighbor_call
+      = BuildLoadNeighbor(grid_var, sr, *bb, reuse, *overlap_arg,
+                          is_periodic);
+  ru::AppendExprStatement(bb, load_neighbor_call);
+  overlap_width = std::max(sr.GetMaxWidth(), overlap_width);
+}
+
+void MPIRuntimeBuilder::BuildLoadSubgridStatements(
+    SgExpression &grid_var,
+    StencilRange &sr,
+    SgExpression &reuse,
+    bool is_periodic,
+    SgStatementPtrList &statements) {
+  // EXPERIMENTAL
+  LOG_WARNING()
+      << "Support of this type of stencils is experimental,\n"
+      << "and may not work as expected. For example,\n"
+      << "periodic access is not supported.\n";
+  PSAssert(!is_periodic);
+  // generate LoadSubgrid call
+  if (sr.IsUniqueDim()) {
+    statements.push_back(
+        sb::buildExprStatement(
+            BuildCallLoadSubgridUniqueDim(grid_var, sr, reuse)));
+  } else {
+    SgBasicBlock *tmp_block = sb::buildBasicBlock();
+    statements.push_back(tmp_block);
+    SgVariableDeclaration *srv = sr.BuildPSGridRange("gr",
+                                                     tmp_block);
+    ru::AppendExprStatement(tmp_block,
+                            BuildCallLoadSubgrid(grid_var, *srv, reuse));
+  }
+}
+
+void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    StencilRange &sr,    
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,    
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags) {
+  string loop_var_name = "i";  
+  Kernel *kernel = ru::GetASTAttribute<Kernel>(smap.getKernel());  
+  if (!kernel->IsGridParamRead(&grid_param)) {
+    LOG_DEBUG() << "Not read in this kernel\n";
+    return;
+  }
+  bool read_only = !kernel->IsGridParamModified(&grid_param);
+  // Read-only grids are loaded just once at the beginning of the
+  // loop
+  SgExpression *reuse = NULL;
+  if (read_only) {
+    reuse = sb::buildGreaterThanOp(sb::buildVarRefExp(loop_var_name),
+                                   sb::buildIntVal(0));
+  } else {
+    reuse = sb::buildIntVal(0);
+  }
+  
+  SgExpression *gvref = BuildStencilFieldRef(
+      sb::buildVarRefExp(&stencil_decl),
+      grid_param.get_name());
+  bool is_periodic = smap.IsGridPeriodic(&grid_param);
+  LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
+  
+  if (sr.IsNeighborAccess() && sr.num_dims() == smap.getNumDim()) {
+    // If both zero, skip
+    if (sr.IsZero()) {
+      LOG_DEBUG() << "Stencil just accesses own buffer; no exchange needed\n";
+      return;
+    }
+    BuildLoadNeighborStatements(*gvref, sr, *reuse, is_periodic,
+                                statements, overlap_width, overlap_flags);
+  } else {
+    BuildLoadSubgridStatements(*gvref, sr, *reuse, is_periodic,
+                               statements);
+    overlap_eligible = false;
+    remote_grids.push_back(&grid_param);
+  }
+}
+
 void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
     StencilMap *smap,
     SgVariableDeclaration *stencil_decl,
@@ -277,87 +373,19 @@ void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
     SgStatementPtrList &statements,
     bool &overlap_eligible,
     int &overlap_width) {
-  string loop_var_name = "i";
   overlap_eligible = true;
   overlap_width = 0;
   vector<SgIntVal*> overlap_flags;
   // Ensure remote grid points available locally
-  FOREACH (ait, smap->grid_params().begin(), smap->grid_params().end()) {
-
-    SgInitializedName *grid_param = *ait;
+  BOOST_FOREACH (SgInitializedName *grid_param, smap->grid_params()) {
     LOG_DEBUG() <<  "grid param: " << grid_param->unparseToString() << "\n";
-    Kernel *kernel = ru::GetASTAttribute<Kernel>(smap->getKernel());
-    LOG_DEBUG() << "kernel: " << kernel->GetName() << "\n";
-    if (!kernel->isGridParamRead(grid_param)) {
-      LOG_DEBUG() << "Not read in this kernel\n";
-      continue;
-    }
-    bool read_only = !kernel->isGridParamWritten(grid_param);
-    // Read-only grids are loaded just once at the beginning of the
-    // loop
-    SgExpression *reuse = NULL;
-    if (read_only) {
-      reuse = sb::buildGreaterThanOp(sb::buildVarRefExp(loop_var_name),
-                                     sb::buildIntVal(0));
-    } else {
-      reuse = sb::buildIntVal(0);
-    }
-
-#if 0    
-    StencilRange &sr = smap->GetStencilRange(grid_param);
-#else
     GridVarAttribute *gva =
-        rose_util::GetASTAttribute<GridVarAttribute>(grid_param);
+        ru::GetASTAttribute<GridVarAttribute>(grid_param);
     StencilRange &sr = gva->sr();
-#endif
     LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
-
-    bool is_periodic = smap->IsGridPeriodic(grid_param);
-    LOG_DEBUG() << "Periodic boundary?: " << is_periodic << "\n";
-
-    SgExpression *gvref = BuildStencilFieldRef(
-        sb::buildVarRefExp(stencil_decl),
-        grid_param->get_name());
-    
-    if (sr.IsNeighborAccess() && sr.num_dims() == smap->getNumDim()) {
-      // If both zero, skip
-      if (sr.IsZero()) {
-        LOG_DEBUG() << "Stencil just accesses own buffer; no exchange needed\n";
-        continue;
-      }
-      // Create an inner scope for declaring variables
-      SgBasicBlock *bb = sb::buildBasicBlock();
-      statements.push_back(bb);
-      SgIntVal *overlap_arg = sb::buildIntVal(0);
-      overlap_flags.push_back(overlap_arg);
-      SgFunctionCallExp *load_neighbor_call
-          = BuildLoadNeighbor(gvref, sr, bb, reuse, overlap_arg,
-                              is_periodic);
-      rose_util::AppendExprStatement(bb, load_neighbor_call);
-      overlap_width = std::max(sr.GetMaxWidth(), overlap_width);
-    } else {
-      // EXPERIMENTAL
-      LOG_WARNING()
-          << "Support of this type of stencils is experimental,\n"
-          << "and may not work as expected. For example,\n"
-          << "periodic access is not supported.\n";
-      PSAssert(!is_periodic);
-      overlap_eligible = false;
-      // generate LoadSubgrid call
-      if (sr.IsUniqueDim()) {
-        statements.push_back(
-            sb::buildExprStatement(
-                BuildCallLoadSubgridUniqueDim(gvref, sr, reuse)));
-      } else {
-        SgBasicBlock *tmp_block = sb::buildBasicBlock();
-        statements.push_back(tmp_block);
-        SgVariableDeclaration *srv = sr.BuildPSGridRange("gr",
-                                                         tmp_block);
-        rose_util::AppendExprStatement(tmp_block,
-                                       BuildCallLoadSubgrid(gvref, srv, reuse));
-      }
-      remote_grids.push_back(grid_param);
-    }
+    BuildLoadRemoteGridRegion(*grid_param, sr, *smap, *stencil_decl,
+                              remote_grids, statements, overlap_eligible,
+                              overlap_width, overlap_flags);
   }
 
   FOREACH (it, overlap_flags.begin(), overlap_flags.end()) {

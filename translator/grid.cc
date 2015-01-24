@@ -311,6 +311,23 @@ SgExpression *GridType::BuildElementTypeExpr() {
   return e;
 }
 
+int GridType::GetMemberIndex(const string &member_name) const {
+  PSAssert(IsUserDefinedPointType());
+  PSAssert(point_def_);
+  int idx = 0;
+  BOOST_FOREACH(SgDeclarationStatement *member, point_def_->get_members()) {
+    SgVariableDeclaration *member_var = isSgVariableDeclaration(member);
+    SgInitializedName *member_in = si::getFirstInitializedName(member_var);
+    LOG_DEBUG() << "Member: " << member_in->unparseToString() << "\n";
+    if (member_in->get_name() == member_name) {
+      return idx;
+    }
+    ++idx;
+  }
+  // Not found; 
+  return -1;
+}
+
 string Grid::toString() const {
   ostringstream ss;
   ss << "Grid object: " << gt->toString()
@@ -384,13 +401,13 @@ void GridVarAttribute::AddStencilIndexList(const StencilIndexList &sil) {
 void GridVarAttribute::AddMemberStencilIndexList(
     const string &member, const IntVector &indices,
     const StencilIndexList &sil) {
-  
-  if (!isContained<pair<string, IntVector>, StencilRange>(
+  if (!isContained<AccessLoc, StencilRange>(
           member_sr_, make_pair(member, indices))) {
     member_sr_.insert(make_pair(make_pair(member, indices),
                                 StencilRange(gt_->rank())));
   }
-  StencilRange &sr = member_sr_.find(make_pair(member, indices))->second;
+  StencilRange &sr = member_sr_.find(
+      make_pair(member, indices))->second;
   sr.insert(sil);
 }
 
@@ -586,7 +603,6 @@ SgInitializedName *GridGetAnalysis::IsGetCall(SgExpression *exp,
   }
   return NULL;
 }
-
 
 SgInitializedName *GridGetAnalysis::IsGetArrayRead(SgExpression *exp) {
   bool is_periodic;

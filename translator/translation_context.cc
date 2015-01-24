@@ -807,7 +807,7 @@ bool TranslationContext::registerInnerKernel(SgFunctionDeclaration *fd,
   LOG_DEBUG() << "Inner kernel: "
               << fd->get_name().getString() << "\n";
   Kernel *k = new Kernel(fd, this, parentKernel);
-  parentKernel->appendChild(call, k);
+  parentKernel->AppendChild(call, k);
   inner_kernels_.insert(std::make_pair(fd, k));
   ru::AddASTAttribute<Kernel>(fd, k);
   return true;

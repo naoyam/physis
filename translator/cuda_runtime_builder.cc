@@ -769,8 +769,6 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
   if (is_copyout) func_name += "Copyout"; else func_name += "Copyin";
   SgType *dev_ptr_type = sb::buildPointerType(dev_type);
   int num_point_elms = gt->point_def()->get_members().size();
-  SgClassDeclaration *type_decl =
-      (SgClassDeclaration*)gt->aux_decl();
   string host_name = is_copyout ? "dst" : "src";
   
   SgInitializedNamePtrList params;

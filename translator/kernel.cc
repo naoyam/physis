@@ -13,7 +13,7 @@ namespace si = SageInterface;
 namespace physis {
 namespace translator {
 
-static void analyzeGridAccess(SgFunctionDeclaration *decl,
+static void AnalyzeGridAccess(SgFunctionDeclaration *decl,
                               TranslationContext &tx,
                               const set<SgInitializedName*> &gvs,
                               GridSet &grid_set,
@@ -22,14 +22,12 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
   BOOST_FOREACH(SgInitializedName *gv, gvs) {
     relevantTypes.push_back(gv->get_type());
     LOG_DEBUG() << "Relevant type: " << gv->get_type()->unparseToString() << "\n";
-    LOG_DEBUG() << "Used grid: "
-                << gv->unparseToString() << "\n";
+    LOG_DEBUG() << "Used grid: " << gv->unparseToString() << "\n";
     const GridSet *gs = tx.findGrid(gv);
     assert(gs);
     FOREACH(it, gs->begin(), gs->end()) {
       if (*it) {
-        LOG_DEBUG() << "gobj: "
-                    << (*it)->toString() << "\n";
+        LOG_DEBUG() << "gobj: " << (*it)->toString() << "\n";
       } else {
         LOG_DEBUG() << "gobj: NULL\n";
       }
@@ -40,46 +38,46 @@ static void analyzeGridAccess(SgFunctionDeclaration *decl,
   LOG_DEBUG() << "Analyzing grid var aliases\n";
   AliasGraph ag(decl, relevantTypes);
   LOG_DEBUG() << ag;
-  if (ag.hasMultipleOriginVar()) {
+  if (ag.HasMultipleOriginVar()) {
     LOG_ERROR() << "Grid variables must not have multiple assignments.\n";
     abort();
   }
-  if (ag.hasNullInitVar()) {
+  if (ag.HasNullInitVar()) {
     LOG_ERROR() << "Grid variables must not have NULL initialization.\n";
     abort();
   }
 
   BOOST_FOREACH(SgInitializedName *gv, gvs) {
-    SgInitializedName* originalVar = ag.findOriginalVar(gv);
+    SgInitializedName* originalVar = ag.FindOriginalVar(gv);
     grid_var_set.insert(originalVar);
   }
 }
 
-void Kernel::analyzeGridWrites(TranslationContext &tx) {
+void Kernel::AnalyzeGridWrites(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
       tx.getGridEmitCalls(decl_->get_definition());
   set<SgInitializedName*> gvs;
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl_, tx, gvs, wGrids_, wGridVars_);
+  AnalyzeGridAccess(decl_, tx, gvs, wGrids_, wGridVars_);
 }
 
-void Kernel::analyzeGridReads(TranslationContext &tx) {
+void Kernel::AnalyzeGridReads(TranslationContext &tx) {
   SgFunctionCallExpPtrList calls =
       tx.getGridGetCalls(decl_->get_definition());
   set<SgInitializedName*> gvs;
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
+  AnalyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
   calls =
       tx.getGridGetPeriodicCalls(decl_->get_definition());
   gvs.clear();
   BOOST_FOREACH (SgFunctionCallExp *fc, calls) {
     gvs.insert(GridType::getGridVarUsedInFuncCall(fc));
   }
-  analyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
+  AnalyzeGridAccess(decl_, tx, gvs, rGrids_, rGridVars_);
 }
 
 static void CollectionReadWriteGrids(SgFunctionDefinition *fdef,
@@ -113,13 +111,13 @@ Kernel::Kernel(SgFunctionDeclaration *decl, TranslationContext *tx,
       isSgFunctionDeclaration(decl->get_definingDeclaration());
   assert(this->decl_);
   if (si::is_C_language() || si::is_Cxx_language()) {
-    analyzeGridWrites(*tx);
-    analyzeGridReads(*tx);
+    AnalyzeGridWrites(*tx);
+    AnalyzeGridReads(*tx);
   } else if (si::is_Fortran_language()) {
     set<SgInitializedName*> rg, wg;
     CollectionReadWriteGrids(decl->get_definition(), rg, wg);
-    analyzeGridAccess(decl, *tx, rg, rGrids_, rGridVars_);
-    analyzeGridAccess(decl, *tx, wg, wGrids_, wGridVars_);    
+    AnalyzeGridAccess(decl, *tx, rg, rGrids_, rGridVars_);
+    AnalyzeGridAccess(decl, *tx, wg, wGrids_, wGridVars_);    
   }  
 }
 
@@ -129,11 +127,11 @@ Kernel::Kernel(const Kernel &k):
     calls_(k.calls_) {
 }
 
-const GridSet& Kernel::getInGrids() const {
+const GridSet& Kernel::GetInGrids() const {
   return rGrids_;
 }
 
-const GridSet& Kernel::getOutGrids() const {
+const GridSet& Kernel::GetOutGrids() const {
   return wGrids_;
 }
 
@@ -167,7 +165,7 @@ bool Kernel::IsGridUnmodified(Grid *g) const {
   return true;
 }
 
-bool Kernel::isGridParamModified(SgInitializedName *v) const {
+bool Kernel::IsGridParamModified(SgInitializedName *v) const {
   return wGridVars_.find(v) != wGridVars_.end();
 }
 
@@ -199,11 +197,11 @@ bool Kernel::IsGridUnread(Grid *g) const {
   return true;
 }
 
-bool Kernel::isGridParamRead(SgInitializedName *v) const {
+bool Kernel::IsGridParamRead(SgInitializedName *v) const {
   return rGridVars_.find(v) != rGridVars_.end();  
 }
 
-void Kernel::appendChild(SgFunctionCallExp *call, Kernel *child) {
+void Kernel::AppendChild(SgFunctionCallExp *call, Kernel *child) {
   assert(calls_.insert(std::make_pair(call, child)).second);
 }
 

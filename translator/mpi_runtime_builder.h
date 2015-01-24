@@ -68,20 +68,46 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
 
  protected:
   bool flag_mpi_overlap_;
+
+  void BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    StencilRange &sr,
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags);
+  void BuildLoadNeighborStatements(
+      SgExpression &grid_var,
+      StencilRange &sr,
+      SgExpression &reuse,
+      bool is_periodic,
+      SgStatementPtrList &statements,
+      int &overlap_width,
+      vector<SgIntVal*> &overlap_flags);
+  void BuildLoadSubgridStatements(
+      SgExpression &grid_var,
+      StencilRange &sr,
+      SgExpression &reuse,
+      bool is_periodic,
+      SgStatementPtrList &statements);
 };
 
-SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression *grid_var,
-                                        SgVariableDeclaration *grid_range,
-                                        SgExpression *reuse);
-SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression *grid_var,
+// REFACTORING: These functions should be moved inside MPIRuntimeBuilder
+SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression &grid_var,
+                                        SgVariableDeclaration &grid_range,
+                                        SgExpression &reuse);
+SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression &grid_var,
                                                  StencilRange &sr,
-                                                 SgExpression *reuse);
+                                                 SgExpression &reuse);
 
-SgFunctionCallExp *BuildLoadNeighbor(SgExpression *grid_var,
+SgFunctionCallExp *BuildLoadNeighbor(SgExpression &grid_var,
                                      StencilRange &sr,
-                                     SgScopeStatement *scope,
-                                     SgExpression *reuse,
-                                     SgExpression *overlap,
+                                     SgScopeStatement &scope,
+                                     SgExpression &reuse,
+                                     SgExpression &overlap,
                                      bool is_periodic);
 SgFunctionCallExp *BuildActivateRemoteGrid(SgExpression *grid_var,
                                            bool active);

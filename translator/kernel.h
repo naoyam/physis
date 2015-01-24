@@ -32,8 +32,8 @@ class Kernel: public AstAttribute {
          Kernel *k = NULL);
   Kernel(const Kernel &k);
   virtual ~Kernel() {}
-  const GridSet& getInGrids() const;
-  const GridSet& getOutGrids() const;
+  const GridSet& GetInGrids() const;
+  const GridSet& GetOutGrids() const;
   // Returns true if grid object g may be read in this
   // kernel.
 #ifdef UNUSED_CODE    
@@ -41,10 +41,9 @@ class Kernel: public AstAttribute {
   bool isReadAny(GridSet *gs) const;
 #endif
   bool IsGridUnread(Grid *g) const;  
-  bool isGridParamRead(SgInitializedName *v) const;
+  bool IsGridParamRead(SgInitializedName *v) const;
   // Returns true if grid object g may be modified in this
   // kernel.
-  // TODO: Deprecated. Use isGridNotModified() instead.
 #ifdef UNUSED_CODE    
   bool isModified(Grid *g) const;
   bool isModifiedAny(GridSet *ngs) const;
@@ -54,31 +53,28 @@ class Kernel: public AstAttribute {
   // TODO (function call from kernel): calls from kernels are not
   // analyzed. Parameters modified in inner kernels are not correctly
   // returned about its accesses. 
-  bool isGridParamModified(SgInitializedName *v) const;
-  bool isGridParamWritten(SgInitializedName *v) const {
-    return isGridParamModified(v);
-  }
+  bool IsGridParamModified(SgInitializedName *v) const;
 
-  SgFunctionDeclaration *getDecl() {
+  SgFunctionDeclaration *GetDecl() {
     return decl_;
   }
 
-  SgInitializedNamePtrList &getArgs() {
+  SgInitializedNamePtrList &GetArgs() {
     return decl_->get_args();
   }
 
-  SgFunctionDefinition *getDef() {
+  SgFunctionDefinition *GetDef() {
     return decl_->get_definition();
   }
-  void appendChild(SgFunctionCallExp *call, Kernel *child);
+  void AppendChild(SgFunctionCallExp *call, Kernel *child);
   std::string GetName() const { return string(decl_->get_name()); }
   static const std::string name;
   Kernel *copy() {
     return new Kernel(*this);
   }
  protected:
-  void analyzeGridWrites(TranslationContext &tx);
-  void analyzeGridReads(TranslationContext &tx);  
+  void AnalyzeGridWrites(TranslationContext &tx);
+  void AnalyzeGridReads(TranslationContext &tx);  
 };
 
 class KernelBody: public AstAttribute {

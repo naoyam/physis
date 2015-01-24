@@ -1,10 +1,4 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_ALIAS_ANALYSIS_H_
 #define PHYSIS_TRANSLATOR_ALIAS_ANALYSIS_H_
@@ -26,7 +20,7 @@ class AliasGraphNode {
  public:
   AliasGraphNode(): index(c.next()) {}
   virtual ~AliasGraphNode() {}
-  virtual std::ostream &print(std::ostream &os) const {
+  virtual std::ostream &Print(std::ostream &os) const {
     return os << "[" << getIndex() << "]";
   }
   int getIndex() const {
@@ -36,7 +30,7 @@ class AliasGraphNode {
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const AliasGraphNode &node) {
-  return node.print(os);
+  return node.Print(os);
 }
 
 
@@ -49,8 +43,8 @@ class AliasVarNode: public AliasGraphNode {
   SgInitializedName *v;
   AliasNodeSet origins;
   AliasVarSet aliases;
-  bool addOrigin(AliasGraphNode *origin);
-  bool addAlias(AliasVarNode *aliasee);
+  bool AddOrigin(AliasGraphNode *origin);
+  bool AddAlias(AliasVarNode *aliasee);
   explicit AliasVarNode(SgInitializedName *v): v(v) {}
   virtual ~AliasVarNode() {}
  public:
@@ -60,13 +54,13 @@ class AliasVarNode: public AliasGraphNode {
   int getNumAliases() const {
     return aliases.size();
   }
-  virtual std::ostream &print(std::ostream &os) const;
-  AliasGraphNode *findRoot();
+  virtual std::ostream &Print(std::ostream &os) const;
+  AliasGraphNode *FindRoot();
 };
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const AliasVarNode &node) {
-  return node.print(os);
+  return node.Print(os);
 }
 
 
@@ -78,15 +72,15 @@ class AliasFuncParamNode: public AliasGraphNode {
     static AliasFuncParamNode *obj = new AliasFuncParamNode();
     return obj;
   }
-  virtual std::ostream &print(std::ostream &os) const {
-    AliasGraphNode::print(os);
+  virtual std::ostream &Print(std::ostream &os) const {
+    AliasGraphNode::Print(os);
     return os << "<FuncParam>";
   }
 };
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const AliasFuncParamNode &node) {
-  return node.print(os);
+  return node.Print(os);
 }
 
 
@@ -98,15 +92,15 @@ class AliasNullInitNode: public AliasGraphNode {
     static AliasNullInitNode *null = new AliasNullInitNode();
     return null;
   }
-  virtual std::ostream &print(std::ostream &os) const {
-    AliasGraphNode::print(os);
+  virtual std::ostream &Print(std::ostream &os) const {
+    AliasGraphNode::Print(os);
     return os << "<NULL>";
   }
 };
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const AliasNullInitNode &node) {
-  return node.print(os);
+  return node.Print(os);
 }
 
 
@@ -119,15 +113,15 @@ class AliasUnknownOriginNode: public AliasGraphNode {
         = new AliasUnknownOriginNode();
     return un;
   }
-  virtual std::ostream &print(std::ostream &os) const {
-    AliasGraphNode::print(os);
+  virtual std::ostream &Print(std::ostream &os) const {
+    AliasGraphNode::Print(os);
     return os << "<UNKNOWN>";
   }
 };
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const AliasUnknownOriginNode &node) {
-  return node.print(os);
+  return node.Print(os);
 }
 
 // Intra-procedural alias analysis
@@ -141,24 +135,24 @@ class AliasGraph {
              const SgTypePtrList &relevantTypes)
       : topLevelNode(topLevelNode) {
     assert(topLevelNode);
-    build(relevantTypes);
+    Build(relevantTypes);
   }
-  bool hasMultipleOriginVar() const;
-  bool hasNullInitVar() const;
-  std::ostream &print(std::ostream &os) const;
-  SgInitializedName *findOriginalVar(SgInitializedName *var);
+  bool HasMultipleOriginVar() const;
+  bool HasNullInitVar() const;
+  std::ostream &Print(std::ostream &os) const;
+  SgInitializedName *FindOriginalVar(SgInitializedName *var);
  protected:
-  AliasVarNode *createOrFindAliasVar(SgInitializedName *var);
-  AliasVarNode *findAliasVar(SgInitializedName *var);
-  void build(const SgTypePtrList &relevantTypes);
-  bool handleVarDecl(SgInitializedName *in);
-  bool handleVarAssignment(SgExpression *lhs,
+  AliasVarNode *CreateOrFindAliasVar(SgInitializedName *var);
+  AliasVarNode *FindAliasVar(SgInitializedName *var);
+  void Build(const SgTypePtrList &relevantTypes);
+  bool HandleVarDecl(SgInitializedName *in);
+  bool HandleVarAssignment(SgExpression *lhs,
                            SgExpression *rhs);
-  bool addAlias(AliasVarNode *alias, AliasGraphNode *origin);
+  bool AddAlias(AliasVarNode *alias, AliasGraphNode *origin);
 };
 
 inline std::ostream &operator<<(std::ostream &os, const AliasGraph &ag) {
-  return ag.print(os);
+  return ag.Print(os);
 }
 
 } // namespace translator
