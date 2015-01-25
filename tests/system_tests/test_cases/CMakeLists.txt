@@ -62,6 +62,8 @@ add_executable(test_user-defined-type-7-pt-periodic.manual.ref.exe
   test_user-defined-type-7-pt-periodic.manual.ref.c)
 add_executable(test_user-defined-type-7-pt-periodic-complex.manual.ref.exe
   test_user-defined-type-7-pt-periodic-complex.manual.ref.c)
+add_executable(test_reduction-3d-sum.manual.ref.exe
+    test_reduction-3d-sum.manual.ref.c)
 add_executable(test_27-pt-reduction.manual.ref.exe
   test_27-pt-reduction.manual.ref.c)
 
@@ -123,6 +125,8 @@ if (CUDA_FOUND)
     test_user-defined-type-7-pt-periodic.manual.cuda.cu)
   cuda_add_executable(test_user-defined-type-7-pt-periodic-complex.manual.cuda.exe
     test_user-defined-type-7-pt-periodic-complex.manual.cuda.cu)
+  cuda_add_executable(test_reduction-3d-sum.manual.cuda.exe
+    test_reduction-3d-sum.manual.cuda.cu)
   cuda_add_executable(test_27-pt-reduction.manual.cuda.exe
     test_27-pt-reduction.manual.cuda.cu)
 endif ()

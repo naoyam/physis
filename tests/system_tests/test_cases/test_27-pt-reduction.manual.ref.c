@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define N 32
-#define REAL float
+#define N 16
+#define REAL int
 
 #define OFFSET(x, y, z) ((x) + (y) * N + (z) * N * N)
 
-void kernel(float *g1, float *g2) {
+void kernel(REAL *g1, REAL *g2) {
   int x, y, z;
   int halo_width = 1;
   for (z = halo_width; z < N-halo_width; ++z) {
     for (y = halo_width; y < N-halo_width; ++y) {
       for (x = halo_width; x < N-halo_width; ++x) {
-        float v =
+        REAL v =
             g1[OFFSET(x, y, z-1)] + g1[OFFSET(x+1, y, z-1)] +
             g1[OFFSET(x-1, y, z-1)] + g1[OFFSET(x, y+1, z-1)] +
             g1[OFFSET(x+1, y+1, z-1)] + g1[OFFSET(x-1, y+1, z-1)] +
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
   kernel(g1, g2);
 
-  printf("%f\n", reduce(g2));
+  printf("%d\n", reduce(g1));
   
   free(g1);
   free(g2);

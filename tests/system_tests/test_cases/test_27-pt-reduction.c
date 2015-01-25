@@ -7,10 +7,14 @@
 #include <stdio.h>
 #include "physis/physis.h"
 
-#define N 32
+#define N 16
 
-void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
-            PSGrid3DFloat g2) {
+#define PSGrid3DReal PSGrid3DInt
+#define PSGrid3DRealNew PSGrid3DIntNew
+#define REAL int
+
+void kernel(const int x, const int y, const int z, PSGrid3DReal g,
+            PSGrid3DReal g2) {
   float v =
       // z == -1
       PSGridGet(g, x, y, z-1) + PSGridGet(g, x+1, y, z-1) +
@@ -38,15 +42,15 @@ void kernel(const int x, const int y, const int z, PSGrid3DFloat g,
 
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 3, N, N, N);
-  PSGrid3DFloat g1 = PSGrid3DFloatNew(N, N, N);
-  PSGrid3DFloat g2 = PSGrid3DFloatNew(N, N, N);
+  PSGrid3DReal g1 = PSGrid3DRealNew(N, N, N);
+  PSGrid3DReal g2 = PSGrid3DRealNew(N, N, N);
 
   PSDomain3D d = PSDomain3DNew(0+halo_width, N-halo_width,
                                0+halo_width, N-halo_width,
                                0+halo_width, N-halo_width);
   size_t nelms = N*N*N;
   
-  float *indata = (float *)malloc(sizeof(float) * nelms);
+  REAL *indata = (REAL *)malloc(sizeof(REAL) * nelms);
   int i;
   for (i = 0; i < nelms; i++) {
     indata[i] = i;
@@ -56,9 +60,9 @@ int main(int argc, char *argv[]) {
   PSGridCopyin(g2, indata);  
 
   PSStencilRun(PSStencilMap(kernel, d, g1, g2));
-  float v;
-  PSReduce(&v, PS_SUM, g2);
-  printf("%f\n", v);
+  REAL v;
+  PSReduce(&v, PS_SUM, g1);
+  printf("%d\n", v);
 
   PSGridFree(g1);
   PSGridFree(g2);
