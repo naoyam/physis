@@ -1,10 +1,5 @@
-// Copyright 2011, Tokyo Institute of Technology.
-// All rights reserved.
-//
-// This file is distributed under the license described in
-// LICENSE.txt.
-//
-// Author: Naoya Maruyama (naoya@matsulab.is.titech.ac.jp)
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_RUNTIME_REDUCE_CUDA_H_
 #define PHYSIS_RUNTIME_REDUCE_CUDA_H_
 #include "runtime/runtime_common.h"
@@ -32,12 +27,12 @@ void ReduceGridCUDA(void *buf, PSReduceOp op,
     *out = *thrust::min_element(dev_ptr, dev_ptr + len);
   } else if (op == PS_SUM) {
     *out = thrust::reduce(dev_ptr, dev_ptr + len,
-                       physis::runtime::GetReductionDefaultValue<T>(op),
-                       thrust::plus<T>());
+                          physis::runtime::GetReductionDefaultValue<T>(op),
+                          thrust::plus<T>());
   } else if (op == PS_PROD) {
     *out = thrust::reduce(dev_ptr, dev_ptr + len,
-                       physis::runtime::GetReductionDefaultValue<T>(op),
-                       thrust::multiplies<T>());
+                          physis::runtime::GetReductionDefaultValue<T>(op),
+                          thrust::multiplies<T>());
   } else {
     PSAbort(1);
   }
