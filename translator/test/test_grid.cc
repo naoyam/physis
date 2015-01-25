@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "rose.h"
 #include <assert.h>
 #include <vector>

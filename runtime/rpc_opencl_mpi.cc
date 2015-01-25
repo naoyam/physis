@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include <runtime/rpc_opencl_mpi.h>
 
 /* C or C++ standard headers */

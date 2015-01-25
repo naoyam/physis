@@ -11,9 +11,10 @@ namespace ru = physis::translator::rose_util;
 namespace physis {
 namespace translator {
 
-SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression &grid_ref,
-                                        SgVariableDeclaration &grid_range,
-                                        SgExpression &reuse) {
+SgFunctionCallExp *MPIRuntimeBuilder::BuildCallLoadSubgrid(
+    SgExpression &grid_ref,
+    SgVariableDeclaration &grid_range,
+    SgExpression &reuse) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSLoadSubgrid");
   SgExprListExp *args = sb::buildExprListExp(
@@ -23,10 +24,10 @@ SgFunctionCallExp *BuildCallLoadSubgrid(SgExpression &grid_ref,
   return call;
 }
 
-
-SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression &gref,
-                                                 StencilRange &sr,
-                                                 SgExpression &reuse) {
+SgFunctionCallExp *MPIRuntimeBuilder::BuildCallLoadSubgridUniqueDim(
+    SgExpression &gref,
+    StencilRange &sr,
+    SgExpression &reuse) {
   SgExprListExp *args = sb::buildExprListExp(&gref);
   for (int i = 0; i < sr.num_dims(); ++i) {
     PSAssert(sr.min_indices()[i].size() == 1);
@@ -62,13 +63,13 @@ SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression &gref,
   return call;
 }
 
-SgFunctionCallExp *BuildLoadNeighbor(SgExpression &grid_var,
-                                     int member_index,
-                                     StencilRange &sr,
-                                     SgScopeStatement &scope,
-                                     SgExpression &reuse,
-                                     SgExpression &overlap,
-                                     bool is_periodic) {
+SgFunctionCallExp *MPIRuntimeBuilder::BuildLoadNeighbor(SgExpression &grid_var,
+                                                        int member_index,
+                                                        StencilRange &sr,
+                                                        SgScopeStatement &scope,
+                                                        SgExpression &reuse,
+                                                        SgExpression &overlap,
+                                                        bool is_periodic) {
   SgExprListExp *load_neighbor_args = sb::buildExprListExp(&grid_var);
   SgFunctionSymbol *load_neighbor_func = NULL;
   // member_index < 0 means loading whole members
@@ -98,8 +99,9 @@ SgFunctionCallExp *BuildLoadNeighbor(SgExpression &grid_var,
   return fc;
 }
 
-SgFunctionCallExp *BuildActivateRemoteGrid(SgExpression *grid_var,
-                                           bool active) {
+SgFunctionCallExp *MPIRuntimeBuilder::BuildActivateRemoteGrid(
+    SgExpression *grid_var,
+    bool active) {
   SgFunctionSymbol *fs
       = si::lookupFunctionSymbolInParentScopes("__PSActivateRemoteGrid");
   SgExprListExp *args =
@@ -432,7 +434,6 @@ SgFunctionParameterList *MPIRuntimeBuilder::BuildRunFuncParameterList(Run *run) 
                 sb::buildInitializedName("stencils", stype));
   return parlist;
 }
-
 
 } // namespace translator
 } // namespace physis

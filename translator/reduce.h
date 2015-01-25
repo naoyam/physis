@@ -1,3 +1,4 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 // Copyright 2011, Tokyo Institute of Technology.
 // All rights reserved.

@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/buffer_opencl.h"
 #include "runtime/rpc_opencl_common.h"
 

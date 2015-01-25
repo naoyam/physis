@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_TRANSLATOR_TEST_COMMON_H_
 #define PHYSIS_TRANSLATOR_TEST_COMMON_H_
 

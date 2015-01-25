@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 /* physis-OpenCL specific */
 #include "runtime/rpc_opencl.h"
 

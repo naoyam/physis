@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/mpi_openmp_runtime.h"
 
 #include <stdarg.h>

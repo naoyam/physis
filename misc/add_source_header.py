@@ -62,11 +62,11 @@ def apply_recursively(top):
     for dirName, subdirList, fileList in os.walk(top):
         print dirName
         if ".git" in dirName or "examples" in dirName \
-           or "gmock" in dirName:
-            print "Ignoring git directory"
+                or "gmock" in dirName:
+            print "Ignoring"
             continue
         for f in fileList:
-            if not f.endswith("cc") or f.endswith(".h"):
+            if not (f.endswith("cc") or f.endswith(".h")):
                 continue
             add_or_replace(os.path.join(dirName, f))
     return

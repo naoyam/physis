@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/grid_mpi_opencl.h"
 #include "runtime/buffer.h"
 #include "runtime/grid_util.h"

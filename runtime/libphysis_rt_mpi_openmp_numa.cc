@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #if ! defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif

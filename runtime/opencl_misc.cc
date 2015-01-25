@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 /* physis-OpenCL specific */
 
 #define BUFSIZE 1024

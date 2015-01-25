@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "translator/mpi_opencl_translator.h"
 #include "translator/translation_context.h"
 #include "translator/translation_util.h"

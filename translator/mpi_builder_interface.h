@@ -13,8 +13,7 @@ class MPIBuilderInterface {
  public:
   virtual ~MPIBuilderInterface() {}
 
-  //! Build a code sequence to load remote region necessary for a
-  //! stencil map.
+  //! Build a code sequence to load remote region necessary for a map
   /*!
     \param smap Load data for this stencil map
     \param stencil_decl Stencil variable declaration
@@ -51,7 +50,6 @@ class MPIBuilderInterface {
                                      SgVariableDeclaration *stencil_decl,
                                      SgScopeStatement *scope) = 0;
 
-  
 };
 
 } // namespace translator

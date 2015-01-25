@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "translator/mpi_openmp_translator.h"
 
 #include "translator/rose_util.h"

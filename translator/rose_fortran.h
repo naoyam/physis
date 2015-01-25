@@ -1,8 +1,4 @@
-// Copyright 2011-2013, RIKEN AICS.
-// All rights reserved.
-//
-// This file is distributed under the BSD license. See LICENSE.txt for
-// details.
+// Licensed under the BSD license. See LICENSE.txt for more details.
 
 #ifndef PHYSIS_TRANSLATOR_ROSE_FORTRAN_H_
 #define PHYSIS_TRANSLATOR_ROSE_FORTRAN_H_

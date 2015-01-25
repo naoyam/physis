@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 /* C or C++ standard headers */
 #include <cstdio>
 

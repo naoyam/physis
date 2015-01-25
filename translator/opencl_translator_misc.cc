@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "translator/opencl_translator.h"
 #include "translator/grid.h"
 #include <cstdio>

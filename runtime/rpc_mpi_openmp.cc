@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/rpc_mpi_openmp.h"
 #include "runtime/grid_util.h"
 #include "runtime/mpi_util.h"

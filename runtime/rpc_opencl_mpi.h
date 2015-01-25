@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #ifndef PHYSIS_RUNTIME_RPC_OPENCL_MPI_H
 #define PHYSIS_RUNTIME_RPC_OPENCL_MPI_H
 

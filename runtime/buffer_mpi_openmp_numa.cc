@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/buffer_mpi_openmp.h"
 
 #ifdef USE_OPENMP_NUMA

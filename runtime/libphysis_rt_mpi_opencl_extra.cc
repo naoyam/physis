@@ -1,3 +1,5 @@
+// Licensed under the BSD license. See LICENSE.txt for more details.
+
 #include "runtime/mpi_opencl_runtime.h"
 #include "physis/physis_mpi_opencl.h"
 
