@@ -269,6 +269,17 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
   virtual SgVariableDeclaration *BuildStencilDecl(
       StencilMap *smap, int stencil_map_index,
       SgFunctionDeclaration *run_func);
+
+  virtual void BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags);
+  
 };
 
 } // namespace translator

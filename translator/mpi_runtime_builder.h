@@ -69,8 +69,18 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
  protected:
   bool flag_mpi_overlap_;
 
-  void BuildLoadRemoteGridRegion(
+  virtual void BuildLoadRemoteGridRegion(
     SgInitializedName &grid_param,
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags);
+  virtual void BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    int member_index,
     StencilRange &sr,
     StencilMap &smap,
     SgVariableDeclaration &stencil_decl,
@@ -79,15 +89,16 @@ class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
     bool &overlap_eligible,
     int &overlap_width,
     vector<SgIntVal*> &overlap_flags);
-  void BuildLoadNeighborStatements(
+  virtual void BuildLoadNeighborStatements(
       SgExpression &grid_var,
+      int member_index,
       StencilRange &sr,
       SgExpression &reuse,
       bool is_periodic,
       SgStatementPtrList &statements,
       int &overlap_width,
       vector<SgIntVal*> &overlap_flags);
-  void BuildLoadSubgridStatements(
+  virtual void BuildLoadSubgridStatements(
       SgExpression &grid_var,
       StencilRange &sr,
       SgExpression &reuse,

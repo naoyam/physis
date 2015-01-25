@@ -517,9 +517,9 @@ void MPICUDARuntimeBuilder::ProcessStencilMap(
   SgStatementPtrList load_statements;
   bool overlap_eligible;
   int overlap_width;
-  BuildLoadRemoteGridRegion(smap, sdecl, run,
-                            remote_grids, load_statements,
-                            overlap_eligible, overlap_width);
+  MPIRuntimeBuilder::BuildLoadRemoteGridRegion(smap, sdecl, run,
+                                               remote_grids, load_statements,
+                                               overlap_eligible, overlap_width);
   bool overlap_enabled = IsOverlappingEnabled() && overlap_eligible;
 
   LOG_INFO() << (overlap_enabled ? "Generating overlapping code\n" :
@@ -780,6 +780,41 @@ SgExpression *MPICUDARuntimeBuilder::BuildGridEmit(
   return cuda_rt_builder_->BuildGridEmit(grid_exp, attr, offset_exprs,
                                          emit_val, scope);
 }
-    
+
+void MPICUDARuntimeBuilder::BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags) {
+  GridVarAttribute *gva =
+      ru::GetASTAttribute<GridVarAttribute>(&grid_param);
+  // If no member-specific accesses are detected, handle this case as
+  // in the MPI case
+  if (gva->gt()->IsPrimitivePointType() ||
+      gva->member_sr().size() == 0) {
+    MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
+        grid_param, smap, stencil_decl, remote_grids,
+        statements, overlap_eligible, overlap_width, overlap_flags);
+    return;
+  }
+  LOG_DEBUG() <<  "grid param: " << grid_param.unparseToString() << "\n";
+  MemberStencilRangeMap &msr = gva->member_sr();
+  BOOST_FOREACH (MemberStencilRangeMap::value_type kv, msr) {
+    StencilRange &sr = kv.second;
+    LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
+    const string &member = kv.first.first;
+    int member_index = gva->gt()->GetMemberIndex(member);
+    MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
+        grid_param, member_index, sr, smap, stencil_decl,
+        remote_grids, statements, overlap_eligible,
+        overlap_width, overlap_flags);
+  }
+  
+}
+
 }  // namespace translator
 }  // namespace physis

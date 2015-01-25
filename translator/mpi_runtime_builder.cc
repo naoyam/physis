@@ -63,27 +63,36 @@ SgFunctionCallExp *BuildCallLoadSubgridUniqueDim(SgExpression &gref,
 }
 
 SgFunctionCallExp *BuildLoadNeighbor(SgExpression &grid_var,
+                                     int member_index,
                                      StencilRange &sr,
                                      SgScopeStatement &scope,
                                      SgExpression &reuse,
                                      SgExpression &overlap,
                                      bool is_periodic) {
-  SgFunctionSymbol *load_neighbor_func
-      = si::lookupFunctionSymbolInParentScopes("__PSLoadNeighbor");
+  SgExprListExp *load_neighbor_args = sb::buildExprListExp(&grid_var);
+  SgFunctionSymbol *load_neighbor_func = NULL;
+  // member_index < 0 means loading whole members
+  if (member_index >= 0) {
+    load_neighbor_func =
+        si::lookupFunctionSymbolInParentScopes("__PSLoadNeighborMember");
+    si::appendExpression(load_neighbor_args, Int(member_index));
+  } else {
+    load_neighbor_func =
+        si::lookupFunctionSymbolInParentScopes("__PSLoadNeighbor");    
+  }
   IntVector offset_min, offset_max;
   PSAssert(sr.GetNeighborAccess(offset_min, offset_max));
   SgVariableDeclaration *offset_min_decl =
       ru::DeclarePSVectorInt("offset_min", offset_min, &scope);
+  si::appendExpression(load_neighbor_args, Var(offset_min_decl));
   SgVariableDeclaration *offset_max_decl =
       ru::DeclarePSVectorInt("offset_max", offset_max, &scope);
-  bool diag_needed = sr.IsNeighborAccessDiagonalAccessed();
-  SgExprListExp *load_neighbor_args =
-      sb::buildExprListExp(&grid_var,
-                           sb::buildVarRefExp(offset_min_decl),                           
-                           sb::buildVarRefExp(offset_max_decl),
-                           sb::buildIntVal(diag_needed),
-                           &reuse, &overlap,
-                           sb::buildIntVal(is_periodic));
+  si::appendExpression(load_neighbor_args, Var(offset_max_decl));  
+  si::appendExpression(load_neighbor_args,
+                       Int(sr.IsNeighborAccessDiagonalAccessed()));
+  si::appendExpression(load_neighbor_args, &reuse);
+  si::appendExpression(load_neighbor_args, &overlap);
+  si::appendExpression(load_neighbor_args, Int(is_periodic));
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(load_neighbor_func,
                                                    load_neighbor_args);
   return fc;
@@ -271,6 +280,7 @@ void MPIRuntimeBuilder::BuildFixGridAddresses(StencilMap *smap,
 
 void MPIRuntimeBuilder::BuildLoadNeighborStatements(
     SgExpression &grid_var,
+    int member_index,
     StencilRange &sr,
     SgExpression &reuse,
     bool is_periodic,
@@ -283,8 +293,8 @@ void MPIRuntimeBuilder::BuildLoadNeighborStatements(
   SgIntVal *overlap_arg = sb::buildIntVal(0);
   overlap_flags.push_back(overlap_arg);
   SgFunctionCallExp *load_neighbor_call
-      = BuildLoadNeighbor(grid_var, sr, *bb, reuse, *overlap_arg,
-                          is_periodic);
+      = BuildLoadNeighbor(grid_var, member_index, sr, *bb, reuse,
+                          *overlap_arg, is_periodic);
   ru::AppendExprStatement(bb, load_neighbor_call);
   overlap_width = std::max(sr.GetMaxWidth(), overlap_width);
 }
@@ -318,6 +328,7 @@ void MPIRuntimeBuilder::BuildLoadSubgridStatements(
 
 void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
     SgInitializedName &grid_param,
+    int member_index,
     StencilRange &sr,    
     StencilMap &smap,
     SgVariableDeclaration &stencil_decl,    
@@ -355,7 +366,7 @@ void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
       LOG_DEBUG() << "Stencil just accesses own buffer; no exchange needed\n";
       return;
     }
-    BuildLoadNeighborStatements(*gvref, sr, *reuse, is_periodic,
+    BuildLoadNeighborStatements(*gvref, member_index, sr, *reuse, is_periodic,
                                 statements, overlap_width, overlap_flags);
   } else {
     BuildLoadSubgridStatements(*gvref, sr, *reuse, is_periodic,
@@ -363,6 +374,28 @@ void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
     overlap_eligible = false;
     remote_grids.push_back(&grid_param);
   }
+}
+
+void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
+    SgInitializedName &grid_param,
+    StencilMap &smap,
+    SgVariableDeclaration &stencil_decl,    
+    SgInitializedNamePtrList &remote_grids,
+    SgStatementPtrList &statements,
+    bool &overlap_eligible,
+    int &overlap_width,
+    vector<SgIntVal*> &overlap_flags) {
+  LOG_DEBUG() <<  "grid param: " << grid_param.unparseToString() << "\n";
+  GridVarAttribute *gva =
+      ru::GetASTAttribute<GridVarAttribute>(&grid_param);
+  StencilRange &sr = gva->sr();
+  LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
+  // MPI runtime uses the AoS layout, so no member-wise loading is
+  // supported. Value of -1 designates the whole struct should be loaded
+  int member_index = -1;
+  BuildLoadRemoteGridRegion(grid_param, member_index, sr, smap, stencil_decl,
+                            remote_grids, statements, overlap_eligible,
+                            overlap_width, overlap_flags);
 }
 
 void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
@@ -378,12 +411,7 @@ void MPIRuntimeBuilder::BuildLoadRemoteGridRegion(
   vector<SgIntVal*> overlap_flags;
   // Ensure remote grid points available locally
   BOOST_FOREACH (SgInitializedName *grid_param, smap->grid_params()) {
-    LOG_DEBUG() <<  "grid param: " << grid_param->unparseToString() << "\n";
-    GridVarAttribute *gva =
-        ru::GetASTAttribute<GridVarAttribute>(grid_param);
-    StencilRange &sr = gva->sr();
-    LOG_DEBUG() << "Argument stencil range: " << sr << "\n";
-    BuildLoadRemoteGridRegion(*grid_param, sr, *smap, *stencil_decl,
+    BuildLoadRemoteGridRegion(*grid_param, *smap, *stencil_decl,
                               remote_grids, statements, overlap_eligible,
                               overlap_width, overlap_flags);
   }
