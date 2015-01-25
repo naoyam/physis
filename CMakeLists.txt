@@ -34,7 +34,7 @@ endif ()
 
 # Add warning flags
 if (CMAKE_COMPILER_IS_GNUCXX)
-  set (WARN_FLAGS "-Wall -Wno-deprecated -Wno-unused-function")
+  set (WARN_FLAGS "-Wall -Wno-unused-function")
   # Unused local typedefs are complained with g++-4.8 and Boost 1.53.  
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.7)
     message (STATUS "CXX compiler version is > 4.7: ${CMAKE_CXX_COMPILER_VERSION}")
