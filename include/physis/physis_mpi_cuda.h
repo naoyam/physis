@@ -436,11 +436,6 @@ extern "C" {
 
   extern int __PSBcast(void *buf, size_t size);
 
-  extern void __PSLoadNeighbor(__PSGridMPI *g,
-                               const PSVectorInt halo_fw_width,
-                               const PSVectorInt halo_bw_width,
-                               int diagonal, int reuse,
-                               int overlap, int periodic);
   extern void __PSLoadNeighborMember(__PSGridMPI *g,
                                      int member,
                                      const PSVectorInt halo_fw_width,
