@@ -158,7 +158,16 @@ static bool skip_entry(lua_State *L) {
 LuaTable *LuaLoader::LoadTable(lua_State *L, bool root) const {
   LuaTable *lt = new LuaTable();
   lua_pushnil(L);
+#if LUA_VERSION_NUM == 501
   int tbl_index = root ? LUA_GLOBALSINDEX : -2;
+#elif LUA_VERSION_NUM == 502
+  if (root) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS);
+  }
+  int tbl_index = -2;
+#else
+#error Lua version, LUA_VERSION_NUM, not supported
+#endif
   while (lua_next(L, tbl_index) != 0) {
     //LOG_DEBUG_LUA() << "next\n";
     if (skip_entry(L)) {
