@@ -7,6 +7,8 @@ include_directories(${CMAKE_SOURCE_DIR}/tests/gmock)
 #link_directories(${CMAKE_BINARY_DIR}/tests/gmock)
 add_library(gmock ../../tests/gmock/gmock-gtest-all.cc)
 
+find_package(Threads REQUIRED)
+
 set (test_src test_buffer.cc)
 
 set(RUNTIME_COMMON_SRC
@@ -74,7 +76,7 @@ foreach (i ${test_src})
   get_filename_component(exe ${i} NAME_WE)
   #add_executable(${exe} ${i})
   target_link_libraries(${exe}
-    gmock)
+      gmock ${CMAKE_THREAD_LIBS_INIT})
   #add_dependencies(test-translator ${exe})
   add_custom_target(test-${exe}
     COMMAND ${exe}
