@@ -10,7 +10,7 @@
 
 #include <iostream>
 #include <algorithm>
-#include <tuple>
+#include <tr1/tuple>
 
 #include <cuda.h>
 #include <cuda_runtime.h>

@@ -1,9 +1,6 @@
 include_directories(${CMAKE_SOURCE_DIR}/tests/gmock)
 link_directories(${CMAKE_BINARY_DIR}/tests/gmock)
 
-# Use tr1/tuple 
-add_flag(CMAKE_CXX_FLAGS "-std=gnu++0x")
-
 set (test_src test_buffer.cc)
 
 set(RUNTIME_COMMON_SRC

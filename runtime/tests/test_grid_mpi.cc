@@ -9,7 +9,7 @@
 
 #include <iostream>
 #include <algorithm>
-#include <tuple>
+#include <tr1/tuple>
 
 #define N (8)
 
