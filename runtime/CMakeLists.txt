@@ -26,9 +26,6 @@ install(TARGETS physis_rt_ref DESTINATION lib)
 
 if (MPI_FOUND AND MPI_RUNTIME_ENABLED)
   include_directories(${MPI_INCLUDE_PATH})
-  # Pthread is used by OpenMPI.   
-  add_definitions(-pthread)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
   add_library(physis_rt_mpi ${RUNTIME_COMMON_SRC}
     libphysis_rt_mpi.cc
     grid.cc grid_mpi.cc grid_util.cc
@@ -143,8 +140,6 @@ endif()
 
 if (MPI_FOUND AND MPI_OPENMP_RUNTIME_ENABLED)
   include_directories(${MPI_INCLUDE_PATH})
-  # Pthread is used by OpenMPI.   
-  add_definitions(-pthread)
   add_library(physis_rt_mpi_openmp
     ${RUNTIME_COMMON_SRC}
     buffer_mpi_openmp.cc
