@@ -1,5 +1,11 @@
+# Uniformly use libstdc++ even for non-CUDA files to simplify compilation
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  add_flag(CMAKE_CXX_FLAGS "-stdlib=libstdc++")
+endif ()
+
 include_directories(${CMAKE_SOURCE_DIR}/tests/gmock)
-link_directories(${CMAKE_BINARY_DIR}/tests/gmock)
+#link_directories(${CMAKE_BINARY_DIR}/tests/gmock)
+add_library(gmock ../../tests/gmock/gmock-gtest-all.cc)
 
 set (test_src test_buffer.cc)
 

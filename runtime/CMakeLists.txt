@@ -58,12 +58,26 @@ if (CUDA_FOUND AND CUDA_RUNTIME_ENABLED)
   cuda_add_library(physis_rt_cuda ${RUNTIME_COMMON_SRC}
     libphysis_rt_cuda.cc reduce_cuda.cu)
   install(TARGETS physis_rt_cuda DESTINATION lib)
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(
+      physis_rt_cuda PROPERTIES
+      COMPILE_FLAGS "-stdlib=libstdc++"
+      LINK_FLAGS "-stdlib=libstdc++"
+      )
+  endif ()
 endif()
 
 if (CUDA_FOUND AND CUDA_HM_RUNTIME_ENABLED)
   include_directories(${CUDA_INCLUDE_DIR})
   cuda_add_library(physis_rt_cuda_hm ${RUNTIME_COMMON_SRC}
     libphysis_rt_cuda_hm.cc reduce_cuda.cu)
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(
+      physis_rt_cuda_hm PROPERTIES
+      COMPILE_FLAGS "-stdlib=libstdc++"
+      LINK_FLAGS "-stdlib=libstdc++"
+      )
+  endif ()
   install(TARGETS physis_rt_cuda_hm DESTINATION lib)
 endif()
 
@@ -78,6 +92,13 @@ if (MPI_FOUND AND CUDA_FOUND AND MPI_CUDA_RUNTIME_ENABLED)
     proc.cc rpc_cuda.cc 
     ipc_mpi.cc mpi_wrapper.cc
     buffer_cuda.cu reduce_grid_mpi_cuda_exp.cu)
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(
+      physis_rt_mpi_cuda PROPERTIES
+      COMPILE_FLAGS "-stdlib=libstdc++"
+      LINK_FLAGS "-stdlib=libstdc++"
+      )
+  endif ()
   install(TARGETS physis_rt_mpi_cuda DESTINATION lib)
 endif()
 

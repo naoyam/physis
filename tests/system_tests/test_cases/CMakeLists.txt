@@ -1,132 +1,30 @@
 
-add_executable(test_7-pt.manual.ref.exe test_7-pt.manual.ref.c)
-add_executable(test_27-pt.manual.ref.exe test_27-pt.manual.ref.c)
-add_executable(test_7-pt-multi-iterations.manual.ref.exe test_7-pt-multi-iterations.manual.ref.c)
-add_executable(test_15.manual.ref.exe test_15.manual.ref.c)
-add_executable(test_16.manual.ref.exe test_16.manual.ref.c)
-add_executable(test_asymmetric.manual.ref.exe 
-  test_asymmetric.manual.ref.c)
-add_executable(test_3-pt-periodic.manual.ref.exe 
-  test_3-pt-periodic.manual.ref.c)
-add_executable(test_7-pt-periodic.manual.ref.exe 
-  test_7-pt-periodic.manual.ref.c)
-add_executable(test_27-pt-periodic.manual.ref.exe 
-  test_27-pt-periodic.manual.ref.c)
-add_executable(test_asymmetric-periodic.manual.ref.exe
-  test_asymmetric-periodic.manual.ref.c)
-add_executable(test_stencil-hole.manual.ref.exe
-  test_stencil-hole.manual.ref.c)
-add_executable(test_7-pt-neumann-cond.manual.ref.exe
-  test_7-pt-neumann-cond.manual.ref.c)
-add_executable(test_user-defined-type1.manual.ref.exe
-  test_user-defined-type1.manual.ref.c)
-add_executable(test_user-defined-type3.manual.ref.exe
-  test_user-defined-type3.manual.ref.c)
-add_executable(test_redblack.manual.ref.exe
-  test_redblack.manual.ref.c)
-add_executable(test_redblack-periodic.manual.ref.exe
-  test_redblack-periodic.manual.ref.c)
+file(GLOB test_srcs
+  "${CMAKE_CURRENT_SOURCE_DIR}/test_*.manual.ref.c")
+foreach (src ${test_srcs})
+  get_filename_component(fname ${src} NAME_WE)
+  add_executable(${fname}.manual.ref.exe ${src})
+endforeach ()
+
 # uses the same manual code as test_redblack
 add_executable(test_redblack-separated.manual.ref.exe
   test_redblack.manual.ref.c)
-add_executable(test_7-pt-int-type.manual.ref.exe
-  test_7-pt-int-type.manual.ref.c)
-# For integer code, use the normal C code for testing the CUDA version
-add_executable(test_7-pt-int-type.manual.cuda.exe
-  test_7-pt-int-type.manual.ref.c)
-add_executable(test_7-pt-double-type.manual.ref.exe
-  test_7-pt-double-type.manual.ref.c)
-add_executable(test_7-pt-type-mix.manual.ref.exe
-  test_7-pt-type-mix.manual.ref.c)
-add_executable(test_3-pt-1d.manual.ref.exe
-  test_3-pt-1d.manual.ref.c)
-add_executable(test_5-pt-2d.manual.ref.exe
-  test_5-pt-2d.manual.ref.c)
-add_executable(test_9-pt-2d.manual.ref.exe
-  test_9-pt-2d.manual.ref.c)
-add_executable(test_mixed-dim.manual.ref.exe
-  test_mixed-dim.manual.ref.c)
-add_executable(test_mixed-dim2.manual.ref.exe
-  test_mixed-dim2.manual.ref.c)
-add_executable(test_mixed-dim3.manual.ref.exe
-  test_mixed-dim3.manual.ref.c)
-add_executable(test_user-defined-type5.manual.ref.exe
-  test_user-defined-type5.manual.ref.c)
-add_executable(test_user-defined-type-multi-members.manual.ref.exe
-  test_user-defined-type-multi-members.manual.ref.c)
-add_executable(test_user-defined-type-multi-dim-member.manual.ref.exe
-  test_user-defined-type-multi-dim-member.manual.ref.c)
-add_executable(test_user-defined-type-7-pt.manual.ref.exe
-  test_user-defined-type-7-pt.manual.ref.c)
-add_executable(test_user-defined-type-7-pt-periodic.manual.ref.exe
-  test_user-defined-type-7-pt-periodic.manual.ref.c)
-add_executable(test_user-defined-type-7-pt-periodic-complex.manual.ref.exe
-  test_user-defined-type-7-pt-periodic-complex.manual.ref.c)
-add_executable(test_reduction-3d-sum.manual.ref.exe
-    test_reduction-3d-sum.manual.ref.c)
-add_executable(test_27-pt-reduction.manual.ref.exe
-  test_27-pt-reduction.manual.ref.c)
+
+file(GLOB cuda_test_srcs
+  "${CMAKE_CURRENT_SOURCE_DIR}/test_*.manual.cuda.cu")
 
 if (CUDA_FOUND)
-  cuda_add_executable(test_7-pt.manual.cuda.exe test_7-pt.manual.cuda.cu)  
-  cuda_add_executable(test_27-pt.manual.cuda.exe test_27-pt.manual.cuda.cu)  
-  cuda_add_executable(test_7-pt-multi-iterations.manual.cuda.exe test_7-pt-multi-iterations.manual.cuda.cu)
-  cuda_add_executable(test_15.manual.cuda.exe test_15.manual.cuda.cu)
-  cuda_add_executable(test_16.manual.cuda.exe test_16.manual.cuda.cu)    
-  cuda_add_executable(test_asymmetric.manual.cuda.exe 
-    test_asymmetric.manual.cuda.cu)
-  cuda_add_executable(test_3-pt-periodic.manual.cuda.exe 
-    test_3-pt-periodic.manual.cuda.cu)
-   cuda_add_executable(test_7-pt-periodic.manual.cuda.exe 
-    test_7-pt-periodic.manual.cuda.cu)
-  cuda_add_executable(test_27-pt-periodic.manual.cuda.exe 
-    test_27-pt-periodic.manual.cuda.cu)
-  cuda_add_executable(test_asymmetric-periodic.manual.cuda.exe
-    test_asymmetric-periodic.manual.cuda.cu)
-  cuda_add_executable(test_stencil-hole.manual.cuda.exe
-    test_stencil-hole.manual.cuda.cu)
-  cuda_add_executable(test_7-pt-neumann-cond.manual.cuda.exe
-    test_7-pt-neumann-cond.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type1.manual.cuda.exe
-    test_user-defined-type1.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type3.manual.cuda.exe
-    test_user-defined-type3.manual.cuda.cu)
-  cuda_add_executable(test_redblack.manual.cuda.exe
-    test_redblack.manual.cuda.cu)
-  cuda_add_executable(test_redblack-periodic.manual.cuda.exe
-    test_redblack-periodic.manual.cuda.cu)
-  cuda_add_executable(test_redblack-separated.manual.cuda.exe
-    test_redblack.manual.cuda.cu)
-  cuda_add_executable(test_7-pt-double-type.manual.cuda.exe
-    test_7-pt-double-type.manual.cuda.cu)
-  cuda_add_executable(test_7-pt-type-mix.manual.cuda.exe
-    test_7-pt-type-mix.manual.cuda.cu)
-  cuda_add_executable(test_3-pt-1d.manual.cuda.exe
-    test_3-pt-1d.manual.cuda.cu)
-  cuda_add_executable(test_5-pt-2d.manual.cuda.exe
-    test_5-pt-2d.manual.cuda.cu)
-  cuda_add_executable(test_9-pt-2d.manual.cuda.exe
-    test_9-pt-2d.manual.cuda.cu)
-  cuda_add_executable(test_mixed-dim.manual.cuda.exe
-    test_mixed-dim.manual.cuda.cu)
-  cuda_add_executable(test_mixed-dim2.manual.cuda.exe
-    test_mixed-dim2.manual.cuda.cu)
-  cuda_add_executable(test_mixed-dim3.manual.cuda.exe
-    test_mixed-dim3.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type5.manual.cuda.exe
-    test_user-defined-type5.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type-multi-members.manual.cuda.exe
-    test_user-defined-type-multi-members.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type-multi-dim-member.manual.cuda.exe
-    test_user-defined-type-multi-dim-member.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type-7-pt.manual.cuda.exe
-    test_user-defined-type-7-pt.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type-7-pt-periodic.manual.cuda.exe
-    test_user-defined-type-7-pt-periodic.manual.cuda.cu)
-  cuda_add_executable(test_user-defined-type-7-pt-periodic-complex.manual.cuda.exe
-    test_user-defined-type-7-pt-periodic-complex.manual.cuda.cu)
-  cuda_add_executable(test_reduction-3d-sum.manual.cuda.exe
-    test_reduction-3d-sum.manual.cuda.cu)
-  cuda_add_executable(test_27-pt-reduction.manual.cuda.exe
-    test_27-pt-reduction.manual.cuda.cu)
+  foreach (src ${cuda_test_srcs})
+    get_filename_component(fname ${src} NAME_WE)
+    cuda_add_executable(${fname}.manual.cuda.exe ${src})
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      set_target_properties(
+	${fname}.manual.cuda.exe PROPERTIES
+	LINK_FLAGS "-stdlib=libstdc++"
+	)
+    endif ()
+  endforeach ()
+  # For integer code, use the normal C code for testing the CUDA version
+  add_executable(test_7-pt-int-type.manual.cuda.exe
+    test_7-pt-int-type.manual.ref.c)
 endif ()
