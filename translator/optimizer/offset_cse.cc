@@ -20,10 +20,10 @@ namespace pass {
 typedef map<SgVariableSymbol*, SgExpressionVector> GridOffsetMap;
 
 static SgExpression *extract_index_var(SgExpression *offset_dim_exp) {
-  SgExpression *off =
-      isSgVarRefExp(
-          *(NodeQuery::querySubTree(offset_dim_exp,
-                                    V_SgVarRefExp).begin()));
+  SgNodePtrList v = NodeQuery::querySubTree(offset_dim_exp,
+                                            V_SgVarRefExp);
+  if (v.size() == 0) return NULL;
+  SgExpression *off = isSgVarRefExp(*(v.begin()));
   return off;
 }
 
@@ -38,7 +38,7 @@ SgFunctionCallExp *ExtractOffsetCall(SgExpression *offset) {
   return isSgFunctionCallExp(offset);
 }
 
-static void build_index_var_list_from_offset_exp(
+static int build_index_var_list_from_offset_exp(
     SgExpression *offset_expr,
     SgExpressionPtrList *index_va_list) {
   offset_expr = ExtractOffsetCall(offset_expr);
@@ -46,12 +46,14 @@ static void build_index_var_list_from_offset_exp(
   SgExpressionPtrList &args =
       isSgFunctionCallExp(offset_expr)->get_args()->get_expressions();
   FOREACH (it, args.begin() + 1, args.end()) {
-    index_va_list->push_back(si::copyExpression(
-        extract_index_var(*it)));
+    SgExpression *index_var = extract_index_var(*it);
+    if (index_var == NULL) return EXIT_FAILURE;
+    index_va_list->push_back(si::copyExpression(index_var));
     LOG_DEBUG() << "Offset expr: "
                 << index_va_list->back()->unparseToString()
                 << "\n";
   }
+  return EXIT_SUCCESS;
 }
 
 /*!
@@ -170,7 +172,7 @@ static void build_center_stencil_index_list(StencilIndexList &sil) {
   return;
 }
 
-static void do_offset_cse(BuilderInterface *builder,
+static int do_offset_cse(BuilderInterface *builder,
                           SgForStatement *loop,
                           SgExpressionVector &offset_exprs) {
   SgBasicBlock *loop_body = isSgBasicBlock(loop->get_loop_body());
@@ -179,7 +181,9 @@ static void do_offset_cse(BuilderInterface *builder,
   GridOffsetAttribute *attr =
       rose_util::GetASTAttribute<GridOffsetAttribute>(offset_expr);
   SgExpressionPtrList base_offset_list;
-  build_index_var_list_from_offset_exp(offset_expr, &base_offset_list);
+  if (build_index_var_list_from_offset_exp(offset_expr, &base_offset_list)) {
+    return EXIT_FAILURE;
+  }
 
   StencilIndexList sil = *attr->GetStencilIndexList();
   StencilIndexListClearOffset(sil);
@@ -212,7 +216,7 @@ static void do_offset_cse(BuilderInterface *builder,
   si::prependStatement(base_offset_var, kernel);
                        
   replace_offset(base_offset_var, offset_exprs, builder);
-  return;
+  return EXIT_SUCCESS;
 }
 
 
@@ -281,7 +285,9 @@ void offset_cse(
     GridOffsetMap ggm = find_candidates(target_loop);
     FOREACH (it, ggm.begin(), ggm.end()) {
       SgExpressionVector &offset_exprs = it->second;
-      do_offset_cse(builder, target_loop, offset_exprs);
+      if (do_offset_cse(builder, target_loop, offset_exprs)) {
+        LOG_DEBUG() << "Failed to apply offset CSE\n";
+      }
     }
   }
   
