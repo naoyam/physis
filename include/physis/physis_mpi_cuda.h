@@ -134,18 +134,18 @@ extern "C" {
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic1DDev(const void *g,
                                                        PSIndex i1) {
-    return (i1 - __PSGridLocalOffsetDev((__PSGrid1D_dev*)g, 0))
-        % __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0);
+    return __PS_PERIODIC(i1 - __PSGridLocalOffsetDev((__PSGrid1D_dev*)g, 0),
+                         __PSGridLocalSizeDev((__PSGrid1D_dev*)g, 0));
   }
   
   PS_FUNCTION_DEVICE
   static inline PSIndex __PSGridGetOffsetPeriodic2DDev(const void *g,
                                                        PSIndex i1,
                                                        PSIndex i2) {
-    return (i1 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 0))
-        % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 0)
-        + ((i2 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 1))
-           % __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1))
+    return __PS_PERIODIC(i1 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 0),
+                         __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 0))
+        + __PS_PERIODIC(i2 - __PSGridLocalOffsetDev((__PSGrid2D_dev*)g, 1),
+                        __PSGridLocalSizeDev((__PSGrid2D_dev*)g, 1))
         * __PSGridLocalSizeDev((__PSGrid2D_dev *)g, 0);
   }
 
