@@ -252,7 +252,8 @@ __global__ void ReduceGridMPICUDAExpKernelStage1(T *buf, T *dev_grid,
     }
   }
   T aggregate = ReduceBlock<T, BlockReduce, op>(v);
-  if (threadIdx.x == 0) buf[blockIdx.x] = aggregate;  
+  int grid_offset = blockIdx.x + blockIdx.y * gridDim.x;  
+  if (threadIdx.x == 0) buf[grid_offset] = aggregate;  
   return;
 }
 
@@ -264,7 +265,7 @@ struct ReduceGridMPICUDAExpFunctor<T, op, 2>{
     int y_thread_size = 16;
     dim3 grid(ceil(((float)size[0]) / tblock.x),
               ceil(((float)size[1]) / y_thread_size));
-    T *reduction_buf = (T*)GetReductionBuf(grid.x * grid.y * sizeof(T));      
+    T *reduction_buf = (T*)GetReductionBuf(grid.x * grid.y * sizeof(T));
     ReduceGridMPICUDAExpKernelStage1<T, op, 256, 16><<<grid, tblock>>>(
         reduction_buf, (T*)dev_grid, size[0], size[1],
         width(0, false), width(1, false),
