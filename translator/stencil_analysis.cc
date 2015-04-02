@@ -260,15 +260,16 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     GridGetAttribute *gga =
         rose_util::GetASTAttribute<GridGetAttribute>(get);
     PSAssert(gga);
+    bool is_periodic = false;
+    SgInitializedName *gv = GridGetAnalysis::IsGet(get, is_periodic);
+    PSAssert(gv);
+    if (is_periodic) sm.SetGridPeriodic(gv);
+    // Set a list of stencil indices if not yet set
     if (gga->GetStencilIndexList()) {
       LOG_DEBUG() << "Grid get already analyzed: "
                   << get->unparseToString() << "\n";
       continue;
     }
-    // Extracts a list of stencil indices
-    bool is_periodic = false;
-    SgInitializedName *gv = GridGetAnalysis::IsGet(get, is_periodic);
-    PSAssert(gv);
     StencilIndexList stencil_indices;
     ExtractStencilIndices(get, stencil_indices, kernel);
     // Associate gv with the stencil indices
@@ -277,7 +278,6 @@ void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
     LOG_DEBUG() << "Setting stencil index list for "
                 << get->unparseToString() << "\n";
     gga->SetStencilIndexList(&stencil_indices);
-    if (is_periodic) sm.SetGridPeriodic(gv);
   }
   PropagateStencilRangeToGrid(sm, tx);
   LOG_DEBUG() << "Analysis of a stencil map done\n";
