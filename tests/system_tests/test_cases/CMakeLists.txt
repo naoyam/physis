@@ -27,4 +27,8 @@ if (CUDA_FOUND)
   # For integer code, use the normal C code for testing the CUDA version
   add_executable(test_7-pt-int-type.manual.cuda.exe
     test_7-pt-int-type.manual.ref.c)
+  add_executable(test_9-pt-reduction.manual.cuda.exe
+    test_9-pt-reduction.manual.ref.c)
+  add_executable(test_9-pt-periodic-reduction.manual.cuda.exe
+    test_9-pt-periodic-reduction.manual.ref.c)
 endif ()
