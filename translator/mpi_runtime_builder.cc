@@ -93,6 +93,7 @@ SgFunctionCallExp *MPIRuntimeBuilder::BuildLoadNeighbor(SgExpression &grid_var,
                        Int(sr.IsNeighborAccessDiagonalAccessed()));
   si::appendExpression(load_neighbor_args, &reuse);
   si::appendExpression(load_neighbor_args, &overlap);
+  LOG_DEBUG() << "Periodic: " << is_periodic << "\n";
   si::appendExpression(load_neighbor_args, Int(is_periodic));
   SgFunctionCallExp *fc = sb::buildFunctionCallExp(load_neighbor_func,
                                                    load_neighbor_args);

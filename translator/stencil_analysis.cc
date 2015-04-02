@@ -142,6 +142,7 @@ bool AnalyzeStencilIndex(SgExpression *arg, StencilIndex &idx,
 
 
 static void PropagateStencilRangeToGrid(StencilMap &sm, TranslationContext &tx) {
+  LOG_DEBUG() << "Propagating analyzed stencil range info to grids\n";
   BOOST_FOREACH(SgNode *node,
                 ru::QuerySubTreeAttribute<GridVarAttribute>(tx.project())) {
     SgInitializedName *gn = isSgInitializedName(node);
@@ -249,7 +250,7 @@ static void ExtractStencilIndices(SgExpression *get,
 
 // Assumption: GridGetAttributes are set on all grid get accesses
 void AnalyzeStencilRange(StencilMap &sm, TranslationContext &tx) {
-  LOG_DEBUG() << "Analyzing stencil range of a stencil map\n";
+  LOG_DEBUG() << "Analyzing stencil range of a stencil map: " << sm.toString() << "\n";
   SgFunctionDeclaration *kernel = sm.getKernel();
   BOOST_FOREACH (
       SgNode *node,
