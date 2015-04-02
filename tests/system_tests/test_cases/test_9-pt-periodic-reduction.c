@@ -26,13 +26,6 @@ static void kernel(const int x, const int y, PSGridType g, PSGridType g2) {
   return;
 }
 
-void dump(float *input) {
-  int i;
-  for (i = 0; i < N*N; ++i) {
-    printf("%f\n", input[i]);
-  }
-}
-
 int main(int argc, char *argv[]) {
   PSInit(&argc, &argv, 2, N, N);
   PSGridType g1 = PSGrid2DIntNew(N, N);
