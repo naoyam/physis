@@ -65,12 +65,17 @@ int main(int argc, char *argv[]) {
 
   kernel<<<grid_dim, block_dim>>>(g1d, g2d);
 
-  thrust::device_ptr<REAL> dev_ptr((REAL*)g1d);
-  REAL v = thrust::reduce(dev_ptr, dev_ptr + nelms,
-                          0.0f, thrust::plus<REAL>());
-  
+  thrust::device_ptr<REAL> dev_ptr2((REAL*)g2d);
+  REAL v = thrust::reduce(dev_ptr2, dev_ptr2 + nelms,
+                          0, thrust::plus<REAL>());
   printf("%d\n", v);
   
+  kernel<<<grid_dim, block_dim>>>(g2d, g1d);
+
+  thrust::device_ptr<REAL> dev_ptr1((REAL*)g1d);
+  v = thrust::reduce(dev_ptr1, dev_ptr1 + nelms,
+                     0, thrust::plus<REAL>());
+  printf("%d\n", v);
 
   cudaDeviceReset();
   return 0;

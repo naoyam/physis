@@ -59,7 +59,9 @@ int main(int argc, char *argv[]) {
   }
 
   kernel(g1, g2);
+  printf("%d\n", reduce(g2));
 
+  kernel(g2, g1);
   printf("%d\n", reduce(g1));
   
   free(g1);

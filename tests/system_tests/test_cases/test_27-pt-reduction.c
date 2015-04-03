@@ -61,6 +61,10 @@ int main(int argc, char *argv[]) {
 
   PSStencilRun(PSStencilMap(kernel, d, g1, g2));
   REAL v;
+  PSReduce(&v, PS_SUM, g2);
+  printf("%d\n", v);
+
+  PSStencilRun(PSStencilMap(kernel, d, g2, g1));
   PSReduce(&v, PS_SUM, g1);
   printf("%d\n", v);
 
