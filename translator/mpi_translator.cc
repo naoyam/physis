@@ -215,7 +215,9 @@ void MPITranslator::TranslateRun(SgFunctionCallExp *node,
       sb::buildExprStatement(sb::buildFunctionCallExp(ref, args)),
       tmp_block);
 
-  si::replaceStatement(getContainingStatement(node), tmp_block);
+  // Note: Keep attached preprocessor directives. This is necessary
+  // when the original PSStencilRun has preprocessor directives.
+  si::replaceStatement(getContainingStatement(node), tmp_block, true);
 }
 
 void MPITranslator::AppendNewArgStencilMemberInfo(SgExprListExp *args,
