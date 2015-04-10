@@ -46,7 +46,7 @@ SgFunctionCallExp *ReferenceRuntimeBuilder::BuildGridGetID(
 SgExpression *ReferenceRuntimeBuilder::BuildGridBaseAddr(
     SgExpression *gvref, SgType *point_type) {
   
-  SgExpression *field = Var(PS_GRID_RAW_PTR_NAME);
+  SgExpression *field = sb::buildOpaqueVarRefExp(PS_GRID_RAW_PTR_NAME);
   SgExpression *p =
       (si::isPointerType(gvref->get_type())) ?
       isSgExpression(Arrow(gvref, field)) :
@@ -159,8 +159,10 @@ SgExpression *ReferenceRuntimeBuilder::BuildGridEmit(
   SgExpression *lhs = ArrayRef(p1, offset);
   
   if (attr->is_member_access()) {
-    // TODO (buildVarRefExp(string))
-    lhs = Dot(lhs, Var(attr->member_name()));
+    SgClassDefinition *user_type_def = ru::getDefinition(isSgClassType(attr->gt()->point_type()));
+    PSAssert(user_type_def);
+    SgVarRefExp *mv = Var(attr->member_name(), user_type_def);
+    lhs = Dot(lhs, mv);
     const vector<string> &array_offsets = attr->array_offsets();
     FOREACH (it, array_offsets.begin(), array_offsets.end()) {
       SgExpression *e = ru::ParseString(*it, scope);
