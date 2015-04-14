@@ -136,7 +136,7 @@ extern "C" {
   extern int __PSGridGetID(__PSGrid *g);
   extern void __PSGridSet(__PSGrid *g, void *buf, ...);
   typedef void (*__PSGrid_devFreeFunc)(void *);
-  extern void __PSGridFree(__PSGrid *g, __PSGrid_devFreeFunc func);
+  extern void __PSGridFree(void *g, __PSGrid_devFreeFunc func);
   typedef void (*__PSGrid_devCopyinFunc)(void *g, const void *src, size_t num_elms);
   extern void __PSGridCopyin(void *p, const void *src_array,
                              __PSGrid_devCopyinFunc func);

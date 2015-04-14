@@ -98,7 +98,8 @@ extern "C" {
     return g;
   }
   
-  void __PSGridFree(__PSGrid *g, __PSGrid_devFreeFunc func) {
+  void __PSGridFree(void *gv, __PSGrid_devFreeFunc func) {
+    __PSGrid *g = (__PSGrid*)gv;
     if (g->dev) {
       if (func) {
         func(g->dev);
