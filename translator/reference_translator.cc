@@ -88,7 +88,11 @@ void ReferenceTranslator::Translate() {
 void ReferenceTranslator::FixAST() {
   if (!rose_util::IsFortranLikeLanguage()) {
     FixGridType();
-    si::fixVariableReferences(project_);
+    if (getenv("PHYSISC_NO_FIX_VARIABLE_REFERENCES")) {
+      LOG_INFO() << "Skipping variable reference fixing\n";
+    } else {
+      si::fixVariableReferences(project_);
+    }
   }
 }
 

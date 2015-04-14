@@ -285,8 +285,9 @@ void CUDATranslator::ProcessUserDefinedPointType(
 void CUDATranslator::FixAST() {
   // Change the dummy grid type to the actual one even if AST
   FixGridType(string(grid_type_name_));
-  // Use the ROSE variable reference fix
-  if (validate_ast_) {
+  if (getenv("PHYSISC_NO_FIX_VARIABLE_REFERENCES")) {
+    LOG_INFO() << "Skipping variable reference fixing\n";
+  } else {
     si::fixVariableReferences(project_);
   }
 }
