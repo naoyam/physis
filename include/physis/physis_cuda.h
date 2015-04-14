@@ -125,7 +125,7 @@ extern "C" {
 #define PSGridDim(p, d) ((p)->dim[(d)])
 #define __PSGridDimDev(p, d) ((p)->dim[d])
 #else  // PHYSIS_USER
-  extern __PSGridDimDev(void *p, int);
+  extern int __PSGridDimDev(void *p, int);
 #endif // PHYSIS_USER
   
   typedef void * (*__PSGrid_devNewFunc)(int num_dims, PSVectorInt dim);
