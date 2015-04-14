@@ -24,8 +24,6 @@ namespace translator {
 CUDATranslator::CUDATranslator(const Configuration &config):
     ReferenceTranslator(config) {
   target_specific_macro_ = "PHYSIS_CUDA";
-  //validate_ast_ = false;
-  validate_ast_ = true;  
 }
 
 void CUDATranslator::SetUp(SgProject *project,

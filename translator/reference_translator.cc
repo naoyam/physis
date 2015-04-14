@@ -27,6 +27,9 @@ ReferenceTranslator::ReferenceTranslator(const Configuration &config):
     validate_ast_(true),
     grid_create_name_("__PSGridNew") {
   target_specific_macro_ = "PHYSIS_REF";
+  if (getenv("PHYSISC_NO_VALIDATION")) {
+    validate_ast_ = false;
+  }
 }
 
 ReferenceTranslator::~ReferenceTranslator() {
