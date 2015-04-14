@@ -1363,7 +1363,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildRunKernelFunc(StencilMap *stenci
   ru::ReplaceFuncBody(run_func, func_body);
   // Mark this function as RunKernel
   ru::AddASTAttribute(run_func, new RunKernelAttribute(stencil));
-  si::fixVariableReferences(run_func);
+  // Comment out since this is probably not necessary.
+  //si::fixVariableReferences(run_func);
   return run_func;
 }
 
