@@ -1285,9 +1285,9 @@ SgIfStmt *CUDARuntimeBuilder::BuildDomainInclusionCheck(
     // NULL indicates no check required.
     if (idx == NULL) continue;
     SgExpression *dom_min = ArrayRef(
-        Dot(Var(dom_arg), Var("local_min")), Int(dim));
+        Dot(Var(dom_arg), sb::buildOpaqueVarRefExp("local_min")), Int(dim));
     SgExpression *dom_max = ArrayRef(
-        Dot(Var(dom_arg), Var("local_max")), Int(dim));
+        Dot(Var(dom_arg), sb::buildOpaqueVarRefExp("local_max")), Int(dim));
     SgExpression *test = sb::buildOrOp(
         sb::buildLessThanOp(Var(idx), dom_min),
         sb::buildGreaterOrEqualOp(Var(idx), dom_max));
@@ -1387,7 +1387,7 @@ SgExpression *CUDARuntimeBuilder::BuildGridGetDev(SgExpression *grid_var,
                                                   GridType *gt) {
   return sb::buildPointerDerefExp(
       sb::buildCastExp(
-          sb::buildArrowExp(grid_var, sb::buildVarRefExp("dev")),
+          sb::buildArrowExp(grid_var, sb::buildOpaqueVarRefExp("dev")),
           sb::buildPointerType(Builder()->BuildOnDeviceGridType(gt))));
 }
 
