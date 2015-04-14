@@ -69,6 +69,9 @@ SgCudaKernelExecConfig *BuildCudaKernelExecConfig(SgExpression *grid,
 
 SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx);
 
+// Make a function a CUDA global function
+void SetCudaKernel(SgFunctionDeclaration *func);
+
 } // namespace cuda_util
 } // namespace translator
 } // namespace physis
