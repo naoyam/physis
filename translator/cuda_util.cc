@@ -331,8 +331,12 @@ void SetCudaKernel(SgFunctionDeclaration *func) {
   SgFunctionDeclaration *decl;
   decl = isSgFunctionDeclaration(func->get_definingDeclaration());
   decl->get_functionModifier().setCudaKernel();
-  decl = isSgFunctionDeclaration(func->get_firstNondefiningDeclaration());
-  decl->get_functionModifier().setCudaKernel();
+  // With Edg4, there is a non-defining declaration, and it needs to
+  // be marked as a cuda kernel. With Edg3, there is no non-defining declaration.
+  if (func->get_firstNondefiningDeclaration()) {
+    decl = isSgFunctionDeclaration(func->get_firstNondefiningDeclaration());
+    decl->get_functionModifier().setCudaKernel();
+  }
 }
 } // namespace cuda_util
 } // namespace translator

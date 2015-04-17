@@ -609,8 +609,8 @@ void BuildCUDAMemcpy(SgBasicBlock *body,
     }
     SgFunctionCallExp *copy_call =
         host_to_dev ?
-        cu::BuildCUDAMemcpyHostToDevice(dev_p, host_p, size_exp) :
-        cu::BuildCUDAMemcpyDeviceToHost(host_p, dev_p, size_exp);
+        cu::BuildCUDAMemcpy(dev_p, host_p, size_exp, cu::cudaMemcpyHostToDevice) :
+        cu::BuildCUDAMemcpy(host_p, dev_p, size_exp, cu::cudaMemcpyDeviceToHost);
     si::appendStatement(sb::buildExprStatement(copy_call), body);
   }
 }
