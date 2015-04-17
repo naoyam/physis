@@ -74,7 +74,7 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
       SgClassDeclaration *grid_decl,
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt);
+      const GridType *gt, SgClassDefinition *utype);
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(

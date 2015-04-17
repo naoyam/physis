@@ -188,7 +188,7 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
     return NULL;
   }
   virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt) {
+      const GridType *gt, SgClassDefinition *utype) {
     return  NULL;
   }
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(

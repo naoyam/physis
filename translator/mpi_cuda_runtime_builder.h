@@ -171,8 +171,8 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
       SgClassDeclaration *grid_decl,
       const GridType *gt);
   virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt) {
-    return cuda_rt_builder_->BuildGridNewFuncForUserType(gt);
+      const GridType *gt, SgClassDefinition *utype) {
+    return cuda_rt_builder_->BuildGridNewFuncForUserType(gt, utype);
   }
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       const GridType *gt) {

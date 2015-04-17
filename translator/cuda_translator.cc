@@ -242,7 +242,7 @@ void CUDATranslator::ProcessUserDefinedPointType(
 
   // Build GridNew for this type
   SgFunctionDeclaration *new_decl =
-      builder()->BuildGridNewFuncForUserType(gt);
+      builder()->BuildGridNewFuncForUserType(gt, type_decl->get_definition());
   LOG_DEBUG() << "Inserting new function for user type\n";
   si::insertStatementAfter(type_decl, new_decl);
   gt->aux_new_decl() = new_decl;
