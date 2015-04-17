@@ -427,8 +427,12 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
           si::lookupNamedTypeInParentScopes("PSVectorInt", gs_));
   si::appendArg(pl, dim_p);
 
-  // Build the function body
-  SgBasicBlock *body = sb::buildBasicBlock();
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name, sb::buildPointerType(sb::buildVoidType()), pl);
+  si::setStatic(fdecl);
+
+  SgBasicBlock *body = fdecl->get_definition()->get_body();
+  
   // Allocate a struct
   // __PSGridType_dev *p = malloc(sizeof(__PSGridType_dev));
   SgVariableDeclaration *p_decl =
@@ -484,10 +488,6 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   // return p;
   si::appendStatement(sb::buildReturnStmt(Var(p_decl)), body);
   
-  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
-      func_name, sb::buildPointerType(sb::buildVoidType()), pl);
-  ru::ReplaceFuncBody(fdecl, body);
-  si::setStatic(fdecl);
   return fdecl;
 }
 
@@ -869,8 +869,13 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
           "offset", BuildIndexType2(gs_));
   si::appendArg(pl, offset_p);
 
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name, gt->point_type(), pl);
+  cu::SetCUDADevice(fdecl);
+  si::setStatic(fdecl);  
+
   // Function body
-  SgBasicBlock *body = sb::buildBasicBlock();
+  SgBasicBlock *body = fdecl->get_definition()->get_body();
   // Type v = {g->x[offset], g->y[offset], g->z[offset]};
 
   SgVariableDeclaration *v_decl =
@@ -914,12 +919,6 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
   // return v;
   si::appendStatement(sb::buildReturnStmt(Var(v_decl)), body);
 
-  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
-      func_name, gt->point_type(), pl);
-  fdecl->get_functionModifier().setCudaDevice();
-  si::setStatic(fdecl);
-  ru::ReplaceFuncBody(fdecl, body);
-  si::setStatic(fdecl);  
   return fdecl;
 }
 
@@ -946,8 +945,13 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
           "v", sb::buildReferenceType(gt->point_type()));
   si::appendArg(pl, v_p);
 
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name, sb::buildVoidType(), pl);
+  cu::SetCUDADevice(fdecl);
+  si::setStatic(fdecl);
+
   // Function body
-  SgBasicBlock *body = sb::buildBasicBlock();
+  SgBasicBlock *body = fdecl->get_definition()->get_body();
 
   SgVariableDeclaration *num_elms_decl =
       BuildNumElmsDecl(Var(g_p), type_decl, gt->rank());
@@ -988,11 +992,6 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
     si::deleteAST(num_elms_decl);
   }
 
-  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
-      func_name, sb::buildVoidType(), pl);
-  fdecl->get_functionModifier().setCudaDevice();
-  si::setStatic(fdecl);
-  ru::ReplaceFuncBody(fdecl, body);
   return fdecl;
 }
 

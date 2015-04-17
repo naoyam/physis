@@ -673,10 +673,16 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       BuildGridCopyFuncSigForUserType(is_copyout, params);
   SgInitializedName *user_ptr = params[0];
   SgInitializedName *pack_buf = is_copyout ? params[1] : NULL;
-  SgInitializedName *num_elms = params.back();  
+  SgInitializedName *num_elms = params.back();
+
+  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
+      func_name,
+      is_copyout? isSgType(sb::buildVoidType()) : isSgType(ru::VoidPointerType()),
+      pl);
+  si::setStatic(fdecl);    
   
   // Function body
-  SgBasicBlock *body = sb::buildBasicBlock();
+  SgBasicBlock *body = fdecl->get_definition()->get_body();
   
   //Type *dstp = (Type *)dst;
   SgType *hostp_type =
@@ -730,14 +736,7 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
         body);
   }
   
-  SgFunctionDeclaration *fdecl = sb::buildDefiningFunctionDeclaration(
-      func_name,
-      is_copyout? isSgType(sb::buildVoidType()) : isSgType(ru::VoidPointerType()),
-      pl);
-  ru::ReplaceFuncBody(fdecl, body);
-  si::setStatic(fdecl);    
   return fdecl;
-  
 }
 
 SgFunctionParameterList *MPICUDARuntimeBuilder::BuildGridCopyFuncSigForUserType(
