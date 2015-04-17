@@ -25,7 +25,7 @@ extern "C" {
   typedef void __PSGridMPI;
   
 #ifdef PHYSIS_USER
-  extern __PSGridDimDev(const void *p, int);
+  extern int __PSGridDimDev(const void *p, int);
   extern void dim3(int, ...);
   extern void *__PSGridGetBaseAddr(const void *g);  
 #else
@@ -506,7 +506,7 @@ extern "C" {
   typedef int cudaError_t;
   extern cudaStream_t stream_inner;
   extern cudaStream_t stream_boundary_kernel;  
-  extern cudaError_t cudaStreamSynchronize(cudaStream);
+  extern cudaError_t cudaStreamSynchronize(cudaStream_t s);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
   enum cudaFuncCache {
