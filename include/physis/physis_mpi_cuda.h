@@ -515,6 +515,9 @@ extern "C" {
     cudaFuncCachePreferL1,
     cudaFuncCachePreferEqual
   };
+  
+  // Simplify the generation of calls to ceil
+  extern double ceil(double x);  
 #endif
   
 
