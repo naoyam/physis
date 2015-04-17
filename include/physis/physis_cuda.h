@@ -289,7 +289,7 @@ extern "C" {
   extern cudaError_t cudaStreamSynchronize(cudaStream_t);
   extern cudaError_t cudaFuncSetCacheConfig(const char* func,
                                             int);
-  extern double ceil(double x);
+
   enum cudaFuncCache {
     cudaFuncCachePreferNone,
     cudaFuncCachePreferShared,
@@ -307,7 +307,9 @@ extern "C" {
   
   extern cudaError_t cudaMemcpy(void *dst, const void * src, size_t count,
                                 enum cudaMemcpyKind kind);
-    
+  
+  // Simplify the generation of calls to ceil
+  extern double ceil(double x);  
 #endif
 
 #ifdef __cplusplus
