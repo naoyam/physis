@@ -395,7 +395,7 @@ static bool IsDimMember(SgVariableDeclaration *member) {
 
 // Build a "new" function.
 SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
-    const GridType *gt) {
+    const GridType *gt, SgClassDefinition *utype) {
   /*
     Example:
     void* __PSGridType_devNew(int num_dims, PSVectorInt dim) {
@@ -444,10 +444,11 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
   
   // p->dim[i]  = dim[i];
   for (unsigned i = 0; i < gt->rank(); ++i) {
+    SgVarRefExp *utype_dim = Var(DIM_STR, utype);
+    // If var is not found, unknown type is assigned
+    PSAssert(utype_dim->get_type() != SgTypeUnknown::createType());
     SgExpression *lhs = ArrayRef(
-        Arrow(Var(p_decl),
-              Var(DIM_STR)),
-        Int(i));
+        Arrow(Var(p_decl), utype_dim), Int(i));
     SgExpression *rhs = ArrayRef(Var(dim_p),
                                  Int(i));
     si::appendStatement(sb::buildAssignStatement(lhs, rhs),
@@ -474,9 +475,11 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
       size_exp = Mul(size_exp, Int(
           si::getArrayElementCount(isSgArrayType(member_type))));
     }
+    SgVarRefExp *member_vref = Var(ru::GetName(Var(member_decl)),
+                                   utype);
+    PSAssert(member_vref->get_type() != SgTypeUnknown::createType());
     SgFunctionCallExp *malloc_call = cu::BuildCUDAMalloc(
-        Arrow(Var(p_decl), Var(ru::GetName(Var(member_decl)))),
-        size_exp);
+        Arrow(Var(p_decl), member_vref), size_exp);
     si::appendStatement(sb::buildExprStatement(malloc_call),
                         body);
   }
