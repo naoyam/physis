@@ -54,7 +54,15 @@ class GridType: public AstAttribute {
   SgType *aux_type() const { return aux_type_; }      
   SgType *&aux_type() { return aux_type_; }
   SgDeclarationStatement *aux_decl() const { return aux_decl_; }
-  SgDeclarationStatement *&aux_decl() { return aux_decl_; }    
+  SgDeclarationStatement *&aux_decl() { return aux_decl_; }
+  SgClassDefinition *aux_def() const {
+    if (isSgClassDeclaration(aux_decl())) {
+      return isSgClassDeclaration(
+          isSgClassDeclaration(aux_decl())->get_definingDeclaration())->get_definition();
+    } else {
+      return NULL;
+    }
+  }
   SgFunctionDeclaration *aux_new_decl() const { return aux_new_decl_; }
   SgFunctionDeclaration *&aux_new_decl() { return aux_new_decl_; }    
   SgFunctionDeclaration *aux_free_decl() const { return aux_free_decl_; }
