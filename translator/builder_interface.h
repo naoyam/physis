@@ -318,7 +318,7 @@ class BuilderInterface {
       SgClassDeclaration *grid_decl,
       const GridType *gt) = 0;  
   virtual SgFunctionDeclaration *BuildGridNewFuncForUserType(
-      const GridType *gt, SgClassDefinition *utype) = 0;
+      const GridType *gt) = 0;
   virtual SgFunctionDeclaration *BuildGridFreeFuncForUserType(
       const GridType *gt) = 0;
   virtual SgFunctionDeclaration *BuildGridCopyFuncForUserType(

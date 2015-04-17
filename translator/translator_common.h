@@ -103,6 +103,30 @@ SgVarRefExp *Var(const T &v, const S &w) {
   return SageBuilder::buildVarRefExp(v, w);
 }
 
+template <class T>
+SgVarRefExp *VarSafe(const T &v) {
+  SgVarRefExp *vr = SageBuilder::buildVarRefExp(v);
+  // If var is not found, unknown type is assigned  
+  PSAssert(vr->get_type() != SgTypeUnknown::createType());
+  return vr;
+}
+
+template <class T>
+SgVarRefExp *VarSafe(T *v) {
+  SgVarRefExp *vr = SageBuilder::buildVarRefExp(v);
+  // If var is not found, unknown type is assigned    
+  PSAssert(vr->get_type() != SgTypeUnknown::createType());
+  return vr;
+}
+
+template <class T, class S>
+SgVarRefExp *VarSafe(const T &v, const S &w) {
+  SgVarRefExp *vr = SageBuilder::buildVarRefExp(v, w);
+  // If var is not found, unknown type is assigned    
+  PSAssert(vr->get_type() != SgTypeUnknown::createType());
+  return vr;
+}
+
 } // namespace translator
 } // namespace physis
 
