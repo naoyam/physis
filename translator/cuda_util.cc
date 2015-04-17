@@ -325,9 +325,9 @@ SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx) {
 }
 
 
-void SetCudaKernel(SgFunctionDeclaration *func) {
+void SetCUDAKernel(SgFunctionDeclaration *func) {
   LOG_DEBUG() << "Make function, "
-              << func->get_name() << ", a CUDA kernel\n";
+              << func->get_name() << ", a CUDA kernel function\n";
   SgFunctionDeclaration *decl;
   decl = isSgFunctionDeclaration(func->get_definingDeclaration());
   decl->get_functionModifier().setCudaKernel();
@@ -338,6 +338,21 @@ void SetCudaKernel(SgFunctionDeclaration *func) {
     decl->get_functionModifier().setCudaKernel();
   }
 }
+
+void SetCUDADevice(SgFunctionDeclaration *func) {
+  LOG_DEBUG() << "Make function, "
+              << func->get_name() << ", a CUDA device function\n";
+  SgFunctionDeclaration *decl;
+  decl = isSgFunctionDeclaration(func->get_definingDeclaration());
+  decl->get_functionModifier().setCudaDevice();
+  // With Edg4, there is a non-defining declaration, and it needs to
+  // be marked as a cuda kernel. With Edg3, there is no non-defining declaration.
+  if (func->get_firstNondefiningDeclaration()) {
+    decl = isSgFunctionDeclaration(func->get_firstNondefiningDeclaration());
+    decl->get_functionModifier().setCudaDevice();
+  }
+}
+
 } // namespace cuda_util
 } // namespace translator
 } // namespace physis

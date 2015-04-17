@@ -80,8 +80,7 @@ void CUDATranslator::appendNewArgExtra(SgExprListExp *args,
 
 void CUDATranslator::TranslateKernelDeclaration(
     SgFunctionDeclaration *node) {
-  SgFunctionModifier &modifier = node->get_functionModifier();
-  modifier.setCudaDevice();
+  cu::SetCUDADevice(node);
 
   // e.g., PSGrid3DFloat -> __PSGrid3DFloatDev *
   Rose_STL_Container<SgNode*> exps =
