@@ -1267,6 +1267,35 @@ SgBasicBlock *CUDARuntimeBuilder::BuildRunKernelFuncBody(
   return block;
 }
 
+static SgClassDefinition *GetPSDomainStruct() {
+  static  SgClassDeclaration *ps_domain_struct = NULL;
+  if (ps_domain_struct == NULL) {
+    SgTypedefSymbol *ts = si::lookupTypedefSymbolInParentScopes("__PSDomain");
+    PSAssert(ts);
+    SgType *bt = ts->get_declaration()->get_base_type();
+    PSAssert(bt);
+    LOG_DEBUG() << "PSDomain typedef'ed base type: " << bt->unparseToString() << "\n";
+    PSAssert(isSgClassType(bt));
+    ps_domain_struct = isSgClassDeclaration(isSgClassType(bt)->get_declaration());
+  }
+  PSAssert(ps_domain_struct);  
+  return isSgClassDeclaration(ps_domain_struct->get_definingDeclaration())->get_definition();
+}
+
+static SgVariableDeclaration *GetPSDomainMember(const string &member_name) {
+  SgClassDefinition *dom = GetPSDomainStruct();
+  SgDeclarationStatementPtrList &members = dom->get_members();
+  BOOST_FOREACH(SgDeclarationStatement *decl, members) {
+    SgVariableDeclaration *vd = isSgVariableDeclaration(decl);
+    PSAssert(vd);
+    if (si::getFirstVariable(*vd).get_name() == member_name) {
+      return vd;
+    }
+  }
+  LOG_ERROR() << "No such member in PSDomain: " << member_name << "\n";
+  return NULL;
+}
+
 SgIfStmt *CUDARuntimeBuilder::BuildDomainInclusionCheck(
     const vector<SgVariableDeclaration*> &indices,
     SgInitializedName *dom_arg, SgStatement *true_stmt) {
@@ -1285,9 +1314,9 @@ SgIfStmt *CUDARuntimeBuilder::BuildDomainInclusionCheck(
     // NULL indicates no check required.
     if (idx == NULL) continue;
     SgExpression *dom_min = ArrayRef(
-        Dot(Var(dom_arg), sb::buildOpaqueVarRefExp("local_min")), Int(dim));
+        Dot(Var(dom_arg), Var(GetPSDomainMember("local_min"))), Int(dim));
     SgExpression *dom_max = ArrayRef(
-        Dot(Var(dom_arg), sb::buildOpaqueVarRefExp("local_max")), Int(dim));
+        Dot(Var(dom_arg), Var(GetPSDomainMember("local_max"))), Int(dim));
     SgExpression *test = sb::buildOrOp(
         sb::buildLessThanOp(Var(idx), dom_min),
         sb::buildGreaterOrEqualOp(Var(idx), dom_max));
