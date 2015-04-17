@@ -22,12 +22,6 @@ SgFunctionCallExp *BuildCUDAMalloc(SgExpression *buf, SgExpression *size);
 SgFunctionCallExp *BuildCUDAFree(SgExpression *p);
 SgFunctionCallExp *BuildCUDAMallocHost(SgExpression *buf, SgExpression *size);
 SgFunctionCallExp *BuildCUDAFreeHost(SgExpression *p);
-SgFunctionCallExp *BuildCUDAMemcpyHostToDevice(SgExpression *dst,
-                                               SgExpression *src,
-                                               SgExpression *size);
-SgFunctionCallExp *BuildCUDAMemcpyDeviceToHost(SgExpression *dst,
-                                               SgExpression *src,
-                                               SgExpression *size);
 
 enum CudaFuncCache {
   cudaFuncCachePreferNone,
@@ -51,6 +45,19 @@ enum CudaDimentionIdx {
 SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
     SgFunctionSymbol *kernel,
     const CudaFuncCache cache_config);
+
+enum CUDAMemcpyKind {
+  cudaMemcpyHostToHost,
+  cudaMemcpyHostToDevice,
+  cudaMemcpyDeviceToHost,
+  cudaMemcpyDeviceToDevice,
+  cudaMemcpyDefault
+};
+
+SgFunctionCallExp *BuildCUDAMemcpy(SgExpression *dst,
+                                   SgExpression *src,
+                                   SgExpression *size,
+                                   CUDAMemcpyKind kind);
 
 SgVariableDeclaration *BuildDim3Declaration(const SgName &name,
                                             SgExpression *dimx,

@@ -104,27 +104,6 @@ SgFunctionCallExp *BuildCUDAFreeHost(SgExpression *p) {
   return call;
 }
 
-SgFunctionCallExp *BuildCUDAMemcpyHostToDevice(
-    SgExpression *dst, SgExpression *src, SgExpression *size) {
-  SgFunctionCallExp *call = sb::buildFunctionCallExp(
-      "cudaMemcpy",
-      BuildCudaErrorType(),
-      sb::buildExprListExp(
-          dst, src, size,
-          sb::buildOpaqueVarRefExp("cudaMemcpyHostToDevice")));
-  return call;
-}
-SgFunctionCallExp *BuildCUDAMemcpyDeviceToHost(
-    SgExpression *dst, SgExpression *src, SgExpression *size) {
-  SgFunctionCallExp *call = sb::buildFunctionCallExp(
-      "cudaMemcpy",
-      BuildCudaErrorType(),
-      sb::buildExprListExp(
-          dst, src, size,
-          sb::buildOpaqueVarRefExp("cudaMemcpyDeviceToHost")));
-  return call;
-}
-
 namespace {
 SgClassDeclaration *cuda_dim3_decl() {
   static SgClassDeclaration *dim3_decl = NULL;
@@ -174,9 +153,19 @@ SgEnumDeclaration *cuda_enum_cuda_func_cache() {
   if (!enum_func_cache) {
     SgEnumSymbol *es = si::lookupEnumSymbolInParentScopes("cudaFuncCache");
     PSAssert(es);
-    enum_func_cache = es->get_declaration();
+    enum_func_cache = isSgEnumDeclaration(es->get_declaration()->get_definingDeclaration());
   }
   return enum_func_cache;
+}
+
+SgEnumDeclaration *cuda_enum_cuda_memcpy_kind() {
+  static SgEnumDeclaration *enum_memcpy_kind = NULL;
+  if (!enum_memcpy_kind) {
+    SgEnumSymbol *es = si::lookupEnumSymbolInParentScopes("cudaMemcpyKind");
+    PSAssert(es);
+    enum_memcpy_kind = isSgEnumDeclaration(es->get_declaration()->get_definingDeclaration());    
+  }
+  return enum_memcpy_kind;
 }
 
 }  // namespace
@@ -194,6 +183,26 @@ SgFunctionCallExp *BuildCudaCallFuncSetCacheConfig(
   // build a call to cudaFuncSetCacheConfig
   SgFunctionSymbol *fs =
       si::lookupFunctionSymbolInParentScopes("cudaFuncSetCacheConfig");
+  PSAssert(fs);
+  SgFunctionCallExp *call =
+      sb::buildFunctionCallExp(fs, args);
+  return call;
+}
+
+SgFunctionCallExp *BuildCUDAMemcpy(
+    SgExpression *dst,
+    SgExpression *src,
+    SgExpression *size,
+    CUDAMemcpyKind kind) {
+  SgEnumVal *enum_val = ru::BuildEnumVal(
+      kind, cuda_enum_cuda_memcpy_kind());
+  
+  SgExprListExp *args =
+      sb::buildExprListExp(dst, src, size, enum_val);
+
+  // build a call to cudaMemcpy
+  SgFunctionSymbol *fs =
+      si::lookupFunctionSymbolInParentScopes("cudaMemcpy");
   PSAssert(fs);
   SgFunctionCallExp *call =
       sb::buildFunctionCallExp(fs, args);

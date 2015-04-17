@@ -296,6 +296,18 @@ extern "C" {
     cudaFuncCachePreferL1,
     cudaFuncCachePreferEqual
   };
+
+  enum cudaMemcpyKind {
+    cudaMemcpyHostToHost,
+    cudaMemcpyHostToDevice,
+    cudaMemcpyDeviceToHost,
+    cudaMemcpyDeviceToDevice,
+    cudaMemcpyDefault
+  };
+  
+  extern cudaError_t cudaMemcpy(void *dst, const void * src, size_t count,
+                                enum cudaMemcpyKind kind);
+    
 #endif
 
 #ifdef __cplusplus
