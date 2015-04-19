@@ -320,13 +320,13 @@ SgExpression *BuildMax(SgExpression *x,
       si::copyExpression(x), si::copyExpression(y));
 }
 
-void RedirectFunctionCall(SgFunctionCallExp *call,
-                          SgExpression *new_target) {
+SgFunctionCallExp *RedirectFunctionCall(SgFunctionCallExp *call,
+                                        SgExpression *new_target) {
+  SgExprListExp *args = isSgExprListExp(si::copyExpression(call->get_args()));
   SgFunctionCallExp *new_call =
-      sb::buildFunctionCallExp(
-          new_target,
-          isSgExprListExp(si::copyExpression(call->get_args())));
+      sb::buildFunctionCallExp(new_target, args);
   si::replaceExpression(call, new_call);
+  return new_call;
 }
 
 void PrependExpression(SgExprListExp *exp_list,

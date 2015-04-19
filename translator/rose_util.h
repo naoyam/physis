@@ -133,8 +133,8 @@ void RedirectFunctionCalls(SgNode *node,
                            const std::string &current_func,
                            SgFunctionDeclaration *new_func);
 
-void RedirectFunctionCall(SgFunctionCallExp *call,
-                          SgExpression *new_target);
+SgFunctionCallExp *RedirectFunctionCall(SgFunctionCallExp *call,
+                                        SgExpression *new_target);
 
 
 SgFunctionDeclaration *CloneFunction(SgFunctionDeclaration *decl,
