@@ -481,8 +481,21 @@ void MPICUDATranslator::TranslateKernelDeclaration(
     PSAssert(fc);
     if (ru::getFuncName(fc) != PS_GRID_DIM_NAME) 
       continue;
-    ru::RedirectFunctionCall(
-        fc, sb::buildFunctionRefExp(gdim_dev));               
+    SgFunctionCallExp *new_fc = ru::RedirectFunctionCall(
+        fc, sb::buildFunctionRefExp(gdim_dev));
+    // ROSE Edg4x add (void*) cast, which needs to be removed to use
+    // the macro __PSGridDimDev defined in physis_mpi_cuda.h.
+    SgExpression *gv_ref = new_fc->get_args()->get_expressions()[0];
+    if (SgCastExp *cast_exp = isSgCastExp(gv_ref)) {
+      if (si::isPointerType(cast_exp->get_type()) &&
+          isSgTypeVoid(si::getElementType(cast_exp->get_type()))) {
+        LOG_DEBUG() << "Removing (void*) from "
+                    << gv_ref->unparseToString() << "\n";
+        si::replaceExpression(cast_exp,
+                              si::copyExpression(cast_exp->get_operand()));
+        LOG_DEBUG() << "After replacement: " << new_fc->unparseToString() << "\n";
+      }
+    }
   }
 
   if (flag_mpi_overlap_)
