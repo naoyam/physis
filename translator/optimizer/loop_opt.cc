@@ -41,11 +41,13 @@ static bool IsAddressTaken(SgInitializedName *vs) {
   // No & op allowed    
   FOREACH (it, addrof_exprs.begin(), addrof_exprs.end()) {
     SgExpression *addr_exp  = (*it)->get_operand();
-    SgInitializedName *decl
-        = GetVariable(isSgVarRefExp(addr_exp));
-    if (isSgVarRefExp(addr_exp) && (vs == decl)) {
-      LOG_DEBUG() << "Assumes non-invariant when address is taken\n";
-      return true;
+    if (isSgVarRefExp(addr_exp)) {
+      SgInitializedName *decl
+          = GetVariable(isSgVarRefExp(addr_exp));
+      if (vs == decl) {
+        LOG_DEBUG() << "Assumes non-invariant when address is taken\n";
+        return true;
+      }
     }
   }
   return false;
