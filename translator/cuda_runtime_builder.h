@@ -117,9 +117,10 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
   virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
   virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
       StencilMap *s);
-  virtual SgBasicBlock *BuildRunKernelFuncBody(
+  virtual void BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
-      vector<SgVariableDeclaration*> &indices);
+      vector<SgVariableDeclaration*> &indices,
+      SgBasicBlock *body);
 
   //! Generates an IF block to exclude indices outside a domain.
   /*!

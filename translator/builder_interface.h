@@ -250,11 +250,12 @@ class BuilderInterface {
     \param stencil The stencil map object.
     \param param Parameters for the run function.
     \param indices Output parameter to return generated indices
-    \return The body of the run function.
+    \param body Function body
    */
-  virtual SgBasicBlock *BuildRunKernelFuncBody(
+  virtual void BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
-      vector<SgVariableDeclaration*> &indices) = 0;
+      vector<SgVariableDeclaration*> &indices,
+      SgBasicBlock *body) = 0;
 
   //! Build a variable declaration represnting loop index
   /*

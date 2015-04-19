@@ -153,11 +153,12 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildRunKernelFunc(
   return cuda_rt_builder_->BuildRunKernelFunc(stencil);
 }
 
-SgBasicBlock *MPICUDARuntimeBuilder::BuildRunKernelFuncBody(
+void MPICUDARuntimeBuilder::BuildRunKernelFuncBody(
     StencilMap *stencil, SgFunctionParameterList *param,
-    vector<SgVariableDeclaration*> &indices) {
-  return cuda_rt_builder_->BuildRunKernelFuncBody(
-      stencil, param, indices);
+    vector<SgVariableDeclaration*> &indices,
+    SgBasicBlock *body) {
+  cuda_rt_builder_->BuildRunKernelFuncBody(
+      stencil, param, indices, body);
 }
 
 SgScopeStatement *MPICUDARuntimeBuilder::BuildKernelCallPreamble1D(

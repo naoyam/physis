@@ -91,10 +91,11 @@ class MPICUDATranslator: public MPITranslator {
     
     \param stencil a stencil map object to generate calls.
     \param param Parameters for the run function
-    \return The basic block containing the generated code.
+    \param body The function body basic block.
   */
-  virtual SgBasicBlock *BuildRunInteriorKernelBody(
-      StencilMap *stencil,  SgFunctionParameterList *param);
+  virtual void BuildRunInteriorKernelBody(
+      StencilMap *stencil,  SgFunctionParameterList *param,
+      SgBasicBlock *body);
   //! Generates a kernel declaration optimized for interior domains.
   /*
     \param original The original kernel declaration.

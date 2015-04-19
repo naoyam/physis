@@ -97,9 +97,10 @@ class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
     SgInitializedName *dom_arg, SgStatement *true_stmt);
   
   virtual SgFunctionDeclaration *BuildRunKernelFunc(StencilMap *s);
-  virtual SgBasicBlock *BuildRunKernelFuncBody(
+  virtual void BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
-      vector<SgVariableDeclaration*> &indices);
+      vector<SgVariableDeclaration*> &indices,
+      SgBasicBlock *body);
   virtual SgFunctionParameterList *BuildRunKernelFuncParameterList(
       StencilMap *stencil);
 

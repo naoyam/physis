@@ -157,9 +157,10 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   virtual SgFunctionDeclaration *BuildRunKernelFunc(
       StencilMap *s);
   
-  virtual SgBasicBlock *BuildRunKernelFuncBody(
+  virtual void BuildRunKernelFuncBody(
       StencilMap *stencil, SgFunctionParameterList *param,
-      vector<SgVariableDeclaration*> &indices);
+      vector<SgVariableDeclaration*> &indices,
+      SgBasicBlock *body);
 
   virtual SgVariableDeclaration *BuildLoopIndexVarDecl(
       int dim,
