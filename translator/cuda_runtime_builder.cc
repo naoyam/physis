@@ -1204,7 +1204,8 @@ SgScopeStatement *CUDARuntimeBuilder::BuildKernelCallPreamble3D(
     SgVariableDeclaration *x_index_rb =
         sb::buildVariableDeclaration(
             indices[0]->get_variables()[0]->get_name() + "_rb",
-            sb::buildIntType(), sb::buildAssignInitializer(rb_offset_init));
+            sb::buildIntType(), sb::buildAssignInitializer(rb_offset_init),
+            kernel_call_block);
     indices[0] = x_index_rb;
     si::appendStatement(x_index_rb, kernel_call_block);
     SgVariableDeclaration* t[] = {x_index_rb};
