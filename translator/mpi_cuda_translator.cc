@@ -133,9 +133,9 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
       "x",
       sb::buildIntType(),
       sb::buildAssignInitializer(
-          Add(Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxX),
-                      cu::BuildCudaIdxExp(cu::kBlockDimX)),
-                  cu::BuildCudaIdxExp(cu::kThreadIdxX)),
+          Add(Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxX, global_scope_),
+                      cu::BuildCudaIdxExp(cu::kBlockDimX, global_scope_)),
+                  cu::BuildCudaIdxExp(cu::kThreadIdxX, global_scope_)),
               offset_exprs[0])),
       block);
   
@@ -145,9 +145,9 @@ SgBasicBlock* MPICUDATranslator::BuildRunBoundaryKernelBody(
       sb::buildIntType(),
       sb::buildAssignInitializer(
           Add(Add(Mul(
-              cu::BuildCudaIdxExp(cu::kBlockIdxY),
-              cu::BuildCudaIdxExp(cu::kBlockDimY)),
-                  cu::BuildCudaIdxExp(cu::kThreadIdxY)),
+              cu::BuildCudaIdxExp(cu::kBlockIdxY, global_scope_),
+              cu::BuildCudaIdxExp(cu::kBlockDimY, global_scope_)),
+                  cu::BuildCudaIdxExp(cu::kThreadIdxY, global_scope_)),
               offset_exprs[1])),
       block);
   
@@ -743,12 +743,12 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
   SgVariableDeclaration *loop_index = x_index;
   SgStatement *loop_init = sb::buildAssignStatement(
       sb::buildVarRefExp(loop_index),
-      Add(cu::BuildCudaIdxExp(cu::kThreadIdxX),
+      Add(cu::BuildCudaIdxExp(cu::kThreadIdxX, global_scope_),
           ArrayRef(min_field, Int(0))));
   SgStatement *loop_test = sb::buildExprStatement(
       sb::buildLessThanOp(Var(loop_index), ArrayRef(max_field, Int(0))));
   SgExpression *loop_incr =
-      sb::buildPlusAssignOp(Var(loop_index), cu::BuildCudaIdxExp(cu::kBlockDimX));
+      sb::buildPlusAssignOp(Var(loop_index), cu::BuildCudaIdxExp(cu::kBlockDimX, global_scope_));
 
   SgBasicBlock *loop_body = sb::buildBasicBlock();
   SgExprListExp *kernel_args=
@@ -776,12 +776,12 @@ SgBasicBlock* MPICUDATranslator::BuildRunMultiStreamBoundaryKernelBody(
     SgExpression *blockDim = NULL;
     if (i == 1) {
       loop_index = y_index;
-      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxY);
-      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimY);
+      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxY, global_scope_);
+      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimY, global_scope_);
     } else if (i == 2) {
       loop_index = z_index;
-      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxZ);
-      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimZ);
+      threadIdx = cu::BuildCudaIdxExp(cu::kThreadIdxZ, global_scope_);
+      blockDim = cu::BuildCudaIdxExp(cu::kBlockDimZ, global_scope_);
     }
     loop_init = sb::buildAssignStatement(
         Var(loop_index), Add(threadIdx, ArrayRef(

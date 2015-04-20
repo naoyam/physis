@@ -47,35 +47,39 @@ SgExpression *CUDARuntimeBuilder::BuildNumElmsExpr(
 
 SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgExpression *dim_expr,
-    int num_dims) {
+    int num_dims,
+    SgScopeStatement *scope) {
   SgExpression *num_elms_rhs = BuildNumElmsExpr(dim_expr, num_dims);
   SgVariableDeclaration *num_elms_decl =
       sb::buildVariableDeclaration(
           "num_elms", si::lookupNamedTypeInParentScopes("size_t"),
-          sb::buildAssignInitializer(num_elms_rhs));
+          sb::buildAssignInitializer(num_elms_rhs),
+          scope);
   return num_elms_decl;
 }
 
 SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgVarRefExp *p_exp,
     SgClassDeclaration *type_decl,
-    int num_dims) {
+    int num_dims,
+    SgScopeStatement *scope) {
   const SgDeclarationStatementPtrList &members =
       type_decl->get_definition()->get_members();
   SgExpression *dim_expr =
       Arrow(p_exp, Var(isSgVariableDeclaration(members[0])));
-  return BuildNumElmsDecl(dim_expr, num_dims);
+  return BuildNumElmsDecl(dim_expr, num_dims, scope);
 }
 
 SgVariableDeclaration *CUDARuntimeBuilder::BuildNumElmsDecl(
     SgVariableDeclaration *p_decl,
     SgClassDeclaration *type_decl,
-    int num_dims) {
+    int num_dims,
+    SgScopeStatement *scope) {
   return BuildNumElmsDecl(Var(p_decl),
-                          type_decl, num_dims);
+                          type_decl, num_dims, scope);
 }
 
-CUDARuntimeBuilder::CUDARuntimeBuilder(SgScopeStatement *global_scope,
+CUDARuntimeBuilder::CUDARuntimeBuilder(SgGlobal *global_scope,
                                        const Configuration &config,
                                        BuilderInterface *delegator):
     ReferenceRuntimeBuilder(global_scope, config, delegator),
@@ -363,7 +367,7 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
   SgType *dim_type = 
       sb::buildArrayType(BuildIndexType2(gs_),
                          Int(gt->rank()));
-  si::appendStatement(sb::buildVariableDeclaration(DIM_STR, dim_type),
+  si::appendStatement(sb::buildVariableDeclaration(DIM_STR, dim_type, NULL, dev_def),
                       dev_def);
                                
   // Add a pointer for each struct member
@@ -379,7 +383,7 @@ SgClassDeclaration *CUDARuntimeBuilder::BuildGridDevTypeForUserType(
     SgVariableDeclaration *dev_type_member =
         sb::buildVariableDeclaration(
             member_name,
-            sb::buildPointerType(member_type));
+            sb::buildPointerType(member_type), NULL, dev_def);
     si::appendStatement(dev_type_member, dev_def);
   }
 
@@ -444,7 +448,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
                       "malloc",
                       sb::buildPointerType(sb::buildVoidType()),
                       sb::buildExprListExp(sb::buildSizeOfOp(dev_type))),
-                  ret_type)));
+                  ret_type)),
+          body);
   si::appendStatement(p_decl, body);
   
   // p->dim[i]  = dim[i];
@@ -459,7 +464,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridNewFuncForUserType(
 
   // size_t num_elms = dim[0] * ...;
   SgVariableDeclaration *num_elms_decl =
-      BuildNumElmsDecl(Var(dim_p), gt->rank());
+      BuildNumElmsDecl(Var(dim_p), gt->rank(), body);
   si::appendStatement(num_elms_decl, body);
   
   // cudaMalloc(&(p->x), sizeof(typeof(p->x)) * dim[i]);
@@ -526,7 +531,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridFreeFuncForUserType(
       sb::buildVariableDeclaration(
           "p", dev_ptr_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(v_p), dev_ptr_type)));
+              sb::buildCastExp(Var(v_p), dev_ptr_type)),
+          body);
   si::appendStatement(p_decl, body);
 
   // cudaFree(p->x);
@@ -790,7 +796,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           "p", dev_ptr_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(params[0]), dev_ptr_type)));
+              sb::buildCastExp(Var(params[0]), dev_ptr_type)),
+          body);
   si::appendStatement(p_decl, body);
   //Type *dstp = (Type *)dst;
   SgType *hostp_type =
@@ -801,7 +808,8 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           host_name + "p", hostp_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(params[1]), hostp_type)));
+              sb::buildCastExp(Var(params[1]), hostp_type)),
+          body);
   si::appendStatement(hostp_decl, body);
   // void *tbuf[3];
   SgVariableDeclaration *tbuf_decl =
@@ -879,11 +887,11 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridGetFuncForUserType(
   // Type v = {g->x[offset], g->y[offset], g->z[offset]};
 
   SgVariableDeclaration *v_decl =
-      sb::buildVariableDeclaration("v", gt->point_type());
+      sb::buildVariableDeclaration("v", gt->point_type(), NULL, body);
   si::appendStatement(v_decl, body);
 
   SgVariableDeclaration *num_elms_decl =
-      BuildNumElmsDecl(Var(g_p), type_decl, gt->rank());
+      BuildNumElmsDecl(Var(g_p), type_decl, gt->rank(), body);
   bool has_array_type = false;
   
   const SgDeclarationStatementPtrList &members =
@@ -954,7 +962,7 @@ SgFunctionDeclaration *CUDARuntimeBuilder::BuildGridEmitFuncForUserType(
   SgBasicBlock *body = fdecl->get_definition()->get_body();
 
   SgVariableDeclaration *num_elms_decl =
-      BuildNumElmsDecl(Var(g_p), type_decl, gt->rank());
+      BuildNumElmsDecl(Var(g_p), type_decl, gt->rank(), body);
   bool has_array_type = false;
   
   // g->x[offset] = v.x;
@@ -1096,9 +1104,9 @@ void CUDARuntimeBuilder::BuildKernelIndices(
   
   // x = blockIdx.x * blockDim.x + threadIdx.x;
   SgExpression *init_x =
-      Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxX),
-              cu::BuildCudaIdxExp(cu::kBlockDimX)),
-          cu::BuildCudaIdxExp(cu::kThreadIdxX));
+      Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxX, gs_),
+              cu::BuildCudaIdxExp(cu::kBlockDimX, gs_)),
+          cu::BuildCudaIdxExp(cu::kThreadIdxX, gs_));
   if (stencil->IsRedBlackVariant()) {
     init_x = Mul(init_x, Int(2));
   }
@@ -1112,9 +1120,9 @@ void CUDARuntimeBuilder::BuildKernelIndices(
   if (dim >= 2) {
     // y = blockIdx.y * blockDim.y + threadIdx.y;        
     SgVariableDeclaration *y_index = BuildLoopIndexVarDecl(
-        2, Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxY),
-                   cu::BuildCudaIdxExp(cu::kBlockDimY)),
-               cu::BuildCudaIdxExp(cu::kThreadIdxY)),
+        2, Add(Mul(cu::BuildCudaIdxExp(cu::kBlockIdxY, gs_),
+                   cu::BuildCudaIdxExp(cu::kBlockDimY, gs_)),
+               cu::BuildCudaIdxExp(cu::kThreadIdxY, gs_)),
         call_site);
     if (ru::IsCLikeLanguage()) {
       si::appendStatement(y_index, call_site);

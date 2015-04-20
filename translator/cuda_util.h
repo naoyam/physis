@@ -74,7 +74,7 @@ SgCudaKernelExecConfig *BuildCudaKernelExecConfig(SgExpression *grid,
                                                   SgExpression *shared = NULL,
                                                   SgExpression *stream = NULL);
 
-SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx);
+SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx, SgGlobal *gs);
 
 // Make a function a CUDA global function
 void SetCUDAKernel(SgFunctionDeclaration *func);

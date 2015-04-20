@@ -14,7 +14,7 @@ namespace translator {
 class MPICUDARuntimeBuilder: virtual public MPIRuntimeBuilder,
                              virtual public CUDABuilderInterface {
  public:
-  MPICUDARuntimeBuilder(SgScopeStatement *global_scope,
+  MPICUDARuntimeBuilder(SgGlobal *global_scope,
                         const Configuration &config,
                         BuilderInterface *delegator=NULL):
       ReferenceRuntimeBuilder(global_scope, config, delegator),

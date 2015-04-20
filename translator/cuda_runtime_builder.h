@@ -14,7 +14,7 @@ namespace translator {
 class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
                           virtual public CUDABuilderInterface {
  public:
-  CUDARuntimeBuilder(SgScopeStatement *global_scope,
+  CUDARuntimeBuilder(SgGlobal *global_scope,
                      const Configuration &config,
                      BuilderInterface *delegator=NULL);
   virtual ~CUDARuntimeBuilder() {}
@@ -221,15 +221,18 @@ class CUDARuntimeBuilder: virtual public ReferenceRuntimeBuilder,
     int num_dims);
   virtual SgVariableDeclaration *BuildNumElmsDecl(
       SgExpression *dim_expr,
-      int num_dims);
+      int num_dims,
+      SgScopeStatement *scope);
   virtual SgVariableDeclaration *BuildNumElmsDecl(
       SgVarRefExp *p_exp,
       SgClassDeclaration *type_decl,
-      int num_dims);
+      int num_dims,
+      SgScopeStatement *scope);
   virtual SgVariableDeclaration *BuildNumElmsDecl(
       SgVariableDeclaration *p_decl,
       SgClassDeclaration *type_decl,
-      int num_dims);
+      int num_dims,
+      SgScopeStatement *scope);
   
   
  protected:

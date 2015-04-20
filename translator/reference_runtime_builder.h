@@ -13,7 +13,7 @@ namespace translator {
 
 class ReferenceRuntimeBuilder: virtual public BuilderInterface {
  public:
-  ReferenceRuntimeBuilder(SgScopeStatement *global_scope,
+  ReferenceRuntimeBuilder(SgGlobal *global_scope,
                           const Configuration &conifg,
                           BuilderInterface *delegator=NULL);
   virtual ~ReferenceRuntimeBuilder() {}
@@ -179,7 +179,8 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
 
   virtual SgExpression *BuildTypeExpr(SgType *ty);
   virtual SgVariableDeclaration *BuildTypeInfo(GridType *gt,
-                                               SgStatementPtrList &stmts);
+                                               SgStatementPtrList &stmts,
+                                               SgScopeStatement *scope);
 
   // REFERENCE backend uses the given user-type as is, so the below
   // functions for user-given types just return NULL.
@@ -215,7 +216,7 @@ class ReferenceRuntimeBuilder: virtual public BuilderInterface {
   
  protected:
   static const std::string  grid_type_name_;
-  SgScopeStatement *gs_;
+  SgGlobal *gs_;
   const Configuration & config_;
   BuilderInterface *delegator_;
   SgTypedefType *dom_type_;

@@ -307,6 +307,20 @@ extern "C" {
   
   extern cudaError_t cudaMemcpy(void *dst, const void * src, size_t count,
                                 enum cudaMemcpyKind kind);
+
+#if 0  
+  struct dim3 {
+    int x;
+    int y;
+    int z;
+    dim3(int x, int y, int z): x(x), y(y), z(z) {}
+  };
+  dim3 threadIdx;
+  dim3 blockIdx;
+  dim3 blockDim;  
+#endif  
+
+  
   
   // Simplify the generation of calls to ceil
   extern double ceil(double x);  

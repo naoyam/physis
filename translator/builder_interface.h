@@ -310,7 +310,8 @@ class BuilderInterface {
   virtual SgExpression *BuildTypeExpr(SgType *ty) = 0;
   //! Build a variable declaration for type info
   virtual SgVariableDeclaration *BuildTypeInfo(GridType *gt,
-                                               SgStatementPtrList &stmts) = 0;
+                                               SgStatementPtrList &stmts,
+                                               SgScopeStatement *scope) = 0;
 
   // These functions build functions and types for user-defined point
   // types. They may simply return NULL if no user-type-specific

@@ -202,7 +202,8 @@ void ReferenceTranslator::TranslateNew(SgFunctionCallExp *node,
 
   // TypeInfo
   SgStatementPtrList build_type_info_stmts;
-  SgVariableDeclaration *type_info = builder()->BuildTypeInfo(gt, build_type_info_stmts);
+  SgVariableDeclaration *type_info = builder()->BuildTypeInfo(gt, build_type_info_stmts,
+                                                              tmpBlock);
   si::appendStatementList(build_type_info_stmts, tmpBlock);
 
   SgExprListExp *new_args = BuildNewArg(gt, g, dimDecl, type_info);

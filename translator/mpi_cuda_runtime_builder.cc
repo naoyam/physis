@@ -694,7 +694,8 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
       sb::buildVariableDeclaration(
           host_name + "p", hostp_type,
           sb::buildAssignInitializer(
-              sb::buildCastExp(Var(user_ptr), hostp_type)));
+              sb::buildCastExp(Var(user_ptr), hostp_type)),
+          body);
   si::appendStatement(hostp_decl, body);
   // void *tbuf[3];
   SgVariableDeclaration *tbuf_decl =
@@ -703,7 +704,8 @@ SgFunctionDeclaration *MPICUDARuntimeBuilder::BuildGridCopyFuncForUserType(
           sb::buildArrayType(
               is_copyout ? ru::ConstVoidPointerType() :
               ru::VoidPointerType(),
-              Int(num_point_elms)));
+              Int(num_point_elms)),
+          NULL, body);
   si::appendStatement(tbuf_decl, body);
 
   // cudaMallocHost((void**)&tbuf[0], sizeof(type) * num_elms);

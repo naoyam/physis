@@ -37,15 +37,16 @@ void CUDATranslator::SetUp(SgProject *project,
   SgClassDeclaration *s =
       sb::buildStructDeclaration(
           SgName("__cuda_block_size_struct"), global_scope_);
+  SgClassDefinition *s_def = s->get_definition();
   si::appendStatement(
-      sb::buildVariableDeclaration("x", sb::buildIntType()),
-      s->get_definition());
+      sb::buildVariableDeclaration("x", sb::buildIntType(), NULL, s_def),
+      s_def);
   si::appendStatement(
-      sb::buildVariableDeclaration("y", sb::buildIntType()),
-      s->get_definition());
+      sb::buildVariableDeclaration("y", sb::buildIntType(), NULL, s_def),
+      s_def);
   si::appendStatement(
-      sb::buildVariableDeclaration("z", sb::buildIntType()),
-      s->get_definition());
+      sb::buildVariableDeclaration("z", sb::buildIntType(), NULL, s_def),
+      s_def);
   cuda_block_size_type_ = s->get_type();
   dynamic_cast<CUDARuntimeBuilder*>(builder())->
       cuda_block_size_type() = cuda_block_size_type_;

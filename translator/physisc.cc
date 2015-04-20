@@ -247,7 +247,7 @@ static pt::BuilderInterface *GetRTBuilder(SgProject *proj,
                                           const Configuration &config,
                                           CommandLineOptions &opts) {
   pt::BuilderInterface *builder = NULL;
-  SgScopeStatement *gs = si::getFirstGlobalScope(proj);
+  SgGlobal *gs = si::getFirstGlobalScope(proj);
   if (opts.ref_trans) {
     builder = new pt::ReferenceRuntimeBuilder(gs, config);
   } else if (opts.cuda_trans) {

@@ -393,8 +393,7 @@ class RegisterBlocking {
       SgType *ty, SgScopeStatement *scope) {
     PSAssert(scope);
     string name = rose_util::generateUniqueName(scope);
-    //return sb::buildVariableDeclaration(name, ty, NULL, scope);
-    return sb::buildVariableDeclaration(name, ty);
+    return sb::buildVariableDeclaration(name, ty, NULL, scope);
   }
 
   SgExpression *FindGetAtIndex(SgForStatement *loop,

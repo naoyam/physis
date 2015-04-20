@@ -14,7 +14,7 @@ namespace translator {
 class MPIRuntimeBuilder: virtual public ReferenceRuntimeBuilder,
                          virtual public MPIBuilderInterface {
  public:
-  MPIRuntimeBuilder(SgScopeStatement *global_scope,
+  MPIRuntimeBuilder(SgGlobal *global_scope,
                     const Configuration &config,
                     BuilderInterface *delegator=NULL):
       ReferenceRuntimeBuilder(global_scope, config, delegator),

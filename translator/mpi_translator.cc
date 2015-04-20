@@ -267,13 +267,15 @@ void MPITranslator::AppendNewArgStencilMemberInfo(SgExprListExp *args,
     SgVariableDeclaration *member_stencil_min_var
         = sb::buildVariableDeclaration(
             "member_stencil_offset_min", ty,
-            sb::buildAggregateInitializer(min_arg, ty));
+            sb::buildAggregateInitializer(min_arg, ty),
+            si::getScope(prec_stmt));
     si::insertStatementAfter(prec_stmt, member_stencil_min_var);
     si::appendExpression(args, sb::buildVarRefExp(member_stencil_min_var));
     SgVariableDeclaration *member_stencil_max_var
         = sb::buildVariableDeclaration(
             "member_stencil_offset_max", ty,
-            sb::buildAggregateInitializer(max_arg, ty));
+            sb::buildAggregateInitializer(max_arg, ty),
+            si::getScope(prec_stmt));
     si::insertStatementAfter(member_stencil_min_var, member_stencil_max_var);
     si::appendExpression(args, sb::buildVarRefExp(member_stencil_max_var));
   }
@@ -305,7 +307,8 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   SgVariableDeclaration *stencil_min_var
       = sb::buildVariableDeclaration(
           "stencil_offset_min", ivec_type_,
-          sb::buildAggregateInitializer(stencil_min_val, ivec_type_));
+          sb::buildAggregateInitializer(stencil_min_val, ivec_type_),
+          si::getScope(dim_decl));
   si::insertStatementAfter(dim_decl, stencil_min_var);
   si::appendExpression(args, sb::buildVarRefExp(stencil_min_var));
 
@@ -318,7 +321,8 @@ void MPITranslator::appendNewArgExtra(SgExprListExp *args,
   SgVariableDeclaration *stencil_max_var
       = sb::buildVariableDeclaration(
           "stencil_offset_max", ivec_type_,
-          sb::buildAggregateInitializer(stencil_max_val, ivec_type_));
+          sb::buildAggregateInitializer(stencil_max_val, ivec_type_),
+          si::getScope(dim_decl));
   si::insertStatementAfter(stencil_min_var, stencil_max_var);
   si::appendExpression(args, sb::buildVarRefExp(stencil_max_var));
 

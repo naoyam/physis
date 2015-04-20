@@ -105,32 +105,42 @@ SgFunctionCallExp *BuildCUDAFreeHost(SgExpression *p) {
 }
 
 namespace {
-SgClassDeclaration *cuda_dim3_decl() {
-  static SgClassDeclaration *dim3_decl = NULL;
-  if (!dim3_decl) {
-    dim3_decl = sb::buildStructDeclaration(SgName("dim3"), NULL);
+SgClassDeclaration *cuda_dim3_decl(SgGlobal *gs) {
+  static SgGlobal *global_scope = NULL;
+  static SgClassDeclaration *dim3_decl = NULL;  
+  if (global_scope != gs || !dim3_decl) {
+    // Creates a type for dim3, but does not make it appear in the
+    // generated code. See SageBuilder::buildOpaqueVarRefExp().
+    dim3_decl = sb::buildStructDeclaration(SgName("dim3"), gs);
+    dim3_decl->set_parent(gs);
+    dim3_decl->get_file_info()->unsetOutputInCodeGeneration();
+    
+    SgClassDefinition *dim3_def = dim3_decl->get_definition();
     si::appendStatement(
-        sb::buildVariableDeclaration("x", sb::buildIntType()),
-        dim3_decl->get_definition());
+        sb::buildVariableDeclaration("x", sb::buildIntType(), NULL, dim3_def),
+        dim3_def);
     si::appendStatement(
-        sb::buildVariableDeclaration("y", sb::buildIntType()),
-        dim3_decl->get_definition());
+        sb::buildVariableDeclaration("y", sb::buildIntType(), NULL, dim3_def),
+        dim3_def);
     si::appendStatement(
-        sb::buildVariableDeclaration("z", sb::buildIntType()),
-        dim3_decl->get_definition());
+        sb::buildVariableDeclaration("z", sb::buildIntType(), NULL, dim3_def),
+        dim3_def);
+    global_scope = gs;
   }
   return dim3_decl;
 }
 
-SgClassDefinition *cuda_dim3_def() {
+SgClassDefinition *cuda_dim3_def(SgGlobal *gs) {
+  static SgGlobal *global_scope = NULL;
   static SgClassDefinition *dim3_def = NULL;
-  if (!dim3_def) {
-    dim3_def = sb::buildClassDefinition(cuda_dim3_decl());
+  if (global_scope != gs || !dim3_def) {
+    dim3_def = cuda_dim3_decl(gs)->get_definition();
+    global_scope = gs;
   }
   return dim3_def;
 }
 
-SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
+SgMemberFunctionDeclaration *cuda_dim3_ctor_decl(SgGlobal *gs) {
   static SgMemberFunctionDeclaration *ctor_decl = NULL;
   if (!ctor_decl) {
     /*
@@ -142,7 +152,7 @@ SgMemberFunctionDeclaration *cuda_dim3_ctor_decl() {
     ctor_decl = sb::buildNondefiningMemberFunctionDeclaration(
         SgName("dim3"), sb::buildVoidType(),
         sb::buildFunctionParameterList(),
-        cuda_dim3_decl()->get_definition());
+        cuda_dim3_def(gs));
     //si::appendStatement(ctor_decl, cuda_dim3_decl()->get_definition());
   }
   return ctor_decl;
@@ -214,13 +224,13 @@ SgVariableDeclaration *BuildDim3Declaration(const SgName &name,
                                             SgExpression *dimy,
                                             SgExpression *dimz,
                                             SgScopeStatement *scope) {
-  SgClassType *dim3_type = cuda_dim3_decl()->get_type();
+  SgClassType *dim3_type = cuda_dim3_decl(si::getGlobalScope(scope))->get_type();
   SgExprListExp *expr_list = sb::buildExprListExp();
   si::appendExpression(expr_list, dimx);
   si::appendExpression(expr_list, dimy);
   si::appendExpression(expr_list, dimz);  
   SgConstructorInitializer *init =
-      sb::buildConstructorInitializer(cuda_dim3_ctor_decl(),
+      sb::buildConstructorInitializer(cuda_dim3_ctor_decl(si::getGlobalScope(scope)),
                                       expr_list,
                                       sb::buildVoidType(),
                                       false, false, true, false);
@@ -271,17 +281,33 @@ SgCudaKernelExecConfig *BuildCudaKernelExecConfig(
   return cuda_config;
 }
 
-SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx) {
+static SgVariableDeclaration *MakeHiddenVariable(const string &name,
+                                                 SgType *type,
+                                                 SgScopeStatement *scope) {
+  SgVariableDeclaration *d = sb::buildVariableDeclaration(name, type, NULL, scope);
+  d->set_parent(scope);
+  d->get_file_info()->unsetOutputInCodeGeneration();
+  return d;
+}
+
+SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx,
+                              SgGlobal *gs) {
   static SgVariableDeclaration *threadIdx = NULL;  
   static SgVariableDeclaration *blockIdx = NULL;
-  static SgVariableDeclaration *blockDim = NULL;  
+  static SgVariableDeclaration *blockDim = NULL;
+  static SgVariableSymbol *dim3_x = NULL;
+  static SgVariableSymbol *dim3_y = NULL;
+  static SgVariableSymbol *dim3_z = NULL;
   if (!blockIdx) {
-    threadIdx = sb::buildVariableDeclaration("threadIdx",
-                                             cuda_dim3_decl()->get_type());
-    blockIdx = sb::buildVariableDeclaration("blockIdx",
-                                            cuda_dim3_decl()->get_type());
-    blockDim = sb::buildVariableDeclaration("blockDim",
-                                            cuda_dim3_decl()->get_type());
+    threadIdx = MakeHiddenVariable("threadIdx",
+                                   cuda_dim3_decl(gs)->get_type(), gs);
+    blockIdx = MakeHiddenVariable("blockIdx",
+                                  cuda_dim3_decl(gs)->get_type(), gs);
+    blockDim = MakeHiddenVariable("blockDim",
+                                  cuda_dim3_decl(gs)->get_type(), gs);
+    PSAssert(dim3_x = si::lookupVariableSymbolInParentScopes("x", cuda_dim3_def(gs)));
+    PSAssert(dim3_y = si::lookupVariableSymbolInParentScopes("y", cuda_dim3_def(gs)));
+    PSAssert(dim3_z = si::lookupVariableSymbolInParentScopes("z", cuda_dim3_def(gs)));
   }
   SgVarRefExp *var = NULL;
   SgVarRefExp *xyz = NULL;
@@ -308,17 +334,17 @@ SgExpression *BuildCudaIdxExp(const CudaDimentionIdx idx) {
     case kBlockDimX:
     case kBlockIdxX:
     case kThreadIdxX:
-      xyz = sb::buildVarRefExp("x");
+      xyz = sb::buildVarRefExp(dim3_x);
       break;
     case kBlockDimY:
     case kBlockIdxY:
     case kThreadIdxY:
-      xyz = sb::buildVarRefExp("y");
+      xyz = sb::buildVarRefExp(dim3_y);
       break;
     case kBlockDimZ:
     case kBlockIdxZ:
     case kThreadIdxZ:
-      xyz = sb::buildVarRefExp("z");
+      xyz = sb::buildVarRefExp(dim3_z);
       break;
   }
   return sb::buildDotExp(var, xyz);

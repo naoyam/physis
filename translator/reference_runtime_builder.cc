@@ -16,7 +16,7 @@ namespace physis {
 namespace translator {
 
 ReferenceRuntimeBuilder::ReferenceRuntimeBuilder(
-    SgScopeStatement *global_scope,
+    SgGlobal *global_scope,
     const Configuration &config,
     BuilderInterface *delegator):
     BuilderInterface(), gs_(global_scope),
@@ -957,7 +957,8 @@ SgExpression *ReferenceRuntimeBuilder::BuildTypeExpr(SgType *ty) {
 }
 
 SgVariableDeclaration *ReferenceRuntimeBuilder::BuildTypeInfo(
-    GridType *gt, SgStatementPtrList &stmts) {
+    GridType *gt, SgStatementPtrList &stmts,
+    SgScopeStatement *scope) {
   string type_info_name = "type_info";
   string member_info_name = "member_info";
 
@@ -972,7 +973,7 @@ SgVariableDeclaration *ReferenceRuntimeBuilder::BuildTypeInfo(
       sb::buildAggregateInitializer(type_info_init_args);
   SgVariableDeclaration *type_info =
       sb::buildVariableDeclaration(type_info_name, type_info_type,
-                                   type_info_init);
+                                   type_info_init, scope);
   if (gt->IsPrimitivePointType()) {
     si::appendExpression(type_info_init_args, Int(0));
     //si::appendExpression(type_info_init_args, sb::buildNullExpression());
@@ -1006,7 +1007,7 @@ SgVariableDeclaration *ReferenceRuntimeBuilder::BuildTypeInfo(
     SgType *member_array_type =
         sb::buildArrayType(member_info_type, Int(members.size()));
     SgVariableDeclaration *member_info =
-        sb::buildVariableDeclaration(member_info_name, member_array_type);
+        sb::buildVariableDeclaration(member_info_name, member_array_type, NULL, scope);
     stmts.push_back(member_info);
 
     si::appendExpression(type_info_init_args, Int(members.size()));
