@@ -23,7 +23,7 @@ Physis uses the ROSE compiler framework. The current version is tested with the 
 
         ./rose-install.sh -g edg4x-rose -b BOOST_INSTALL_DIR
     
-    where BOOST_INSTALL_DIR points the directory where the Boost library is installed. If omitted, the sytem default is used. The script automatically download, configure, and compile the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named edg4x-rose/latest.
+    where BOOST_INSTALL_DIR points to the directory where the Boost library is installed. If omitted, the system default is used. The script automatically downloads, configures, and compiles the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named edg4x-rose/latest.
 
 ## Manual way
 
