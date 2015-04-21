@@ -1,46 +1,46 @@
 # ROSE Installation
 
+Physis uses the ROSE compiler framework. The current version is tested with the EDG4x version of the ROSE. See below for how to set up a ROSE installation.
+
 ## Prerequisites
 * Java JDK (not just JRE)
+    * Version 1.7 or newer
 * Boost C++ library
-    * Versions from 1.36 to 1.45
+    * Versions from 1.36 to 1.47
 * GNU libtool
 * Ghostscript (optional)
 * Doxygen (optional)
 
 ### Platform specific notes
 * Ubuntu/Debian packages
-    * sun-java6, libboost-all-dev
-* Mac
-    * Only OSX 10.6 is suppoted (10.7 not supported)
-    * Get Java from the Java developer package from http://connect.apple.com
+    * sun-java7, libboost-all-dev
 
 ## Automated way
 
-1. Set the JAVA_HOME environment variable. It should be like /usr/lib/jvm/java (RHEL6/CentOS6/SL6), /usr/lib/jvm/java-6-sun, or /usr/lib/jvm/java-6-sun.
-2. Run misc/rose-build.sh. It will automatically download, configure, and compile the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named rose-VERSION/build and installed to rose-VERSION/install. 
+1. Set the JAVA_HOME environment variable. It should be like /usr/lib/jvm/java (RHEL6/CentOS6/SL6), /usr/lib/jvm/java-7-sun, or /usr/lib/jvm/java-7-sun.
+2. Get the install script, rose-install.sh, from https://github.com/naoyam/rose-tools.
+3. Run the script.sh as:
+
+        ./rose-install.sh -g edg4x-rose -b BOOST_INSTALL_DIR
+    
+    where BOOST_INSTALL_DIR points the directory where the Boost library is installed. If omitted, the sytem default is used. The script automatically download, configure, and compile the ROSE source as suitable for Physis. Just run the script, and the ROSE library will be built under a directory named edg4x-rose/latest.
 
 ## Manual way
 
-Clone the Git repository or download a tar package from the ROSE website.
+1. Set JAVA_HOME and LD_LIBRARY_PATH appropriately. LD_LIBRARY_PATH should include libjvm.so directory, e.g.:
 
-1. (Git only) run build.sh
-2. Linux only
-* set JAVA_HOME
-* set LD_LIBRARY_PATH to include libjvm.so directory
-    * e.g., export LD_LIBRARY_PATH=/usr/lib/jvm/java-6-sun/jre/lib/amd64/server:$LD_LIBRARY_PATH
-3. Download the source from https://outreach.scidac.gov/frs/?group_id=24
-    * Rose is automatically packaged every week. Newer versions seem
-    to be more reliable.
-4. unpack the source
-5. mkdir <some-build-directory>
-6. do configure in the build directory
-* --prefix=somewhere
-* --with-CXX_DEBUG="-g"
-* --with-CXX_WARNINGS="-Wall -Wno-deprecated"
-* --enable-cuda
-* --with-boost=/usr
-    * need to be passed; probably a bug
+         export LD_LIBRARY_PATH=/usr/lib/jvm/java-7-sun/jre/lib/amd64/server:$LD_LIBRARY_PATH
+    
+2. Download the source from the Github (http://github.com/rose-compiler).
+    * There are two versions. The repository at github.com/rose-compiler/edg4x-rose uses the latest EDG4 frontend for parsing C/C++, and is considered the current default version. Another repository at github.com/rose-compiler/rose uses the older EDG3, and is not maintainted anymore. Physis is tested with the edg4x-rose repository.
+    * Note that the old tgz packages are not distributed anymore.
+3. run build.sh on the top-level source directory.
+4. mkdir <some-build-directory>
+5. do configure in the build directory
+    * --prefix=somewhere
+    * --with-CXX_DEBUG="-g"
+    * --with-CXX_WARNINGS="-Wall -Wno-deprecated"
+    * --with-boost=/usr (depends on your boost installation)
 7. make
     * Hint: use -j option to speed up compilation
 8. make install
@@ -65,11 +65,6 @@ See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
     * SgDeclarationModifier::get_storageModifier() to
       getSgStorageModifier
     * Use SgStorageModifier::setStatic
-* Do not insert statements and expressions while traversing. Already
-  traversed nodes seem fine to edit, but editing remaining nodes
-  results in backend errors.
-* buildVarRefExp with NULL scope is ok, but resultant AST may not be
-  analyzable and translatable anymore.
 * Use SageInterface's methods for manipulating AST nodes and
   edges. node->append_statement() seems to be just connecting an edge
   from the parent to the child, but the pointer from the child to the
@@ -77,12 +72,6 @@ See https://mailman.nersc.gov/pipermail/rose-public/2010-July/000314.html
 * Subclasses of AstAttribute must override virtual function copy for
   the deepcopy mechanism copies the attributes as well.
   
-# Questions
-* SageInterface::lookupNamedTypeInParentScopes
-    * The doxygen manual says it does bottom up search. What is the top
-    of the stack? Is it the most inner scope? Or is it the root of the
-    scope? 
-
 # Misc
 * frontend and backend functions
   * Declared in roseSupport/utility_functions.h

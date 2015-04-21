@@ -3,8 +3,8 @@
 This is under active development, and is not yet ready for
 production use. The features listed here should work, but you would
 likely encounter issues that do not work as expected. Email the
-[author](http://matsu-www.is.titech.ac.jp/~naoya/) if you are
-interested in more details. 
+[author](http://mt.aics.riken.jp/~nmaruyama/) if you are interested in
+more details.
 
 ## Overview
 
@@ -62,7 +62,7 @@ Physis depends on the following external software:
 In addition, the following platform-specific tools and libraries are
 required when using the respective platform:
 
-* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (5.0 tested)
+* [NVIDIA CUDA toolkit and SDK for using NVIDIA GPUs](http://developer.nvidia.com/cuda-downloads) (6.5 tested)
 * MPI for multi-node parallel execution
   ([OpenMPI v1.4.2](http://www.open-mpi.org/) tested)
 

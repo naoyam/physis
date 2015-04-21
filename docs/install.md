@@ -4,7 +4,7 @@
 * Cmake 
     * version 2.8 or newer
 * Boost
-    * Boost is also used in ROSE, which only supports version 1.36 to 1.45.
+    * Boost is also used in ROSE. As of this writing, ROSE suppports boost version 1.37 to 1.47. See http://en.wikibooks.org/wiki/ROSE_Compiler_Framework/Installation.
 * Lua
 * GNU getopt	
 * ROSE (Optional)
@@ -17,7 +17,7 @@
 * CUDA (Optional)
     * Required for CUDA-based runtimes. If not found, no CUDA-based
       runtimes will be built.
-    * Only toolkit is required. Tested with up to 4.2.
+    * Only toolkit is required. Tested with up to 6.5.
     
 ## Steps
 1. Change directory to an empty build directory
